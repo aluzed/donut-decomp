@@ -447,7 +447,11 @@ void Game::Run()
 		}
 
 		if (_showDebug)
+		{
 			_lineRenderer->DrawSkeleton(_character->GetPosition(), _character->GetSkeleton());
+			_lineRenderer->DrawBox(_character->GetPosition(), _character->GetRotation(),
+				Vector3(-0.3f, 0.0f, -0.2f), Vector3(0.3f, 1.8f, 0.3f), Vector4(0.2f, 1.0f, 0.2f, 1.0f));
+		}
 		_level->Update(deltaTime);
 		_trafficManager->Update(deltaTime);
 		if (_showDebug)
