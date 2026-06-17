@@ -400,13 +400,13 @@ void Game::Run()
 			}
 			else
 			{
-				float throttle = 0, steer = 0;
+				float throttle = 0, steer = 0, brake = 0;
 				if (Input::IsDown(Button::KeyUp))    throttle = 1.0f;
-				if (Input::IsDown(Button::KeyDown))  throttle = -0.5f;
+				if (Input::IsDown(Button::KeyDown))  brake = 1.0f;
 				if (Input::IsDown(Button::KeyLeft))  steer = -1.0f;
 				if (Input::IsDown(Button::KeyRight)) steer = 1.0f;
 				float boost = Input::IsDown(Button::KeyLSHIFT) ? 3.0f : 1.0f;
-				_activeVehicle->ApplyInput(throttle, steer, 0.5f, boost);
+				_activeVehicle->ApplyInput(throttle, steer, brake, boost);
 			}
 		}
 
