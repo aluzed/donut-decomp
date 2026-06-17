@@ -10,6 +10,7 @@ out VertexData
 {
     vec2 uv;
     vec3 normal;
+    vec3 worldPos;
 } outData;
 
 uniform mat4 viewProj;
@@ -29,7 +30,9 @@ void main()
     boneMatrix += GetMatrix(boneIndices[1]) * boneWeights[1];
     boneMatrix += GetMatrix(boneIndices[2]) * boneWeights[2];
 
+    vec4 worldPos4 = boneMatrix * vec4(position, 1.0);
     outData.uv = uv;
     outData.normal = normal;
-    gl_Position = viewProj * (boneMatrix * vec4(position, 1.0));
+    outData.worldPos = worldPos4.xyz;
+    gl_Position = viewProj * worldPos4;
 }

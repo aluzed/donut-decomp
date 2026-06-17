@@ -5,12 +5,12 @@
 #include "Core/File.h"
 #include "GameCommands.h"
 
+#include <Core/Log.h>
 #include <fmt/format.h>
 
 #include <algorithm>
 #include <cctype>
 #include <charconv>
-#include <iostream>
 #include <locale>
 #include <string>
 #include <unordered_map>
@@ -44,13 +44,13 @@ public:
 		auto command = _namedCommands.find(name);
 		if (command == _namedCommands.end())
 		{
-			std::cout << "command " << name << "not found" << std::endl;
+			Log::Warn("command {} not found", name);
 			return false;
 		}
 
 		if (!command->second.sig(params))
 		{
-			std::cout << "error running command " << name << "(" << params << ")" << std::endl;
+			Log::Error("error running command {}({})", name, params);
 			return false;
 		}
 
@@ -157,14 +157,18 @@ public:
 	{
 		if (!FileSystem::exists(filename))
 		{
-			std::cout << "Script not found: " << filename << "\n";
+			Log::Warn("Script not found: {}", filename);
 			return false;
 		}
 
 		File file;
 		file.Open(filename, FileMode::Read);
 
-		while (file.Position() < file.Size()) { RunLine(file.ReadLine()); }
+		while (file.Position() < file.Size())
+		{
+			std::string line = file.ReadLine();
+			RunCommands(line);
+		}
 
 		file.Close();
 
@@ -172,6 +176,26 @@ public:
 	}
 
 private:
+	static void RunCommands(const std::string& line)
+	{
+		if (line.empty() || std::all_of(line.begin(), line.end(), isspace))
+			return;
+
+		std::size_t pos = 0;
+		while (pos < line.size())
+		{
+			std::size_t end = line.find(");", pos);
+			if (end == std::string::npos)
+			{
+				RunLine(line.substr(pos));
+				return;
+			}
+			std::string cmd = line.substr(pos, end - pos + 2);
+			RunLine(cmd);
+			pos = end + 2;
+			while (pos < line.size() && std::isspace(line[pos])) ++pos;
+		}
+	}
 	static inline void ltrim(std::string& s)
 	{
 		s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) { return !std::isspace(ch); }));

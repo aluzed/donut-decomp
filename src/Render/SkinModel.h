@@ -63,7 +63,6 @@ public:
 	void LoadPolySkin(const P3D::PolySkin&);
 
 	// Update / Draw methods
-	// void UpdateAnimation(SkinAnimation& anim, double time);
 	void Draw();
 
 private:

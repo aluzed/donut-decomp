@@ -1,11 +1,11 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
+#include <Core/Log.h>
 #include <Game.h>
 #include <P3D/P3D.generated.h>
 #include <P3D/P3DFile.h>
 #include <Render/CompositeModel.h>
 #include "Core/FileSystem.h"
-#include <iostream>
 
 namespace Donut
 {
@@ -110,11 +110,11 @@ std::unique_ptr<CompositeModel> CompositeModel::LoadP3D(const std::string& filen
 {
 	if (!FileSystem::exists(filename))
 	{
-		std::cout << "CompositeDrawable not found: " << filename << "\n";
+		Log::Info("CompositeDrawable not found: {}", filename);
 		return nullptr;
 	}
 
-	std::cout << "Loading CompositeDrawable: " << filename << "\n";
+	Log::Info("Loading CompositeDrawable: {}", filename);
 
 	const auto p3d = P3D::P3DFile(filename);
 	return std::make_unique<CompositeModel>(CompositeModel_Chunk(p3d.GetRoot()));

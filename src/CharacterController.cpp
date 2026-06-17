@@ -2,6 +2,7 @@
 
 #include <Character.h>
 #include <CharacterController.h>
+#include <Core/Log.h>
 #include <Physics/BulletCast.h>
 #include <Physics/WorldPhysics.h>
 #include <btBulletDynamicsCommon.h>
@@ -43,17 +44,24 @@ CharacterController::~CharacterController()
 	if (_worldPhysics == nullptr)
 		return;
 
-	// _worldPhysics->GetDynamicsWorld()->removeAction(this);
-	// _worldPhysics->GetDynamicsWorld()->removeCollisionObject(_physGhostObject.get());
+	_worldPhysics->GetDynamicsWorld()->removeAction(this);
+	_worldPhysics->GetDynamicsWorld()->removeCollisionObject(_physGhostObject.get());
 }
 
 void CharacterController::updateAction(btCollisionWorld* collisionWorld, btScalar dt)
 {
+	if (_jumpCooldown > 0.0f)
+		_jumpCooldown -= dt;
 	preStep(collisionWorld);
 	playerStep(collisionWorld, dt);
 }
 
-void CharacterController::debugDraw(btIDebugDraw* debugDraw) {}
+void CharacterController::debugDraw(btIDebugDraw* debugDrawer)
+{
+	if (!debugDrawer) return;
+	btVector3 pos = _physGhostObject->getWorldTransform().getOrigin();
+	debugDrawer->drawCapsule(_physShape->getRadius(), _physShape->getHalfHeight() * 2.0f, 0, btTransform::getIdentity(), pos);
+}
 void CharacterController::reset(btCollisionWorld* collisionWorld) {}
 
 void CharacterController::setWalkDirection(const btVector3& walkDirection)
@@ -63,7 +71,11 @@ void CharacterController::setWalkDirection(const btVector3& walkDirection)
 
 void CharacterController::setVelocityForTimeInterval(const btVector3& velocity, btScalar timeInterval)
 {
-	printf("setVelocityForTimeInterval: %f, %f, %f\n", velocity.getX(), velocity.getY(), velocity.getZ());
+	btTransform transform = _physGhostObject->getWorldTransform();
+	btVector3 displacement = velocity * timeInterval;
+	transform.setOrigin(transform.getOrigin() + displacement);
+	_physGhostObject->setWorldTransform(transform);
+	_position = BulletCast<Vector3>(transform.getOrigin());
 }
 
 void CharacterController::warp(const btVector3& origin)
@@ -89,10 +101,16 @@ void CharacterController::preStep(btCollisionWorld* collisionWorld)
 void CharacterController::playerStep(btCollisionWorld* collisionWorld, btScalar dt)
 {
 	// accelerate by gravity
-	const float gravity = 1.0f;
+	const float gravity = 9.8f;
 	_verticalVelocity -= gravity * dt;
 
-	// todo: cap _verticalVelocity at something sane like 3.0f
+	const float maxFallSpeed = -55.0f;
+	if (_verticalVelocity < maxFallSpeed)
+		_verticalVelocity = maxFallSpeed;
+
+	const float maxRiseSpeed = 30.0f;
+	if (_verticalVelocity > maxRiseSpeed)
+		_verticalVelocity = maxRiseSpeed;
 
 	_verticalOffset = _verticalVelocity * dt;
 
@@ -115,14 +133,36 @@ void CharacterController::playerStep(btCollisionWorld* collisionWorld, btScalar 
 
 bool CharacterController::canJump() const
 {
-	return false;
+	return onGround() && _jumpCooldown <= 0.0f;
 }
 
-void CharacterController::jump(const btVector3& dir) {}
+void CharacterController::jump(const btVector3& dir)
+{
+	if (!canJump()) return;
+	_verticalVelocity = 5.0f;
+	_jumpCooldown = 0.5f;
+}
 
 bool CharacterController::onGround() const
 {
-	return false;
+	btTransform start, end;
+	start.setIdentity();
+	end.setIdentity();
+
+	btVector3 pos = BulletCast<btVector3>(_position);
+	start.setOrigin(pos + btVector3(0, 0.1f, 0));
+	end.setOrigin(pos - btVector3(0, _stepHeight * 2.0f, 0));
+
+	btCollisionWorld::ClosestRayResultCallback rayCallback(start.getOrigin(), end.getOrigin());
+
+	if (_worldPhysics)
+	{
+		auto* world = _worldPhysics->GetDynamicsWorld();
+		world->rayTest(start.getOrigin(), end.getOrigin(), rayCallback);
+		return rayCallback.hasHit();
+	}
+
+	return _verticalVelocity >= 0.0f;
 }
 
 void CharacterController::setUpInterpolate(bool) {}

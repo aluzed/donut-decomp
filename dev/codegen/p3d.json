@@ -833,5 +833,164 @@
 
   "CompositeDrawableEffectList": {
     "numEffects": "u32"
+  },
+
+  "Spline": {
+    "numPoints": "u32",
+    "points": "buffer<vec3[numPoints]>"
+  },
+
+  "LocatorMatrix": {
+    "transform": "mat4"
+  },
+
+  "SurfaceTypeList": {
+    "numSurfaces": "u32",
+    "surfaces": "buffer<u32[numSurfaces]>"
+  },
+
+  "Mesh": {
+    "version": "u32",
+    "name": "string",
+    "numPrimGroups": "u32",
+    "primitiveGroups": "children PrimitiveGroup",
+    "boundingBox": "child BoundingBox",
+    "boundingSphere": "child BoundingSphere"
+  },
+
+  "OffsetList": {
+    "size": "u32",
+    "offsets": "buffer<vec3[size]>"
+  },
+
+  "PackedNormalList": {
+    "size": "u32",
+    "normals": "buffer<u32[size]>"
+  },
+
+  "VertexShader": {
+    "version": "u32",
+    "data": "buffer<u8[dataSize]>"
+  },
+
+  "DrawShadow": {
+    "version": "u32",
+    "todo": "u32"
+  },
+
+  "ExpressionOffsets": {
+    "size": "u32",
+    "offsets": "buffer<vec3[size]>"
+  },
+
+  "Light": {
+    "version": "u32",
+    "name": "string",
+    "color": "vec4",
+    "intensity": "float"
+  },
+
+  "LightDirection": {
+    "direction": "vec3"
+  },
+
+  "LightPosition": {
+    "position": "vec3"
+  },
+
+  "LightShadow": {
+    "enable": "u32"
+  },
+
+  "FrontendStringHardCoded": {
+    "name": "string",
+    "text": "string"
+  },
+
+  "FrontendTextBible": {
+    "name": "string",
+    "language": "string",
+    "numStrings": "u32"
+  },
+
+  "StaticPropData": {
+    "version": "u32",
+    "name": "string"
+  },
+
+  "InstancedStaticEntity": {
+    "name": "string",
+    "version": "u32",
+    "renderOrder": "u32",
+    "geometry": "child Geometry",
+    "instanceList": "child InstanceList"
+  },
+
+  "CollisionWallVolume": {
+    "normal": "vec3",
+    "position": "vec3"
+  },
+
+  "ExportInfo": {
+    "version": "u32",
+    "name": "string",
+    "children": "children ExportInfoNamedString"
+  },
+
+  "ExportInfoNamedString": {
+    "name": "string",
+    "value": "string"
+  },
+
+  "ExportInfoNamedInteger": {
+    "name": "string",
+    "value": "u32"
+  },
+
+  "Tree": {
+    "version": "u32",
+    "name": "string",
+    "numNodes": "u32",
+    "nodes": "children TreeNode"
+  },
+
+  "TreeNode": {
+    "version": "u32",
+    "min": "vec3",
+    "max": "vec3",
+    "numChildren": "u32",
+    "children": "children TreeNode"
+  },
+
+  "FrameController": {
+    "version": "u32",
+    "name": "string",
+    "controllerId": "u32",
+    "numTracks": "u32"
+  },
+
+  "FrameController2": {
+    "version": "u32",
+    "name": "string"
+  },
+
+  "MultiController2": {
+    "version": "u32",
+    "name": "string"
+  },
+
+  "Locator": {
+    "version": "u32",
+    "name": "string",
+    "type": "u32",
+    "position": "vec3",
+    "dataSize": "u32"
+  },
+
+  "LightGroup": {
+    "version": "u32",
+    "name": "string",
+    "numLights": "u32",
+    "lights": "children Light"
   }
 }

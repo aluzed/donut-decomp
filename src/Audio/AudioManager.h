@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "Core/Math/Vector3.h"
 #include "RCL/RCFFile.h"
 #include "RCL/RSDFile.h"
 
@@ -27,24 +28,41 @@ public:
 
 	void PlayAudio(const std::string& name);
 	void PlayAudio(uint32_t hash);
+	void PlayAudio(const std::string& name, const Vector3& position);
+	void PlayDialogue(const std::string& name);
+
+	void SetListenerPosition(const Vector3& position, const Vector3& direction, const Vector3& up);
+	void SetVolume(float volume);
 
 	void DebugGUI(bool* open);
 
 private:
+	static constexpr int kMaxSources = 24;
+
+	struct Source
+	{
+		ALuint id;
+		ALuint buffer;
+		bool inUse;
+	};
+
 	void initializeOpenAL();
 	void shutdownOpenAL();
-
 	ALenum getFormat(const RCL::RSDFile& file) const;
+
+	Source* findFreeSource();
+
+	void playOnSource(Source* src, const RCL::RSDFile& rsdFile);
+
+	void discoverFiles(const std::string& directory, const std::string& extension);
 
 	ALCcontext* _alContext;
 	ALCdevice* _alDevice;
 
 	std::vector<std::unique_ptr<RCL::RCFFile>> _rcfFiles;
-
-	// Containers for sounds
 	std::unordered_map<std::string, RCL::RCFFile*> _sounds;
 
-	unsigned int _buffer, _source;
+	std::vector<Source> _sources;
 };
 
 } // namespace Donut

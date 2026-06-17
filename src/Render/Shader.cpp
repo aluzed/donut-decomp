@@ -1,9 +1,8 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
+#include <Core/Log.h>
 #include <P3D/P3D.generated.h>
 #include <Render/Shader.h>
-#include <fmt/format.h>
-#include <iostream>
 
 namespace Donut
 {
@@ -12,7 +11,7 @@ Shader::Shader(const P3D::Shader& shader): _name(shader.GetName())
 {
 	auto const& pddiName = shader.GetPddiShaderName();
 	if (pddiName != "simple")
-		fmt::print("shader {0}: unhandled pddi type: {1}\n", _name, pddiName);
+		Log::Warn("shader {}: unhandled pddi type: {}", _name, pddiName);
 
 	_isTranslucent = shader.GetIsTrans() == 1;
 

@@ -9,6 +9,18 @@
 namespace Donut
 {
 
+enum class GameState
+{
+	Splash,
+	MainMenu,
+	Loading,
+	InGame,
+	Paused,
+	MissionComplete,
+	MissionFailed,
+	Credits
+};
+
 class Window;
 class AudioManager;
 class ResourceManager;
@@ -17,6 +29,9 @@ class Level;
 class WorldPhysics;
 class FreeCamera;
 class Character;
+class ScriptEngine;
+class Vehicle;
+class TrafficManager;
 
 namespace P3D
 {
@@ -44,6 +59,12 @@ public:
 	ResourceManager& GetResourceManager() { return *_resourceManager; }
 	WorldPhysics& GetWorldPhysics() { return *_worldPhysics; }
 	LineRenderer& GetLineRenderer() { return *_lineRenderer; }
+	Level& GetLevel() { return *_level; }
+
+	ScriptEngine& GetScriptEngine() { return *_scriptEngine; }
+
+	GameState GetState() const { return _gameState; }
+	void SetState(GameState state) { _gameState = state; }
 
 	void LockMouse(bool lockMouse);
 
@@ -54,9 +75,8 @@ private:
 	void guiModelMenu(Character&);
 	void loadGlobal();
 	void debugDrawP3D(const P3D::P3DFile&);
-	void OnInputTextEntry(const std::string& text);
-
 	void debugAboutMenu();
+	void OnInputTextEntry(const std::string& text);
 
 	std::unique_ptr<Window> _window;
 	std::unique_ptr<AudioManager> _audioManager;
@@ -66,6 +86,8 @@ private:
 	std::unique_ptr<LineRenderer> _lineRenderer;
 	std::unique_ptr<Level> _level;
 	std::unique_ptr<WorldPhysics> _worldPhysics;
+	std::unique_ptr<ScriptEngine> _scriptEngine;
+	std::unique_ptr<TrafficManager> _trafficManager;
 	std::unique_ptr<P3D::P3DFile> _animP3D;
 	std::unique_ptr<P3D::P3DFile> _globalP3D;
 	std::unique_ptr<P3D::TextureFont> _textureFontP3D;
@@ -77,6 +99,11 @@ private:
 	bool _mouseLocked;
 	int _lockedMousePosX;
 	int _lockedMousePosY;
+
+	GameState _gameState = GameState::InGame;
+	bool _inVehicle = false;
+	Vehicle* _activeVehicle = nullptr;
+	double _missionCompleteTimer = 0.0;
 
 	bool _debugResourceManagerWindowOpen = false;
 	bool _debugLevelWindowOpen = false;

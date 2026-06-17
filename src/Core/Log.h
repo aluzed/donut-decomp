@@ -16,24 +16,28 @@ template <typename... Args>
 inline void Debug(std::string_view fmt, const Args&... args)
 {
 	fmt::print(fmt, args...);
+	fmt::print("\n");
 }
 
 template <typename... Args>
 inline void Info(std::string_view fmt, const Args&... args)
 {
 	fmt::print(fmt, args...);
+	fmt::print("\n");
 }
 
 template <typename... Args>
 inline void Warn(std::string_view fmt, const Args&... args)
 {
-	fmt::print(fmt, args...);
+	fmt::print(stderr, fmt, args...);
+	fmt::print(stderr, "\n");
 }
 
 template <typename... Args>
 inline void Error(std::string_view fmt, const Args&... args)
 {
-	fmt::print(fmt, args...);
+	fmt::print(stderr, fmt, args...);
+	fmt::print(stderr, "\n");
 }
 
 }

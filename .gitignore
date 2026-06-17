@@ -4,3 +4,6 @@
 # ide files
 .vs
 /.vscode/
+
+# game assets and dumps
+/files/

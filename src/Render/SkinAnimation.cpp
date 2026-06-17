@@ -12,11 +12,13 @@ Matrix4x4 SkinAnimation::Evaluate(size_t trackIndex, float time)
 
 Matrix4x4 SkinAnimation::Track::Evaluate(float time)
 {
-	// Matrix4x4 rot   = glm::toMat4(_rotationKeys.Evalulate(time, Quaternion(1, 0, 0, 0)));
-	// Matrix4x4 trans = glm::translate(Matrix(1.0f), _translationKeys.Evalulate(time, Vector3(1.0f)));
-	// Matrix4x4 final = trans * rot;
-	// return final;
-	return Matrix4x4::Identity;
+	Vector3 translation = _translationKeys.Evalulate(time, Vector3::Zero);
+	Quaternion rotation = _rotationKeys.Evalulate(time, Quaternion::Identity);
+
+	Matrix4x4 transMat = Matrix4x4::MakeTranslate(translation);
+	Matrix4x4 rotMat(rotation);
+
+	return transMat * rotMat;
 }
 
 } // namespace Donut

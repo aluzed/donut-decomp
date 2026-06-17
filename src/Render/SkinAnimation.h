@@ -40,8 +40,7 @@ public:
 
 		virtual Vector3 Lerp(const Vector3& b, float time) override
 		{
-			return b; // TODO
-			          // return glm::mix(_value, b, time);
+			return _value + (b - _value) * time;
 		}
 	};
 
@@ -52,8 +51,34 @@ public:
 
 		virtual Quaternion Lerp(const Quaternion& b, float time) override
 		{
-			return b; // TODO
-			          // return glm::slerp(_value, b, time);
+			float cosTheta = _value.X * b.X + _value.Y * b.Y + _value.Z * b.Z + _value.W * b.W;
+			float t = time;
+
+			Quaternion other = b;
+			if (cosTheta < 0.0f)
+			{
+				cosTheta = -cosTheta;
+				other = Quaternion(-b.X, -b.Y, -b.Z, -b.W);
+				t = -t;
+			}
+
+			if (cosTheta > 0.9995f)
+				return Quaternion(
+					_value.X + (other.X - _value.X) * time,
+					_value.Y + (other.Y - _value.Y) * time,
+					_value.Z + (other.Z - _value.Z) * time,
+					_value.W + (other.W - _value.W) * time).Normal();
+
+			float theta = acosf(cosTheta);
+			float sinTheta = sinf(theta);
+			float wA = sinf((1.0f - time) * theta) / sinTheta;
+			float wB = sinf(time * theta) / sinTheta;
+
+			return Quaternion(
+				wA * _value.X + wB * other.X,
+				wA * _value.Y + wB * other.Y,
+				wA * _value.Z + wB * other.Z,
+				wA * _value.W + wB * other.W);
 		}
 	};
 
@@ -80,15 +105,8 @@ public:
 			time = glm::mod(time, _keyValues[lastIndex]->GetTime());
 
 			auto index = GetKeyValueIndex(time);
-			if (index == -1)
-				return _keyValues[0]->GetValue();
-
-			if (index == lastIndex)
-			{
-				return _keyValues[lastIndex]->GetValue();
-			}
-
 			auto nextIndex = (index == lastIndex) ? 0 : index + 1;
+
 			const auto& prevPoint = _keyValues[index];
 			const auto& nextPoint = _keyValues[nextIndex];
 			auto delta = nextPoint->GetTime() - prevPoint->GetTime();
@@ -102,7 +120,7 @@ public:
 			}
 			else
 			{
-				return _keyValues[index]->GetValue();
+				return prevPoint->GetValue();
 			}
 		}
 
@@ -112,11 +130,14 @@ public:
 		size_t GetKeyValueIndex(float time)
 		{
 			size_t count = _keyValues.size();
+			if (count == 0)
+				return 0;
+
 			size_t lastIndex = count - 1;
 
 			if (time < _keyValues.at(0)->GetTime())
 			{
-				return -1;
+				return 0;
 			}
 
 			if (time >= _keyValues.at(lastIndex)->GetTime())

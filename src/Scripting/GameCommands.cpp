@@ -2,14 +2,16 @@
 
 #include "GameCommands.h"
 
+#include <Core/Log.h>
+#include <Game.h>
+#include <Scripting/ScriptEngine.h>
 #include <fmt/format.h>
-#include <iostream>
 
 namespace Donut
 {
 void GameCommands::HelloWorld()
 {
-	std::cout << "hellooooooooooo new york!!!!\n";
+	Log::Info("Hello from donut scripting engine!");
 }
 
 void GameCommands::LoadP3DFile(const std::string& param0, const std::string& param1 /*= ""*/)
@@ -32,34 +34,71 @@ void GameCommands::BindReward(const std::string& param0, const std::string& para
 }
 void GameCommands::SetCarAttributes(const std::string& param0, float param1, float param2, float param3, float param4) {}
 void GameCommands::SetTotalGags(int32_t param0, int32_t param1) {}
-void GameCommands::SelectMission(const std::string& param0) {}
-void GameCommands::SetMissionResetPlayerInCar(const std::string& param0) {}
-void GameCommands::SetDynaLoadData(const std::string& param0, const std::string& param1 /*= ""*/) {}
+void GameCommands::SelectMission(const std::string& param0)
+{
+	Game::GetInstance().GetScriptEngine().SelectMission(param0);
+}
+void GameCommands::SetMissionResetPlayerInCar(const std::string& param0)
+{
+	Game::GetInstance().GetScriptEngine().SetMissionResetPlayerInCar(param0);
+}
+void GameCommands::SetDynaLoadData(const std::string& param0, const std::string& param1 /*= ""*/)
+{
+	Game::GetInstance().GetScriptEngine().SetDynaLoadData(param0);
+	if (!param1.empty())
+		Game::GetInstance().GetScriptEngine().SetDynaLoadData(param1);
+}
 void GameCommands::UsePedGroup(int32_t param0) {}
 void GameCommands::AddStage(const std::string& param0 /*= ""*/, const std::string& param1 /*= ""*/,
                             const std::string& param2 /*= ""*/)
 {
+	Game::GetInstance().GetScriptEngine().AddStage(param0.empty() ? 0 : std::stoi(param0));
 }
-void GameCommands::SetPresentationBitmap(const std::string& param0) {}
+void GameCommands::SetPresentationBitmap(const std::string& param0)
+{
+	Game::GetInstance().GetScriptEngine().SetPresentationBitmap(param0);
+}
 void GameCommands::SetStageMessageIndex(int32_t param0, const std::string& param1 /*= ""*/) {}
 void GameCommands::AddObjective(const std::string& param0, const std::string& param1 /*= ""*/,
                                 const std::string& param2 /*= ""*/)
 {
+	Game::GetInstance().GetScriptEngine().AddObjective(param0);
 }
-void GameCommands::SetObjTargetVehicle(const std::string& param0) {}
-void GameCommands::CloseObjective(int32_t param0 /*= 0*/) {}
-void GameCommands::CloseStage(int32_t param0 /*= 0*/) {}
+void GameCommands::SetObjTargetVehicle(const std::string& param0)
+{
+	Game::GetInstance().GetScriptEngine().SetObjTargetVehicle(param0);
+}
+void GameCommands::CloseObjective(int32_t param0 /*= 0*/)
+{
+	Game::GetInstance().GetScriptEngine().CloseObjective();
+}
+void GameCommands::CloseStage(int32_t param0 /*= 0*/)
+{
+	Game::GetInstance().GetScriptEngine().CloseStage();
+}
 void GameCommands::RESET_TO_HERE(int32_t param0 /*= 0*/) {}
-void GameCommands::SetHUDIcon(const std::string& param0) {}
+void GameCommands::SetHUDIcon(const std::string& param0)
+{
+	Game::GetInstance().GetScriptEngine().SetHUDIcon(param0);
+}
 void GameCommands::AddCollectible(const std::string& param0, const std::string& param1 /*= ""*/,
                                   const std::string& param2 /*= ""*/, const std::string& param3 /*= ""*/)
 {
 }
-void GameCommands::SetStageTime(int32_t param0) {}
+void GameCommands::SetStageTime(int32_t param0)
+{
+	Game::GetInstance().GetScriptEngine().SetStageTime(static_cast<float>(param0));
+}
 void GameCommands::AddCondition(const std::string& param0, const std::string& param1 /*= ""*/) {}
 void GameCommands::CloseCondition(int32_t param0 /*= 0*/) {}
-void GameCommands::ShowStageComplete(int32_t param0 /*= 0*/) {}
-void GameCommands::AddNPC(const std::string& param0, const std::string& param1, const std::string& param2 /*= ""*/) {}
+void GameCommands::ShowStageComplete(int32_t param0 /*= 0*/)
+{
+	Game::GetInstance().GetScriptEngine().ShowStageComplete();
+}
+void GameCommands::AddNPC(const std::string& param0, const std::string& param1, const std::string& param2 /*= ""*/)
+{
+	Game::GetInstance().GetScriptEngine().AddCharacter(param0, param1);
+}
 void GameCommands::SetDestination(const std::string& param0, const std::string& param1 /*= ""*/) {}
 void GameCommands::SetCollectibleEffect(const std::string& param0) {}
 void GameCommands::AddStageTime(int32_t param0) {}
@@ -73,12 +112,19 @@ void GameCommands::SetDialogueInfo(const std::string& param0, const std::string&
 {
 }
 void GameCommands::SetCamBestSide(const std::string& param0, const std::string& param1 /*= ""*/) {}
-void GameCommands::CloseMission(int32_t param0 /*= 0*/) {}
-void GameCommands::PlacePlayerCar(const std::string& param0, const std::string& param1) {}
+void GameCommands::CloseMission(int32_t param0 /*= 0*/)
+{
+	Game::GetInstance().GetScriptEngine().CloseMission();
+}
+void GameCommands::PlacePlayerCar(const std::string& param0, const std::string& param1)
+{
+	Game::GetInstance().GetScriptEngine().PlacePlayerCar(param0, param1);
+}
 void GameCommands::SetMaxTraffic(int32_t param0) {}
 void GameCommands::AddStageVehicle(const std::string& param0, const std::string& param1, const std::string& param2,
                                    const std::string& param3, const std::string& param4 /*= ""*/)
 {
+	Game::GetInstance().GetScriptEngine().AddStageVehicle(param0, param1, param2, param3, param4);
 }
 void GameCommands::AddStageWaypoint(const std::string& param0) {}
 void GameCommands::SetRaceLaps(int32_t param0) {}
@@ -105,13 +151,23 @@ void GameCommands::GagSetIntro(int32_t param0) {}
 void GameCommands::GagSetOutro(int32_t param0) {}
 void GameCommands::GagSetCameraShake(float param0, int32_t param1, float param2) {}
 void GameCommands::GagPlayFMV(const std::string& param0) {}
-void GameCommands::EnableTutorialMode(const std::string& param0) {}
+void GameCommands::EnableTutorialMode(const std::string& param0)
+{
+	Game::GetInstance().GetScriptEngine().EnableTutorialMode(param0 == "true" || param0 == "TRUE");
+}
 void GameCommands::InitLevelPlayerVehicle(const std::string& param0, const std::string& param1, const std::string& param2,
                                           const std::string& param3 /*= ""*/)
 {
+	Game::GetInstance().GetScriptEngine().InitLevelPlayerVehicle(param0, param1, param2, param3);
 }
-void GameCommands::AddCharacter(const std::string& param0, const std::string& param1) {}
-void GameCommands::CreateChaseManager(const std::string& param0, const std::string& param1, int32_t param2) {}
+void GameCommands::AddCharacter(const std::string& param0, const std::string& param1)
+{
+	Game::GetInstance().GetScriptEngine().AddCharacter(param0, param1);
+}
+void GameCommands::CreateChaseManager(const std::string& param0, const std::string& param1, int32_t param2)
+{
+	Game::GetInstance().GetScriptEngine().CreateChaseManager(param0, param1, param2);
+}
 void GameCommands::SetHitAndRunDecay(float param0) {}
 void GameCommands::SetNumChaseCars(const std::string& param0) {}
 void GameCommands::AddNPCCharacterBonusMission(const std::string& param0, const std::string& param1, const std::string& param2,
@@ -176,7 +232,10 @@ void GameCommands::SetCoinDrawable(const std::string& param0) {}
 void GameCommands::AmbientAnimationRandomize(int32_t param0, int32_t param1) {}
 void GameCommands::TurnGotoDialogOff(int32_t param0 /*= 0*/) {}
 void GameCommands::SetCompletionDialog(const std::string& param0, const std::string& param1 /*= ""*/) {}
-void GameCommands::SetMissionResetPlayerOutCar(const std::string& param0, const std::string& param1) {}
+void GameCommands::SetMissionResetPlayerOutCar(const std::string& param0, const std::string& param1)
+{
+	Game::GetInstance().GetScriptEngine().SetMissionResetPlayerOutCar(param0);
+}
 void GameCommands::SetMissionStartCameraName(const std::string& param0) {}
 void GameCommands::SetMissionStartMulticontName(const std::string& param0) {}
 void GameCommands::SetInitialWalk(const std::string& param0) {}
@@ -253,14 +312,30 @@ void GameCommands::AllowRockOut(int32_t param0 /*= 0*/) {}
 void GameCommands::ShowHUD(const std::string& param0) {}
 void GameCommands::SetGameOver(int32_t param0 /*= 0*/) {}
 void GameCommands::GoToPsScreenWhenDone(int32_t param0 /*= 0*/) {}
-void GameCommands::SetMass(float param0) {}
-void GameCommands::SetGasScale(float param0) {}
+void GameCommands::SetMass(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetMass(param0);
+}
+void GameCommands::SetGasScale(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetGasScale(param0);
+}
 void GameCommands::SetSlipGasScale(float param0) {}
 void GameCommands::SetBrakeScale(float param0) {}
-void GameCommands::SetTopSpeedKmh(float param0) {}
+void GameCommands::SetTopSpeedKmh(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetTopSpeedKmh(param0);
+}
 void GameCommands::SetMaxWheelTurnAngle(float param0) {}
 void GameCommands::SetHighSpeedSteeringDrop(float param0) {}
-void GameCommands::SetTireGrip(float param0) {}
+void GameCommands::SetTireGrip(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetTireGrip(param0);
+}
+void GameCommands::SetSuspensionLimit(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetSuspensionLimit(param0);
+}
 void GameCommands::SetNormalSteering(float param0) {}
 void GameCommands::SetSlipSteering(float param0) {}
 void GameCommands::SetEBrakeEffect(float param0) {}
@@ -269,7 +344,6 @@ void GameCommands::SetSlipEffectNoEBrake(float param0) {}
 void GameCommands::SetCMOffsetX(float param0) {}
 void GameCommands::SetCMOffsetY(float param0) {}
 void GameCommands::SetCMOffsetZ(float param0) {}
-void GameCommands::SetSuspensionLimit(float param0) {}
 void GameCommands::SetSpringK(float param0) {}
 void GameCommands::SetDamperC(float param0) {}
 void GameCommands::SetSuspensionYOffset(float param0) {}

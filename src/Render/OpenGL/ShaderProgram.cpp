@@ -2,6 +2,7 @@
 
 #include "ShaderProgram.h"
 
+#include "Core/Log.h"
 #include "Core/Math/Matrix3x3.h"
 #include "Core/Math/Matrix4x4.h"
 #include "Core/Math/Quaternion.h"
@@ -44,7 +45,7 @@ ShaderProgram::ShaderProgram(const std::string& vertexSource, const std::string&
 
 		char* infoLog = new char[infoLogLen];
 		glGetProgramInfoLog(_program, infoLogLen, &infoLogLen, infoLog);
-		std::fprintf(stderr, "ShaderProgram linking errors:\n%s\n", infoLog); // throw an exception?
+		Log::Error("ShaderProgram linking errors:\n{}", infoLog);
 		delete[] infoLog;
 
 		glDeleteProgram(_program);
@@ -146,7 +147,7 @@ GLuint ShaderProgram::createSubShader(GLenum type, const std::string& source)
 
 		char* infoLog = new char[infoLogLen];
 		glGetShaderInfoLog(shader, infoLogLen, &infoLogLen, infoLog);
-		std::fprintf(stderr, "ShaderProgram compile errors:\n%s\n", infoLog); // throw an exception?
+		Log::Error("ShaderProgram compile errors:\n{}", infoLog);
 		delete[] infoLog;
 
 		glDeleteShader(shader);

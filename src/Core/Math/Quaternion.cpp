@@ -99,7 +99,7 @@ void Quaternion::ToRotationMatrix(Matrix4x4& m) const
 
 Quaternion& Quaternion::FromRotationMatrix(const Matrix3x3& m)
 {
-	return *this; // TODO
+	return FromRotationMatrix(Matrix4x4(m));
 }
 
 Quaternion& Quaternion::FromRotationMatrix(const Matrix4x4& m)
@@ -214,7 +214,33 @@ Vector3 Quaternion::GetZAxis() const
 
 Quaternion Quaternion::MakeFromEuler(const Vector3& euler)
 {
-	return Quaternion(0, 0, 0, 1);
+	float halfX = euler.X * 0.5f;
+	float halfY = euler.Y * 0.5f;
+	float halfZ = euler.Z * 0.5f;
+
+	float cx = Math::Cos(halfX);
+	float sx = Math::Sin(halfX);
+	float cy = Math::Cos(halfY);
+	float sy = Math::Sin(halfY);
+	float cz = Math::Cos(halfZ);
+	float sz = Math::Sin(halfZ);
+
+	return Quaternion(
+		sx * cy * cz - cx * sy * sz,
+		cx * sy * cz + sx * cy * sz,
+		cx * cy * sz - sx * sy * cz,
+		cx * cy * cz + sx * sy * sz);
+}
+
+Vector3 Quaternion::Euler() const
+{
+	Matrix3x3 m;
+	ToRotationMatrix(m);
+
+	return Vector3(
+		Math::RadiansToDegrees(atan2f(m.M[1][2], m.M[2][2])),
+		Math::RadiansToDegrees(atan2f(-m.M[0][2], sqrtf(m.M[0][0] * m.M[0][0] + m.M[0][1] * m.M[0][1]))),
+		Math::RadiansToDegrees(atan2f(m.M[0][1], m.M[0][0])));
 }
 
 std::string Quaternion::ToString() const

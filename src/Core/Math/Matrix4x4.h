@@ -4,6 +4,7 @@
 
 #include "Core/Math/Matrix3x3.h"
 #include "Core/Math/Vector3.h"
+#include "Core/Math/Vector4.h"
 #include "Core/Platform.h"
 
 #include <assert.h>
@@ -54,8 +55,8 @@ public:
 	inline bool operator!=(const Matrix4x4& m) const;
 
 	/* Vector operators */
-	// FORCEINLINE Matrix4x4 operator*(const Vector3& v) const;
-	// FORCEINLINE Matrix4x4 operator*(const Vector4& v) const;
+	FORCEINLINE Vector4 operator*(const Vector4& v) const;
+	FORCEINLINE Vector3 operator*(const Vector3& v) const;
 
 	/* Row access operators */
 	inline float* operator[](std::size_t row);
@@ -199,6 +200,23 @@ inline bool Matrix4x4::operator==(const Matrix4x4& m) const
 inline bool Matrix4x4::operator!=(const Matrix4x4& m) const
 {
 	return !(*this == m);
+}
+
+FORCEINLINE Vector4 Matrix4x4::operator*(const Vector4& v) const
+{
+	return Vector4(
+		M[0][0] * v.X + M[0][1] * v.Y + M[0][2] * v.Z + M[0][3] * v.W,
+		M[1][0] * v.X + M[1][1] * v.Y + M[1][2] * v.Z + M[1][3] * v.W,
+		M[2][0] * v.X + M[2][1] * v.Y + M[2][2] * v.Z + M[2][3] * v.W,
+		M[3][0] * v.X + M[3][1] * v.Y + M[3][2] * v.Z + M[3][3] * v.W);
+}
+
+FORCEINLINE Vector3 Matrix4x4::operator*(const Vector3& v) const
+{
+	return Vector3(
+		M[0][0] * v.X + M[0][1] * v.Y + M[0][2] * v.Z + M[0][3],
+		M[1][0] * v.X + M[1][1] * v.Y + M[1][2] * v.Z + M[1][3],
+		M[2][0] * v.X + M[2][1] * v.Y + M[2][2] * v.Z + M[2][3]);
 }
 
 inline float* Matrix4x4::operator[](std::size_t row)

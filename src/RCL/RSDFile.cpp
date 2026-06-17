@@ -2,9 +2,8 @@
 
 #include "RSDFile.h"
 
+#include <Core/Log.h>
 #include <array>
-#include <fmt/format.h>
-#include <iostream>
 
 namespace Donut::RCL
 {
@@ -85,8 +84,7 @@ RSDFile::RSDFile(MemoryStream& stream)
 	_bitsPerChannel = stream.Read<uint32_t>();
 	_sampleRate = stream.Read<uint32_t>();
 
-	std::cout << fmt::format("{0}, channels:{1}, bpc:{2}, samplerate:{3}", magic, _numChannels, _bitsPerChannel, _sampleRate)
-	          << std::endl;
+	Log::Info("{} channels:{} bpc:{} samplerate:{}", magic, _numChannels, _bitsPerChannel, _sampleRate);
 
 	stream.Seek(0x800, Donut::SeekMode::Begin);
 

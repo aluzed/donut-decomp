@@ -1,7 +1,6 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
 #include <Input/Input.h>
-#include <iostream>
 
 namespace Donut
 {

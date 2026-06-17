@@ -3,8 +3,11 @@
 #pragma once
 
 #include "Core/Math/Fwd.h"
+#include "Core/Math/Vector3.h"
 
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -31,12 +34,21 @@ public:
 	~Level();
 
 	void Update(double deltatime);
-	void Draw(Matrix4x4& viewProj);
+	void Draw(Matrix4x4& viewProj, const Vector3& cameraPos = Vector3::Zero);
 	void LoadP3D(const std::string& filename);
 
 	void DynaLoadData(const std::string& dynaLoadData);
 
 	void ImGuiDebugWindow(bool* p_open) const;
+
+	class Path
+	{
+	public:
+		std::vector<Vector3> points;
+	};
+
+	Vector3 GetLocatorPosition(const std::string& name) const;
+	const std::vector<Path>& GetPaths() const { return _paths; }
 
 private:
 	void loadRegion(const std::string& filename);
@@ -52,13 +64,10 @@ private:
 
 	std::vector<std::unique_ptr<CompositeModel>> _compositeModels;
 
-	class Path
-	{
-	public:
-		std::vector<Vector3> points;
-	};
-
 	std::vector<Path> _paths;
+	std::set<std::string> _loadedRegions;
+	std::set<std::string> _loadedP3Ds;
+	std::map<std::string, Vector3> _locators;
 };
 
 } // namespace Donut

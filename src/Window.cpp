@@ -1,8 +1,8 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
 #include "Render/OpenGL/glad/glad.h"
+#include <Core/Log.h>
 #include <Window.h>
-#include <iostream>
 
 namespace Donut
 {
@@ -13,11 +13,11 @@ Window::Window(const std::string& title, const int width, const int height)
 	SDL_VERSION(&compiledVersion);
 	SDL_GetVersion(&linkedVersion);
 
-	std::clog << "Initializing SDL..." << std::endl;
-	std::clog << "SDL Version/Compiled " << uint32_t(compiledVersion.major) << "." << uint32_t(compiledVersion.minor) << "."
-	          << uint32_t(compiledVersion.patch) << std::endl;
-	std::clog << "SDL Version/Linked " << uint32_t(linkedVersion.major) << "." << uint32_t(linkedVersion.minor) << "."
-	          << uint32_t(linkedVersion.patch) << std::endl;
+	Log::Info("Initializing SDL...");
+	Log::Info("SDL Version/Compiled {}.{}.{}",
+	          uint32_t(compiledVersion.major), uint32_t(compiledVersion.minor), uint32_t(compiledVersion.patch));
+	Log::Info("SDL Version/Linked {}.{}.{}",
+	          uint32_t(linkedVersion.major), uint32_t(linkedVersion.minor), uint32_t(linkedVersion.patch));
 
 	// Initialize SDL
 	if (SDL_WasInit(0) == 0)
@@ -70,11 +70,11 @@ Window::Window(const std::string& title, const int width, const int height)
 	if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress))
 		throw std::runtime_error("Failed to initialize the OpenGL context.");
 
-	std::cout << "OpenGL version loaded: " << GLVersion.major << "." << GLVersion.minor << "\n"
-	          << "Vendor: " << glGetString(GL_VENDOR) << "\n"
-	          << "Renderer: " << glGetString(GL_RENDERER) << "\n"
-	          << "Version: " << glGetString(GL_VERSION) << "\n"
-	          << std::endl;
+	Log::Info("OpenGL version loaded: {}.{}\nVendor: {}\nRenderer: {}\nVersion: {}",
+	          GLVersion.major, GLVersion.minor,
+	          reinterpret_cast<const char*>(glGetString(GL_VENDOR)),
+	          reinterpret_cast<const char*>(glGetString(GL_RENDERER)),
+	          reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 
 	if (!GLAD_GL_VERSION_4_3)
 		throw std::runtime_error("Your OpenGL version is too low, expected 4.3 or higher.");

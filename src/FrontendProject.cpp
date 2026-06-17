@@ -1,16 +1,16 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
+#include <Core/Log.h>
 #include <Entity.h>
 #include <FrontendProject.h>
 #include <Game.h>
 #include <P3D/P3D.generated.h>
 #include <P3D/P3DFile.h>
+#include <Render/Font.h>
 #include <Render/OpenGL/GLTexture2D.h>
 #include <Render/Texture.h>
 #include <ResourceManager.h>
 #include "Core/FileSystem.h"
-#include <fmt/format.h>
-#include <iostream>
 
 namespace Donut
 {
@@ -106,11 +106,11 @@ void FrontendProject::LoadP3D(const std::string& filename)
 {
 	if (!FileSystem::exists(filename))
 	{
-		std::cout << "Frontend Project not found: " << filename << "\n";
+		Log::Info("Frontend Project not found: {}", filename);
 		return;
 	}
 
-	std::cout << "Loading Frontend Project: " << filename << "\n";
+	Log::Info("Loading Frontend Project: {}", filename);
 
 	const auto p3d = P3D::P3DFile(filename);
 	const auto& root = p3d.GetRoot();
@@ -126,9 +126,6 @@ void FrontendProject::LoadP3D(const std::string& filename)
 
 			for (const auto& page : project->GetPages())
 			{
-				if (page->GetName() != "MessageBox.pag")
-					continue;
-
 				for (const auto& layer : page->GetLayers())
 				{
 					for (const auto& group : layer->GetGroups()) { AddGroup(*group, resX, resY); }
@@ -147,7 +144,9 @@ void FrontendProject::LoadP3D(const std::string& filename)
 		}
 		case P3D::ChunkType::TextureFont:
 		{
-			auto font = P3D::TextureFont::Load(*chunk);
+			auto p3dFont = P3D::TextureFont::Load(*chunk);
+			auto font = std::make_unique<Font>(*p3dFont);
+			Game::GetInstance().GetResourceManager().AddFont(p3dFont->GetName(), std::move(font));
 			break;
 		}
 		}

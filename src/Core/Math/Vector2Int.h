@@ -28,6 +28,7 @@ struct Vector2Int
 	FORCEINLINE constexpr Vector2Int(const int scalar) noexcept;
 
 	FORCEINLINE int Length() const noexcept;
+	FORCEINLINE float LengthF() const noexcept;
 	FORCEINLINE int LengthSquared() const noexcept;
 
 	FORCEINLINE int DistanceTo(const Vector2Int& a) noexcept;
@@ -97,7 +98,12 @@ FORCEINLINE constexpr Vector2Int::Vector2Int(const int scaler) noexcept: X(scale
  */
 FORCEINLINE int Vector2Int::Length() const noexcept
 {
-	return Math::Sqrt(X * X + Y * Y);
+	return static_cast<int>(Math::Sqrt(static_cast<float>(X * X + Y * Y)));
+}
+
+FORCEINLINE float Vector2Int::LengthF() const noexcept
+{
+	return Math::Sqrt(static_cast<float>(X * X + Y * Y));
 }
 
 /**

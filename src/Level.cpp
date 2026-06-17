@@ -2,6 +2,7 @@
 
 #include "Render/imgui/imgui.h"
 #include <Core/File.h>
+#include <Core/Log.h>
 #include <Entity.h>
 #include <Game.h>
 #include <Level.h>
@@ -17,7 +18,6 @@
 #include <Render/WorldSphere.h>
 #include <ResourceManager.h>
 #include <array>
-#include <iostream>
 
 namespace Donut
 {
@@ -34,44 +34,25 @@ Level::Level()
 	_billboardBatchShader = std::make_unique<GL::ShaderProgram>(billboardBatchVertSrc, worldFragSrc);
 
 	// todo: move this into Game.cpp or something else ?
-	/*std::array<std::string, 7> carFiles {
-	    "art/cars/mrplo_v.p3d",
-	    "art/cars/carhom_v.p3d",
-	    "art/cars/krust_v.p3d",
-	    "art/cars/cDuff.p3d",
-	    "art/cars/bart_v.p3d",
-	    "art/cars/snake_v.p3d",
-	    "art/cars/wiggu_v.p3d",
-	};
-
-	float offset = 0.0f;
-	for (const auto& carFile : carFiles)
-	{
-	    if (auto car = CompositeModel::LoadP3D(carFile))
-	    {
-	        auto transform = glm::translate(Matrix(1.0f), Vector3(240 + offset, 4.6f, -160));
-	        car->SetTransform(transform);
-	        _compositeModels.push_back(std::move(car));
-	        offset += 3.0f;
-	    }
-	}*/
 }
 
 Level::~Level() = default;
 
 void Level::LoadP3D(const std::string& filename)
 {
+	if (_loadedP3Ds.find(filename) != _loadedP3Ds.end())
+		return;
+	_loadedP3Ds.insert(filename);
+
 	std::string fullpath = "./art/" + filename;
 
 	if (!FileSystem::exists(fullpath))
 	{
-		std::cout << "Level not found: " << filename << "\n";
+		Log::Warn("Level not found: {}", filename);
 		return;
 	}
 
-	std::cout << "Loading level: " << filename << "\n";
-
-	std::vector<std::unique_ptr<P3D::Locator2>> locators;
+	Log::Info("Loading level: {}", filename);
 
 	const auto p3d = P3D::P3DFile(fullpath);
 
@@ -92,11 +73,8 @@ void Level::LoadP3D(const std::string& filename)
 		case P3D::ChunkType::StaticPhysics:
 		{
 			const auto& ent = P3D::StaticPhysics::Load(*chunk);
-
-			/*auto const& volume = ent->GetCollisionObject()->GetVolume();
-			if (volume != nullptr)
-			    _worldPhysics->AddCollisionVolume(*volume);*/
-
+			if (auto const& volume = ent->GetCollisionObject()->GetVolume())
+				Game::GetInstance().GetWorldPhysics().AddCollisionVolume(*volume);
 			break;
 		}
 		case P3D::ChunkType::InstancedStaticPhysics:
@@ -185,16 +163,27 @@ void Level::LoadP3D(const std::string& filename)
 		case P3D::ChunkType::Intersect:
 		{
 			auto intersect = P3D::Intersect::Load(*chunk);
-			// _worldPhysics->AddIntersect(*intersect);
-
+			Game::GetInstance().GetWorldPhysics().AddIntersect(*intersect);
 			break;
 		}
 		case P3D::ChunkType::WorldSphere: _worldSphere = std::make_unique<WorldSphere>(*P3D::WorldSphere::Load(*chunk)); break;
-		case P3D::ChunkType::Locator2: locators.push_back(P3D::Locator2::Load(*chunk)); break;
+		case P3D::ChunkType::Locator2:
+		{
+			auto loc = P3D::Locator2::Load(*chunk);
+			const auto& triggers = loc->GetTriggers();
+			if (!triggers.empty())
+			{
+				Matrix4x4 t = triggers[0]->GetTransform();
+				Vector3 pos(t.M[3][0], t.M[3][1], t.M[3][2]);
+				std::string name = loc->GetName();
+				_locators.insert({name, pos});
+			}
+			break;
+		}
 		case P3D::ChunkType::FenceWrapper:
 		{
 			auto const& fence = P3D::FenceWrapper::Load(*chunk);
-			// _worldPhysics->AddP3DFence(*fence->GetFence());
+			Game::GetInstance().GetWorldPhysics().AddP3DFence(*fence->GetFence());
 			break;
 		}
 		case P3D::ChunkType::BillboardQuadGroup:
@@ -217,33 +206,28 @@ void Level::LoadP3D(const std::string& filename)
 
 void Level::DynaLoadData(const std::string& dynaLoadData)
 {
-	/*	std::vector<std::string> regionsLoad, regionsUnload, interiorsLoad, interiorsUnload;
+	std::vector<std::string> regionsLoad, regionsUnload;
 
-	// todo: this will probably fuck up on an invalid string
 	std::size_t prev = 0, pos;
 	while ((pos = dynaLoadData.find_first_of(";:@$", prev)) != std::string::npos)
 	{
-	    const std::string file = dynaLoadData.substr(prev, pos - prev);
-	    switch (dynaLoadData.at(pos))
-	    {
-	    case ';': regionsLoad.push_back(file); break;
-	    case ':': regionsUnload.push_back(file); break;
-	    case '@': interiorsLoad.push_back(file); break;
-	    case '$': interiorsUnload.push_back(file); break;
-	    }
+		const std::string file = dynaLoadData.substr(prev, pos - prev);
+		switch (dynaLoadData.at(pos))
+		{
+		case ';': regionsLoad.push_back(file); break;
+		case ':': regionsUnload.push_back(file); break;
+		case '@': regionsLoad.push_back(file); Log::Info("Level: load interior {}", file); break;
+		case '$': regionsUnload.push_back(file); Log::Info("Level: unload interior {}", file); break;
+		}
 
-	    prev = pos + 1;
+		prev = pos + 1;
 	}
 
-	// todo: be a right laugh to thread all this!!! stick it all in a queue etc.
-
-	// unload first
 	for (auto const& region : regionsUnload)
-	    unloadRegion(region);
+		unloadRegion(region);
 
-	// load in more shit
 	for (auto const& region : regionsLoad)
-	    loadRegion(region);*/
+		loadRegion(region);
 }
 
 void Level::ImGuiDebugWindow(bool* p_open) const
@@ -265,14 +249,29 @@ void Level::ImGuiDebugWindow(bool* p_open) const
 	ImGui::End();
 }
 
+Vector3 Level::GetLocatorPosition(const std::string& name) const
+{
+	auto it = _locators.find(name);
+	if (it != _locators.end())
+		return it->second;
+	return Vector3::Zero;
+}
+
 void Level::loadRegion(const std::string& filename)
 {
-	std::cout << "load region: " << filename << std::endl;
+	if (_loadedRegions.find(filename) != _loadedRegions.end())
+		return;
+
+	Log::Info("load region: {}", filename);
+	_loadedRegions.insert(filename);
+	LoadP3D(filename);
 }
 
 void Level::unloadRegion(const std::string& filename)
 {
-	std::cout << "unload region: " << filename << std::endl;
+	Log::Info("unload region: {}", filename);
+	_loadedRegions.erase(filename);
+	_loadedP3Ds.erase(filename);
 }
 
 void Level::Update(double deltatime)
@@ -281,10 +280,13 @@ void Level::Update(double deltatime)
 	_worldSphere->Update(deltatime);
 }
 
-void Level::Draw(Matrix4x4& viewProj)
+void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 {
 	_worldShader->Bind();
 	_worldShader->SetUniformValue("viewProj", viewProj);
+	_worldShader->SetUniformValue("fogDensity", 0.0004f);
+	_worldShader->SetUniformValue("fogColor", Vector4(0.62f, 0.78f, 1.0f, 1.0f));
+	_worldShader->SetUniformValue("cameraPos", cameraPos);
 
 	glDisable(GL_DEPTH_TEST);
 

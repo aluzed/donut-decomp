@@ -35,7 +35,7 @@ struct Vector3
 	FORCEINLINE Vector3 Normalized() const noexcept;
 	FORCEINLINE bool IsNormalized() const noexcept;
 
-	FORCEINLINE Vector3 Cross(const Vector3& a) noexcept;
+	FORCEINLINE Vector3 Cross(const Vector3& a) const noexcept;
 	FORCEINLINE float Dot(const Vector3& a) noexcept;
 	FORCEINLINE float DistanceTo(const Vector3& a) noexcept;
 	FORCEINLINE float DistanceToSquared(const Vector3& a) noexcept;
@@ -179,7 +179,7 @@ FORCEINLINE bool Vector3::IsNormalized() const noexcept
 	return squareSum == 1.0f;
 }
 
-FORCEINLINE Vector3 Vector3::Cross(const Vector3& a) noexcept
+FORCEINLINE Vector3 Vector3::Cross(const Vector3& a) const noexcept
 {
 	return Vector3((Y * a.Z) - (Z * a.Y), (Z * a.X) - (X * a.Z), (X * a.Y) - (Y * a.X));
 }

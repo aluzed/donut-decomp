@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Core/Math/Math.h"
+#include "Core/Math/Vector3.h"
 
 #include <string>
 
@@ -36,7 +37,7 @@ struct Vector4
 	FORCEINLINE Vector4 Normalized() const noexcept;
 	FORCEINLINE bool IsNormalized() const noexcept;
 
-	FORCEINLINE Vector4 Cross(const Vector4& a) noexcept;
+	FORCEINLINE Vector3 Cross(const Vector4& a) noexcept;
 	FORCEINLINE float Dot(const Vector4& a) noexcept;
 	FORCEINLINE float DistanceTo(const Vector4& a) noexcept;
 	FORCEINLINE float DistanceToSquared(const Vector4& a) noexcept;
@@ -172,6 +173,14 @@ FORCEINLINE float Vector4::Dot(const Vector4& a) noexcept
 	return X * a.X + Y * a.Y + Z * a.Z + W * a.W;
 }
 
+FORCEINLINE Vector3 Vector4::Cross(const Vector4& a) noexcept
+{
+	return Vector3(
+		Y * a.Z - Z * a.Y,
+		Z * a.X - X * a.Z,
+		X * a.Y - Y * a.X);
+}
+
 FORCEINLINE float Vector4::DistanceTo(const Vector4& a) noexcept
 {
 	return Math::Sqrt(DistanceToSquared(a));
@@ -267,7 +276,7 @@ FORCEINLINE Vector4 Vector4::operator/=(const Vector4& a)
 	X /= a.X;
 	Y /= a.Y;
 	Z /= a.Z;
-	W /= a.Z;
+	W /= a.W;
 	return *this;
 }
 
@@ -288,7 +297,7 @@ FORCEINLINE bool Vector4::operator!=(const Vector4& a) const
 
 FORCEINLINE Vector4 Vector4::operator-() const
 {
-	return Vector4(-X, -Y, -Z, -Z);
+	return Vector4(-X, -Y, -Z, -W);
 }
 
 FORCEINLINE float& Vector4::operator[](std::size_t i)

@@ -13,7 +13,6 @@ namespace Donut
 WorldSphere::WorldSphere(const P3D::WorldSphere& worldSphere): _name(worldSphere.GetName())
 {
 	auto meshes = std::unordered_map<std::string, std::unique_ptr<Mesh>>(worldSphere.GetGeometryCount());
-	auto billboards = std::unordered_map<std::string, std::unique_ptr<BillboardBatch>>(worldSphere.GetBillboardCount());
 
 	for (auto const& p3dmesh : worldSphere.GetGeometries())
 	{
@@ -22,8 +21,11 @@ WorldSphere::WorldSphere(const P3D::WorldSphere& worldSphere): _name(worldSphere
 		meshes[p3dmesh->GetName()] = std::move(mesh);
 	}
 
-	// for (auto const& billboard : worldSphere.GetBillboards())
-	//	billboards.emplace_back(std::make_unique<BillboardBatch>(*billboard));
+	for (auto const& billboardGroup : worldSphere.GetBillboards())
+	{
+		auto batch = std::make_unique<BillboardBatch>(*billboardGroup);
+		_billboardBatches.push_back(std::move(batch));
+	}
 
 	auto const& compositeDrawableList = worldSphere.GetCompositeDrawable()->GetPropList()->GetProps();
 	for (auto const& p3dprop : compositeDrawableList)
@@ -147,6 +149,9 @@ void WorldSphere::Draw(GL::ShaderProgram& shader, const Matrix4x4& viewProj, boo
 		prop.mesh->Draw(shader, opaque);
 	}
 
+	for (auto const& billboard : _billboardBatches)
+		billboard->Draw(shader, opaque);
+
 	shader.SetUniformValue("viewProj", viewProj);
 }
 
@@ -157,7 +162,7 @@ void WorldSphere::Update(double deltatime)
 	if (_animation != nullptr)
 		_skeleton->UpdatePose(*_animation, _animTime);
 
-	// Game::GetInstance().GetLineRenderer().DrawSkeleton(Vector3(0.0, 0.0, 0.0), *_skeleton);
+	Game::GetInstance().GetLineRenderer().DrawSkeleton(Vector3::Zero, *_skeleton);
 }
 
 } // namespace Donut

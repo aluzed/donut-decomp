@@ -4,6 +4,8 @@
 #include <P3D/P3DChunk.h>
 #include <P3D/P3DFile.h>
 
+#include <zlib.h>
+
 namespace Donut::P3D
 {
 
@@ -15,10 +17,36 @@ P3DFile::P3DFile(const std::string& path): _filename(path)
 	uint32_t type;
 	file.Read(&type, 1);
 
-	// cba reading the other formats
+	if (type == static_cast<uint32_t>(FileTypes::RZ))
+	{
+		const std::size_t compressedSize = file.Size() - sizeof(uint32_t);
+		std::vector<uint8_t> compressed(compressedSize);
+		file.ReadBytes(compressed.data(), compressedSize);
+
+		uLongf uncompressedSize = compressedSize * 4;
+		std::vector<uint8_t> uncompressed;
+		int ret;
+		do
+		{
+			uncompressed.resize(uncompressedSize);
+			ret = uncompress(uncompressed.data(), &uncompressedSize, compressed.data(), static_cast<uLong>(compressedSize));
+			uncompressedSize *= 2;
+		} while (ret == Z_BUF_ERROR);
+
+		if (ret != Z_OK)
+		{
+			file.Close();
+			return;
+		}
+
+		uncompressed.resize(uncompressedSize);
+		_root = std::make_unique<P3DChunk>(uncompressed);
+		file.Close();
+		return;
+	}
+
 	assert(type == static_cast<uint32_t>(FileTypes::P3D));
 
-	// rewind to the start, the file type is the root chunk type
 	file.Seek(0, FileSeekMode::Begin);
 
 	const std::size_t size = file.Size();

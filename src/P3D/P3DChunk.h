@@ -277,8 +277,6 @@ struct P3DUtil
 	static void GetDrawables(const std::unique_ptr<class SceneGraphTransform>&, std::vector<class SceneGraphDrawable*>&,
 	                         std::vector<Matrix4x4>&, const Matrix4x4&);
 
-	static std::string GetShaderTexture(const std::unique_ptr<class Shader>&);
-
 	static Vector4 ConvertColor(uint32_t v)
 	{
 		return Vector4(((v >> 16) & 255) / 255.0f, ((v >> 8) & 255) / 255.0f, ((v & 255)) / 255.0f, ((v >> 24) & 255) / 255.0f);

@@ -3,11 +3,11 @@
 #include "AnimCamera.h"
 
 #include "Core/FileSystem.h"
+#include "Core/Log.h"
+#include "Render/SkinAnimation.h"
 
 #include <P3D/P3D.generated.h>
 #include <P3D/P3DFile.h>
-#include <Render/SkinAnimation.h>
-#include <iostream>
 
 namespace Donut
 {
@@ -72,11 +72,11 @@ std::unique_ptr<AnimCamera> AnimCamera::LoadP3D(const std::string& filename)
 {
 	if (!FileSystem::exists(filename))
 	{
-		std::cout << "AnimCamera not found: " << filename << "\n";
+		Log::Info("AnimCamera not found: {}", filename);
 		return nullptr;
 	}
 
-	std::cout << "Loading AnimCamera: " << filename << "\n";
+	Log::Info("Loading AnimCamera: {}", filename);
 
 	const auto p3d = P3D::P3DFile(filename);
 	return std::make_unique<AnimCamera>(p3d.GetRoot());
@@ -85,15 +85,5 @@ std::unique_ptr<AnimCamera> AnimCamera::LoadP3D(const std::string& filename)
 Matrix4x4 AnimCamera::Update(double dt)
 {
 	return Matrix4x4::Identity;
-	// const auto& trans = _trans->Evaluate(0, (float)_time);
-	// const auto& forward = _forward->EvaluateDirection(0, (float)_time);
-	// const auto& up = Vector3(0, 1, 0);
-	// const auto& right = glm::normalize(glm::cross(up, forward));
-	// Matrix3x3 rotation(right.x, up.x, forward.x, right.y, up.y, forward.y, right.z, up.z, forward.z);
-	// auto lookAt = Quat_cast(rotation);
-
-	//_time += dt;
-
-	// return glm::toMat4(lookAt) * glm::translate(Matrix(1.0f), -Vector3(trans[3]));
 }
 } // namespace Donut

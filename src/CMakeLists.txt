@@ -4,8 +4,11 @@ file(GLOB_RECURSE DONUT_SOURCES "${CMAKE_CURRENT_LIST_DIR}/*.cpp" "${CMAKE_CURRE
 file(GLOB_RECURSE DONUT_C_SOURCES "${CMAKE_CURRENT_LIST_DIR}/*.c")
 file(GLOB_RECURSE DONUT_HEADERS "${CMAKE_CURRENT_LIST_DIR}/*.h")
 
-set(DONUT_RC ${CMAKE_SOURCE_DIR}/assets/windows/donut.rc)
-set(DONUT_MANIFEST ${CMAKE_SOURCE_DIR}/assets/windows/donut.exe.manifest)
+set(DONUT_RESOURCES "")
+if (WIN32)
+	list(APPEND DONUT_RESOURCES ${CMAKE_SOURCE_DIR}/assets/windows/donut.rc)
+	list(APPEND DONUT_RESOURCES ${CMAKE_SOURCE_DIR}/assets/windows/donut.exe.manifest)
+endif()
 
 # imgui use GLAD loader
 add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD)
@@ -39,7 +42,7 @@ if (WIN32)
 	endif()
 endif()
 
-add_executable(${PROJECT_NAME} ${DONUT_SOURCES} ${DONUT_HEADERS} ${DONUT_RC} ${DONUT_MANIFEST})
+add_executable(${PROJECT_NAME} ${DONUT_SOURCES} ${DONUT_HEADERS} ${DONUT_RESOURCES})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 
 target_link_libraries(${PROJECT_NAME}
@@ -54,6 +57,7 @@ if (UNIX)
 	target_link_libraries(${PROJECT_NAME}
 			PRIVATE
 			${CMAKE_DL_LIBS}
+			z
 		)
 endif()
 

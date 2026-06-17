@@ -8,6 +8,7 @@ out VertexData
 {
     vec2 uv;
     vec4 color;
+    vec3 worldPos;
 } outData;
 
 uniform mat4 viewProj;
@@ -16,6 +17,7 @@ void main()
 {
     outData.uv = uv;
     outData.color = color;
+    outData.worldPos = position;
 
 	gl_Position = viewProj * vec4(position, 1.0);
 }

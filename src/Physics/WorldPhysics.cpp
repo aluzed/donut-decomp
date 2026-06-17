@@ -23,7 +23,7 @@ WorldPhysics::WorldPhysics(LineRenderer* lineRenderer)
 	_debugDraw->setDebugMode(btIDebugDraw::DBG_NoDebug);
 
 	_dynamicsWorld->setDebugDrawer(_debugDraw.get());
-	_dynamicsWorld->setGravity(btVector3(0.0f, -1.0f, 0.0f));
+	_dynamicsWorld->setGravity(btVector3(0.0f, -9.8f, 0.0f));
 
 	// _char = std::make_unique<CharacterController>(this, Vector3(Vector3(229.0f, 4.5f, -182.0f)));
 }
@@ -57,10 +57,8 @@ WorldPhysics::~WorldPhysics()
 
 void WorldPhysics::Update(const float dt) const
 {
-	// _dynamicsWorld->stepSimulation(dt);
+	_dynamicsWorld->stepSimulation(dt);
 	_dynamicsWorld->debugDrawWorld();
-
-	// _char->Update(_dynamicsWorld, dt);
 }
 
 void WorldPhysics::AddIntersect(const P3D::Intersect& intersect)
@@ -164,8 +162,22 @@ void WorldPhysics::AddP3DCylinder(const P3D::CollisionCylinder& cylinder)
 {
 	const float radius = cylinder.GetRadius();
 	const float halfLength = cylinder.GetLength();
-	const Quaternion rotation = Quaternion(Vector3::Up, cylinder.GetVectors()[1].Y); // todo: not right
-	// const Quaternion rotation = glm::rotation(Vector3(0.0f, 1.0f, 0.0f), cylinder.GetVectors()[1]);
+	Vector3 cylDir = cylinder.GetVectors()[1];
+	Vector3 up(0.0f, 1.0f, 0.0f);
+	Vector3 axis = up.Cross(cylDir);
+	float axisLen = axis.Length();
+	Quaternion rotation;
+	if (axisLen > 0.0001f)
+	{
+		axis = axis.Normalized();
+		cylDir = cylDir.Normalized();
+		float angle = acosf(up.Dot(cylDir));
+		rotation = Quaternion(axis, angle);
+	}
+	else
+	{
+		rotation = Quaternion::Identity;
+	}
 
 	btConvexShape* shape = nullptr;
 	if (cylinder.GetFlatEnd() == 1)
@@ -189,32 +201,20 @@ void WorldPhysics::AddP3DCylinder(const P3D::CollisionCylinder& cylinder)
 
 void WorldPhysics::AddP3DFence(const P3D::Fence& fence)
 {
-	Vector3 start = fence.GetStart();
-	Vector3 end = fence.GetEnd();
-	Vector3 normal = fence.GetNormal();
-	Vector3 center = end + (start - end) * 0.5f;
-
-	const float length = start.DistanceTo(end);
-	const Quaternion rotation = Quaternion(Vector3::Forward, normal.X); // todo: wrong
-	// const Quaternion rotation = glm::rotation(Vector3(0.0f, 0.0f, 1.0f), normal);
-
-	// tall box, very little thickness, might turn into a plane if possible
-	const btVector3 boxHalfExtents(length / 2, 50.0f, .0125f);
-
-	auto box = new btBoxShape(boxHalfExtents);
-	const float angle = atan2f(normal.X, normal.Z);
+	auto fenceShape = new BulletFenceShape(
+		BulletCast<btVector3>(fence.GetStart()),
+		BulletCast<btVector3>(fence.GetEnd()),
+		BulletCast<btVector3>(fence.GetNormal()));
 
 	btTransform worldTransform;
 	worldTransform.setIdentity();
-	worldTransform.setOrigin(BulletCast<btVector3>(center));
-	worldTransform.setRotation(BulletCast<btQuaternion>(rotation));
+	worldTransform.setOrigin(BulletCast<btVector3>(fence.GetStart()));
 
 	auto colObj = new btCollisionObject();
-	colObj->setCollisionShape(box);
+	colObj->setCollisionShape(fenceShape);
 	colObj->setWorldTransform(worldTransform);
 
 	_dynamicsWorld->addCollisionObject(colObj);
-
 	_allocatedCollisionObjects.push_back(colObj);
 }
 

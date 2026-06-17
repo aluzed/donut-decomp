@@ -16,6 +16,17 @@ public:
 	Vector3 GetCenter() const { return _center; }
 	float GetRadius() const { return _radius; }
 
+	bool Contains(const Vector3& point) const
+	{
+		return (point - _center).LengthSquared() <= _radius * _radius;
+	}
+
+	bool Intersects(const BoundingSphere& other) const
+	{
+		float radii = _radius + other._radius;
+		return (_center - other._center).LengthSquared() <= radii * radii;
+	}
+
 private:
 	Vector3 _center;
 	float _radius;

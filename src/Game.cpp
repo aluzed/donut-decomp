@@ -10,9 +10,11 @@
 #include "FreeCamera.h"
 #include "FrontendProject.h"
 #include "Input/Input.h"
+#include "AI/TrafficManager.h"
 #include "Level.h"
 #include "P3D/P3D.generated.h"
 #include "P3D/P3DFile.h"
+#include "Physics/BulletCast.h"
 #include "Physics/WorldPhysics.h"
 #include "RCL/RCFFile.h"
 #include "RCL/RSDFile.h"
@@ -30,6 +32,7 @@
 #include "Render/imgui/imgui_markdown.h"
 #include "ResourceManager.h"
 #include "Scripting/Commands.h"
+#include "Scripting/ScriptEngine.h"
 #include "Window.h"
 
 #include <SDL.h>
@@ -96,6 +99,13 @@ Game::Game(int argc, char** argv)
 	// init sub classes
 	_audioManager = std::make_unique<AudioManager>();
 	_resourceManager = std::make_unique<ResourceManager>();
+	_scriptEngine = std::make_unique<ScriptEngine>(*this);
+
+	if (FileSystem::exists("./assets/audio/ambience/ambience.rcf"))
+		_audioManager->LoadRCF("./assets/audio/ambience/ambience.rcf");
+
+	if (FileSystem::exists("scripts/Missions/level01/M1race.con"))
+		_scriptEngine->RunFile("scripts/Missions/level01/M1race.con");
 
 	if (FileSystem::exists("./art/frontend/scrooby2/resource/fonts/font0_16.p3d"))
 	{
@@ -115,19 +125,18 @@ Game::Game(int argc, char** argv)
 	_level->LoadP3D("l1z1.p3d");
 	_level->LoadP3D("l1r1.p3d");
 	_level->LoadP3D("l1r7.p3d");
+	_level->LoadP3D("l1r2.p3d");
+	_level->LoadP3D("l1r3.p3d");
+	_level->LoadP3D("l1r4a.p3d");
+	_level->LoadP3D("l1r6.p3d");
+	_level->LoadP3D("l1z2.p3d");
+	_level->LoadP3D("l1z3.p3d");
+	_level->LoadP3D("l1z4.p3d");
+	_level->LoadP3D("l1z6.p3d");
+	_level->LoadP3D("l1z7.p3d");
 
 	_level->DynaLoadData("l1z1.p3d;l1r1.p3d;l1r7.p3d;");
-
-	// rest of the shit, load the whole world why not!!
-	// _level->LoadP3D("l1r2.p3d");
-	// _level->LoadP3D("l1r3.p3d");
-	// _level->LoadP3D("l1r4a.p3d");
-	// _level->LoadP3D("l1r6.p3d");
-	// _level->LoadP3D("l1z2.p3d");
-	// _level->LoadP3D("l1z3.p3d");
-	// _level->LoadP3D("l1z4.p3d");
-	// _level->LoadP3D("l1z6.p3d");
-	// _level->LoadP3D("l1z7.p3d");
+	_trafficManager = std::make_unique<TrafficManager>(*_level);
 
 	const auto skinVertSrc = File::ReadAll("shaders/skin.vert");
 	const auto skinFragSrc = File::ReadAll("shaders/skin.frag");
@@ -298,13 +307,100 @@ void Game::Run()
 			_camera->Move(inputForce, static_cast<float>(deltaTime));
 		}
 
+		if (_character && !_inVehicle)
+		{
+			auto& ctrl = _character->GetCharacterController();
+			auto charMove = Vector3::Zero;
+			if (Input::IsDown(Button::KeyUp))    charMove += Vector3::Forward;
+			if (Input::IsDown(Button::KeyDown))  charMove += Vector3::Backward;
+			if (Input::IsDown(Button::KeyLeft))  charMove += Vector3::Left;
+			if (Input::IsDown(Button::KeyRight)) charMove += Vector3::Right;
+
+			if (Input::JustPressed(Button::KeyE))
+			{
+				if (_scriptEngine->IsMissionActive())
+				{
+					for (auto& v : _scriptEngine->GetMissionVehicles())
+					{
+						if ((v->GetPosition() - _character->GetPosition()).Length() < 5.0f)
+						{
+							_inVehicle = true;
+							_activeVehicle = v.get();
+							Log::Info("Game: entered vehicle '{}'", v->GetName());
+							break;
+						}
+					}
+				}
+				if (!_inVehicle && ctrl.canJump())
+					ctrl.jump(btVector3(0, 0, 0));
+			}
+
+			if (charMove.LengthSquared() > 0.0f)
+			{
+				charMove.Normalize();
+				charMove *= 5.0f;
+				_character->SetRotation(Quaternion::MakeFromEuler(
+					Vector3(0, atan2f(charMove.X, charMove.Z), 0)));
+			}
+			ctrl.setWalkDirection(BulletCast<btVector3>(charMove));
+		}
+
+		if (_inVehicle && _activeVehicle)
+		{
+			if (Input::JustPressed(Button::KeyE))
+			{
+				_inVehicle = false;
+				_activeVehicle = nullptr;
+				Log::Info("Game: exited vehicle");
+			}
+			else
+			{
+				float throttle = 0, steer = 0;
+				if (Input::IsDown(Button::KeyUp))    throttle = 1.0f;
+				if (Input::IsDown(Button::KeyDown))  throttle = -0.5f;
+				if (Input::IsDown(Button::KeyLeft))  steer = -1.0f;
+				if (Input::IsDown(Button::KeyRight)) steer = 1.0f;
+				_activeVehicle->ApplyInput(throttle, steer, 0.5f);
+			}
+		}
+
 		auto cameraTransform = animCamera->Update(deltaTime * 35.0);
+
+		if (_inVehicle && _activeVehicle && !_mouseLocked)
+		{
+			auto vehPos = _activeVehicle->GetPosition();
+			auto vehRot = _activeVehicle->GetRotation();
+			Vector3 camTarget = vehPos + vehRot * Vector3(0, 1.5f, 0);
+			Vector3 camPos = camTarget + vehRot * Vector3(0, 3.0f, 12.0f);
+			_camera->SetPosition(camPos);
+			_camera->SetQuaternion(Quaternion::MakeFromEuler(Vector3(-0.2f, vehRot.Euler().Y, 0)));
+		}
+		else if (_character && !_mouseLocked)
+		{
+			auto charPos = _character->GetPosition();
+			auto rot = _character->GetRotation();
+			Vector3 camTarget = charPos + rot * Vector3(0, 1.5f, 0);
+			Vector3 camPos = camTarget + rot * Vector3(0, 3.0f, 8.0f);
+			_camera->SetPosition(camPos);
+			_camera->SetQuaternion(Quaternion::MakeFromEuler(Vector3(-0.3f, rot.Euler().Y, 0)));
+		}
 		//_camera->SetPosition(cameraTransform.Translation());
 
 		_worldPhysics->Update(static_cast<float>(deltaTime));
 
+		if (_gameState == GameState::MissionComplete)
+		{
+			_missionCompleteTimer += deltaTime;
+			if (_missionCompleteTimer > 3.0)
+			{
+				_gameState = GameState::InGame;
+				_missionCompleteTimer = 0.0;
+			}
+		}
+
 		_lineRenderer->DrawSkeleton(_character->GetPosition(), _character->GetSkeleton());
 		_level->Update(deltaTime);
+		_trafficManager->Update(deltaTime);
 
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplSDL2_NewFrame(static_cast<SDL_Window*>(*_window));
@@ -327,6 +423,20 @@ void Game::Run()
 			_audioManager->DebugGUI(&_debugAudioWindowOpen);
 
 		debugAboutMenu();
+
+		if (Input::JustPressed(Button::KeyESCAPE))
+		{
+			_gameState = (_gameState == GameState::InGame) ? GameState::Paused : GameState::InGame;
+			Log::Info("GameState: {}", static_cast<int>(_gameState));
+		}
+
+		if (_gameState == GameState::Paused)
+		{
+			ImGui::Render();
+			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+			_window->Swap();
+			continue;
+		}
 
 		ImGuiIO& io = ImGui::GetIO();
 		ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - 8.0f, io.DisplaySize.y - 8.0f), ImGuiCond_Always, ImVec2(1.0f, 1.0f));
@@ -351,18 +461,15 @@ void Game::Run()
 
 		ImGui::Render();
 
-		int viewportWidth = 0;
-		int viewportHeight = 0;
-
-		viewportWidth = (int)io.DisplaySize.x;
-		viewportHeight = (int)io.DisplaySize.y;
+		int viewportWidth = (int)io.DisplaySize.x;
+		int viewportHeight = (int)io.DisplaySize.y;
 
 		glViewport(0, 0, viewportWidth, viewportHeight);
 
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_BLEND);
 
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClearColor(0.62f, 0.78f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		_camera->SetAspectRatio(static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight));
@@ -374,12 +481,21 @@ void Game::Run()
 		if (_level != nullptr)
 			_level->Draw(viewProjection);
 
-		if (_character != nullptr)
+		if (_character != nullptr && !_inVehicle)
 			_character->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
 
 		glDisable(GL_DEPTH_TEST);
 		_lineRenderer->Flush(viewProjection);
 		glEnable(GL_DEPTH_TEST);
+
+		if (_scriptEngine->IsMissionActive())
+		{
+			for (auto& v : _scriptEngine->GetMissionVehicles())
+			{
+				v->Update(deltaTime);
+				v->Draw(viewProjection, *_skinShaderProgram, false);
+			}
+		}
 
 		Matrix4x4 proj = Matrix4x4::MakeOrtho(0.0f, viewportWidth, viewportHeight, 0.0f);
 
@@ -389,6 +505,25 @@ void Game::Run()
 			auto font = _resourceManager->GetFont("boulder_16");
 			sprites.DrawText(font, fps, Vector2(32 + 3, 32 + 3), Vector4(0.0f, 0.0f, 0.0f, 1.0f));
 			sprites.DrawText(font, fps, Vector2(32, 32), Vector4(1.0f, 1.0f, 0.0f, 1.0f));
+
+			if (_character)
+			{
+				std::string pos = fmt::format("Pos: {:.1f} {:.1f} {:.1f}",
+					_character->GetPosition().X, _character->GetPosition().Y, _character->GetPosition().Z);
+				sprites.DrawText(font, pos, Vector2(32, 52), Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+			}
+
+			if (_scriptEngine->IsMissionActive())
+			{
+				sprites.DrawText(font, "MISSION ACTIVE", Vector2(32, 72), Vector4(0.0f, 1.0f, 0.0f, 1.0f));
+			}
+
+			if (_gameState == GameState::MissionComplete)
+			{
+				sprites.DrawText(font, "STAGE COMPLETE!",
+					Vector2((viewportWidth / 2.0f) - 100, viewportHeight / 2.0f),
+					Vector4(1.0f, 0.84f, 0.0f, 1.0f));
+			}
 		}
 
 		sprites.Flush(proj);
@@ -527,7 +662,24 @@ void Game::debugDrawP3D(const P3D::P3DFile& p3d)
 		if (ImGui::TreeNode(&chunk, "%s", name.str().c_str()))
 		{
 			ImGui::TextDisabled("Type ID: %x", static_cast<uint32_t>(chunk.GetType()));
-			ImGui::TextDisabled("Data Size: %ldb", chunk.GetData().size());
+			ImGui::TextDisabled("Data Size: %zu bytes", chunk.GetData().size());
+
+			if (!chunk.GetData().empty() && ImGui::TreeNode("Data"))
+			{
+				const auto& data = chunk.GetData();
+				for (std::size_t i = 0; i < data.size(); i += 16)
+				{
+					ImGui::Text("%04zx: ", i);
+					ImGui::SameLine();
+					for (std::size_t j = 0; j < 16 && i + j < data.size(); ++j)
+					{
+						ImGui::Text("%02x ", data[i + j]);
+						ImGui::SameLine();
+					}
+					ImGui::NewLine();
+				}
+				ImGui::TreePop();
+			}
 
 			for (auto& child : chunk.GetChildren()) { self(self, *child); }
 

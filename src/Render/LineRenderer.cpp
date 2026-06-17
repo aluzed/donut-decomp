@@ -81,18 +81,18 @@ void LineRenderer::DrawLine(const Vector3& p1, const Vector3& p2, const Vector4&
 
 void LineRenderer::DrawBox(const Matrix4x4 transform, const Vector3& mins, const Vector3& maxs, const Vector4& colour)
 {
-	// DrawLine(transform * Vector4(mins.X, mins.Y, mins.Z, 1), transform * Vector4(maxs.X, mins.Y, mins.Z, 1), colour);
-	// DrawLine(transform * Vector4(maxs.X, mins.Y, mins.Z, 1), transform * Vector4(maxs.X, maxs.Y, mins.Z, 1), colour);
-	// DrawLine(transform * Vector4(maxs.X, maxs.Y, mins.Z, 1), transform * Vector4(mins.X, maxs.Y, mins.Z, 1), colour);
-	// DrawLine(transform * Vector4(mins.X, maxs.Y, mins.Z, 1), transform * Vector4(mins.X, mins.Y, mins.Z, 1), colour);
-	// DrawLine(transform * Vector4(mins.X, mins.Y, mins.Z, 1), transform * Vector4(mins.X, mins.Y, maxs.Z, 1), colour);
-	// DrawLine(transform * Vector4(maxs.X, mins.Y, mins.Z, 1), transform * Vector4(maxs.X, mins.Y, maxs.Z, 1), colour);
-	// DrawLine(transform * Vector4(maxs.X, maxs.Y, mins.Z, 1), transform * Vector4(maxs.X, maxs.Y, maxs.Z, 1), colour);
-	// DrawLine(transform * Vector4(mins.X, maxs.Y, mins.Z, 1), transform * Vector4(mins.X, maxs.Y, maxs.Z, 1), colour);
-	// DrawLine(transform * Vector4(mins.X, mins.Y, maxs.Z, 1), transform * Vector4(maxs.X, mins.Y, maxs.Z, 1), colour);
-	// DrawLine(transform * Vector4(maxs.X, mins.Y, maxs.Z, 1), transform * Vector4(maxs.X, maxs.Y, maxs.Z, 1), colour);
-	// DrawLine(transform * Vector4(maxs.X, maxs.Y, maxs.Z, 1), transform * Vector4(mins.X, maxs.Y, maxs.Z, 1), colour);
-	// DrawLine(transform * Vector4(mins.X, maxs.Y, maxs.Z, 1), transform * Vector4(mins.X, mins.Y, maxs.Z, 1), colour);
+	DrawLine(transform * Vector3(mins.X, mins.Y, mins.Z), transform * Vector3(maxs.X, mins.Y, mins.Z), colour);
+	DrawLine(transform * Vector3(maxs.X, mins.Y, mins.Z), transform * Vector3(maxs.X, maxs.Y, mins.Z), colour);
+	DrawLine(transform * Vector3(maxs.X, maxs.Y, mins.Z), transform * Vector3(mins.X, maxs.Y, mins.Z), colour);
+	DrawLine(transform * Vector3(mins.X, maxs.Y, mins.Z), transform * Vector3(mins.X, mins.Y, mins.Z), colour);
+	DrawLine(transform * Vector3(mins.X, mins.Y, mins.Z), transform * Vector3(mins.X, mins.Y, maxs.Z), colour);
+	DrawLine(transform * Vector3(maxs.X, mins.Y, mins.Z), transform * Vector3(maxs.X, mins.Y, maxs.Z), colour);
+	DrawLine(transform * Vector3(maxs.X, maxs.Y, mins.Z), transform * Vector3(maxs.X, maxs.Y, maxs.Z), colour);
+	DrawLine(transform * Vector3(mins.X, maxs.Y, mins.Z), transform * Vector3(mins.X, maxs.Y, maxs.Z), colour);
+	DrawLine(transform * Vector3(mins.X, mins.Y, maxs.Z), transform * Vector3(maxs.X, mins.Y, maxs.Z), colour);
+	DrawLine(transform * Vector3(maxs.X, mins.Y, maxs.Z), transform * Vector3(maxs.X, maxs.Y, maxs.Z), colour);
+	DrawLine(transform * Vector3(maxs.X, maxs.Y, maxs.Z), transform * Vector3(mins.X, maxs.Y, maxs.Z), colour);
+	DrawLine(transform * Vector3(mins.X, maxs.Y, maxs.Z), transform * Vector3(mins.X, mins.Y, maxs.Z), colour);
 }
 
 void LineRenderer::DrawAABBox(const Vector3& position, const Vector3& mins, const Vector3& maxs, const Vector4& colour)
@@ -119,15 +119,19 @@ void LineRenderer::DrawAABBox(const Vector3& mins, const Vector3& maxs, const Ve
 void LineRenderer::DrawBox(const Vector3& position, const Vector3& angles, const Vector3& mins, const Vector3& maxs,
                            const Vector4& colour)
 {
-	// DrawBox(position, Quaternion(Math::DegreesToRadians(angles)), mins, maxs, colour);
+	DrawBox(position,
+	        Quaternion::MakeFromEuler(Vector3(
+	            Math::DegreesToRadians(angles.X),
+	            Math::DegreesToRadians(angles.Y),
+	            Math::DegreesToRadians(angles.Z))),
+	        mins, maxs, colour);
 }
 
 void LineRenderer::DrawBox(const Vector3& position, const Quaternion& angles, const Vector3& mins, const Vector3& maxs,
                            const Vector4& colour)
 {
-	// Matrix4x4 transform = Matrix4x4::MakeTranslate(position) * angles;
-
-	DrawBox(Matrix4x4::Identity, mins, maxs, colour);
+	Matrix4x4 transform = Matrix4x4::MakeTranslate(position) * Matrix4x4(angles);
+	DrawBox(transform, mins, maxs, colour);
 }
 
 void LineRenderer::DrawSphere(const Vector3& position, float radius, int thetaSegments, int phiSegments, const Vector4& colour)

@@ -2,7 +2,7 @@
 
 #include "FrameBuffer.h"
 
-#include <iostream>
+#include <Core/Log.h>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <ThirdParty/stb_image_write.h>
@@ -294,32 +294,32 @@ bool FrameBuffer::CheckStatus()
 	}
 	case GL_FRAMEBUFFER_UNSUPPORTED:
 	{
-		std::cout << "Unsupported framebuffer format" << std::endl;
+		Log::Error("Unsupported framebuffer format");
 		return false;
 	}
 	case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
 	{
-		std::cout << "Framebuffer incomplete: missing attachment" << std::endl;
+		Log::Error("Framebuffer incomplete: missing attachment");
 		return false;
 	}
 	case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
 	{
-		std::cout << "Framebuffer incomplete: duplicate attachment" << std::endl;
+		Log::Error("Framebuffer incomplete: duplicate attachment");
 		return false;
 	}
 	case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
 	{
-		std::cout << "Framebuffer incomplete: missing draw buffer" << std::endl;
+		Log::Error("Framebuffer incomplete: missing draw buffer");
 		return false;
 	}
 	case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:
 	{
-		std::cout << "Framebuffer incomplete: missing read buffer" << std::endl;
+		Log::Error("Framebuffer incomplete: missing read buffer");
 		return false;
 	}
 	default:
 	{
-		std::cout << "Framebuffer invalid: unknown reason" << std::endl;
+		Log::Error("Framebuffer invalid: unknown reason");
 		return false;
 	}
 	}
