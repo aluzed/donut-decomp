@@ -177,6 +177,7 @@ void Level::LoadP3D(const std::string& filename)
 				Vector3 pos(t.M[3][0], t.M[3][1], t.M[3][2]);
 				std::string name = loc->GetName();
 				_locators.insert({name, pos});
+				Log::Info("Level: locator '{}' at ({:.1f}, {:.1f}, {:.1f})", name, pos.X, pos.Y, pos.Z);
 			}
 			break;
 		}

@@ -40,6 +40,10 @@ void ScriptEngine::SetMissionResetPlayerInCar(const std::string& locator)
 		_game.SetPlayerPosition(pos);
 		Log::Info("ScriptEngine: player placed at locator '{}' ({:.1f}, {:.1f}, {:.1f})", locator, pos.X, pos.Y, pos.Z);
 	}
+	else
+	{
+		Log::Warn("ScriptEngine: locator '{}' not found!", locator);
+	}
 }
 
 void ScriptEngine::SetMissionResetPlayerOutCar(const std::string& locator)
@@ -104,6 +108,9 @@ void ScriptEngine::InitLevelPlayerVehicle(const std::string& car, const std::str
                                           const std::string& role, const std::string& aiScript)
 {
 	Vector3 pos = _game.GetLevel().GetLocatorPosition(locator);
+	if (pos == Vector3::Zero)
+		Log::Warn("ScriptEngine: locator '{}' not found for vehicle '{}'!", locator, car);
+
 	Log::Info("ScriptEngine: init player vehicle '{}' at '{}' ({:.1f}, {:.1f}, {:.1f}) role='{}' ai='{}'",
 	          car, locator, pos.X, pos.Y, pos.Z, role, aiScript);
 
