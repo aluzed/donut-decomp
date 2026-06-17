@@ -639,7 +639,17 @@ void Game::Run()
 
 			if (_scriptEngine->IsMissionActive())
 			{
-				sprites.DrawText(font, "MISSION ACTIVE", Vector2(32, 72), Vector4(0.0f, 1.0f, 0.0f, 1.0f));
+				float goTimer = _scriptEngine->GetGoTimer();
+				if (goTimer > 0.0f)
+				{
+					sprites.DrawText(font, "GO!",
+						Vector2((viewportWidth / 2.0f) - 20, viewportHeight / 2.0f),
+						Vector4(0.0f, 1.0f, 0.0f, 1.0f));
+				}
+				else
+				{
+					sprites.DrawText(font, "MISSION ACTIVE", Vector2(32, 72), Vector4(0.0f, 1.0f, 0.0f, 1.0f));
+				}
 
 				const auto& objType = _scriptEngine->GetObjectiveType();
 				if (!objType.empty())

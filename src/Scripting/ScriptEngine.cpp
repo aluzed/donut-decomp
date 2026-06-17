@@ -18,6 +18,8 @@ void ScriptEngine::SelectMission(const std::string& id)
 	_currentStage = -1;
 	_zones.clear();
 	_missionVehicles.clear();
+	_goTimer = 1.5f;
+	_stageTimeRemaining = -1.0f;
 	Log::Info("ScriptEngine: mission {} started", id);
 
 	std::string scriptPath = "scripts/Missions/level01/" + id + ".con";
@@ -90,6 +92,12 @@ void ScriptEngine::SetStageTime(float seconds)
 
 void ScriptEngine::Update(double dt)
 {
+	if (_goTimer > 0.0f)
+	{
+		_goTimer -= static_cast<float>(dt);
+		return;
+	}
+
 	if (!_missionActive || _stageTimeRemaining <= 0.0f) return;
 
 	_stageTimeRemaining -= static_cast<float>(dt);
