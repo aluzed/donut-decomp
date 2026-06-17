@@ -3,6 +3,7 @@
 #include "Game.h"
 
 #include "AnimCamera.h"
+#include "Audio/SoundGenerator.h"
 #include "Audio/AudioManager.h"
 #include "Character.h"
 #include "Core/FpsTimer.h"
@@ -355,6 +356,7 @@ void Game::Run()
 							_inVehicle = true;
 							_activeVehicle = v.get();
 							Log::Info("Game: entered vehicle '{}'", v->GetName());
+							_audioManager->PlayRaw(SoundGenerator::Beep(800, 0.15f), 22050, 1, 16);
 							_scriptEngine->CloseObjective();
 							_scriptEngine->ShowStageComplete();
 							break;

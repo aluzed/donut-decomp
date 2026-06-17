@@ -33,6 +33,7 @@ public:
 
 	void SetListenerPosition(const Vector3& position, const Vector3& direction, const Vector3& up);
 	void SetVolume(float volume);
+	void PlayRaw(const std::vector<uint8_t>& pcmData, int sampleRate, int channels, int bits);
 
 	void DebugGUI(bool* open);
 

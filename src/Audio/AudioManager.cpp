@@ -135,6 +135,31 @@ void AudioManager::SetVolume(float volume)
 	alListenerf(AL_GAIN, volume);
 }
 
+void AudioManager::PlayRaw(const std::vector<uint8_t>& pcmData, int sampleRate, int channels, int bits)
+{
+	Source* src = findFreeSource();
+	if (!src) return;
+
+	if (src->buffer != 0)
+		alDeleteBuffers(1, &src->buffer);
+
+	alGenBuffers(1, &src->buffer);
+
+	ALenum format = AL_FORMAT_MONO16;
+	if (channels == 2 && bits == 16)
+		format = AL_FORMAT_STEREO16;
+	else if (channels == 1 && bits == 16)
+		format = AL_FORMAT_MONO16;
+	else if (channels == 1 && bits == 8)
+		format = AL_FORMAT_MONO8;
+
+	alBufferData(src->buffer, format, pcmData.data(), static_cast<ALsizei>(pcmData.size()), sampleRate);
+	alSourcei(src->id, AL_BUFFER, src->buffer);
+	alSourcei(src->id, AL_LOOPING, AL_FALSE);
+	alSourcePlay(src->id);
+	src->inUse = true;
+}
+
 void AudioManager::DebugGUI(bool* open)
 {
 	ImGui::SetNextWindowSize(ImVec2(330, 400), ImGuiCond_Once);

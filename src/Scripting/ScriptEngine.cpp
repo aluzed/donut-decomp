@@ -1,6 +1,8 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
 #include "ScriptEngine.h"
+#include "Audio/AudioManager.h"
+#include "Audio/SoundGenerator.h"
 #include "Core/FileSystem.h"
 #include "Core/Log.h"
 #include "Game.h"
@@ -119,6 +121,7 @@ void ScriptEngine::Update(double dt)
 	{
 		_stageTimeRemaining = 0.0f;
 		Log::Info("ScriptEngine: stage timer expired - mission failed!");
+		_game.GetAudioManager().PlayRaw(SoundGenerator::Beep(150, 0.5f), 22050, 1, 16);
 		_game.SetState(GameState::MissionFailed);
 	}
 }
@@ -231,10 +234,16 @@ void ScriptEngine::AdvanceCheckpoint()
 	{
 		_currentCheckpoint++;
 		Log::Info("ScriptEngine: checkpoint {}/{} reached!", _currentCheckpoint, _checkpoints.size());
+
+		AudioManager& audio = _game.GetAudioManager();
 		if (_currentCheckpoint >= static_cast<int>(_checkpoints.size()))
 		{
-			Log::Info("ScriptEngine: all checkpoints complete!");
+			audio.PlayRaw(SoundGenerator::Chirp(400, 1200, 0.3f), 22050, 1, 16);
 			ShowStageComplete();
+		}
+		else
+		{
+			audio.PlayRaw(SoundGenerator::Beep(600, 0.1f), 22050, 1, 16);
 		}
 	}
 }
