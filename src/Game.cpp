@@ -755,8 +755,14 @@ void Game::Run()
 			if (_gameState == GameState::MissionComplete)
 			{
 				sprites.DrawText(font, "STAGE COMPLETE!",
-					Vector2((viewportWidth / 2.0f) - 100, viewportHeight / 2.0f),
+					Vector2((viewportWidth / 2.0f) - 100, viewportHeight / 2.0f - 30),
 					Vector4(1.0f, 0.84f, 0.0f, 1.0f));
+
+				float elapsed = _scriptEngine->GetInitialStageTime() - _scriptEngine->GetStageTimeRemaining();
+				std::string stats = fmt::format("Time: {:.1f}s", elapsed);
+				sprites.DrawText(font, stats,
+					Vector2((viewportWidth / 2.0f) - 50, viewportHeight / 2.0f + 10),
+					Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 			}
 
 			if (_gameState == GameState::MissionFailed)
