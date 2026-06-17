@@ -2,9 +2,8 @@
 
 #pragma once
 
-#include "Core/Math/Fwd.h"
-#include "Core/Math/Fwd.h"
 #include "Core/Math/Vector3.h"
+#include "Core/Math/Quaternion.h"
 
 #include <memory>
 #include <vector>
@@ -13,20 +12,21 @@ namespace Donut
 {
 
 class Level;
-namespace GL { class ShaderProgram; }
+class LineRenderer;
 
 class TrafficManager
 {
 public:
-	TrafficManager(Level& level);
+	TrafficManager(Level& level, LineRenderer& lineRenderer);
 
 	void Update(double dt);
-	void Draw(const Matrix4x4& viewProj, GL::ShaderProgram& shader);
+	void Draw();
 
 private:
 	struct TrafficCar
 	{
 		Vector3 position;
+		Quaternion rotation;
 		int currentPath;
 		int currentPoint;
 		float speed;
@@ -34,6 +34,7 @@ private:
 	};
 
 	Level& _level;
+	LineRenderer& _lineRenderer;
 	std::vector<TrafficCar> _cars;
 };
 

@@ -2,14 +2,15 @@
 
 #include "AI/TrafficManager.h"
 #include "Core/Log.h"
-#include "Core/Math/Matrix4x4.h"
+#include "Core/Math/Math.h"
 #include "Level.h"
-#include "Render/OpenGL/ShaderProgram.h"
+#include "Render/LineRenderer.h"
 
 namespace Donut
 {
 
-TrafficManager::TrafficManager(Level& level): _level(level)
+TrafficManager::TrafficManager(Level& level, LineRenderer& lineRenderer)
+    : _level(level), _lineRenderer(lineRenderer)
 {
 	const auto& paths = level.GetPaths();
 	if (paths.empty())
@@ -36,6 +37,7 @@ TrafficManager::TrafficManager(Level& level): _level(level)
 		car.currentPoint = 0;
 		car.speed = 8.0f + (i * 2.0f);
 		car.color = colors[i % colors.size()];
+		car.rotation = Quaternion::Identity;
 		_cars.push_back(car);
 	}
 
@@ -65,16 +67,21 @@ void TrafficManager::Update(double dt)
 
 		dir.Normalize();
 		car.position += dir * car.speed * static_cast<float>(dt);
+
+		float yaw = atan2f(dir.X, dir.Z);
+		car.rotation = Quaternion::MakeFromEuler(Vector3(0, yaw, 0));
 	}
 }
 
-void TrafficManager::Draw(const Matrix4x4& viewProj, GL::ShaderProgram& shader)
+void TrafficManager::Draw()
 {
+	Vector3 boxMins(-0.9f, -0.3f, -2.0f);
+	Vector3 boxMaxs(0.9f, 0.9f, 2.0f);
+
 	for (const auto& car : _cars)
 	{
-		Matrix4x4 model = Matrix4x4::MakeTranslate(car.position);
-		shader.SetUniformValue("viewProj", viewProj * model);
-		shader.SetUniformValue("alphaMask", 0.0f);
+		Vector4 col(car.color.X, car.color.Y, car.color.Z, 1.0f);
+		_lineRenderer.DrawBox(car.position, car.rotation, boxMins, boxMaxs, col);
 	}
 }
 
