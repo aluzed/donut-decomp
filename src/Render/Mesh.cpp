@@ -26,11 +26,12 @@ void Mesh::CreateVertexBinding()
 	GL::ArrayElement vertexLayout[] = {
 	    GL::ArrayElement(_vertexBuffer.get(), 0, 3, GL::AE_FLOAT, vertStride, 0),
 	    GL::ArrayElement(_vertexBuffer.get(), 1, 2, GL::AE_FLOAT, vertStride, 3 * sizeof(float)),
-	    GL::ArrayElement(_vertexBuffer.get(), 2, 4, GL::AE_FLOAT, vertStride, 5 * sizeof(float)),
+	    GL::ArrayElement(_vertexBuffer.get(), 2, 2, GL::AE_FLOAT, vertStride, 5 * sizeof(float)),
+	    GL::ArrayElement(_vertexBuffer.get(), 3, 4, GL::AE_FLOAT, vertStride, 7 * sizeof(float)),
 	};
 
 	_vertexBinding = std::make_shared<GL::VertexBinding>();
-	_vertexBinding->Create(vertexLayout, 3, *_indexBuffer, GL::ElementType::AE_UINT);
+	_vertexBinding->Create(vertexLayout, 4, *_indexBuffer, GL::ElementType::AE_UINT);
 }
 
 void Mesh::CreateMeshBuffers(const P3D::Geometry& geometry)
@@ -44,15 +45,20 @@ void Mesh::CreateMeshBuffers(const P3D::Geometry& geometry)
 	{
 		auto verts = prim->GetVertices();
 		auto uvs = prim->GetUvs(0);
+		auto lightmapUVs = prim->GetUvs(1);
 		auto colors = prim->GetColors();
 		auto indices = prim->GetIndices();
 		bool hasColors = !colors.empty();
+		bool hasLightmap = !lightmapUVs.empty();
 
 		for (uint32_t i = 0; i < verts.size(); i++)
 		{
+			Vector2 lmUV = hasLightmap ? Vector2(lightmapUVs[i].X, 1.0f - lightmapUVs[i].Y)
+			                           : Vector2(uvs[i].X, 1.0f - uvs[i].Y);
 			allVerts.push_back(Vertex {
 			    verts[i],
 			    Vector2(uvs[i].X, 1.0f - uvs[i].Y),
+			    lmUV,
 			    hasColors ? P3D::P3DUtil::ConvertColor(colors[i]) : Vector4(1.0f, 1.0f, 1.0f, 1.0f),
 			});
 		}

@@ -39,7 +39,8 @@ protected:
 	{
 		Vector3 pos;
 		Vector2 uv;
-		Vector4 co0lor;
+		Vector2 lightmapUV;
+		Vector4 color;
 	};
 
 	void CreateMeshBuffers(const P3D::Geometry& geometry);

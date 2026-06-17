@@ -288,6 +288,8 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 	_worldShader->SetUniformValue("fogDensity", 0.0004f);
 	_worldShader->SetUniformValue("fogColor", Vector4(0.62f, 0.78f, 1.0f, 1.0f));
 	_worldShader->SetUniformValue("cameraPos", cameraPos);
+	_worldShader->SetUniformValue("lightmapIntensity", 0.0f);
+	_worldShader->SetUniformValue("lightmapTex", 1);
 
 	glDisable(GL_DEPTH_TEST);
 
