@@ -624,6 +624,15 @@ void Game::Run()
 					Vector4 col(0.2f, 0.6f, 1.0f, 1.0f);
 					_lineRenderer->DrawBox(v->GetPosition(), v->GetRotation(),
 						Vector3(-0.9f, -0.3f, -2.0f), Vector3(0.9f, 0.9f, 2.0f), col);
+
+					float speed = v->GetSpeedKmh();
+					if (speed > 10.0f && _inVehicle && v.get() == _activeVehicle)
+					{
+						Vector3 trailStart = v->GetPosition() + v->GetRotation() * Vector3(0, 0.2f, -2.0f);
+						Vector3 trailEnd = trailStart - v->GetRotation() * Vector3(0, 0, fminf(speed * 0.1f, 5.0f));
+						Vector4 trailCol(1.0f, speed > 80 ? 0.3f : 0.8f, 0.0f, 1.0f);
+						_lineRenderer->DrawLine(trailStart, trailEnd, trailCol);
+					}
 				}
 			}
 		}
