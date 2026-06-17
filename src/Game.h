@@ -105,12 +105,14 @@ private:
 	int _lockedMousePosX;
 	int _lockedMousePosY;
 	bool _showDebug = true;
+	float _health = 100.0f;
 
 	GameState _gameState = GameState::InGame;
 	bool _inVehicle = false;
 	Vehicle* _activeVehicle = nullptr;
 	double _missionCompleteTimer = 0.0;
 	Vector3 _smoothCamPos = Vector3::Zero;
+	Vector3 _lastSafePos = Vector3(220, 4.5f, -172);
 
 	bool _debugResourceManagerWindowOpen = false;
 	bool _debugLevelWindowOpen = false;
