@@ -98,6 +98,7 @@ void ScriptEngine::CleanupMission()
 void ScriptEngine::SetStageTime(float seconds)
 {
 	_stageTimeRemaining = seconds;
+	_initialStageTime = seconds;
 	Log::Info("ScriptEngine: stage time = {}s", seconds);
 }
 
