@@ -71,6 +71,7 @@ public:
 
 	void LockMouse(bool lockMouse);
 	void SetPlayerPosition(const Vector3& pos);
+	Vector3 GetPlayerPosition() const;
 
 	static Game& GetInstance() { return *instance; }
 

@@ -109,10 +109,13 @@ void ScriptEngine::InitLevelPlayerVehicle(const std::string& car, const std::str
 {
 	Vector3 pos = _game.GetLevel().GetLocatorPosition(locator);
 	if (pos == Vector3::Zero)
-		Log::Warn("ScriptEngine: locator '{}' not found for vehicle '{}'!", locator, car);
+	{
+		Log::Warn("ScriptEngine: locator '{}' not found, spawning vehicle near player", locator);
+		pos = _game.GetPlayerPosition() + Vector3(0, 0, 5.0f);
+	}
 
-	Log::Info("ScriptEngine: init player vehicle '{}' at '{}' ({:.1f}, {:.1f}, {:.1f}) role='{}' ai='{}'",
-	          car, locator, pos.X, pos.Y, pos.Z, role, aiScript);
+	Log::Info("ScriptEngine: init player vehicle '{}' at ({:.1f}, {:.1f}, {:.1f}) role='{}' ai='{}'",
+	          car, pos.X, pos.Y, pos.Z, role, aiScript);
 
 	auto vehicle = std::make_unique<Vehicle>(car);
 	vehicle->LoadModel("art/cars/" + car + ".p3d");
@@ -126,6 +129,12 @@ void ScriptEngine::AddStageVehicle(const std::string& car, const std::string& lo
                                    const std::string& driver)
 {
 	Vector3 pos = _game.GetLevel().GetLocatorPosition(locator);
+	if (pos == Vector3::Zero)
+	{
+		Log::Warn("ScriptEngine: locator '{}' not found, spawning '{}' near player", locator, car);
+		pos = _game.GetPlayerPosition() + Vector3(5.0f, 0, 0);
+	}
+
 	Log::Info("ScriptEngine: add stage vehicle '{}' at '{}' ({:.1f}, {:.1f}, {:.1f}) behaviour='{}' ai='{}' driver='{}'",
 	          car, locator, pos.X, pos.Y, pos.Z, behaviour, aiScript, driver);
 

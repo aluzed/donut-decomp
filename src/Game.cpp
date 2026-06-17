@@ -227,6 +227,13 @@ void Game::SetPlayerPosition(const Vector3& pos)
 	}
 }
 
+Vector3 Game::GetPlayerPosition() const
+{
+	if (_character)
+		return _character->GetPosition();
+	return Vector3::Zero;
+}
+
 std::vector<std::tuple<std::string, Vector3, std::string>> locations {
     {"Simpsons' House", Vector3(220, 3.5, -172), "l1z1.p3d;l1r1.p3d;l1r7.p3d;"},
     {"Kwik E Mart", Vector3(209, 3.6, -285), "l1z2.p3d;l1r1.p3d;l1r2.p3d;"},
