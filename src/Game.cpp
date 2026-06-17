@@ -350,6 +350,15 @@ void Game::Run()
 					ctrl.jump(btVector3(0, 0, 0));
 			}
 
+			if (Input::JustPressed(Button::KeyT) && _scriptEngine->IsMissionActive())
+			{
+				for (auto& v : _scriptEngine->GetMissionVehicles())
+				{
+					SetPlayerPosition(v->GetPosition() + Vector3(0, 2.0f, 5.0f));
+					break;
+				}
+			}
+
 			if (charMove.LengthSquared() > 0.0f)
 			{
 				charMove.Normalize();
@@ -562,7 +571,7 @@ void Game::Run()
 			}
 			else if (_gameState == GameState::InGame)
 			{
-				sprites.DrawText(font, "Arrows: Move | E: Jump/Enter car | ESC: Pause",
+				sprites.DrawText(font, "Arrows: Move | E: Jump/Enter | T: Teleport to car | 1: Debug | ESC: Pause",
 					Vector2(32, 92), Vector4(0.7f, 0.7f, 0.7f, 1.0f));
 			}
 
