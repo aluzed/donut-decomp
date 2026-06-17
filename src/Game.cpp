@@ -450,6 +450,12 @@ void Game::Run()
 			{
 				_gameState = GameState::InGame;
 				_missionCompleteTimer = 0.0;
+				_scriptEngine->CleanupMission();
+				if (_inVehicle)
+				{
+					_inVehicle = false;
+					_activeVehicle = nullptr;
+				}
 			}
 		}
 
