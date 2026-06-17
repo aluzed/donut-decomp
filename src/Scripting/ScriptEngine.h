@@ -62,6 +62,7 @@ public:
 
 	bool IsMissionActive() const { return _missionActive; }
 	float GetStageTimeRemaining() const { return _stageTimeRemaining; }
+	float GetGoTimer() const { return _goTimer; }
 	const std::string& GetObjectiveType() const { return _objectiveType; }
 	std::vector<std::unique_ptr<Vehicle>>& GetMissionVehicles() { return _missionVehicles; }
 
@@ -73,6 +74,7 @@ private:
 	std::vector<std::string> _zones;
 	int _currentStage = -1;
 	float _stageTimeRemaining = -1.0f;
+	float _goTimer = 1.5f;
 	std::vector<std::unique_ptr<Vehicle>> _missionVehicles;
 	Vehicle* _activeVehicle = nullptr;
 
