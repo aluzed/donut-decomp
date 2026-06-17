@@ -599,6 +599,16 @@ void Game::Run()
 			if (_scriptEngine->IsMissionActive())
 			{
 				sprites.DrawText(font, "MISSION ACTIVE", Vector2(32, 72), Vector4(0.0f, 1.0f, 0.0f, 1.0f));
+
+				const auto& objType = _scriptEngine->GetObjectiveType();
+				if (!objType.empty())
+				{
+					std::string objText = fmt::format("Objective: {}", objType);
+					sprites.DrawText(font, objText,
+						Vector2((viewportWidth / 2.0f) - 100, 32),
+						Vector4(1.0f, 0.84f, 0.0f, 1.0f));
+				}
+
 				float timeLeft = _scriptEngine->GetStageTimeRemaining();
 				if (timeLeft > 0.0f)
 				{

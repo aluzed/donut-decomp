@@ -62,6 +62,7 @@ public:
 
 	bool IsMissionActive() const { return _missionActive; }
 	float GetStageTimeRemaining() const { return _stageTimeRemaining; }
+	const std::string& GetObjectiveType() const { return _objectiveType; }
 	std::vector<std::unique_ptr<Vehicle>>& GetMissionVehicles() { return _missionVehicles; }
 
 private:
