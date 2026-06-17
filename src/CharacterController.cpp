@@ -145,20 +145,30 @@ void CharacterController::jump(const btVector3& dir)
 
 bool CharacterController::onGround() const
 {
-	btTransform start, end;
-	start.setIdentity();
-	end.setIdentity();
-
 	btVector3 pos = BulletCast<btVector3>(_position);
-	start.setOrigin(pos + btVector3(0, 0.1f, 0));
-	end.setOrigin(pos - btVector3(0, _stepHeight * 2.0f, 0));
+	btVector3 from = pos + btVector3(0, 0.1f, 0);
+	btVector3 to = pos - btVector3(0, _stepHeight * 2.0f, 0);
 
-	btCollisionWorld::ClosestRayResultCallback rayCallback(start.getOrigin(), end.getOrigin());
+	struct GroundRayCallback : btCollisionWorld::ClosestRayResultCallback
+	{
+		const btCollisionObject* _self;
+		GroundRayCallback(const btVector3& from, const btVector3& to, const btCollisionObject* self)
+		    : ClosestRayResultCallback(from, to), _self(self) {}
+
+		btScalar addSingleResult(btCollisionWorld::LocalRayResult& rayResult, bool normalInWorldSpace) override
+		{
+			if (rayResult.m_collisionObject == _self)
+				return 1.0f;
+			return ClosestRayResultCallback::addSingleResult(rayResult, normalInWorldSpace);
+		}
+	};
+
+	GroundRayCallback rayCallback(from, to, _physGhostObject.get());
 
 	if (_worldPhysics)
 	{
 		auto* world = _worldPhysics->GetDynamicsWorld();
-		world->rayTest(start.getOrigin(), end.getOrigin(), rayCallback);
+		world->rayTest(from, to, rayCallback);
 		return rayCallback.hasHit();
 	}
 
