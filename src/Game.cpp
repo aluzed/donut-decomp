@@ -507,10 +507,6 @@ void Game::Run()
 		if (_character != nullptr && !_inVehicle)
 			_character->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
 
-		glDisable(GL_DEPTH_TEST);
-		_lineRenderer->Flush(viewProjection);
-		glEnable(GL_DEPTH_TEST);
-
 		if (_scriptEngine->IsMissionActive())
 		{
 			for (auto& v : _scriptEngine->GetMissionVehicles())
@@ -526,6 +522,10 @@ void Game::Run()
 				}
 			}
 		}
+
+		glDisable(GL_DEPTH_TEST);
+		_lineRenderer->Flush(viewProjection);
+		glEnable(GL_DEPTH_TEST);
 
 		Matrix4x4 proj = Matrix4x4::MakeOrtho(0.0f, viewportWidth, viewportHeight, 0.0f);
 
