@@ -1,7 +1,7 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
-#include "AI/TrafficManager.h"
 #include "AI/PathGraph.h"
+#include "AI/TrafficManager.h"
 #include "Core/Log.h"
 #include "Core/Math/Math.h"
 #include "Level.h"
@@ -9,6 +9,31 @@
 
 namespace Donut
 {
+
+static float seekSteer(const Vector3& position, const Vector3& target, const Quaternion& rotation,
+                       float speed, float maxSteer)
+{
+	Vector3 desired = target - position;
+	if (desired.LengthSquared() < 0.01f) return 0.0f;
+
+	desired.Normalize();
+	Vector3 forward = rotation * Vector3::Forward;
+	float dot = forward.X * desired.X + forward.Z * desired.Z;
+	float cross = forward.X * desired.Z - forward.Z * desired.X;
+
+	float steer = cross > 0.1f ? maxSteer : cross < -0.1f ? -maxSteer : cross * maxSteer;
+	if (dot < 0.0f) steer = steer > 0 ? maxSteer : -maxSteer;
+
+	return steer;
+}
+
+static float arrivalSpeed(const Vector3& position, const Vector3& target, float maxSpeed, float slowDist)
+{
+	float dist = (target - position).Length();
+	if (dist < 0.5f) return 0.0f;
+	if (dist < slowDist) return maxSpeed * (dist / slowDist);
+	return maxSpeed;
+}
 
 TrafficManager::TrafficManager(Level& level, LineRenderer& lineRenderer, const PathGraph& graph)
     : _level(level), _lineRenderer(lineRenderer), _graph(graph)
@@ -42,6 +67,7 @@ TrafficManager::TrafficManager(Level& level, LineRenderer& lineRenderer, const P
 			car.targetNode = rand() % nodes.size();
 
 		car.speed = 6.0f + (rand() % 10) * 0.8f;
+		car.maxSpeed = car.speed;
 		car.color = colors[i % colors.size()];
 		car.rotation = Quaternion::Identity;
 		car.position = nodes[car.currentNode].position;
@@ -76,11 +102,15 @@ void TrafficManager::Update(double dt)
 			continue;
 		}
 
-		dir.Normalize();
-		car.position += dir * car.speed * static_cast<float>(dt);
+		float steer = seekSteer(car.position, target, car.rotation, car.maxSpeed, 2.5f);
+		float speed = arrivalSpeed(car.position, target, car.maxSpeed, 15.0f);
 
-		float yaw = atan2f(dir.X, dir.Z);
+		float yaw = car.rotation.Euler().Y;
+		yaw += steer * static_cast<float>(dt);
 		car.rotation = Quaternion::MakeFromEuler(Vector3(0, yaw, 0));
+
+		Vector3 forward = car.rotation * Vector3::Forward;
+		car.position += forward * speed * static_cast<float>(dt);
 	}
 }
 

@@ -29,6 +29,7 @@ private:
 		Vector3 position;
 		Quaternion rotation;
 		float speed;
+		float maxSpeed;
 		Vector3 color;
 		int currentNode;
 		int targetNode;
