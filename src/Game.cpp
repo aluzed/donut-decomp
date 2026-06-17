@@ -349,6 +349,8 @@ void Game::Run()
 							_inVehicle = true;
 							_activeVehicle = v.get();
 							Log::Info("Game: entered vehicle '{}'", v->GetName());
+							_scriptEngine->CloseObjective();
+							_scriptEngine->ShowStageComplete();
 							break;
 						}
 					}
@@ -436,7 +438,7 @@ void Game::Run()
 
 		_worldPhysics->Update(static_cast<float>(deltaTime));
 
-		if (_gameState == GameState::MissionComplete)
+		if (_gameState == GameState::MissionComplete || _gameState == GameState::MissionFailed)
 		{
 			_missionCompleteTimer += deltaTime;
 			if (_missionCompleteTimer > 3.0)
@@ -670,6 +672,13 @@ void Game::Run()
 				sprites.DrawText(font, "STAGE COMPLETE!",
 					Vector2((viewportWidth / 2.0f) - 100, viewportHeight / 2.0f),
 					Vector4(1.0f, 0.84f, 0.0f, 1.0f));
+			}
+
+			if (_gameState == GameState::MissionFailed)
+			{
+				sprites.DrawText(font, "MISSION FAILED!",
+					Vector2((viewportWidth / 2.0f) - 100, viewportHeight / 2.0f),
+					Vector4(1.0f, 0.2f, 0.2f, 1.0f));
 			}
 		}
 
