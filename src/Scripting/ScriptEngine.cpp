@@ -10,6 +10,8 @@
 #include "Scripting/Commands.h"
 #include "Vehicle.h"
 
+#include <fstream>
+
 namespace Donut
 {
 
@@ -22,6 +24,14 @@ void ScriptEngine::SelectMission(const std::string& id)
 	_missionVehicles.clear();
 	_goTimer = 1.5f;
 	_stageTimeRemaining = -1.0f;
+
+	std::ifstream saveFile("donut_save.dat");
+	if (saveFile.good())
+	{
+		saveFile >> _bestTime;
+		Log::Info("ScriptEngine: loaded best time {:.1f}s", _bestTime);
+	}
+
 	Log::Info("ScriptEngine: mission {} started", id);
 
 	std::string scriptPath = "scripts/Missions/level01/" + id + ".con";
@@ -271,7 +281,12 @@ void ScriptEngine::ShowStageComplete()
 {
 	float elapsed = _initialStageTime - _stageTimeRemaining;
 	if (elapsed < _bestTime)
+	{
 		_bestTime = elapsed;
+		std::ofstream saveFile("donut_save.dat");
+		if (saveFile.good())
+			saveFile << _bestTime;
+	}
 
 	Log::Info("ScriptEngine: stage complete! Time: {:.1f}s (Best: {:.1f}s)", elapsed, _bestTime);
 	_stageTimeRemaining = -1.0f;

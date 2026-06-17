@@ -691,6 +691,20 @@ void Game::Run()
 					Vector3 beaconBase = v->GetPosition() + Vector3(0, 1.0f, 0);
 					_lineRenderer->DrawLine(beaconBase, beaconBase + Vector3(0, 20.0f, 0),
 						Vector4(0.0f, 1.0f, 1.0f, 1.0f));
+
+					if (_inVehicle && v.get() == _activeVehicle)
+					{
+						float speed = v->GetSpeedKmh();
+						Vector3 exhaustPos = v->GetPosition() + v->GetRotation() * Vector3(-0.5f, -0.2f, -2.2f);
+						Vector3 exhaustDir = v->GetRotation() * Vector3(0, 0.1f, -0.5f);
+						for (int e = 0; e < 3; ++e)
+						{
+							Vector3 offset(rand() % 10 * 0.02f - 0.1f, rand() % 10 * 0.02f, rand() % 10 * 0.02f);
+							_lineRenderer->DrawLine(exhaustPos + offset,
+								exhaustPos + exhaustDir * (0.5f + speed * 0.02f) + offset,
+								Vector4(0.5f, 0.5f, 0.5f, 1.0f));
+						}
+					}
 				}
 			}
 		}
