@@ -699,7 +699,8 @@ void Game::Run()
 
 			if (_inVehicle)
 			{
-				sprites.DrawText(font, "DRIVING - E to exit", Vector2(32, 92), Vector4(0.5f, 0.8f, 1.0f, 1.0f));
+				sprites.DrawText(font, "Arrows: Drive | Shift: Boost | H: Horn | E: Exit",
+					Vector2(32, 92), Vector4(0.5f, 0.8f, 1.0f, 1.0f));
 				if (_activeVehicle)
 				{
 					float spd = _activeVehicle->GetSpeedKmh();
@@ -713,7 +714,7 @@ void Game::Run()
 			}
 			else if (_gameState == GameState::InGame)
 			{
-				sprites.DrawText(font, "Arrows: Move | E: Jump/Enter | ESC: Pause",
+				sprites.DrawText(font, "Arrows: Move | E: Action | M: Restart | ESC: Pause",
 					Vector2(32, 92), Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 
 				if (_character && _scriptEngine->IsMissionActive())
