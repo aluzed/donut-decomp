@@ -541,6 +541,17 @@ void Game::Run()
 			Log::Info("Game: quit from pause menu");
 		}
 
+		if (Input::JustPressed(Button::KeyM) && _gameState == GameState::InGame)
+		{
+			Log::Info("Game: restarting mission...");
+			_scriptEngine->CleanupMission();
+			if (_inVehicle) { _inVehicle = false; _activeVehicle = nullptr; }
+			if (FileSystem::exists("scripts/Missions/level01/M1race.con"))
+				_scriptEngine->RunFile("scripts/Missions/level01/M1race.con");
+			else if (FileSystem::exists("scripts/Missions/level01/m1.con"))
+				_scriptEngine->RunFile("scripts/Missions/level01/m1.con");
+		}
+
 		if (Input::JustPressed(Button::Key1))
 		{
 			_showDebug = !_showDebug;
