@@ -136,7 +136,7 @@ Game::Game(int argc, char** argv)
 	_level->LoadP3D("l1z7.p3d");
 
 	_level->DynaLoadData("l1z1.p3d;l1r1.p3d;l1r7.p3d;");
-	_trafficManager = std::make_unique<TrafficManager>(*_level);
+	_trafficManager = std::make_unique<TrafficManager>(*_level, *_lineRenderer);
 
 	const auto skinVertSrc = File::ReadAll("shaders/skin.vert");
 	const auto skinFragSrc = File::ReadAll("shaders/skin.frag");
@@ -401,6 +401,7 @@ void Game::Run()
 		_lineRenderer->DrawSkeleton(_character->GetPosition(), _character->GetSkeleton());
 		_level->Update(deltaTime);
 		_trafficManager->Update(deltaTime);
+		_trafficManager->Draw();
 
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplSDL2_NewFrame(static_cast<SDL_Window*>(*_window));
@@ -493,7 +494,14 @@ void Game::Run()
 			for (auto& v : _scriptEngine->GetMissionVehicles())
 			{
 				v->Update(deltaTime);
-				v->Draw(viewProjection, *_skinShaderProgram, false);
+				if (v->HasModel())
+					v->Draw(viewProjection, *_skinShaderProgram, false);
+				else
+				{
+					Vector4 col(0.2f, 0.6f, 1.0f, 1.0f);
+					_lineRenderer->DrawBox(v->GetPosition(), v->GetRotation(),
+						Vector3(-0.9f, -0.3f, -2.0f), Vector3(0.9f, 0.9f, 2.0f), col);
+				}
 			}
 		}
 
