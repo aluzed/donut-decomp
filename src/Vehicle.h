@@ -32,7 +32,7 @@ public:
 	void SetEngineForce(float force);
 	void SetSteeringValue(float steering);
 	void SetBrake(float brake);
-	void ApplyInput(float throttle, float steer, float brake);
+	void ApplyInput(float throttle, float steer, float brake, float boost = 1.0f);
 
 	void SetMass(float mass) { _mass = mass; }
 	void SetGasScale(float scale) { _gasScale = scale; }
