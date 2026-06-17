@@ -145,6 +145,21 @@ void Vehicle::Jump()
 	}
 }
 
+void Vehicle::DestroyPhysics(WorldPhysics& physics)
+{
+	if (_rayVehicle)
+	{
+		btRigidBody* chassis = _rayVehicle->getRigidBody();
+		if (chassis)
+			physics.GetDynamicsWorld()->removeRigidBody(chassis);
+
+		physics.GetDynamicsWorld()->removeAction(_rayVehicle.get());
+		delete chassis;
+		_rayVehicle.reset();
+		Log::Info("Vehicle: physics destroyed for '{}'", _name);
+	}
+}
+
 void Vehicle::Draw(Matrix4x4& viewProj, GL::ShaderProgram& shader, bool opaque)
 {
 	if (_model)

@@ -86,6 +86,8 @@ void ScriptEngine::CloseMission()
 
 void ScriptEngine::CleanupMission()
 {
+	for (auto& v : _missionVehicles)
+		v->DestroyPhysics(_game.GetWorldPhysics());
 	_missionVehicles.clear();
 	_activeVehicle = nullptr;
 	_objectiveType.clear();
