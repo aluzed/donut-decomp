@@ -152,6 +152,13 @@ Game::Game(int argc, char** argv)
 	_camera = std::make_unique<FreeCamera>();
 	_camera->SetPosition(Vector3(228.0f, 5.0f, -174.0f));
 	_camera->SetFOV(70.0f);
+	_gameState = GameState::Splash;
+	_missionCompleteTimer = 0.0;
+
+	_frontend = std::make_unique<FrontendProject>();
+	if (FileSystem::exists("./art/frontend/scrooby/bootup.p3d"))
+		_frontend->LoadP3D("./art/frontend/scrooby/bootup.p3d");
+
 	_camera->SetZNear(1.0f);
 	_camera->SetZFar(100000.0f);
 
@@ -270,9 +277,6 @@ void Game::Run()
 	GL::ShaderProgram& spriteShader = sprites.GetShader();
 
 	auto animCamera = AnimCamera::LoadP3D("art/missions/level01/mission0cam.p3d");
-
-	auto frontend = std::make_unique<FrontendProject>();
-	frontend->LoadP3D("art/frontend/scrooby/bootup.p3d");
 
 	Input::CaptureTextEntry(this, &Game::OnInputTextEntry);
 
@@ -475,6 +479,16 @@ void Game::Run()
 					_inVehicle = false;
 					_activeVehicle = nullptr;
 				}
+			}
+		}
+
+		if (_gameState == GameState::Splash)
+		{
+			_missionCompleteTimer += deltaTime;
+			if (_missionCompleteTimer > 2.0)
+			{
+				_gameState = GameState::InGame;
+				_missionCompleteTimer = 0.0;
 			}
 		}
 
@@ -800,7 +814,8 @@ void Game::Run()
 		}
 
 		sprites.Flush(proj);
-		// frontend->Draw(proj);
+		if (_gameState == GameState::Splash)
+			_frontend->Draw(proj);
 
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 		_window->Swap();
