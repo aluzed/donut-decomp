@@ -109,6 +109,7 @@ private:
 	bool _inVehicle = false;
 	Vehicle* _activeVehicle = nullptr;
 	double _missionCompleteTimer = 0.0;
+	Vector3 _smoothCamPos = Vector3::Zero;
 
 	bool _debugResourceManagerWindowOpen = false;
 	bool _debugLevelWindowOpen = false;

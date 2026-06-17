@@ -402,8 +402,13 @@ void Game::Run()
 			auto vehPos = _activeVehicle->GetPosition();
 			auto vehRot = _activeVehicle->GetRotation();
 			Vector3 camTarget = vehPos + vehRot * Vector3(0, 1.5f, 0);
-			Vector3 camPos = camTarget + vehRot * Vector3(0, 3.0f, 12.0f);
-			_camera->SetPosition(camPos);
+			Vector3 targetPos = camTarget + vehRot * Vector3(0, 3.0f, 12.0f);
+
+			float lerpFactor = 1.0f - exp(-8.0f * static_cast<float>(deltaTime));
+			if (_smoothCamPos == Vector3::Zero) _smoothCamPos = targetPos;
+			_smoothCamPos = _smoothCamPos + (targetPos - _smoothCamPos) * lerpFactor;
+
+			_camera->SetPosition(_smoothCamPos);
 			_camera->SetQuaternion(Quaternion::MakeFromEuler(Vector3(-0.2f, vehRot.Euler().Y, 0)));
 		}
 		else if (_character && !_mouseLocked)
@@ -411,8 +416,13 @@ void Game::Run()
 			auto charPos = _character->GetPosition();
 			auto rot = _character->GetRotation();
 			Vector3 camTarget = charPos + rot * Vector3(0, 1.5f, 0);
-			Vector3 camPos = camTarget + rot * Vector3(0, 3.0f, 8.0f);
-			_camera->SetPosition(camPos);
+			Vector3 targetPos = camTarget + rot * Vector3(0, 3.0f, 8.0f);
+
+			float lerpFactor = 1.0f - exp(-8.0f * static_cast<float>(deltaTime));
+			if (_smoothCamPos == Vector3::Zero) _smoothCamPos = targetPos;
+			_smoothCamPos = _smoothCamPos + (targetPos - _smoothCamPos) * lerpFactor;
+
+			_camera->SetPosition(_smoothCamPos);
 			_camera->SetQuaternion(Quaternion::MakeFromEuler(Vector3(-0.3f, rot.Euler().Y, 0)));
 		}
 		//_camera->SetPosition(cameraTransform.Translation());
