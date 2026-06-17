@@ -28,6 +28,7 @@ public:
 	void CloseStage();
 	void CloseMission();
 	void SetStageTime(float seconds);
+	void Update(double dt);
 
 	void AddCharacter(const std::string& name, const std::string& locator);
 	void AddNPC(const std::string& name, const std::string& locator, const std::string& type = "");
@@ -60,6 +61,7 @@ public:
 	void RunFile(const std::string& path);
 
 	bool IsMissionActive() const { return _missionActive; }
+	float GetStageTimeRemaining() const { return _stageTimeRemaining; }
 	std::vector<std::unique_ptr<Vehicle>>& GetMissionVehicles() { return _missionVehicles; }
 
 private:
@@ -69,6 +71,7 @@ private:
 	std::string _playerLocator;
 	std::vector<std::string> _zones;
 	int _currentStage = -1;
+	float _stageTimeRemaining = -1.0f;
 	std::vector<std::unique_ptr<Vehicle>> _missionVehicles;
 	Vehicle* _activeVehicle = nullptr;
 

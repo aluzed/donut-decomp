@@ -468,6 +468,7 @@ void Game::Run()
 		}
 		_level->Update(deltaTime);
 		_trafficManager->Update(deltaTime);
+		_scriptEngine->Update(deltaTime);
 		if (_showDebug)
 			_trafficManager->Draw();
 
@@ -598,6 +599,14 @@ void Game::Run()
 			if (_scriptEngine->IsMissionActive())
 			{
 				sprites.DrawText(font, "MISSION ACTIVE", Vector2(32, 72), Vector4(0.0f, 1.0f, 0.0f, 1.0f));
+				float timeLeft = _scriptEngine->GetStageTimeRemaining();
+				if (timeLeft > 0.0f)
+				{
+					std::string timerText = fmt::format("Time: {:.0f}s", timeLeft);
+					sprites.DrawText(font, timerText,
+						Vector2(viewportWidth - 130.0f, 32),
+						timeLeft < 30.0f ? Vector4(1.0f, 0.3f, 0.3f, 1.0f) : Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+				}
 			}
 
 			if (_inVehicle)

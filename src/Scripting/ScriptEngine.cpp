@@ -84,7 +84,21 @@ void ScriptEngine::CloseMission()
 
 void ScriptEngine::SetStageTime(float seconds)
 {
+	_stageTimeRemaining = seconds;
 	Log::Info("ScriptEngine: stage time = {}s", seconds);
+}
+
+void ScriptEngine::Update(double dt)
+{
+	if (!_missionActive || _stageTimeRemaining <= 0.0f) return;
+
+	_stageTimeRemaining -= static_cast<float>(dt);
+	if (_stageTimeRemaining <= 0.0f)
+	{
+		_stageTimeRemaining = 0.0f;
+		Log::Info("ScriptEngine: stage timer expired!");
+		ShowStageComplete();
+	}
 }
 
 void ScriptEngine::AddCharacter(const std::string& name, const std::string& locator)
