@@ -219,6 +219,7 @@ void ScriptEngine::AddObjective(const std::string& type)
 {
 	_objectiveType = type;
 	_currentCheckpoint = 0;
+	_currentLap = 0;
 	_checkpoints.clear();
 
 	if (type == "race")
@@ -250,13 +251,24 @@ void ScriptEngine::AdvanceCheckpoint()
 	if (_currentCheckpoint < static_cast<int>(_checkpoints.size()))
 	{
 		_currentCheckpoint++;
-		Log::Info("ScriptEngine: checkpoint {}/{} reached!", _currentCheckpoint, _checkpoints.size());
+		Log::Info("ScriptEngine: checkpoint {}/{} (lap {}/{}) reached!",
+		          _currentCheckpoint, _checkpoints.size(), _currentLap + 1, _totalLaps);
 
 		AudioManager& audio = _game.GetAudioManager();
 		if (_currentCheckpoint >= static_cast<int>(_checkpoints.size()))
 		{
-			audio.PlayRaw(SoundGenerator::Chirp(400, 1200, 0.3f), 22050, 1, 16);
-			ShowStageComplete();
+			_currentLap++;
+			if (_currentLap >= _totalLaps)
+			{
+				audio.PlayRaw(SoundGenerator::Chirp(400, 1200, 0.3f), 22050, 1, 16);
+				ShowStageComplete();
+				return;
+			}
+			else
+			{
+				_currentCheckpoint = 0;
+				audio.PlayRaw(SoundGenerator::Beep(800, 0.15f), 22050, 1, 16);
+			}
 		}
 		else
 		{
