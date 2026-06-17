@@ -500,6 +500,12 @@ void Game::Run()
 			Log::Info("GameState: {}", static_cast<int>(_gameState));
 		}
 
+		if (_gameState == GameState::Paused && Input::JustPressed(Button::KeyQ))
+		{
+			running = false;
+			Log::Info("Game: quit from pause menu");
+		}
+
 		if (Input::JustPressed(Button::Key1))
 		{
 			_showDebug = !_showDebug;
@@ -651,9 +657,12 @@ void Game::Run()
 
 			if (_gameState == GameState::Paused)
 			{
-				sprites.DrawText(font, "PAUSED - ESC to resume",
-					Vector2((viewportWidth / 2.0f) - 80, viewportHeight / 2.0f),
+				sprites.DrawText(font, "PAUSED",
+					Vector2((viewportWidth / 2.0f) - 40, viewportHeight / 2.0f - 30),
 					Vector4(1.0f, 1.0f, 0.0f, 1.0f));
+				sprites.DrawText(font, "ESC: Resume  |  Q: Quit",
+					Vector2((viewportWidth / 2.0f) - 100, viewportHeight / 2.0f + 10),
+					Vector4(0.7f, 0.7f, 0.7f, 1.0f));
 			}
 
 			if (_gameState == GameState::MissionComplete)
