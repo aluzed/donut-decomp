@@ -14,6 +14,8 @@ namespace Donut
 class Level;
 class LineRenderer;
 class PathGraph;
+class SimpleMesh;
+namespace GL { class ShaderProgram; }
 
 class TrafficManager
 {
@@ -22,6 +24,7 @@ public:
 
 	void Update(double dt);
 	void Draw();
+	void DrawSolid(SimpleMesh& carMesh, GL::ShaderProgram& shader, const Matrix4x4& viewProj);
 
 private:
 	struct TrafficCar

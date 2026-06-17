@@ -4,8 +4,11 @@
 #include "AI/TrafficManager.h"
 #include "Core/Log.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Matrix4x4.h"
 #include "Level.h"
 #include "Render/LineRenderer.h"
+#include "Render/OpenGL/ShaderProgram.h"
+#include "Render/SimpleMesh.h"
 
 namespace Donut
 {
@@ -123,6 +126,17 @@ void TrafficManager::Draw()
 	{
 		Vector4 col(car.color.X, car.color.Y, car.color.Z, 1.0f);
 		_lineRenderer.DrawBox(car.position, car.rotation, boxMins, boxMaxs, col);
+	}
+}
+
+void TrafficManager::DrawSolid(SimpleMesh& carMesh, GL::ShaderProgram& shader, const Matrix4x4& viewProj)
+{
+	for (const auto& car : _cars)
+	{
+		Vector4 col(car.color.X, car.color.Y, car.color.Z, 1.0f);
+		carMesh.Draw(shader,
+			Matrix4x4::MakeTranslate(car.position) * Matrix4x4(car.rotation),
+			viewProj, col);
 	}
 }
 

@@ -31,7 +31,8 @@ public:
 	static std::unique_ptr<SimpleMesh> CreateBox(const Vector3& halfExtents, const Vector4& color);
 	static std::unique_ptr<SimpleMesh> CreateCapsule(float radius, float height, const Vector4& color, int segments = 8);
 
-	void Draw(GL::ShaderProgram& shader, const Matrix4x4& model, const Matrix4x4& viewProj);
+	void Draw(GL::ShaderProgram& shader, const Matrix4x4& model, const Matrix4x4& viewProj,
+	          const Vector4& color);
 
 private:
 	SimpleMesh() = default;

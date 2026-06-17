@@ -560,6 +560,11 @@ void Game::Run()
 			_trafficManager->Update(deltaTime);
 			_trafficManager->Draw();
 		}
+		else
+		{
+			_trafficManager->Update(deltaTime);
+			_trafficManager->DrawSolid(*_carMesh, *_meshShader, viewProjection);
+		}
 		_scriptEngine->Update(deltaTime);
 
 		ImGui_ImplOpenGL3_NewFrame();
@@ -669,7 +674,7 @@ void Game::Run()
 			_character->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
 			_playerMesh->Draw(*_meshShader,
 				Matrix4x4::MakeTranslate(_character->GetPosition()) * Matrix4x4(_character->GetRotation()),
-				viewProjection);
+				viewProjection, Vector4(0.2f, 1.0f, 0.2f, 1.0f));
 		}
 
 		if (_scriptEngine->IsMissionActive())
@@ -683,7 +688,7 @@ void Game::Run()
 				{
 					_carMesh->Draw(*_meshShader,
 						Matrix4x4::MakeTranslate(v->GetPosition()) * Matrix4x4(v->GetRotation()),
-						viewProjection);
+						viewProjection, Vector4(0.2f, 0.5f, 1.0f, 1.0f));
 					Vector3 beaconBase = v->GetPosition() + Vector3(0, 1.0f, 0);
 					_lineRenderer->DrawLine(beaconBase, beaconBase + Vector3(0, 20.0f, 0),
 						Vector4(0.0f, 1.0f, 1.0f, 1.0f));
