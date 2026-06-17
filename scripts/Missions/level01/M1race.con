@@ -1,0 +1,24 @@
+// M1race.con - Mission 1: Street Race (Level 1, Evergreen Terrace)
+// Extracted from original game scripts (data3.cab)
+
+SelectMission("m1");
+SetMissionResetPlayerOutCar("level1_homer_start","level1_carstart");
+SetDynaLoadData("l1z1.p3d;l1r1.p3d;l1r7.p3d;");
+
+UsePedGroup(0);
+
+AddStage(1);
+	RESET_TO_HERE();
+	SetStageMessageIndex(0);
+	SetPresentationBitmap("art/frontend/dynaload/images/mis01_01.p3d");
+	SetHUDIcon("monkey");
+	AddObjective("race");
+	SetStageTime(120);
+
+	AddNPC("snake","m1_snake");
+	AddStageVehicle("snake_v","m1_snake_carstart","race","Missions/level01/M1race.con","snake");
+	AddStageWaypoint("m1_AI_path1");
+
+CloseStage();
+
+CloseMission();

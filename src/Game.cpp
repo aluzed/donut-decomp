@@ -106,6 +106,8 @@ Game::Game(int argc, char** argv)
 
 	if (FileSystem::exists("scripts/Missions/level01/M1race.con"))
 		_scriptEngine->RunFile("scripts/Missions/level01/M1race.con");
+	else if (FileSystem::exists("scripts/Missions/level01/m1.con"))
+		_scriptEngine->RunFile("scripts/Missions/level01/m1.con");
 
 	if (FileSystem::exists("./art/frontend/scrooby2/resource/fonts/font0_16.p3d"))
 	{
