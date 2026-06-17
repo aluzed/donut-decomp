@@ -103,6 +103,7 @@ private:
 	bool _mouseLocked;
 	int _lockedMousePosX;
 	int _lockedMousePosY;
+	bool _showDebug = true;
 
 	GameState _gameState = GameState::InGame;
 	bool _inVehicle = false;

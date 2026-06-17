@@ -420,10 +420,12 @@ void Game::Run()
 			}
 		}
 
-		_lineRenderer->DrawSkeleton(_character->GetPosition(), _character->GetSkeleton());
+		if (_showDebug)
+			_lineRenderer->DrawSkeleton(_character->GetPosition(), _character->GetSkeleton());
 		_level->Update(deltaTime);
 		_trafficManager->Update(deltaTime);
-		_trafficManager->Draw();
+		if (_showDebug)
+			_trafficManager->Draw();
 
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplSDL2_NewFrame(static_cast<SDL_Window*>(*_window));
@@ -451,6 +453,12 @@ void Game::Run()
 		{
 			_gameState = (_gameState == GameState::InGame) ? GameState::Paused : GameState::InGame;
 			Log::Info("GameState: {}", static_cast<int>(_gameState));
+		}
+
+		if (Input::JustPressed(Button::Key1))
+		{
+			_showDebug = !_showDebug;
+			Log::Info("Debug draw: {}", _showDebug ? "ON" : "OFF");
 		}
 
 		if (_gameState == GameState::Paused)
