@@ -25,19 +25,30 @@ TrafficManager::TrafficManager(Level& level, LineRenderer& lineRenderer)
 		Vector3(0.2f, 0.2f, 1.0f),
 		Vector3(1.0f, 1.0f, 0.2f),
 		Vector3(1.0f, 0.5f, 0.0f),
+		Vector3(0.5f, 0.0f, 0.5f),
+		Vector3(0.0f, 0.8f, 0.8f),
+		Vector3(0.8f, 0.8f, 0.8f),
 	};
 
-	for (int i = 0; i < 5 && i < static_cast<int>(paths.size()); ++i)
+	int maxCars = std::min(10, static_cast<int>(paths.size()) * 2);
+
+	for (int i = 0; i < maxCars; ++i)
 	{
-		if (paths[i].points.size() < 2) continue;
+		int pathIdx = i % paths.size();
+		const auto& path = paths[pathIdx];
+		if (path.points.size() < 2) continue;
 
 		TrafficCar car;
-		car.position = paths[i].points[0];
-		car.currentPath = i;
-		car.currentPoint = 0;
-		car.speed = 8.0f + (i * 2.0f);
+		car.currentPath = pathIdx;
+		car.currentPoint = rand() % path.points.size();
+		car.speed = 6.0f + (rand() % 10) * 0.8f;
 		car.color = colors[i % colors.size()];
 		car.rotation = Quaternion::Identity;
+
+		car.position = path.points[car.currentPoint];
+		if (car.currentPoint > 0)
+			car.position += Vector3((rand() % 100 - 50) * 0.02f, 0, (rand() % 100 - 50) * 0.02f);
+
 		_cars.push_back(car);
 	}
 
