@@ -36,6 +36,7 @@ class ScriptEngine;
 class Vehicle;
 class TrafficManager;
 class PathGraph;
+class FrontendProject;
 
 namespace P3D
 {
@@ -95,6 +96,7 @@ private:
 	std::unique_ptr<ScriptEngine> _scriptEngine;
 	std::unique_ptr<TrafficManager> _trafficManager;
 	std::unique_ptr<PathGraph> _pathGraph;
+	std::unique_ptr<FrontendProject> _frontend;
 	std::unique_ptr<P3D::P3DFile> _animP3D;
 	std::unique_ptr<P3D::P3DFile> _globalP3D;
 	std::unique_ptr<P3D::TextureFont> _textureFontP3D;
