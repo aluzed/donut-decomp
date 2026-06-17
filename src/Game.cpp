@@ -563,7 +563,6 @@ void Game::Run()
 		else
 		{
 			_trafficManager->Update(deltaTime);
-			_trafficManager->DrawSolid(*_carMesh, *_meshShader, viewProjection);
 		}
 		_scriptEngine->Update(deltaTime);
 
@@ -695,6 +694,9 @@ void Game::Run()
 				}
 			}
 		}
+
+		if (!_showDebug)
+			_trafficManager->DrawSolid(*_carMesh, *_meshShader, viewProjection);
 
 		glDisable(GL_DEPTH_TEST);
 		_lineRenderer->Flush(viewProjection);
