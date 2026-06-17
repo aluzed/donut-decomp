@@ -297,24 +297,27 @@ void Game::Run()
 			_camera->LookDelta(mouseDeltaX * 0.25f, mouseDeltaY * 0.25f);
 		}
 
-		auto inputForce = Vector3(0.0f);
-		if (Input::IsDown(Button::KeyW))
-			inputForce += Vector3::Forward;
-		if (Input::IsDown(Button::KeyS))
-			inputForce += Vector3::Backward;
-		if (Input::IsDown(Button::KeyA))
-			inputForce += Vector3::Left;
-		if (Input::IsDown(Button::KeyD))
-			inputForce += Vector3::Right;
-		if (Input::IsDown(Button::KeySPACE))
-			inputForce += Vector3::Up;
-		if (Input::IsDown(Button::KeyLCONTROL))
-			inputForce += Vector3::Down;
-		if (inputForce.LengthSquared() > 0.0f)
+		if (_mouseLocked)
 		{
-			inputForce.Normalize();
-			inputForce *= Input::IsDown(Button::KeyLSHIFT) ? 60.0f : 10.0f;
-			_camera->Move(inputForce, static_cast<float>(deltaTime));
+			auto inputForce = Vector3(0.0f);
+			if (Input::IsDown(Button::KeyW))
+				inputForce += Vector3::Forward;
+			if (Input::IsDown(Button::KeyS))
+				inputForce += Vector3::Backward;
+			if (Input::IsDown(Button::KeyA))
+				inputForce += Vector3::Left;
+			if (Input::IsDown(Button::KeyD))
+				inputForce += Vector3::Right;
+			if (Input::IsDown(Button::KeySPACE))
+				inputForce += Vector3::Up;
+			if (Input::IsDown(Button::KeyLCONTROL))
+				inputForce += Vector3::Down;
+			if (inputForce.LengthSquared() > 0.0f)
+			{
+				inputForce.Normalize();
+				inputForce *= Input::IsDown(Button::KeyLSHIFT) ? 60.0f : 10.0f;
+				_camera->Move(inputForce, static_cast<float>(deltaTime));
+			}
 		}
 
 		if (_character && !_inVehicle)
