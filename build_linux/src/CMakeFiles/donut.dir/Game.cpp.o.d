@@ -519,9 +519,10 @@ src/CMakeFiles/donut.dir/Game.cpp.o: /var/www/reverse/donut/src/Game.cpp \
  /var/www/reverse/donut/src/Render/OpenGL/glad/glad.h \
  /var/www/reverse/donut/src/Render/Texture.h \
  /var/www/reverse/donut/src/Core/Math/Vector2Int.h \
+ /var/www/reverse/donut/src/Render/SimpleMesh.h \
+ /var/www/reverse/donut/src/Render/OpenGL/IndexBuffer.h \
  /var/www/reverse/donut/src/Render/SkinModel.h \
  /var/www/reverse/donut/src/Core/Math/Vector3Int.h \
- /var/www/reverse/donut/src/Render/OpenGL/IndexBuffer.h \
  /var/www/reverse/donut/src/Render/OpenGL/TextureBuffer.h \
  /var/www/reverse/donut/src/Render/SkinAnimation.h \
  /tmp/opencode/glm/glm/glm.hpp /tmp/opencode/glm/glm/detail/_fixes.hpp \

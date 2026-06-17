@@ -95,6 +95,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/donut.dir/Render/OpenGL/glad/glad.c.o.d"
   "CMakeFiles/donut.dir/Render/Shader.cpp.o"
   "CMakeFiles/donut.dir/Render/Shader.cpp.o.d"
+  "CMakeFiles/donut.dir/Render/SimpleMesh.cpp.o"
+  "CMakeFiles/donut.dir/Render/SimpleMesh.cpp.o.d"
   "CMakeFiles/donut.dir/Render/SkinAnimation.cpp.o"
   "CMakeFiles/donut.dir/Render/SkinAnimation.cpp.o.d"
   "CMakeFiles/donut.dir/Render/SkinModel.cpp.o"

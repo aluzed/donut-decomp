@@ -1258,6 +1258,30 @@ Render/Shader.cpp.s:
 	cd /var/www/reverse/donut/build_linux && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/donut.dir/build.make src/CMakeFiles/donut.dir/Render/Shader.cpp.s
 .PHONY : Render/Shader.cpp.s
 
+Render/SimpleMesh.o: Render/SimpleMesh.cpp.o
+.PHONY : Render/SimpleMesh.o
+
+# target to build an object file
+Render/SimpleMesh.cpp.o:
+	cd /var/www/reverse/donut/build_linux && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/donut.dir/build.make src/CMakeFiles/donut.dir/Render/SimpleMesh.cpp.o
+.PHONY : Render/SimpleMesh.cpp.o
+
+Render/SimpleMesh.i: Render/SimpleMesh.cpp.i
+.PHONY : Render/SimpleMesh.i
+
+# target to preprocess a source file
+Render/SimpleMesh.cpp.i:
+	cd /var/www/reverse/donut/build_linux && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/donut.dir/build.make src/CMakeFiles/donut.dir/Render/SimpleMesh.cpp.i
+.PHONY : Render/SimpleMesh.cpp.i
+
+Render/SimpleMesh.s: Render/SimpleMesh.cpp.s
+.PHONY : Render/SimpleMesh.s
+
+# target to generate assembly for a file
+Render/SimpleMesh.cpp.s:
+	cd /var/www/reverse/donut/build_linux && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/donut.dir/build.make src/CMakeFiles/donut.dir/Render/SimpleMesh.cpp.s
+.PHONY : Render/SimpleMesh.cpp.s
+
 Render/SkinAnimation.o: Render/SkinAnimation.cpp.o
 .PHONY : Render/SkinAnimation.o
 
@@ -1888,6 +1912,9 @@ help:
 	@echo "... Render/Shader.o"
 	@echo "... Render/Shader.i"
 	@echo "... Render/Shader.s"
+	@echo "... Render/SimpleMesh.o"
+	@echo "... Render/SimpleMesh.i"
+	@echo "... Render/SimpleMesh.s"
 	@echo "... Render/SkinAnimation.o"
 	@echo "... Render/SkinAnimation.i"
 	@echo "... Render/SkinAnimation.s"
