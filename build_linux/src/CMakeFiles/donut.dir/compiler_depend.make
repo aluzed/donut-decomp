@@ -6040,6 +6040,7 @@ src/CMakeFiles/donut.dir/Game.cpp.o: /var/www/reverse/donut/src/Game.cpp \
   /var/www/reverse/donut/src/AI/TrafficManager.h \
   /var/www/reverse/donut/src/AnimCamera.h \
   /var/www/reverse/donut/src/Audio/AudioManager.h \
+  /var/www/reverse/donut/src/Audio/SoundGenerator.h \
   /var/www/reverse/donut/src/Character.h \
   /var/www/reverse/donut/src/CharacterController.h \
   /var/www/reverse/donut/src/Core/File.h \
@@ -17029,6 +17030,7 @@ src/CMakeFiles/donut.dir/Scripting/ScriptEngine.cpp.o: /var/www/reverse/donut/sr
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdarg.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h \
+  /var/www/reverse/donut/src/Audio/SoundGenerator.h \
   /var/www/reverse/donut/src/Core/File.h \
   /var/www/reverse/donut/src/Core/FileSystem.h \
   /var/www/reverse/donut/src/Core/Log.h \
@@ -19864,6 +19866,8 @@ src/CMakeFiles/donut.dir/main.cpp.o: /var/www/reverse/donut/src/main.cpp \
 /usr/include/c++/13/pstl/glue_memory_defs.h:
 
 /tmp/opencode/glm/glm/mat3x2.hpp:
+
+/var/www/reverse/donut/src/Audio/SoundGenerator.h:
 
 /tmp/opencode/glm/glm/mat2x3.hpp:
 
