@@ -214,13 +214,20 @@ void ScriptEngine::AddObjective(const std::string& type)
 	if (type == "race")
 	{
 		const auto& paths = _game.GetLevel().GetPaths();
-		int numCheckpoints = std::min(5, static_cast<int>(paths.size()));
-		for (int i = 0; i < numCheckpoints && i < static_cast<int>(paths.size()); ++i)
-		{
-			if (!paths[i].points.empty())
-				_checkpoints.push_back(paths[i].points[paths[i].points.size() / 2]);
-		}
-		Log::Info("ScriptEngine: race objective with {} checkpoints", _checkpoints.size());
+		const auto* bestPath = &paths[0];
+		for (const auto& p : paths)
+			if (p.points.size() > bestPath->points.size())
+				bestPath = &p;
+
+		int numCheckpoints = std::min(6, static_cast<int>(bestPath->points.size()));
+		int step = static_cast<int>(bestPath->points.size()) / numCheckpoints;
+		if (step < 1) step = 1;
+
+		for (int i = 0; i < numCheckpoints; ++i)
+			_checkpoints.push_back(bestPath->points[i * step]);
+
+		Log::Info("ScriptEngine: race circuit with {} checkpoints on path with {} points",
+		          _checkpoints.size(), bestPath->points.size());
 	}
 	else
 	{
@@ -262,7 +269,11 @@ void ScriptEngine::SetObjTargetVehicle(const std::string& target)
 
 void ScriptEngine::ShowStageComplete()
 {
-	Log::Info("ScriptEngine: stage complete!");
+	float elapsed = _initialStageTime - _stageTimeRemaining;
+	if (elapsed < _bestTime)
+		_bestTime = elapsed;
+
+	Log::Info("ScriptEngine: stage complete! Time: {:.1f}s (Best: {:.1f}s)", elapsed, _bestTime);
 	_stageTimeRemaining = -1.0f;
 	_game.SetState(GameState::MissionComplete);
 }

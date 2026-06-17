@@ -815,7 +815,15 @@ void Game::Run()
 				sprites.DrawText(font, stats,
 					Vector2((viewportWidth / 2.0f) - 50, viewportHeight / 2.0f + 10),
 					Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-			}
+
+				float best = _scriptEngine->GetBestTime();
+				if (best < 999.0f)
+				{
+					std::string bestText = fmt::format("Best: {:.1f}s", best);
+					sprites.DrawText(font, bestText,
+						Vector2((viewportWidth / 2.0f) - 40, viewportHeight / 2.0f + 30),
+						elapsed <= best ? Vector4(1.0f, 0.84f, 0.0f, 1.0f) : Vector4(0.5f, 0.5f, 0.5f, 1.0f));
+				}
 
 			if (_gameState == GameState::MissionFailed)
 			{

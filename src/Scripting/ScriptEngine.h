@@ -69,6 +69,7 @@ public:
 	const std::string& GetObjectiveType() const { return _objectiveType; }
 	const std::vector<Vector3>& GetCheckpoints() const { return _checkpoints; }
 	int GetCurrentCheckpoint() const { return _currentCheckpoint; }
+	float GetBestTime() const { return _bestTime; }
 	void AdvanceCheckpoint();
 	std::vector<std::unique_ptr<Vehicle>>& GetMissionVehicles() { return _missionVehicles; }
 
@@ -89,6 +90,7 @@ private:
 	std::string _objectiveTarget;
 	std::vector<Vector3> _checkpoints;
 	int _currentCheckpoint = 0;
+	float _bestTime = 999.0f;
 };
 
 } // namespace Donut
