@@ -138,4 +138,11 @@ void Vehicle::Draw(Matrix4x4& viewProj, GL::ShaderProgram& shader, bool opaque)
 		_model->Draw(shader, viewProj, _model->GetTransform(), opaque);
 }
 
+float Vehicle::GetSpeedKmh() const
+{
+	if (_rayVehicle)
+		return _rayVehicle->getCurrentSpeedKmHour();
+	return 0.0f;
+}
+
 } // namespace Donut

@@ -446,6 +446,20 @@ void Game::Run()
 			}
 		}
 
+		if (_character && _character->GetPosition().Y < -50.0f)
+		{
+			Log::Warn("Game: player fell off the map, respawning...");
+			SetPlayerPosition(Vector3(220, 4.5f, -172));
+		}
+
+		if (_activeVehicle && _inVehicle && _activeVehicle->GetPosition().Y < -50.0f)
+		{
+			Log::Warn("Game: vehicle fell off the map, exiting...");
+			_inVehicle = false;
+			_activeVehicle = nullptr;
+			SetPlayerPosition(Vector3(220, 4.5f, -172));
+		}
+
 		if (_showDebug)
 		{
 			_lineRenderer->DrawSkeleton(_character->GetPosition(), _character->GetSkeleton());
@@ -589,6 +603,13 @@ void Game::Run()
 			if (_inVehicle)
 			{
 				sprites.DrawText(font, "DRIVING - E to exit", Vector2(32, 92), Vector4(0.5f, 0.8f, 1.0f, 1.0f));
+				if (_activeVehicle)
+				{
+					std::string speedText = fmt::format("{:.0f} km/h", _activeVehicle->GetSpeedKmh());
+					sprites.DrawText(font, speedText,
+						Vector2(viewportWidth - 130.0f, viewportHeight - 50.0f),
+						Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+				}
 			}
 			else if (_gameState == GameState::InGame)
 			{

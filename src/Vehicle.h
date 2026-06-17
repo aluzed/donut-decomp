@@ -46,6 +46,7 @@ public:
 	const Quaternion& GetRotation() const { return _rotation; }
 	const std::string& GetName() const { return _name; }
 	bool HasModel() const { return _model != nullptr; }
+	float GetSpeedKmh() const;
 
 private:
 	std::string _name;
