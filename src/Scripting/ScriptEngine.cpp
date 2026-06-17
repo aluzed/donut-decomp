@@ -37,7 +37,7 @@ void ScriptEngine::SetMissionResetPlayerInCar(const std::string& locator)
 	Vector3 pos = _game.GetLevel().GetLocatorPosition(locator);
 	if (pos != Vector3::Zero)
 	{
-		_game.LoadModel("homer", "homer");
+		_game.SetPlayerPosition(pos);
 		Log::Info("ScriptEngine: player placed at locator '{}' ({:.1f}, {:.1f}, {:.1f})", locator, pos.X, pos.Y, pos.Z);
 	}
 }
@@ -45,6 +45,12 @@ void ScriptEngine::SetMissionResetPlayerInCar(const std::string& locator)
 void ScriptEngine::SetMissionResetPlayerOutCar(const std::string& locator)
 {
 	_playerLocator = locator;
+	Vector3 pos = _game.GetLevel().GetLocatorPosition(locator);
+	if (pos != Vector3::Zero)
+	{
+		_game.SetPlayerPosition(pos);
+		Log::Info("ScriptEngine: player placed (out of car) at '{}' ({:.1f}, {:.1f}, {:.1f})", locator, pos.X, pos.Y, pos.Z);
+	}
 }
 
 void ScriptEngine::SetDynaLoadData(const std::string& zones)

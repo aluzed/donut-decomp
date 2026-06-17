@@ -2,6 +2,9 @@
 
 #pragma once
 
+#include "Core/Math/Fwd.h"
+#include "Core/Math/Vector3.h"
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -67,6 +70,7 @@ public:
 	void SetState(GameState state) { _gameState = state; }
 
 	void LockMouse(bool lockMouse);
+	void SetPlayerPosition(const Vector3& pos);
 
 	static Game& GetInstance() { return *instance; }
 

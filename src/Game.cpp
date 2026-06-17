@@ -215,6 +215,16 @@ void Game::LockMouse(bool lockMouse)
 	Input::ResetMouseDelta();
 }
 
+void Game::SetPlayerPosition(const Vector3& pos)
+{
+	if (_character)
+	{
+		_character->SetPosition(pos);
+		_character->GetCharacterController().warp(BulletCast<btVector3>(pos));
+		Log::Info("Game: player teleported to ({:.1f}, {:.1f}, {:.1f})", pos.X, pos.Y, pos.Z);
+	}
+}
+
 std::vector<std::tuple<std::string, Vector3, std::string>> locations {
     {"Simpsons' House", Vector3(220, 3.5, -172), "l1z1.p3d;l1r1.p3d;l1r7.p3d;"},
     {"Kwik E Mart", Vector3(209, 3.6, -285), "l1z2.p3d;l1r1.p3d;l1r2.p3d;"},

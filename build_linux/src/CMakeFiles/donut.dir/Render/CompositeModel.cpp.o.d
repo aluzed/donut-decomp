@@ -192,6 +192,10 @@ src/CMakeFiles/donut.dir/Render/CompositeModel.cpp.o: \
  /usr/include/c++/13/bits/uniform_int_dist.h \
  /usr/include/c++/13/pstl/glue_algorithm_defs.h \
  /tmp/opencode/fmt/include/fmt/format.h /var/www/reverse/donut/src/Game.h \
+ /var/www/reverse/donut/src/Core/Math/Fwd.h \
+ /var/www/reverse/donut/src/Core/Math/Vector3.h \
+ /var/www/reverse/donut/src/Core/Math/Math.h \
+ /var/www/reverse/donut/src/Core/Platform.h /usr/include/c++/13/math.h \
  /usr/include/c++/13/vector /usr/include/c++/13/bits/stl_vector.h \
  /usr/include/c++/13/bits/stl_bvector.h \
  /usr/include/c++/13/bits/vector.tcc \
@@ -199,9 +203,6 @@ src/CMakeFiles/donut.dir/Render/CompositeModel.cpp.o: \
  /var/www/reverse/donut/src/Core/Math/Matrix4x4.h \
  /var/www/reverse/donut/src/Core/Math/Matrix3x3.h \
  /var/www/reverse/donut/src/Core/Math/Quaternion.h \
- /var/www/reverse/donut/src/Core/Math/Math.h \
- /var/www/reverse/donut/src/Core/Platform.h /usr/include/c++/13/math.h \
- /var/www/reverse/donut/src/Core/Math/Vector3.h \
  /var/www/reverse/donut/src/Core/Math/Vector4.h /usr/include/assert.h \
  /var/www/reverse/donut/src/Core/Math/Vector2.h \
  /var/www/reverse/donut/src/P3D/P3DChunk.h /usr/include/c++/13/iostream \
@@ -224,7 +225,6 @@ src/CMakeFiles/donut.dir/Render/CompositeModel.cpp.o: \
  /var/www/reverse/donut/src/Render/CompositeModel.h \
  /var/www/reverse/donut/src/Render/BillboardBatch.h \
  /var/www/reverse/donut/src/Render/Mesh.h \
- /var/www/reverse/donut/src/Core/Math/Fwd.h \
  /var/www/reverse/donut/src/Render/OpenGL/IndexBuffer.h \
  /var/www/reverse/donut/src/Render/OpenGL/glad/glad.h \
  /var/www/reverse/donut/src/Render/OpenGL/glad/khrplatform.h \

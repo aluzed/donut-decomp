@@ -152,14 +152,9 @@ src/CMakeFiles/donut.dir/Render/BillboardBatch.cpp.o: \
  /usr/include/c++/13/bits/basic_string.tcc \
  /usr/include/c++/13/bits/memory_resource.h /usr/include/c++/13/cstddef \
  /usr/include/c++/13/bits/uses_allocator_args.h \
- /var/www/reverse/donut/src/Game.h /usr/include/c++/13/vector \
- /usr/include/c++/13/bits/stl_vector.h \
- /usr/include/c++/13/bits/stl_bvector.h \
- /usr/include/c++/13/bits/vector.tcc \
- /var/www/reverse/donut/src/P3D/P3D.generated.h \
- /var/www/reverse/donut/src/Core/Math/Matrix4x4.h \
- /var/www/reverse/donut/src/Core/Math/Matrix3x3.h \
- /var/www/reverse/donut/src/Core/Math/Quaternion.h \
+ /var/www/reverse/donut/src/Game.h \
+ /var/www/reverse/donut/src/Core/Math/Fwd.h \
+ /var/www/reverse/donut/src/Core/Math/Vector3.h \
  /var/www/reverse/donut/src/Core/Math/Math.h \
  /var/www/reverse/donut/src/Core/Platform.h /usr/include/c++/13/math.h \
  /usr/include/c++/13/cmath /usr/include/math.h \
@@ -184,8 +179,14 @@ src/CMakeFiles/donut.dir/Render/BillboardBatch.cpp.o: \
  /usr/include/c++/13/tr1/modified_bessel_func.tcc \
  /usr/include/c++/13/tr1/poly_hermite.tcc \
  /usr/include/c++/13/tr1/poly_laguerre.tcc \
- /usr/include/c++/13/tr1/riemann_zeta.tcc \
- /var/www/reverse/donut/src/Core/Math/Vector3.h \
+ /usr/include/c++/13/tr1/riemann_zeta.tcc /usr/include/c++/13/vector \
+ /usr/include/c++/13/bits/stl_vector.h \
+ /usr/include/c++/13/bits/stl_bvector.h \
+ /usr/include/c++/13/bits/vector.tcc \
+ /var/www/reverse/donut/src/P3D/P3D.generated.h \
+ /var/www/reverse/donut/src/Core/Math/Matrix4x4.h \
+ /var/www/reverse/donut/src/Core/Math/Matrix3x3.h \
+ /var/www/reverse/donut/src/Core/Math/Quaternion.h \
  /var/www/reverse/donut/src/Core/Math/Vector4.h /usr/include/assert.h \
  /var/www/reverse/donut/src/Core/Math/Vector2.h \
  /var/www/reverse/donut/src/P3D/P3DChunk.h \
@@ -219,7 +220,6 @@ src/CMakeFiles/donut.dir/Render/BillboardBatch.cpp.o: \
  /var/www/reverse/donut/src/Render/OpenGL/glad/glad.h \
  /var/www/reverse/donut/src/Render/OpenGL/glad/khrplatform.h \
  /var/www/reverse/donut/src/Render/OpenGL/ShaderProgram.h \
- /var/www/reverse/donut/src/Core/Math/Fwd.h \
  /var/www/reverse/donut/src/Render/OpenGL/VertexBinding.h \
  /var/www/reverse/donut/src/Render/OpenGL/VertexBuffer.h \
  /var/www/reverse/donut/src/Render/Shader.h \
