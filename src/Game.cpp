@@ -573,6 +573,19 @@ void Game::Run()
 			{
 				sprites.DrawText(font, "Arrows: Move | E: Jump/Enter | T: Teleport to car | 1: Debug | ESC: Pause",
 					Vector2(32, 92), Vector4(0.7f, 0.7f, 0.7f, 1.0f));
+
+				if (_character && _scriptEngine->IsMissionActive())
+				{
+					for (auto& v : _scriptEngine->GetMissionVehicles())
+					{
+						if ((v->GetPosition() - _character->GetPosition()).Length() < 5.0f)
+						{
+							sprites.DrawText(font, "Press E to enter vehicle!",
+								Vector2(32, 112), Vector4(0.0f, 1.0f, 1.0f, 1.0f));
+							break;
+						}
+					}
+				}
 			}
 
 			if (_gameState == GameState::Paused)
