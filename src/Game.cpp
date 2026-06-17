@@ -10,6 +10,7 @@
 #include "FreeCamera.h"
 #include "FrontendProject.h"
 #include "Input/Input.h"
+#include "AI/PathGraph.h"
 #include "AI/TrafficManager.h"
 #include "Level.h"
 #include "P3D/P3D.generated.h"
@@ -138,7 +139,8 @@ Game::Game(int argc, char** argv)
 	_level->LoadP3D("l1z7.p3d");
 
 	_level->DynaLoadData("l1z1.p3d;l1r1.p3d;l1r7.p3d;");
-	_trafficManager = std::make_unique<TrafficManager>(*_level, *_lineRenderer);
+	_pathGraph = std::make_unique<PathGraph>(*_level);
+	_trafficManager = std::make_unique<TrafficManager>(*_level, *_lineRenderer, *_pathGraph);
 
 	const auto skinVertSrc = File::ReadAll("shaders/skin.vert");
 	const auto skinFragSrc = File::ReadAll("shaders/skin.frag");

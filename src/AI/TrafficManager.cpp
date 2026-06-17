@@ -1,6 +1,7 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
 #include "AI/TrafficManager.h"
+#include "AI/PathGraph.h"
 #include "Core/Log.h"
 #include "Core/Math/Math.h"
 #include "Level.h"
@@ -9,13 +10,13 @@
 namespace Donut
 {
 
-TrafficManager::TrafficManager(Level& level, LineRenderer& lineRenderer)
-    : _level(level), _lineRenderer(lineRenderer)
+TrafficManager::TrafficManager(Level& level, LineRenderer& lineRenderer, const PathGraph& graph)
+    : _level(level), _lineRenderer(lineRenderer), _graph(graph)
 {
-	const auto& paths = level.GetPaths();
-	if (paths.empty())
+	const auto& nodes = graph.GetNodes();
+	if (nodes.empty())
 	{
-		Log::Warn("TrafficManager: no paths available");
+		Log::Warn("TrafficManager: no graph nodes available");
 		return;
 	}
 
@@ -30,49 +31,48 @@ TrafficManager::TrafficManager(Level& level, LineRenderer& lineRenderer)
 		Vector3(0.8f, 0.8f, 0.8f),
 	};
 
-	int maxCars = std::min(10, static_cast<int>(paths.size()) * 2);
+	int maxCars = std::min(12, static_cast<int>(nodes.size()));
 
 	for (int i = 0; i < maxCars; ++i)
 	{
-		int pathIdx = i % paths.size();
-		const auto& path = paths[pathIdx];
-		if (path.points.size() < 2) continue;
-
 		TrafficCar car;
-		car.currentPath = pathIdx;
-		car.currentPoint = rand() % path.points.size();
+		car.currentNode = rand() % nodes.size();
+		car.targetNode = rand() % nodes.size();
+		while (car.targetNode == car.currentNode && nodes.size() > 1)
+			car.targetNode = rand() % nodes.size();
+
 		car.speed = 6.0f + (rand() % 10) * 0.8f;
 		car.color = colors[i % colors.size()];
 		car.rotation = Quaternion::Identity;
-
-		car.position = path.points[car.currentPoint];
-		if (car.currentPoint > 0)
-			car.position += Vector3((rand() % 100 - 50) * 0.02f, 0, (rand() % 100 - 50) * 0.02f);
-
+		car.position = nodes[car.currentNode].position;
 		_cars.push_back(car);
 	}
 
-	Log::Info("TrafficManager: spawned {} cars on {} paths", _cars.size(), paths.size());
+	Log::Info("TrafficManager: spawned {} cars on graph with {} nodes", _cars.size(), nodes.size());
 }
 
 void TrafficManager::Update(double dt)
 {
-	const auto& paths = _level.GetPaths();
+	const auto& nodes = _graph.GetNodes();
 
 	for (auto& car : _cars)
 	{
-		if (car.currentPath >= static_cast<int>(paths.size())) continue;
-		const auto& path = paths[car.currentPath];
-		if (path.points.size() < 2) continue;
+		if (car.currentNode < 0 || car.currentNode >= static_cast<int>(nodes.size()))
+			continue;
 
-		int next = (car.currentPoint + 1) % path.points.size();
-		Vector3 target = path.points[next];
+		int nextNode = _graph.GetNextNode(car.currentNode, car.targetNode);
+		if (nextNode < 0 || nextNode >= static_cast<int>(nodes.size()))
+			continue;
+
+		Vector3 target = nodes[nextNode].position;
 		Vector3 dir = target - car.position;
 		float dist = dir.Length();
 
-		if (dist < 0.5f)
+		if (dist < 1.0f)
 		{
-			car.currentPoint = next;
+			car.currentNode = nextNode;
+			if (car.currentNode == car.targetNode)
+				car.targetNode = rand() % nodes.size();
 			continue;
 		}
 
