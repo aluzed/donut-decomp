@@ -38,6 +38,9 @@ public:
 	                     const std::string& behaviour, const std::string& aiScript,
 	                     const std::string& driver = "");
 
+	void AddStageWaypoint(const std::string& path);
+	void UsePedGroup(int group);
+
 	void SetMass(float mass);
 	void SetGasScale(float scale);
 	void SetTopSpeedKmh(float speed);

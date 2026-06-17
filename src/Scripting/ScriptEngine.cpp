@@ -129,6 +129,16 @@ void ScriptEngine::SetTopSpeedKmh(float speed) { if (_activeVehicle) _activeVehi
 void ScriptEngine::SetTireGrip(float grip) { if (_activeVehicle) _activeVehicle->SetTireGrip(grip); }
 void ScriptEngine::SetSuspensionLimit(float limit) { if (_activeVehicle) _activeVehicle->SetSuspensionLimit(limit); }
 
+void ScriptEngine::AddStageWaypoint(const std::string& path)
+{
+	Log::Info("ScriptEngine: stage waypoint = '{}'", path);
+}
+
+void ScriptEngine::UsePedGroup(int group)
+{
+	Log::Info("ScriptEngine: using ped group {}", group);
+}
+
 void ScriptEngine::SetHUDIcon(const std::string& icon)
 {
 	Log::Info("ScriptEngine: HUD icon = '{}'", icon);

@@ -48,7 +48,10 @@ void GameCommands::SetDynaLoadData(const std::string& param0, const std::string&
 	if (!param1.empty())
 		Game::GetInstance().GetScriptEngine().SetDynaLoadData(param1);
 }
-void GameCommands::UsePedGroup(int32_t param0) {}
+void GameCommands::UsePedGroup(int32_t param0)
+{
+	Game::GetInstance().GetScriptEngine().UsePedGroup(param0);
+}
 void GameCommands::AddStage(const std::string& param0 /*= ""*/, const std::string& param1 /*= ""*/,
                             const std::string& param2 /*= ""*/)
 {
@@ -58,7 +61,10 @@ void GameCommands::SetPresentationBitmap(const std::string& param0)
 {
 	Game::GetInstance().GetScriptEngine().SetPresentationBitmap(param0);
 }
-void GameCommands::SetStageMessageIndex(int32_t param0, const std::string& param1 /*= ""*/) {}
+void GameCommands::SetStageMessageIndex(int32_t param0, const std::string& param1 /*= ""*/)
+{
+	Log::Info("StageMessageIndex: {} ({})", param0, param1);
+}
 void GameCommands::AddObjective(const std::string& param0, const std::string& param1 /*= ""*/,
                                 const std::string& param2 /*= ""*/)
 {
@@ -76,7 +82,10 @@ void GameCommands::CloseStage(int32_t param0 /*= 0*/)
 {
 	Game::GetInstance().GetScriptEngine().CloseStage();
 }
-void GameCommands::RESET_TO_HERE(int32_t param0 /*= 0*/) {}
+void GameCommands::RESET_TO_HERE(int32_t param0 /*= 0*/)
+{
+	Log::Info("RESET_TO_HERE: checkpoint {}", param0);
+}
 void GameCommands::SetHUDIcon(const std::string& param0)
 {
 	Game::GetInstance().GetScriptEngine().SetHUDIcon(param0);
@@ -126,7 +135,10 @@ void GameCommands::AddStageVehicle(const std::string& param0, const std::string&
 {
 	Game::GetInstance().GetScriptEngine().AddStageVehicle(param0, param1, param2, param3, param4);
 }
-void GameCommands::AddStageWaypoint(const std::string& param0) {}
+void GameCommands::AddStageWaypoint(const std::string& param0)
+{
+	Game::GetInstance().GetScriptEngine().AddStageWaypoint(param0);
+}
 void GameCommands::SetRaceLaps(int32_t param0) {}
 void GameCommands::SetDemoLoopTime(int64_t param0) {}
 void GameCommands::AddStageMusicChange(int32_t param0 /*= 0*/) {}
