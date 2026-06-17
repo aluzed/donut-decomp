@@ -33,12 +33,12 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 {
 	SetPosition(position);
 
-	btVector3 pos = BulletCast<btVector3>(position + Vector3(0, 2.0f, 0));
+	btVector3 pos = BulletCast<btVector3>(position + Vector3(0, 1.5f, 0));
 
-	btCollisionShape* chassisShape = new btBoxShape(btVector3(1.0f, 0.4f, 2.5f));
+	btCollisionShape* chassisShape = new btBoxShape(btVector3(0.9f, 0.4f, 2.2f));
 	btDefaultMotionState* motionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), pos));
 
-	btScalar mass = 1500.0f;
+	btScalar mass = 1200.0f;
 	btVector3 inertia(0, 0, 0);
 	chassisShape->calculateLocalInertia(mass, inertia);
 
@@ -47,9 +47,9 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 	btVehicleRaycaster* raycaster = new btDefaultVehicleRaycaster(physics.GetDynamicsWorld());
 
 	btRaycastVehicle::btVehicleTuning tuning;
-	tuning.m_suspensionStiffness = 20.0f;
+	tuning.m_suspensionStiffness = 30.0f;
 	tuning.m_suspensionCompression = 4.4f;
-	tuning.m_suspensionDamping = 2.3f;
+	tuning.m_suspensionDamping = 2.8f;
 	tuning.m_maxSuspensionTravelCm = 500.0f;
 	tuning.m_frictionSlip = 10.5f;
 
@@ -58,13 +58,13 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 
 	btVector3 wheelDirection(0, -1, 0);
 	btVector3 wheelAxle(-1, 0, 0);
-	btScalar wheelRadius = 0.6f;
-	btScalar suspensionRestLength = 0.4f;
+	btScalar wheelRadius = 0.4f;
+	btScalar suspensionRestLength = 0.2f;
 
-	_rayVehicle->addWheel(btVector3(-0.9f, 0.0f,  1.5f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, true);
-	_rayVehicle->addWheel(btVector3( 0.9f, 0.0f,  1.5f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, true);
-	_rayVehicle->addWheel(btVector3(-0.9f, 0.0f, -1.5f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, false);
-	_rayVehicle->addWheel(btVector3( 0.9f, 0.0f, -1.5f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, false);
+	_rayVehicle->addWheel(btVector3(-0.8f, 0.0f,  1.8f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, true);
+	_rayVehicle->addWheel(btVector3( 0.8f, 0.0f,  1.8f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, true);
+	_rayVehicle->addWheel(btVector3(-0.8f, 0.0f, -1.8f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, false);
+	_rayVehicle->addWheel(btVector3( 0.8f, 0.0f, -1.8f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, false);
 
 	physics.GetDynamicsWorld()->addRigidBody(chassis);
 	physics.GetDynamicsWorld()->addAction(_rayVehicle.get());
