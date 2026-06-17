@@ -205,7 +205,38 @@ void ScriptEngine::SetHUDIcon(const std::string& icon)
 void ScriptEngine::AddObjective(const std::string& type)
 {
 	_objectiveType = type;
-	Log::Info("ScriptEngine: objective type = '{}'", type);
+	_currentCheckpoint = 0;
+	_checkpoints.clear();
+
+	if (type == "race")
+	{
+		const auto& paths = _game.GetLevel().GetPaths();
+		int numCheckpoints = std::min(5, static_cast<int>(paths.size()));
+		for (int i = 0; i < numCheckpoints && i < static_cast<int>(paths.size()); ++i)
+		{
+			if (!paths[i].points.empty())
+				_checkpoints.push_back(paths[i].points[paths[i].points.size() / 2]);
+		}
+		Log::Info("ScriptEngine: race objective with {} checkpoints", _checkpoints.size());
+	}
+	else
+	{
+		Log::Info("ScriptEngine: objective type = '{}'", type);
+	}
+}
+
+void ScriptEngine::AdvanceCheckpoint()
+{
+	if (_currentCheckpoint < static_cast<int>(_checkpoints.size()))
+	{
+		_currentCheckpoint++;
+		Log::Info("ScriptEngine: checkpoint {}/{} reached!", _currentCheckpoint, _checkpoints.size());
+		if (_currentCheckpoint >= static_cast<int>(_checkpoints.size()))
+		{
+			Log::Info("ScriptEngine: all checkpoints complete!");
+			ShowStageComplete();
+		}
+	}
 }
 
 void ScriptEngine::CloseObjective()
