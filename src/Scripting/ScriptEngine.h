@@ -2,10 +2,11 @@
 
 #pragma once
 
+#include "Core/Math/Vector3.h"
+#include "Vehicle.h"
+
 #include <string>
 #include <vector>
-
-#include "Vehicle.h"
 
 namespace Donut
 {
@@ -66,6 +67,9 @@ public:
 	float GetInitialStageTime() const { return _initialStageTime; }
 	float GetGoTimer() const { return _goTimer; }
 	const std::string& GetObjectiveType() const { return _objectiveType; }
+	const std::vector<Vector3>& GetCheckpoints() const { return _checkpoints; }
+	int GetCurrentCheckpoint() const { return _currentCheckpoint; }
+	void AdvanceCheckpoint();
 	std::vector<std::unique_ptr<Vehicle>>& GetMissionVehicles() { return _missionVehicles; }
 
 private:
@@ -83,6 +87,8 @@ private:
 
 	std::string _objectiveType;
 	std::string _objectiveTarget;
+	std::vector<Vector3> _checkpoints;
+	int _currentCheckpoint = 0;
 };
 
 } // namespace Donut

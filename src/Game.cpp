@@ -389,6 +389,18 @@ void Game::Run()
 
 		if (_inVehicle && _activeVehicle)
 		{
+			if (_scriptEngine->IsMissionActive())
+			{
+				const auto& checkpoints = _scriptEngine->GetCheckpoints();
+				int current = _scriptEngine->GetCurrentCheckpoint();
+				if (current >= 0 && current < static_cast<int>(checkpoints.size()))
+				{
+					float dist = (_activeVehicle->GetPosition() - checkpoints[current]).Length();
+					if (dist < 5.0f)
+						_scriptEngine->AdvanceCheckpoint();
+				}
+			}
+
 			if (Input::JustPressed(Button::KeyE))
 			{
 				_inVehicle = false;
@@ -502,6 +514,18 @@ void Game::Run()
 					break;
 				}
 			}
+
+			const auto& checkpoints = _scriptEngine->GetCheckpoints();
+			int currentCp = _scriptEngine->GetCurrentCheckpoint();
+			for (int i = 0; i < static_cast<int>(checkpoints.size()); ++i)
+			{
+				Vector4 cpCol = i == currentCp ? Vector4(1.0f, 1.0f, 0.0f, 1.0f) :
+				                i < currentCp  ? Vector4(0.0f, 1.0f, 0.0f, 1.0f) :
+				                                 Vector4(1.0f, 0.0f, 0.0f, 1.0f);
+				Vector3 cpBase = checkpoints[i] + Vector3(0, 0.5f, 0);
+				_lineRenderer->DrawLine(cpBase, cpBase + Vector3(0, 15.0f, 0), cpCol);
+			}
+
 			_lineRenderer->DrawSkeleton(_character->GetPosition(), _character->GetSkeleton());
 			_lineRenderer->DrawBox(_character->GetPosition(), _character->GetRotation(),
 				Vector3(-0.3f, 0.0f, -0.2f), Vector3(0.3f, 1.8f, 0.3f), Vector4(0.2f, 1.0f, 0.2f, 1.0f));
