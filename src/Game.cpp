@@ -398,6 +398,10 @@ void Game::Run()
 			{
 				Log::Info("Vehicle: HONK!");
 			}
+			else if (Input::JustPressed(Button::KeySPACE))
+			{
+				_activeVehicle->Jump();
+			}
 			else
 			{
 				float throttle = 0, steer = 0, brake = 0;

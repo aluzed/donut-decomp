@@ -132,6 +132,19 @@ void Vehicle::ApplyInput(float throttle, float steer, float brake, float boost)
 	SetBrake(brake * 100.0f + 10.0f);
 }
 
+void Vehicle::Jump()
+{
+	if (_rayVehicle)
+	{
+		btRigidBody* chassis = _rayVehicle->getRigidBody();
+		if (chassis)
+		{
+			chassis->applyCentralImpulse(btVector3(0, 5000.0f, 0));
+			Log::Info("Vehicle: jump!");
+		}
+	}
+}
+
 void Vehicle::Draw(Matrix4x4& viewProj, GL::ShaderProgram& shader, bool opaque)
 {
 	if (_model)
