@@ -479,7 +479,7 @@ void Game::Run()
 		if (_gameState == GameState::MissionComplete || _gameState == GameState::MissionFailed)
 		{
 			_missionCompleteTimer += deltaTime;
-			if (_missionCompleteTimer > 3.0)
+			if (_missionCompleteTimer > 5.0)
 			{
 				_gameState = GameState::InGame;
 				_missionCompleteTimer = 0.0;
@@ -489,6 +489,8 @@ void Game::Run()
 					_inVehicle = false;
 					_activeVehicle = nullptr;
 				}
+				if (FileSystem::exists("scripts/Missions/level01/M1race.con"))
+					_scriptEngine->RunFile("scripts/Missions/level01/M1race.con");
 			}
 		}
 
@@ -769,6 +771,17 @@ void Game::Run()
 						Vector2(viewportWidth - 130.0f, 32),
 						timeLeft < 30.0f ? Vector4(1.0f, 0.3f, 0.3f, 1.0f) : Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 				}
+
+				if (_scriptEngine->GetTotalLaps() > 1)
+				{
+					size_t totalCp = _scriptEngine->GetCheckpoints().size();
+					std::string lapText = fmt::format("Lap {}/{}  CP {}/{}",
+						_scriptEngine->GetCurrentLap() + 1, _scriptEngine->GetTotalLaps(),
+						_scriptEngine->GetCurrentCheckpoint(), totalCp);
+					sprites.DrawText(font, lapText,
+						Vector2((viewportWidth / 2.0f) - 80, 72),
+						Vector4(0.0f, 1.0f, 1.0f, 1.0f));
+				}
 			}
 
 			if (_inVehicle)
@@ -821,13 +834,13 @@ void Game::Run()
 			if (_gameState == GameState::MissionComplete)
 			{
 				sprites.DrawText(font, "STAGE COMPLETE!",
-					Vector2((viewportWidth / 2.0f) - 100, viewportHeight / 2.0f - 30),
+					Vector2((viewportWidth / 2.0f) - 100, viewportHeight / 2.0f - 50),
 					Vector4(1.0f, 0.84f, 0.0f, 1.0f));
 
 				float elapsed = _scriptEngine->GetInitialStageTime() - _scriptEngine->GetStageTimeRemaining();
 				std::string stats = fmt::format("Time: {:.1f}s", elapsed);
 				sprites.DrawText(font, stats,
-					Vector2((viewportWidth / 2.0f) - 50, viewportHeight / 2.0f + 10),
+					Vector2((viewportWidth / 2.0f) - 50, viewportHeight / 2.0f - 10),
 					Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 
 				float best = _scriptEngine->GetBestTime();
@@ -835,16 +848,27 @@ void Game::Run()
 				{
 					std::string bestText = fmt::format("Best: {:.1f}s", best);
 					sprites.DrawText(font, bestText,
-						Vector2((viewportWidth / 2.0f) - 40, viewportHeight / 2.0f + 30),
+						Vector2((viewportWidth / 2.0f) - 40, viewportHeight / 2.0f + 10),
 						elapsed <= best ? Vector4(1.0f, 0.84f, 0.0f, 1.0f) : Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 				}
+
+				int nextIn = 5 - static_cast<int>(_missionCompleteTimer);
+				std::string nextText = fmt::format("Next race in {}...", nextIn);
+				sprites.DrawText(font, nextText,
+					Vector2((viewportWidth / 2.0f) - 60, viewportHeight / 2.0f + 40),
+					Vector4(0.6f, 0.6f, 0.6f, 1.0f));
 			}
 
 			if (_gameState == GameState::MissionFailed)
 			{
 				sprites.DrawText(font, "MISSION FAILED!",
-					Vector2((viewportWidth / 2.0f) - 100, viewportHeight / 2.0f),
+					Vector2((viewportWidth / 2.0f) - 100, viewportHeight / 2.0f - 20),
 					Vector4(1.0f, 0.2f, 0.2f, 1.0f));
+				int nextIn = 5 - static_cast<int>(_missionCompleteTimer);
+				std::string nextText = fmt::format("Retrying in {}...", nextIn);
+				sprites.DrawText(font, nextText,
+					Vector2((viewportWidth / 2.0f) - 60, viewportHeight / 2.0f + 10),
+					Vector4(0.6f, 0.6f, 0.6f, 1.0f));
 			}
 		}
 

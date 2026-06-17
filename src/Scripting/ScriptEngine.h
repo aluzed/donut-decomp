@@ -69,6 +69,8 @@ public:
 	const std::string& GetObjectiveType() const { return _objectiveType; }
 	const std::vector<Vector3>& GetCheckpoints() const { return _checkpoints; }
 	int GetCurrentCheckpoint() const { return _currentCheckpoint; }
+	int GetCurrentLap() const { return _currentLap; }
+	int GetTotalLaps() const { return _totalLaps; }
 	float GetBestTime() const { return _bestTime; }
 	void AdvanceCheckpoint();
 	std::vector<std::unique_ptr<Vehicle>>& GetMissionVehicles() { return _missionVehicles; }
@@ -90,6 +92,8 @@ private:
 	std::string _objectiveTarget;
 	std::vector<Vector3> _checkpoints;
 	int _currentCheckpoint = 0;
+	int _currentLap = 0;
+	int _totalLaps = 2;
 	float _bestTime = 999.0f;
 };
 
