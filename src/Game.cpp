@@ -464,6 +464,21 @@ void Game::Run()
 
 		if (_showDebug)
 		{
+			if (_scriptEngine->IsMissionActive() && _character)
+			{
+				for (auto& v : _scriptEngine->GetMissionVehicles())
+				{
+					Vector3 dir = v->GetPosition() - _character->GetPosition();
+					if (dir.LengthSquared() > 0.0f)
+					{
+						dir.Normalize();
+						Vector3 arrowStart = _character->GetPosition() + Vector3(0, 1.5f, 0);
+						Vector3 arrowEnd = arrowStart + dir * 3.0f;
+						_lineRenderer->DrawLine(arrowStart, arrowEnd, Vector4(0.0f, 1.0f, 1.0f, 1.0f));
+					}
+					break;
+				}
+			}
 			_lineRenderer->DrawSkeleton(_character->GetPosition(), _character->GetSkeleton());
 			_lineRenderer->DrawBox(_character->GetPosition(), _character->GetRotation(),
 				Vector3(-0.3f, 0.0f, -0.2f), Vector3(0.3f, 1.8f, 0.3f), Vector4(0.2f, 1.0f, 0.2f, 1.0f));
@@ -647,12 +662,15 @@ void Game::Run()
 				{
 					for (auto& v : _scriptEngine->GetMissionVehicles())
 					{
-						if ((v->GetPosition() - _character->GetPosition()).Length() < 5.0f)
+						float dist = (v->GetPosition() - _character->GetPosition()).Length();
+						if (dist < 5.0f)
 						{
 							sprites.DrawText(font, "Press E to enter vehicle!",
 								Vector2(32, 112), Vector4(0.0f, 1.0f, 1.0f, 1.0f));
-							break;
 						}
+						std::string distText = fmt::format("Vehicle: {:.0f}m", dist);
+						sprites.DrawText(font, distText, Vector2(32, 72), Vector4(0.8f, 0.8f, 0.8f, 1.0f));
+						break;
 					}
 				}
 			}
