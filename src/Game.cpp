@@ -546,6 +546,23 @@ void Game::Run()
 				sprites.DrawText(font, "MISSION ACTIVE", Vector2(32, 72), Vector4(0.0f, 1.0f, 0.0f, 1.0f));
 			}
 
+			if (_inVehicle)
+			{
+				sprites.DrawText(font, "DRIVING - E to exit", Vector2(32, 92), Vector4(0.5f, 0.8f, 1.0f, 1.0f));
+			}
+			else if (_gameState == GameState::InGame)
+			{
+				sprites.DrawText(font, "Arrows: Move | E: Jump/Enter car | ESC: Pause",
+					Vector2(32, 92), Vector4(0.7f, 0.7f, 0.7f, 1.0f));
+			}
+
+			if (_gameState == GameState::Paused)
+			{
+				sprites.DrawText(font, "PAUSED - ESC to resume",
+					Vector2((viewportWidth / 2.0f) - 80, viewportHeight / 2.0f),
+					Vector4(1.0f, 1.0f, 0.0f, 1.0f));
+			}
+
 			if (_gameState == GameState::MissionComplete)
 			{
 				sprites.DrawText(font, "STAGE COMPLETE!",
