@@ -630,6 +630,10 @@ void Game::Run()
 					_lineRenderer->DrawBox(v->GetPosition(), v->GetRotation(),
 						Vector3(-0.9f, -0.3f, -2.0f), Vector3(0.9f, 0.9f, 2.0f), col);
 
+					Vector3 beaconBase = v->GetPosition() + Vector3(0, 1.0f, 0);
+					_lineRenderer->DrawLine(beaconBase, beaconBase + Vector3(0, 20.0f, 0),
+						Vector4(0.0f, 1.0f, 1.0f, 1.0f));
+
 					float speed = v->GetSpeedKmh();
 					if (speed > 10.0f && _inVehicle && v.get() == _activeVehicle)
 					{
