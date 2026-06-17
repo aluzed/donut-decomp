@@ -26,6 +26,7 @@
 #include "Render/OpenGL/ShaderProgram.h"
 #include "Render/OpenGL/glad/glad.h"
 #include "Render/Shader.h"
+#include "Render/SimpleMesh.h"
 #include "Render/SkinModel.h"
 #include "Render/SpriteBatch.h"
 #include "Render/imgui/imgui.h"
@@ -146,6 +147,13 @@ Game::Game(int argc, char** argv)
 	const auto skinVertSrc = File::ReadAll("shaders/skin.vert");
 	const auto skinFragSrc = File::ReadAll("shaders/skin.frag");
 	_skinShaderProgram = std::make_unique<GL::ShaderProgram>(skinVertSrc, skinFragSrc);
+
+	const auto meshVertSrc = File::ReadAll("shaders/mesh.vert");
+	const auto meshFragSrc = File::ReadAll("shaders/mesh.frag");
+	_meshShader = std::make_unique<GL::ShaderProgram>(meshVertSrc, meshFragSrc);
+
+	_playerMesh = SimpleMesh::CreateCapsule(0.3f, 1.8f, Vector4(0.2f, 1.0f, 0.2f, 1.0f), 12);
+	_carMesh = SimpleMesh::CreateBox(Vector3(0.9f, 0.5f, 2.2f), Vector4(0.2f, 0.5f, 1.0f, 1.0f));
 
 	loadGlobal();
 	LoadModel("homer", "homer");
@@ -657,7 +665,12 @@ void Game::Run()
 			_level->Draw(viewProjection);
 
 		if (_character != nullptr && !_inVehicle)
+		{
 			_character->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
+			_playerMesh->Draw(*_meshShader,
+				Matrix4x4::MakeTranslate(_character->GetPosition()) * Matrix4x4(_character->GetRotation()),
+				viewProjection);
+		}
 
 		if (_scriptEngine->IsMissionActive())
 		{
@@ -668,22 +681,12 @@ void Game::Run()
 					v->Draw(viewProjection, *_skinShaderProgram, false);
 				else
 				{
-					Vector4 col(0.2f, 0.6f, 1.0f, 1.0f);
-					_lineRenderer->DrawBox(v->GetPosition(), v->GetRotation(),
-						Vector3(-0.9f, -0.3f, -2.0f), Vector3(0.9f, 0.9f, 2.0f), col);
-
+					_carMesh->Draw(*_meshShader,
+						Matrix4x4::MakeTranslate(v->GetPosition()) * Matrix4x4(v->GetRotation()),
+						viewProjection);
 					Vector3 beaconBase = v->GetPosition() + Vector3(0, 1.0f, 0);
 					_lineRenderer->DrawLine(beaconBase, beaconBase + Vector3(0, 20.0f, 0),
 						Vector4(0.0f, 1.0f, 1.0f, 1.0f));
-
-					float speed = v->GetSpeedKmh();
-					if (speed > 10.0f && _inVehicle && v.get() == _activeVehicle)
-					{
-						Vector3 trailStart = v->GetPosition() + v->GetRotation() * Vector3(0, 0.2f, -2.0f);
-						Vector3 trailEnd = trailStart - v->GetRotation() * Vector3(0, 0, fminf(speed * 0.1f, 5.0f));
-						Vector4 trailCol(1.0f, speed > 80 ? 0.3f : 0.8f, 0.0f, 1.0f);
-						_lineRenderer->DrawLine(trailStart, trailEnd, trailCol);
-					}
 				}
 			}
 		}
