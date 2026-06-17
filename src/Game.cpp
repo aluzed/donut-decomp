@@ -390,8 +390,13 @@ void Game::Run()
 			if (Input::JustPressed(Button::KeyE))
 			{
 				_inVehicle = false;
+				SetPlayerPosition(_activeVehicle->GetPosition() + Vector3(3.0f, 0, 0));
 				_activeVehicle = nullptr;
 				Log::Info("Game: exited vehicle");
+			}
+			else if (Input::JustPressed(Button::KeyH))
+			{
+				Log::Info("Vehicle: HONK!");
 			}
 			else
 			{
@@ -451,7 +456,9 @@ void Game::Run()
 		if (_character && _character->GetPosition().Y < -50.0f)
 		{
 			Log::Warn("Game: player fell off the map, respawning...");
-			SetPlayerPosition(Vector3(220, 4.5f, -172));
+			_health -= 20.0f;
+			if (_health <= 0.0f) _health = 100.0f;
+			SetPlayerPosition(_lastSafePos);
 		}
 
 		if (_activeVehicle && _inVehicle && _activeVehicle->GetPosition().Y < -50.0f)
@@ -459,8 +466,11 @@ void Game::Run()
 			Log::Warn("Game: vehicle fell off the map, exiting...");
 			_inVehicle = false;
 			_activeVehicle = nullptr;
-			SetPlayerPosition(Vector3(220, 4.5f, -172));
+			SetPlayerPosition(_lastSafePos);
 		}
+
+		if (_character && _character->GetCharacterController().onGround())
+			_lastSafePos = _character->GetPosition();
 
 		if (_showDebug)
 		{
@@ -484,10 +494,12 @@ void Game::Run()
 				Vector3(-0.3f, 0.0f, -0.2f), Vector3(0.3f, 1.8f, 0.3f), Vector4(0.2f, 1.0f, 0.2f, 1.0f));
 		}
 		_level->Update(deltaTime);
-		_trafficManager->Update(deltaTime);
-		_scriptEngine->Update(deltaTime);
 		if (_showDebug)
+		{
+			_trafficManager->Update(deltaTime);
 			_trafficManager->Draw();
+		}
+		_scriptEngine->Update(deltaTime);
 
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplSDL2_NewFrame(static_cast<SDL_Window*>(*_window));
@@ -617,6 +629,12 @@ void Game::Run()
 				std::string pos = fmt::format("Pos: {:.1f} {:.1f} {:.1f}",
 					_character->GetPosition().X, _character->GetPosition().Y, _character->GetPosition().Z);
 				sprites.DrawText(font, pos, Vector2(32, 52), Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+
+				std::string hp = fmt::format("HP: {:.0f}", _health);
+				Vector4 hpCol = _health > 50 ? Vector4(0.0f, 1.0f, 0.0f, 1.0f) :
+				                _health > 25 ? Vector4(1.0f, 1.0f, 0.0f, 1.0f) :
+				                               Vector4(1.0f, 0.0f, 0.0f, 1.0f);
+				sprites.DrawText(font, hp, Vector2(viewportWidth - 100.0f, 72), hpCol);
 			}
 
 			if (_scriptEngine->IsMissionActive())
@@ -647,16 +665,19 @@ void Game::Run()
 				sprites.DrawText(font, "DRIVING - E to exit", Vector2(32, 92), Vector4(0.5f, 0.8f, 1.0f, 1.0f));
 				if (_activeVehicle)
 				{
-					std::string speedText = fmt::format("{:.0f} km/h", _activeVehicle->GetSpeedKmh());
+					float spd = _activeVehicle->GetSpeedKmh();
+					std::string speedText = fmt::format("{:.0f} km/h", spd);
+					Vector4 spdCol = spd > 100 ? Vector4(1.0f, 0.3f, 0.3f, 1.0f) :
+					                 spd > 50  ? Vector4(1.0f, 1.0f, 0.3f, 1.0f) :
+					                             Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 					sprites.DrawText(font, speedText,
-						Vector2(viewportWidth - 130.0f, viewportHeight - 50.0f),
-						Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+						Vector2(viewportWidth - 130.0f, viewportHeight - 50.0f), spdCol);
 				}
 			}
 			else if (_gameState == GameState::InGame)
 			{
-				sprites.DrawText(font, "Arrows: Move | E: Jump/Enter | T: Teleport to car | 1: Debug | ESC: Pause",
-					Vector2(32, 92), Vector4(0.7f, 0.7f, 0.7f, 1.0f));
+				sprites.DrawText(font, "Arrows: Move | E: Jump/Enter | ESC: Pause",
+					Vector2(32, 92), Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 
 				if (_character && _scriptEngine->IsMissionActive())
 				{

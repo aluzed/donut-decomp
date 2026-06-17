@@ -201,6 +201,7 @@ void ScriptEngine::SetObjTargetVehicle(const std::string& target)
 void ScriptEngine::ShowStageComplete()
 {
 	Log::Info("ScriptEngine: stage complete!");
+	_stageTimeRemaining = -1.0f;
 	_game.SetState(GameState::MissionComplete);
 }
 
