@@ -124,9 +124,9 @@ void Vehicle::SetBrake(float brake)
 		_rayVehicle->setBrake(brake, i);
 }
 
-void Vehicle::ApplyInput(float throttle, float steer, float brake)
+void Vehicle::ApplyInput(float throttle, float steer, float brake, float boost)
 {
-	float force = throttle * _gasScale * 1000.0f;
+	float force = throttle * _gasScale * 1000.0f * boost;
 	SetEngineForce(force);
 	SetSteeringValue(steer * 0.5f);
 	SetBrake(brake * 100.0f);
