@@ -824,6 +824,7 @@ void Game::Run()
 						Vector2((viewportWidth / 2.0f) - 40, viewportHeight / 2.0f + 30),
 						elapsed <= best ? Vector4(1.0f, 0.84f, 0.0f, 1.0f) : Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 				}
+			}
 
 			if (_gameState == GameState::MissionFailed)
 			{
