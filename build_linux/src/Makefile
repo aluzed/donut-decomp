@@ -130,6 +130,30 @@ donut/fast:
 	cd /var/www/reverse/donut/build_linux && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/donut.dir/build.make src/CMakeFiles/donut.dir/build
 .PHONY : donut/fast
 
+AI/PathGraph.o: AI/PathGraph.cpp.o
+.PHONY : AI/PathGraph.o
+
+# target to build an object file
+AI/PathGraph.cpp.o:
+	cd /var/www/reverse/donut/build_linux && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/donut.dir/build.make src/CMakeFiles/donut.dir/AI/PathGraph.cpp.o
+.PHONY : AI/PathGraph.cpp.o
+
+AI/PathGraph.i: AI/PathGraph.cpp.i
+.PHONY : AI/PathGraph.i
+
+# target to preprocess a source file
+AI/PathGraph.cpp.i:
+	cd /var/www/reverse/donut/build_linux && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/donut.dir/build.make src/CMakeFiles/donut.dir/AI/PathGraph.cpp.i
+.PHONY : AI/PathGraph.cpp.i
+
+AI/PathGraph.s: AI/PathGraph.cpp.s
+.PHONY : AI/PathGraph.s
+
+# target to generate assembly for a file
+AI/PathGraph.cpp.s:
+	cd /var/www/reverse/donut/build_linux && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/donut.dir/build.make src/CMakeFiles/donut.dir/AI/PathGraph.cpp.s
+.PHONY : AI/PathGraph.cpp.s
+
 AI/TrafficManager.o: AI/TrafficManager.cpp.o
 .PHONY : AI/TrafficManager.o
 
@@ -1699,6 +1723,9 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... donut"
+	@echo "... AI/PathGraph.o"
+	@echo "... AI/PathGraph.i"
+	@echo "... AI/PathGraph.s"
 	@echo "... AI/TrafficManager.o"
 	@echo "... AI/TrafficManager.i"
 	@echo "... AI/TrafficManager.s"

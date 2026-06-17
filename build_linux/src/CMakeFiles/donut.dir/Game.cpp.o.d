@@ -337,7 +337,7 @@ src/CMakeFiles/donut.dir/Game.cpp.o: /var/www/reverse/donut/src/Game.cpp \
  /usr/include/SDL2/SDL_render.h /usr/include/SDL2/SDL_shape.h \
  /usr/include/SDL2/SDL_system.h /usr/include/SDL2/SDL_timer.h \
  /usr/include/SDL2/SDL_version.h /usr/include/SDL2/SDL_locale.h \
- /usr/include/SDL2/SDL_misc.h \
+ /usr/include/SDL2/SDL_misc.h /var/www/reverse/donut/src/AI/PathGraph.h \
  /var/www/reverse/donut/src/AI/TrafficManager.h \
  /var/www/reverse/donut/src/Level.h /usr/include/c++/13/set \
  /usr/include/c++/13/bits/stl_set.h \

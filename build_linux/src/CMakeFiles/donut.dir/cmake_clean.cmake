@@ -1,6 +1,8 @@
 file(REMOVE_RECURSE
   "../bin/donut"
   "../bin/donut.pdb"
+  "CMakeFiles/donut.dir/AI/PathGraph.cpp.o"
+  "CMakeFiles/donut.dir/AI/PathGraph.cpp.o.d"
   "CMakeFiles/donut.dir/AI/TrafficManager.cpp.o"
   "CMakeFiles/donut.dir/AI/TrafficManager.cpp.o.d"
   "CMakeFiles/donut.dir/AnimCamera.cpp.o"

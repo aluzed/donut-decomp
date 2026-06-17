@@ -13,11 +13,12 @@ namespace Donut
 
 class Level;
 class LineRenderer;
+class PathGraph;
 
 class TrafficManager
 {
 public:
-	TrafficManager(Level& level, LineRenderer& lineRenderer);
+	TrafficManager(Level& level, LineRenderer& lineRenderer, const PathGraph& graph);
 
 	void Update(double dt);
 	void Draw();
@@ -27,14 +28,15 @@ private:
 	{
 		Vector3 position;
 		Quaternion rotation;
-		int currentPath;
-		int currentPoint;
 		float speed;
 		Vector3 color;
+		int currentNode;
+		int targetNode;
 	};
 
 	Level& _level;
 	LineRenderer& _lineRenderer;
+	const PathGraph& _graph;
 	std::vector<TrafficCar> _cars;
 };
 
