@@ -306,9 +306,32 @@ btVector3 CharacterController::perpendicularComponent(const btVector3& direction
 
 void CharacterController::stepUp(btCollisionWorld* world)
 {
+	if (_walkDirection.LengthSquared() < 0.001f)
+		return;
+
+	btVector3 forward = BulletCast<btVector3>(_walkDirection.Normalized());
+	btScalar stepHeight = 0.5f;
+
 	btTransform start, end;
-	_targetPosition = BulletCast<btVector3>(_position + Vector3(0.0f, 1.0f, 0.0f) * _stepHeight);
-	_position = BulletCast<Vector3>(_targetPosition);
+	start.setIdentity();
+	end.setIdentity();
+	start.setOrigin(BulletCast<btVector3>(_position));
+	btVector3 targetPos = start.getOrigin() + forward * 0.3f;
+	targetPos.setY(targetPos.y() + stepHeight);
+	end.setOrigin(targetPos);
+
+	btKinematicClosestNotMeConvexResultCallback callback(_physGhostObject.get(), -forward, 0.0f);
+	callback.m_collisionFilterGroup = _physGhostObject->getBroadphaseHandle()->m_collisionFilterGroup;
+	callback.m_collisionFilterMask = _physGhostObject->getBroadphaseHandle()->m_collisionFilterMask;
+
+	world->convexSweepTest(_physShape.get(), start, end, callback,
+	                       world->getDispatchInfo().m_allowedCcdPenetration);
+
+	if (callback.hasHit())
+	{
+		_targetPosition.setInterpolate3(start.getOrigin(), end.getOrigin(), callback.m_closestHitFraction);
+		_position = BulletCast<Vector3>(_targetPosition);
+	}
 }
 
 void CharacterController::updateTargetPositionBasedOnCollision(const btVector3& hitNormal, btScalar tangentMag,
