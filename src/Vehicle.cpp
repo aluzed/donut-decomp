@@ -129,7 +129,7 @@ void Vehicle::ApplyInput(float throttle, float steer, float brake, float boost)
 	float force = throttle * _gasScale * 1000.0f * boost;
 	SetEngineForce(force);
 	SetSteeringValue(steer * 0.5f);
-	SetBrake(brake * 100.0f);
+	SetBrake(brake * 100.0f + 10.0f);
 }
 
 void Vehicle::Draw(Matrix4x4& viewProj, GL::ShaderProgram& shader, bool opaque)
