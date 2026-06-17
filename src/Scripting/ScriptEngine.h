@@ -29,6 +29,7 @@ public:
 	void CloseMission();
 	void SetStageTime(float seconds);
 	void Update(double dt);
+	void CleanupMission();
 
 	void AddCharacter(const std::string& name, const std::string& locator);
 	void AddNPC(const std::string& name, const std::string& locator, const std::string& type = "");

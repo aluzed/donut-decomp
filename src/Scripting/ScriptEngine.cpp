@@ -84,6 +84,17 @@ void ScriptEngine::CloseMission()
 	_game.SetState(GameState::MissionComplete);
 }
 
+void ScriptEngine::CleanupMission()
+{
+	_missionVehicles.clear();
+	_activeVehicle = nullptr;
+	_objectiveType.clear();
+	_objectiveTarget.clear();
+	_stageTimeRemaining = -1.0f;
+	_goTimer = 1.5f;
+	Log::Info("ScriptEngine: mission cleaned up");
+}
+
 void ScriptEngine::SetStageTime(float seconds)
 {
 	_stageTimeRemaining = seconds;
