@@ -352,10 +352,17 @@ void Game::Run()
 			{
 				charMove.Normalize();
 				charMove *= 5.0f;
-				_character->SetRotation(Quaternion::MakeFromEuler(
-					Vector3(0, atan2f(charMove.X, charMove.Z), 0)));
+				Quaternion rot = _character->GetRotation();
+				Vector3 worldMove = rot * charMove;
+				ctrl.setWalkDirection(BulletCast<btVector3>(worldMove));
+
+				float targetYaw = atan2f(worldMove.X, worldMove.Z);
+				_character->SetRotation(Quaternion::MakeFromEuler(Vector3(0, targetYaw, 0)));
 			}
-			ctrl.setWalkDirection(BulletCast<btVector3>(charMove));
+			else
+			{
+				ctrl.setWalkDirection(btVector3(0, 0, 0));
+			}
 		}
 
 		if (_inVehicle && _activeVehicle)
