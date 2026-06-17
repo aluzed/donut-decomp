@@ -9,6 +9,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/donut.dir/AnimCamera.cpp.o.d"
   "CMakeFiles/donut.dir/Audio/AudioManager.cpp.o"
   "CMakeFiles/donut.dir/Audio/AudioManager.cpp.o.d"
+  "CMakeFiles/donut.dir/Audio/SoundGenerator.cpp.o"
+  "CMakeFiles/donut.dir/Audio/SoundGenerator.cpp.o.d"
   "CMakeFiles/donut.dir/Character.cpp.o"
   "CMakeFiles/donut.dir/Character.cpp.o.d"
   "CMakeFiles/donut.dir/CharacterController.cpp.o"

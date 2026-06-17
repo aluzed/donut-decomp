@@ -226,6 +226,30 @@ Audio/AudioManager.cpp.s:
 	cd /var/www/reverse/donut/build_linux && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/donut.dir/build.make src/CMakeFiles/donut.dir/Audio/AudioManager.cpp.s
 .PHONY : Audio/AudioManager.cpp.s
 
+Audio/SoundGenerator.o: Audio/SoundGenerator.cpp.o
+.PHONY : Audio/SoundGenerator.o
+
+# target to build an object file
+Audio/SoundGenerator.cpp.o:
+	cd /var/www/reverse/donut/build_linux && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/donut.dir/build.make src/CMakeFiles/donut.dir/Audio/SoundGenerator.cpp.o
+.PHONY : Audio/SoundGenerator.cpp.o
+
+Audio/SoundGenerator.i: Audio/SoundGenerator.cpp.i
+.PHONY : Audio/SoundGenerator.i
+
+# target to preprocess a source file
+Audio/SoundGenerator.cpp.i:
+	cd /var/www/reverse/donut/build_linux && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/donut.dir/build.make src/CMakeFiles/donut.dir/Audio/SoundGenerator.cpp.i
+.PHONY : Audio/SoundGenerator.cpp.i
+
+Audio/SoundGenerator.s: Audio/SoundGenerator.cpp.s
+.PHONY : Audio/SoundGenerator.s
+
+# target to generate assembly for a file
+Audio/SoundGenerator.cpp.s:
+	cd /var/www/reverse/donut/build_linux && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/donut.dir/build.make src/CMakeFiles/donut.dir/Audio/SoundGenerator.cpp.s
+.PHONY : Audio/SoundGenerator.cpp.s
+
 Character.o: Character.cpp.o
 .PHONY : Character.o
 
@@ -1735,6 +1759,9 @@ help:
 	@echo "... Audio/AudioManager.o"
 	@echo "... Audio/AudioManager.i"
 	@echo "... Audio/AudioManager.s"
+	@echo "... Audio/SoundGenerator.o"
+	@echo "... Audio/SoundGenerator.i"
+	@echo "... Audio/SoundGenerator.s"
 	@echo "... Character.o"
 	@echo "... Character.i"
 	@echo "... Character.s"

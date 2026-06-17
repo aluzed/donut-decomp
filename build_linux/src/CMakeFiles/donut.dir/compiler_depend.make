@@ -16742,6 +16742,10 @@ src/CMakeFiles/donut.dir/Scripting/ScriptEngine.cpp.o: /var/www/reverse/donut/sr
   /tmp/opencode/fmt/include/fmt/core.h \
   /tmp/opencode/fmt/include/fmt/format.h \
   /tmp/opencode/fmt/include/fmt/printf.h \
+  /tmp/opencode/openal/AL/al.h \
+  /tmp/opencode/openal/AL/alc.h \
+  /tmp/opencode/openal/AL/alext.h \
+  /tmp/opencode/openal/AL/efx.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \
@@ -17030,6 +17034,7 @@ src/CMakeFiles/donut.dir/Scripting/ScriptEngine.cpp.o: /var/www/reverse/donut/sr
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdarg.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h \
+  /var/www/reverse/donut/src/Audio/AudioManager.h \
   /var/www/reverse/donut/src/Audio/SoundGenerator.h \
   /var/www/reverse/donut/src/Core/File.h \
   /var/www/reverse/donut/src/Core/FileSystem.h \
@@ -17041,9 +17046,12 @@ src/CMakeFiles/donut.dir/Scripting/ScriptEngine.cpp.o: /var/www/reverse/donut/sr
   /var/www/reverse/donut/src/Core/Math/Quaternion.h \
   /var/www/reverse/donut/src/Core/Math/Vector3.h \
   /var/www/reverse/donut/src/Core/Math/Vector4.h \
+  /var/www/reverse/donut/src/Core/MemoryStream.h \
   /var/www/reverse/donut/src/Core/Platform.h \
   /var/www/reverse/donut/src/Game.h \
   /var/www/reverse/donut/src/Level.h \
+  /var/www/reverse/donut/src/RCL/RCFFile.h \
+  /var/www/reverse/donut/src/RCL/RSDFile.h \
   /var/www/reverse/donut/src/Scripting/Commands.h \
   /var/www/reverse/donut/src/Scripting/GameCommands.h \
   /var/www/reverse/donut/src/Scripting/ScriptEngine.h \

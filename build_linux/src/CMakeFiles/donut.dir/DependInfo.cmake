@@ -13,6 +13,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/var/www/reverse/donut/src/AI/TrafficManager.cpp" "src/CMakeFiles/donut.dir/AI/TrafficManager.cpp.o" "gcc" "src/CMakeFiles/donut.dir/AI/TrafficManager.cpp.o.d"
   "/var/www/reverse/donut/src/AnimCamera.cpp" "src/CMakeFiles/donut.dir/AnimCamera.cpp.o" "gcc" "src/CMakeFiles/donut.dir/AnimCamera.cpp.o.d"
   "/var/www/reverse/donut/src/Audio/AudioManager.cpp" "src/CMakeFiles/donut.dir/Audio/AudioManager.cpp.o" "gcc" "src/CMakeFiles/donut.dir/Audio/AudioManager.cpp.o.d"
+  "/var/www/reverse/donut/src/Audio/SoundGenerator.cpp" "src/CMakeFiles/donut.dir/Audio/SoundGenerator.cpp.o" "gcc" "src/CMakeFiles/donut.dir/Audio/SoundGenerator.cpp.o.d"
   "/var/www/reverse/donut/src/Character.cpp" "src/CMakeFiles/donut.dir/Character.cpp.o" "gcc" "src/CMakeFiles/donut.dir/Character.cpp.o.d"
   "/var/www/reverse/donut/src/CharacterController.cpp" "src/CMakeFiles/donut.dir/CharacterController.cpp.o" "gcc" "src/CMakeFiles/donut.dir/CharacterController.cpp.o.d"
   "/var/www/reverse/donut/src/Core/File.cpp" "src/CMakeFiles/donut.dir/Core/File.cpp.o" "gcc" "src/CMakeFiles/donut.dir/Core/File.cpp.o.d"
