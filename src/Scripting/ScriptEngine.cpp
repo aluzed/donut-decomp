@@ -96,8 +96,8 @@ void ScriptEngine::Update(double dt)
 	if (_stageTimeRemaining <= 0.0f)
 	{
 		_stageTimeRemaining = 0.0f;
-		Log::Info("ScriptEngine: stage timer expired!");
-		ShowStageComplete();
+		Log::Info("ScriptEngine: stage timer expired - mission failed!");
+		_game.SetState(GameState::MissionFailed);
 	}
 }
 
