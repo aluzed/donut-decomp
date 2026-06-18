@@ -752,6 +752,17 @@ void Game::Run()
 
 		if (_character != nullptr && _gameState == GameState::InGame)
 		{
+			if (_level->CheckTrigger(_character->GetPosition(), ""))
+			{
+				static std::string lastTrigger;
+				static double lastTriggerTime = 0;
+				lastTriggerTime += deltaTime;
+				if (lastTriggerTime > 2.0)
+				{
+					lastTriggerTime = 0;
+					Log::Info("Game: player entered trigger zone");
+				}
+			}
 			static double pedSpawnTimer = 0.0;
 			pedSpawnTimer += deltaTime;
 			if (pedSpawnTimer > 0.5)

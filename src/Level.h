@@ -47,8 +47,17 @@ public:
 		std::vector<Vector3> points;
 	};
 
+	struct Trigger
+	{
+		std::string name;
+		Vector3 position;
+		Vector3 bounds;
+		bool isRect;
+	};
+
 	Vector3 GetLocatorPosition(const std::string& name) const;
 	const std::vector<Path>& GetPaths() const { return _paths; }
+	bool CheckTrigger(const Vector3& pos, const std::string& name) const;
 
 private:
 	void loadRegion(const std::string& filename);
@@ -65,6 +74,7 @@ private:
 	std::vector<std::unique_ptr<CompositeModel>> _compositeModels;
 
 	std::vector<Path> _paths;
+	std::vector<Trigger> _triggers;
 	std::set<std::string> _loadedRegions;
 	std::set<std::string> _loadedP3Ds;
 	std::map<std::string, Vector3> _locators;
