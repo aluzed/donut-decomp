@@ -1101,7 +1101,10 @@ void Game::Run()
 
 			if (_inVehicle)
 			{
-				sprites.DrawText(font, "Arrows: Drive | Shift: Boost | H: Horn | E: Exit",
+				std::string ctrlText = Input::IsGamepadConnected()
+					? "Stick: Drive | A: Exit | X: Horn | B: Boost | Y: Jump"
+					: "Arrows: Drive | Shift: Boost | H: Horn | E: Exit";
+				sprites.DrawText(font, ctrlText,
 					Vector2(32, 92), Vector4(0.5f, 0.8f, 1.0f, 1.0f));
 				if (_activeVehicle)
 				{
@@ -1124,7 +1127,10 @@ void Game::Run()
 			}
 			else if (_gameState == GameState::InGame)
 			{
-				sprites.DrawText(font, "Arrows: Move | E: Action | M: Restart | ESC: Pause",
+				std::string ctrlText = Input::IsGamepadConnected()
+					? "Stick: Move | A: Action | Y: Jump | Back: Restart | Start: Pause"
+					: "Arrows: Move | E: Action | M: Restart | ESC: Pause";
+				sprites.DrawText(font, ctrlText,
 					Vector2(32, 92), Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 
 				if (_showHelp)
