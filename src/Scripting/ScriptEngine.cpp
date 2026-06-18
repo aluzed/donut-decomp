@@ -1,6 +1,7 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
 #include "ScriptEngine.h"
+#include "AI/ChaseManager.h"
 #include "Audio/AudioManager.h"
 #include "Audio/SoundGenerator.h"
 #include "Core/FileSystem.h"
@@ -374,7 +375,8 @@ void ScriptEngine::EnableTutorialMode(bool enable)
 
 void ScriptEngine::CreateChaseManager(const std::string& copCar, const std::string& aiScript, int count)
 {
-	Log::Info("ScriptEngine: create chase manager '{}' ai='{}' count={}", copCar, aiScript, count);
+	_chaseManager = std::make_unique<ChaseManager>(_game.GetWorldPhysics(), copCar, count);
+	Log::Info("ScriptEngine: chase manager created '{}' ai='{}' count={}", copCar, aiScript, count);
 }
 
 void ScriptEngine::RunFile(const std::string& path)

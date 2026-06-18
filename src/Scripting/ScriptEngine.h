@@ -14,6 +14,7 @@ namespace Donut
 class Game;
 class Level;
 class Vehicle;
+class ChaseManager;
 
 class ScriptEngine
 {
@@ -105,6 +106,7 @@ private:
 	Quaternion _aiRotation;
 	int _aiCheckpoint = 0;
 	float _aiSpeed = 12.0f;
+	std::unique_ptr<ChaseManager> _chaseManager;
 };
 
 } // namespace Donut
