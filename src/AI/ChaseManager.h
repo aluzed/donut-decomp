@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Core/Math/Vector3.h"
+#include "Core/Math/Quaternion.h"
 
 #include <memory>
 #include <vector>
@@ -23,6 +24,8 @@ public:
 	void AddHeat(float amount);
 	float GetHeat() const { return _heat; }
 	bool IsActive() const { return _heat > 0.0f; }
+	bool IsBusted() const { return _busted; }
+	bool IsEvaded() const { return _evaded && _heat <= 0.0f; }
 
 	const std::vector<std::unique_ptr<Vehicle>>& GetCopCars() const { return _copCars; }
 
@@ -33,6 +36,8 @@ private:
 	int _maxCops;
 	std::vector<std::unique_ptr<Vehicle>> _copCars;
 	float _spawnTimer = 0.0f;
+	bool _busted = false;
+	bool _evaded = false;
 };
 
 } // namespace Donut
