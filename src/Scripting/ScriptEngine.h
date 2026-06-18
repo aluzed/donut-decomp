@@ -58,6 +58,8 @@ public:
 	void ShowStageComplete();
 	void UpdateAI(double dt);
 	void ResetBestTime();
+	void SaveGameState();
+	void LoadGameState();
 	void SetPresentationBitmap(const std::string& path);
 	void EnableTutorialMode(bool enable);
 	void CreateChaseManager(const std::string& copCar, const std::string& aiScript, int count);

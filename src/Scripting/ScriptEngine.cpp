@@ -33,6 +33,7 @@ void ScriptEngine::SelectMission(const std::string& id)
 	if (saveFile.good())
 	{
 		saveFile >> _bestTime;
+		saveFile.ignore(1024, '\n');
 		Log::Info("ScriptEngine: loaded best time {:.1f}s", _bestTime);
 	}
 
@@ -305,6 +306,27 @@ void ScriptEngine::ResetBestTime()
 	Log::Info("ScriptEngine: best time reset to default");
 }
 
+void ScriptEngine::SaveGameState()
+{
+	auto& game = Game::GetInstance();
+	std::ofstream saveFile("donut_save.dat");
+	if (!saveFile.good()) return;
+
+	saveFile << _bestTime << "\n";
+	Vector3 pos = game.GetPlayerPosition();
+	saveFile << pos.X << " " << pos.Y << " " << pos.Z << "\n";
+	Log::Info("ScriptEngine: game saved");
+}
+
+void ScriptEngine::LoadGameState()
+{
+	std::ifstream saveFile("donut_save.dat");
+	if (!saveFile.good()) return;
+
+	saveFile >> _bestTime;
+	Log::Info("ScriptEngine: loaded best time {:.1f}s", _bestTime);
+}
+
 void ScriptEngine::AdvanceCheckpoint()
 {
 	if (_currentCheckpoint < static_cast<int>(_checkpoints.size()))
@@ -359,7 +381,11 @@ void ScriptEngine::ShowStageComplete()
 		_isNewRecord = true;
 		std::ofstream saveFile("donut_save.dat");
 		if (saveFile.good())
-			saveFile << _bestTime;
+		{
+			saveFile << _bestTime << "\n";
+			Vector3 pos = _game.GetPlayerPosition();
+			saveFile << pos.X << " " << pos.Y << " " << pos.Z << "\n";
+		}
 		_game.GetAudioManager().PlayRaw(SoundGenerator::Chirp(600, 1200, 0.5f), 22050, 1, 16);
 	}
 

@@ -185,6 +185,18 @@ void Level::LoadP3D(const std::string& filename)
 				std::string name = loc->GetName();
 				_locators.insert({name, pos});
 				Log::Info("Level: locator '{}' at ({:.1f}, {:.1f}, {:.1f})", name, pos.X, pos.Y, pos.Z);
+
+				for (const auto& trigger : triggers)
+				{
+					Trigger tvol;
+					tvol.name = trigger->GetName();
+					tvol.position = Vector3(trigger->GetTransform().M[3][0],
+					                        trigger->GetTransform().M[3][1],
+					                        trigger->GetTransform().M[3][2]);
+					tvol.bounds = trigger->GetBounds();
+					tvol.isRect = trigger->GetIsRect() != 0;
+					_triggers.push_back(tvol);
+				}
 			}
 			break;
 		}
@@ -263,6 +275,28 @@ Vector3 Level::GetLocatorPosition(const std::string& name) const
 	if (it != _locators.end())
 		return it->second;
 	return Vector3::Zero;
+}
+
+bool Level::CheckTrigger(const Vector3& pos, const std::string& name) const
+{
+	for (const auto& t : _triggers)
+	{
+		if (!name.empty() && t.name.find(name) == std::string::npos)
+			continue;
+
+		Vector3 d = pos - t.position;
+		if (t.isRect)
+		{
+			if (fabs(d.X) <= t.bounds.X && fabs(d.Y) <= t.bounds.Y && fabs(d.Z) <= t.bounds.Z)
+				return true;
+		}
+		else
+		{
+			if (d.LengthSquared() <= t.bounds.X * t.bounds.X)
+				return true;
+		}
+	}
+	return false;
 }
 
 void Level::loadRegion(const std::string& filename)
