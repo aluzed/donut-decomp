@@ -178,7 +178,7 @@ Game::Game(int argc, char** argv)
 	_buildingMesh = SimpleMesh::CreateBox(Vector3(2.0f, 4.0f, 2.0f), Vector4(0.7f, 0.6f, 0.5f, 1.0f));
 
 	loadGlobal();
-	LoadModel("homer", "homer");
+	LoadModel("bart", "bart");
 
 	_camera = std::make_unique<FreeCamera>();
 	_camera->SetPosition(Vector3(228.0f, 5.0f, -174.0f));
