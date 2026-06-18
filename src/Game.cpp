@@ -892,21 +892,9 @@ void Game::Run()
 
 		glViewport(0, 0, viewportWidth, viewportHeight);
 
-		if (!_sceneFBO || _sceneFBO->GetWidth() != viewportWidth || _sceneFBO->GetHeight() != viewportHeight)
-		{
-			GL::FrameBuffer::Format fmt;
-			fmt.EnableColourBuffer(true, 1);
-			fmt.EnableDepthBuffer(true, true);
-			fmt.SetColourInternalFormat(GL_RGBA8);
-			fmt.SetFilterMin(GL_LINEAR);
-			fmt.SetFilterMag(GL_LINEAR);
-			_sceneFBO = std::make_unique<GL::FrameBuffer>(viewportWidth, viewportHeight, fmt);
-		}
-		_sceneFBO->Bind();
-
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_BLEND);
-		glClearColor(0.62f, 0.78f, 1.0f, 1.0f);
+		glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		_camera->SetAspectRatio(static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight));
@@ -1002,21 +990,6 @@ void Game::Run()
 		glDisable(GL_DEPTH_TEST);
 		_lineRenderer->Flush(viewProjection);
 		glEnable(GL_DEPTH_TEST);
-
-		GL::FrameBuffer::Unbind();
-
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glDisable(GL_DEPTH_TEST);
-		glDisable(GL_BLEND);
-
-		_postProcessShader->Bind();
-		_postProcessShader->SetUniformValue("sceneTex", 0);
-		_postProcessShader->SetUniformValue("screenSize", Vector2(static_cast<float>(viewportWidth), static_cast<float>(viewportHeight)));
-		glActiveTexture(GL_TEXTURE0);
-		_sceneFBO->BindColorTexture(0);
-		_fullscreenQuadBinding->Bind();
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-		_fullscreenQuadBinding->Unbind();
 
 		Matrix4x4 proj = Matrix4x4::MakeOrtho(0.0f, viewportWidth, viewportHeight, 0.0f);
 
