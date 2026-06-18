@@ -114,6 +114,7 @@ private:
 	int _lockedMousePosY;
 	bool _showDebug = true;
 	float _health = 100.0f;
+	std::vector<std::pair<Vector3, float>> _buildings;
 
 	GameState _gameState = GameState::InGame;
 	bool _inVehicle = false;

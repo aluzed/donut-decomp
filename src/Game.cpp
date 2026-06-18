@@ -144,6 +144,27 @@ Game::Game(int argc, char** argv)
 	_pathGraph = std::make_unique<PathGraph>(*_level);
 	_trafficManager = std::make_unique<TrafficManager>(*_level, *_lineRenderer, *_pathGraph);
 
+	const auto& paths = _level->GetPaths();
+	const auto* bestPath = &paths[0];
+	for (const auto& p : paths)
+		if (p.points.size() > bestPath->points.size())
+			bestPath = &p;
+
+	srand(42);
+	for (size_t i = 0; i < bestPath->points.size(); i += 2)
+	{
+		const auto& pt = bestPath->points[i];
+		Vector3 dir;
+		if (i + 1 < bestPath->points.size())
+			dir = (bestPath->points[i + 1] - pt).Normalized();
+		Vector3 perp(-dir.Z, 0, dir.X);
+		float height = 2.0f + (rand() % 10) * 1.5f;
+		_buildings.push_back({pt + perp * (15.0f + (rand() % 10) * 2.0f), height});
+		_buildings.push_back({pt - perp * (15.0f + (rand() % 10) * 2.0f), height});
+	}
+
+	Log::Info("Game: generated {} buildings", _buildings.size());
+
 	const auto skinVertSrc = File::ReadAll("shaders/skin.vert");
 	const auto skinFragSrc = File::ReadAll("shaders/skin.frag");
 	_skinShaderProgram = std::make_unique<GL::ShaderProgram>(skinVertSrc, skinFragSrc);
@@ -669,6 +690,18 @@ void Game::Run()
 
 		if (_level != nullptr)
 			_level->Draw(viewProjection);
+
+		for (const auto& b : _buildings)
+		{
+			float h = b.second;
+			Vector3 halfExt(1.5f, h * 0.5f, 1.5f);
+			Vector4 col(0.8f, 0.7f, 0.6f, 1.0f);
+			if (h > 10) col = Vector4(0.6f, 0.6f, 0.7f, 1.0f);
+
+			_carMesh->Draw(*_meshShader,
+				Matrix4x4::MakeTranslate(b.first + Vector3(0, h * 0.5f, 0)),
+				viewProjection, col);
+		}
 
 		if (_character != nullptr && !_inVehicle)
 		{
