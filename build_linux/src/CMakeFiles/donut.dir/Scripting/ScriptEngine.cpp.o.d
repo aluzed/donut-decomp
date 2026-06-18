@@ -216,6 +216,7 @@ src/CMakeFiles/donut.dir/Scripting/ScriptEngine.cpp.o: \
  /usr/include/c++/13/bits/stl_vector.h \
  /usr/include/c++/13/bits/stl_bvector.h \
  /usr/include/c++/13/bits/vector.tcc \
+ /var/www/reverse/donut/src/AI/ChaseManager.h \
  /var/www/reverse/donut/src/Audio/AudioManager.h \
  /var/www/reverse/donut/src/RCL/RCFFile.h \
  /var/www/reverse/donut/src/Core/MemoryStream.h \

@@ -130,6 +130,30 @@ donut/fast:
 	cd /var/www/reverse/donut/build_linux && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/donut.dir/build.make src/CMakeFiles/donut.dir/build
 .PHONY : donut/fast
 
+AI/ChaseManager.o: AI/ChaseManager.cpp.o
+.PHONY : AI/ChaseManager.o
+
+# target to build an object file
+AI/ChaseManager.cpp.o:
+	cd /var/www/reverse/donut/build_linux && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/donut.dir/build.make src/CMakeFiles/donut.dir/AI/ChaseManager.cpp.o
+.PHONY : AI/ChaseManager.cpp.o
+
+AI/ChaseManager.i: AI/ChaseManager.cpp.i
+.PHONY : AI/ChaseManager.i
+
+# target to preprocess a source file
+AI/ChaseManager.cpp.i:
+	cd /var/www/reverse/donut/build_linux && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/donut.dir/build.make src/CMakeFiles/donut.dir/AI/ChaseManager.cpp.i
+.PHONY : AI/ChaseManager.cpp.i
+
+AI/ChaseManager.s: AI/ChaseManager.cpp.s
+.PHONY : AI/ChaseManager.s
+
+# target to generate assembly for a file
+AI/ChaseManager.cpp.s:
+	cd /var/www/reverse/donut/build_linux && $(MAKE) $(MAKESILENT) -f src/CMakeFiles/donut.dir/build.make src/CMakeFiles/donut.dir/AI/ChaseManager.cpp.s
+.PHONY : AI/ChaseManager.cpp.s
+
 AI/PathGraph.o: AI/PathGraph.cpp.o
 .PHONY : AI/PathGraph.o
 
@@ -1771,6 +1795,9 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... donut"
+	@echo "... AI/ChaseManager.o"
+	@echo "... AI/ChaseManager.i"
+	@echo "... AI/ChaseManager.s"
 	@echo "... AI/PathGraph.o"
 	@echo "... AI/PathGraph.i"
 	@echo "... AI/PathGraph.s"

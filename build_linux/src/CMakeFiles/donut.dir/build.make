@@ -69,10 +69,24 @@ include src/CMakeFiles/donut.dir/progress.make
 # Include the compile flags for this target's objects.
 include src/CMakeFiles/donut.dir/flags.make
 
+src/CMakeFiles/donut.dir/AI/ChaseManager.cpp.o: src/CMakeFiles/donut.dir/flags.make
+src/CMakeFiles/donut.dir/AI/ChaseManager.cpp.o: /var/www/reverse/donut/src/AI/ChaseManager.cpp
+src/CMakeFiles/donut.dir/AI/ChaseManager.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object src/CMakeFiles/donut.dir/AI/ChaseManager.cpp.o"
+	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/AI/ChaseManager.cpp.o -MF CMakeFiles/donut.dir/AI/ChaseManager.cpp.o.d -o CMakeFiles/donut.dir/AI/ChaseManager.cpp.o -c /var/www/reverse/donut/src/AI/ChaseManager.cpp
+
+src/CMakeFiles/donut.dir/AI/ChaseManager.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/donut.dir/AI/ChaseManager.cpp.i"
+	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /var/www/reverse/donut/src/AI/ChaseManager.cpp > CMakeFiles/donut.dir/AI/ChaseManager.cpp.i
+
+src/CMakeFiles/donut.dir/AI/ChaseManager.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/donut.dir/AI/ChaseManager.cpp.s"
+	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /var/www/reverse/donut/src/AI/ChaseManager.cpp -o CMakeFiles/donut.dir/AI/ChaseManager.cpp.s
+
 src/CMakeFiles/donut.dir/AI/PathGraph.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/AI/PathGraph.cpp.o: /var/www/reverse/donut/src/AI/PathGraph.cpp
 src/CMakeFiles/donut.dir/AI/PathGraph.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object src/CMakeFiles/donut.dir/AI/PathGraph.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object src/CMakeFiles/donut.dir/AI/PathGraph.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/AI/PathGraph.cpp.o -MF CMakeFiles/donut.dir/AI/PathGraph.cpp.o.d -o CMakeFiles/donut.dir/AI/PathGraph.cpp.o -c /var/www/reverse/donut/src/AI/PathGraph.cpp
 
 src/CMakeFiles/donut.dir/AI/PathGraph.cpp.i: cmake_force
@@ -86,7 +100,7 @@ src/CMakeFiles/donut.dir/AI/PathGraph.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/AI/TrafficManager.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/AI/TrafficManager.cpp.o: /var/www/reverse/donut/src/AI/TrafficManager.cpp
 src/CMakeFiles/donut.dir/AI/TrafficManager.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object src/CMakeFiles/donut.dir/AI/TrafficManager.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object src/CMakeFiles/donut.dir/AI/TrafficManager.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/AI/TrafficManager.cpp.o -MF CMakeFiles/donut.dir/AI/TrafficManager.cpp.o.d -o CMakeFiles/donut.dir/AI/TrafficManager.cpp.o -c /var/www/reverse/donut/src/AI/TrafficManager.cpp
 
 src/CMakeFiles/donut.dir/AI/TrafficManager.cpp.i: cmake_force
@@ -100,7 +114,7 @@ src/CMakeFiles/donut.dir/AI/TrafficManager.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/AnimCamera.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/AnimCamera.cpp.o: /var/www/reverse/donut/src/AnimCamera.cpp
 src/CMakeFiles/donut.dir/AnimCamera.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object src/CMakeFiles/donut.dir/AnimCamera.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object src/CMakeFiles/donut.dir/AnimCamera.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/AnimCamera.cpp.o -MF CMakeFiles/donut.dir/AnimCamera.cpp.o.d -o CMakeFiles/donut.dir/AnimCamera.cpp.o -c /var/www/reverse/donut/src/AnimCamera.cpp
 
 src/CMakeFiles/donut.dir/AnimCamera.cpp.i: cmake_force
@@ -114,7 +128,7 @@ src/CMakeFiles/donut.dir/AnimCamera.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Audio/AudioManager.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Audio/AudioManager.cpp.o: /var/www/reverse/donut/src/Audio/AudioManager.cpp
 src/CMakeFiles/donut.dir/Audio/AudioManager.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object src/CMakeFiles/donut.dir/Audio/AudioManager.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object src/CMakeFiles/donut.dir/Audio/AudioManager.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Audio/AudioManager.cpp.o -MF CMakeFiles/donut.dir/Audio/AudioManager.cpp.o.d -o CMakeFiles/donut.dir/Audio/AudioManager.cpp.o -c /var/www/reverse/donut/src/Audio/AudioManager.cpp
 
 src/CMakeFiles/donut.dir/Audio/AudioManager.cpp.i: cmake_force
@@ -128,7 +142,7 @@ src/CMakeFiles/donut.dir/Audio/AudioManager.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Audio/SoundGenerator.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Audio/SoundGenerator.cpp.o: /var/www/reverse/donut/src/Audio/SoundGenerator.cpp
 src/CMakeFiles/donut.dir/Audio/SoundGenerator.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object src/CMakeFiles/donut.dir/Audio/SoundGenerator.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object src/CMakeFiles/donut.dir/Audio/SoundGenerator.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Audio/SoundGenerator.cpp.o -MF CMakeFiles/donut.dir/Audio/SoundGenerator.cpp.o.d -o CMakeFiles/donut.dir/Audio/SoundGenerator.cpp.o -c /var/www/reverse/donut/src/Audio/SoundGenerator.cpp
 
 src/CMakeFiles/donut.dir/Audio/SoundGenerator.cpp.i: cmake_force
@@ -142,7 +156,7 @@ src/CMakeFiles/donut.dir/Audio/SoundGenerator.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Character.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Character.cpp.o: /var/www/reverse/donut/src/Character.cpp
 src/CMakeFiles/donut.dir/Character.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object src/CMakeFiles/donut.dir/Character.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object src/CMakeFiles/donut.dir/Character.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Character.cpp.o -MF CMakeFiles/donut.dir/Character.cpp.o.d -o CMakeFiles/donut.dir/Character.cpp.o -c /var/www/reverse/donut/src/Character.cpp
 
 src/CMakeFiles/donut.dir/Character.cpp.i: cmake_force
@@ -156,7 +170,7 @@ src/CMakeFiles/donut.dir/Character.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/CharacterController.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/CharacterController.cpp.o: /var/www/reverse/donut/src/CharacterController.cpp
 src/CMakeFiles/donut.dir/CharacterController.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object src/CMakeFiles/donut.dir/CharacterController.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object src/CMakeFiles/donut.dir/CharacterController.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/CharacterController.cpp.o -MF CMakeFiles/donut.dir/CharacterController.cpp.o.d -o CMakeFiles/donut.dir/CharacterController.cpp.o -c /var/www/reverse/donut/src/CharacterController.cpp
 
 src/CMakeFiles/donut.dir/CharacterController.cpp.i: cmake_force
@@ -170,7 +184,7 @@ src/CMakeFiles/donut.dir/CharacterController.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Core/File.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Core/File.cpp.o: /var/www/reverse/donut/src/Core/File.cpp
 src/CMakeFiles/donut.dir/Core/File.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object src/CMakeFiles/donut.dir/Core/File.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object src/CMakeFiles/donut.dir/Core/File.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Core/File.cpp.o -MF CMakeFiles/donut.dir/Core/File.cpp.o.d -o CMakeFiles/donut.dir/Core/File.cpp.o -c /var/www/reverse/donut/src/Core/File.cpp
 
 src/CMakeFiles/donut.dir/Core/File.cpp.i: cmake_force
@@ -184,7 +198,7 @@ src/CMakeFiles/donut.dir/Core/File.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Core/Log.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Core/Log.cpp.o: /var/www/reverse/donut/src/Core/Log.cpp
 src/CMakeFiles/donut.dir/Core/Log.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object src/CMakeFiles/donut.dir/Core/Log.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object src/CMakeFiles/donut.dir/Core/Log.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Core/Log.cpp.o -MF CMakeFiles/donut.dir/Core/Log.cpp.o.d -o CMakeFiles/donut.dir/Core/Log.cpp.o -c /var/www/reverse/donut/src/Core/Log.cpp
 
 src/CMakeFiles/donut.dir/Core/Log.cpp.i: cmake_force
@@ -198,7 +212,7 @@ src/CMakeFiles/donut.dir/Core/Log.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Core/Math/Math.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Core/Math/Math.cpp.o: /var/www/reverse/donut/src/Core/Math/Math.cpp
 src/CMakeFiles/donut.dir/Core/Math/Math.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object src/CMakeFiles/donut.dir/Core/Math/Math.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object src/CMakeFiles/donut.dir/Core/Math/Math.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Core/Math/Math.cpp.o -MF CMakeFiles/donut.dir/Core/Math/Math.cpp.o.d -o CMakeFiles/donut.dir/Core/Math/Math.cpp.o -c /var/www/reverse/donut/src/Core/Math/Math.cpp
 
 src/CMakeFiles/donut.dir/Core/Math/Math.cpp.i: cmake_force
@@ -212,7 +226,7 @@ src/CMakeFiles/donut.dir/Core/Math/Math.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Core/Math/Matrix3x3.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Core/Math/Matrix3x3.cpp.o: /var/www/reverse/donut/src/Core/Math/Matrix3x3.cpp
 src/CMakeFiles/donut.dir/Core/Math/Matrix3x3.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object src/CMakeFiles/donut.dir/Core/Math/Matrix3x3.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object src/CMakeFiles/donut.dir/Core/Math/Matrix3x3.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Core/Math/Matrix3x3.cpp.o -MF CMakeFiles/donut.dir/Core/Math/Matrix3x3.cpp.o.d -o CMakeFiles/donut.dir/Core/Math/Matrix3x3.cpp.o -c /var/www/reverse/donut/src/Core/Math/Matrix3x3.cpp
 
 src/CMakeFiles/donut.dir/Core/Math/Matrix3x3.cpp.i: cmake_force
@@ -226,7 +240,7 @@ src/CMakeFiles/donut.dir/Core/Math/Matrix3x3.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Core/Math/Matrix4x4.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Core/Math/Matrix4x4.cpp.o: /var/www/reverse/donut/src/Core/Math/Matrix4x4.cpp
 src/CMakeFiles/donut.dir/Core/Math/Matrix4x4.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object src/CMakeFiles/donut.dir/Core/Math/Matrix4x4.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CXX object src/CMakeFiles/donut.dir/Core/Math/Matrix4x4.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Core/Math/Matrix4x4.cpp.o -MF CMakeFiles/donut.dir/Core/Math/Matrix4x4.cpp.o.d -o CMakeFiles/donut.dir/Core/Math/Matrix4x4.cpp.o -c /var/www/reverse/donut/src/Core/Math/Matrix4x4.cpp
 
 src/CMakeFiles/donut.dir/Core/Math/Matrix4x4.cpp.i: cmake_force
@@ -240,7 +254,7 @@ src/CMakeFiles/donut.dir/Core/Math/Matrix4x4.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Core/Math/Quaternion.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Core/Math/Quaternion.cpp.o: /var/www/reverse/donut/src/Core/Math/Quaternion.cpp
 src/CMakeFiles/donut.dir/Core/Math/Quaternion.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CXX object src/CMakeFiles/donut.dir/Core/Math/Quaternion.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building CXX object src/CMakeFiles/donut.dir/Core/Math/Quaternion.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Core/Math/Quaternion.cpp.o -MF CMakeFiles/donut.dir/Core/Math/Quaternion.cpp.o.d -o CMakeFiles/donut.dir/Core/Math/Quaternion.cpp.o -c /var/www/reverse/donut/src/Core/Math/Quaternion.cpp
 
 src/CMakeFiles/donut.dir/Core/Math/Quaternion.cpp.i: cmake_force
@@ -254,7 +268,7 @@ src/CMakeFiles/donut.dir/Core/Math/Quaternion.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Core/Math/Vector2.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Core/Math/Vector2.cpp.o: /var/www/reverse/donut/src/Core/Math/Vector2.cpp
 src/CMakeFiles/donut.dir/Core/Math/Vector2.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building CXX object src/CMakeFiles/donut.dir/Core/Math/Vector2.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building CXX object src/CMakeFiles/donut.dir/Core/Math/Vector2.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Core/Math/Vector2.cpp.o -MF CMakeFiles/donut.dir/Core/Math/Vector2.cpp.o.d -o CMakeFiles/donut.dir/Core/Math/Vector2.cpp.o -c /var/www/reverse/donut/src/Core/Math/Vector2.cpp
 
 src/CMakeFiles/donut.dir/Core/Math/Vector2.cpp.i: cmake_force
@@ -268,7 +282,7 @@ src/CMakeFiles/donut.dir/Core/Math/Vector2.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Core/Math/Vector3.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Core/Math/Vector3.cpp.o: /var/www/reverse/donut/src/Core/Math/Vector3.cpp
 src/CMakeFiles/donut.dir/Core/Math/Vector3.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Building CXX object src/CMakeFiles/donut.dir/Core/Math/Vector3.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Building CXX object src/CMakeFiles/donut.dir/Core/Math/Vector3.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Core/Math/Vector3.cpp.o -MF CMakeFiles/donut.dir/Core/Math/Vector3.cpp.o.d -o CMakeFiles/donut.dir/Core/Math/Vector3.cpp.o -c /var/www/reverse/donut/src/Core/Math/Vector3.cpp
 
 src/CMakeFiles/donut.dir/Core/Math/Vector3.cpp.i: cmake_force
@@ -282,7 +296,7 @@ src/CMakeFiles/donut.dir/Core/Math/Vector3.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Core/Math/Vector3Int.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Core/Math/Vector3Int.cpp.o: /var/www/reverse/donut/src/Core/Math/Vector3Int.cpp
 src/CMakeFiles/donut.dir/Core/Math/Vector3Int.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Building CXX object src/CMakeFiles/donut.dir/Core/Math/Vector3Int.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_17) "Building CXX object src/CMakeFiles/donut.dir/Core/Math/Vector3Int.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Core/Math/Vector3Int.cpp.o -MF CMakeFiles/donut.dir/Core/Math/Vector3Int.cpp.o.d -o CMakeFiles/donut.dir/Core/Math/Vector3Int.cpp.o -c /var/www/reverse/donut/src/Core/Math/Vector3Int.cpp
 
 src/CMakeFiles/donut.dir/Core/Math/Vector3Int.cpp.i: cmake_force
@@ -296,7 +310,7 @@ src/CMakeFiles/donut.dir/Core/Math/Vector3Int.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Core/Math/Vector4.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Core/Math/Vector4.cpp.o: /var/www/reverse/donut/src/Core/Math/Vector4.cpp
 src/CMakeFiles/donut.dir/Core/Math/Vector4.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_17) "Building CXX object src/CMakeFiles/donut.dir/Core/Math/Vector4.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_18) "Building CXX object src/CMakeFiles/donut.dir/Core/Math/Vector4.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Core/Math/Vector4.cpp.o -MF CMakeFiles/donut.dir/Core/Math/Vector4.cpp.o.d -o CMakeFiles/donut.dir/Core/Math/Vector4.cpp.o -c /var/www/reverse/donut/src/Core/Math/Vector4.cpp
 
 src/CMakeFiles/donut.dir/Core/Math/Vector4.cpp.i: cmake_force
@@ -310,7 +324,7 @@ src/CMakeFiles/donut.dir/Core/Math/Vector4.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Core/MemoryStream.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Core/MemoryStream.cpp.o: /var/www/reverse/donut/src/Core/MemoryStream.cpp
 src/CMakeFiles/donut.dir/Core/MemoryStream.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_18) "Building CXX object src/CMakeFiles/donut.dir/Core/MemoryStream.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Building CXX object src/CMakeFiles/donut.dir/Core/MemoryStream.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Core/MemoryStream.cpp.o -MF CMakeFiles/donut.dir/Core/MemoryStream.cpp.o.d -o CMakeFiles/donut.dir/Core/MemoryStream.cpp.o -c /var/www/reverse/donut/src/Core/MemoryStream.cpp
 
 src/CMakeFiles/donut.dir/Core/MemoryStream.cpp.i: cmake_force
@@ -324,7 +338,7 @@ src/CMakeFiles/donut.dir/Core/MemoryStream.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Entity.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Entity.cpp.o: /var/www/reverse/donut/src/Entity.cpp
 src/CMakeFiles/donut.dir/Entity.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_19) "Building CXX object src/CMakeFiles/donut.dir/Entity.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_20) "Building CXX object src/CMakeFiles/donut.dir/Entity.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Entity.cpp.o -MF CMakeFiles/donut.dir/Entity.cpp.o.d -o CMakeFiles/donut.dir/Entity.cpp.o -c /var/www/reverse/donut/src/Entity.cpp
 
 src/CMakeFiles/donut.dir/Entity.cpp.i: cmake_force
@@ -338,7 +352,7 @@ src/CMakeFiles/donut.dir/Entity.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/FreeCamera.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/FreeCamera.cpp.o: /var/www/reverse/donut/src/FreeCamera.cpp
 src/CMakeFiles/donut.dir/FreeCamera.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_20) "Building CXX object src/CMakeFiles/donut.dir/FreeCamera.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building CXX object src/CMakeFiles/donut.dir/FreeCamera.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/FreeCamera.cpp.o -MF CMakeFiles/donut.dir/FreeCamera.cpp.o.d -o CMakeFiles/donut.dir/FreeCamera.cpp.o -c /var/www/reverse/donut/src/FreeCamera.cpp
 
 src/CMakeFiles/donut.dir/FreeCamera.cpp.i: cmake_force
@@ -352,7 +366,7 @@ src/CMakeFiles/donut.dir/FreeCamera.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/FrontendProject.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/FrontendProject.cpp.o: /var/www/reverse/donut/src/FrontendProject.cpp
 src/CMakeFiles/donut.dir/FrontendProject.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_21) "Building CXX object src/CMakeFiles/donut.dir/FrontendProject.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_22) "Building CXX object src/CMakeFiles/donut.dir/FrontendProject.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/FrontendProject.cpp.o -MF CMakeFiles/donut.dir/FrontendProject.cpp.o.d -o CMakeFiles/donut.dir/FrontendProject.cpp.o -c /var/www/reverse/donut/src/FrontendProject.cpp
 
 src/CMakeFiles/donut.dir/FrontendProject.cpp.i: cmake_force
@@ -366,7 +380,7 @@ src/CMakeFiles/donut.dir/FrontendProject.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Game.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Game.cpp.o: /var/www/reverse/donut/src/Game.cpp
 src/CMakeFiles/donut.dir/Game.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_22) "Building CXX object src/CMakeFiles/donut.dir/Game.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_23) "Building CXX object src/CMakeFiles/donut.dir/Game.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Game.cpp.o -MF CMakeFiles/donut.dir/Game.cpp.o.d -o CMakeFiles/donut.dir/Game.cpp.o -c /var/www/reverse/donut/src/Game.cpp
 
 src/CMakeFiles/donut.dir/Game.cpp.i: cmake_force
@@ -380,7 +394,7 @@ src/CMakeFiles/donut.dir/Game.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Input/Input.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Input/Input.cpp.o: /var/www/reverse/donut/src/Input/Input.cpp
 src/CMakeFiles/donut.dir/Input/Input.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_23) "Building CXX object src/CMakeFiles/donut.dir/Input/Input.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_24) "Building CXX object src/CMakeFiles/donut.dir/Input/Input.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Input/Input.cpp.o -MF CMakeFiles/donut.dir/Input/Input.cpp.o.d -o CMakeFiles/donut.dir/Input/Input.cpp.o -c /var/www/reverse/donut/src/Input/Input.cpp
 
 src/CMakeFiles/donut.dir/Input/Input.cpp.i: cmake_force
@@ -394,7 +408,7 @@ src/CMakeFiles/donut.dir/Input/Input.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Level.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Level.cpp.o: /var/www/reverse/donut/src/Level.cpp
 src/CMakeFiles/donut.dir/Level.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_24) "Building CXX object src/CMakeFiles/donut.dir/Level.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_25) "Building CXX object src/CMakeFiles/donut.dir/Level.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Level.cpp.o -MF CMakeFiles/donut.dir/Level.cpp.o.d -o CMakeFiles/donut.dir/Level.cpp.o -c /var/www/reverse/donut/src/Level.cpp
 
 src/CMakeFiles/donut.dir/Level.cpp.i: cmake_force
@@ -408,7 +422,7 @@ src/CMakeFiles/donut.dir/Level.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/P3D/P3D.generated.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/P3D/P3D.generated.cpp.o: /var/www/reverse/donut/src/P3D/P3D.generated.cpp
 src/CMakeFiles/donut.dir/P3D/P3D.generated.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_25) "Building CXX object src/CMakeFiles/donut.dir/P3D/P3D.generated.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_26) "Building CXX object src/CMakeFiles/donut.dir/P3D/P3D.generated.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/P3D/P3D.generated.cpp.o -MF CMakeFiles/donut.dir/P3D/P3D.generated.cpp.o.d -o CMakeFiles/donut.dir/P3D/P3D.generated.cpp.o -c /var/www/reverse/donut/src/P3D/P3D.generated.cpp
 
 src/CMakeFiles/donut.dir/P3D/P3D.generated.cpp.i: cmake_force
@@ -422,7 +436,7 @@ src/CMakeFiles/donut.dir/P3D/P3D.generated.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/P3D/P3DChunk.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/P3D/P3DChunk.cpp.o: /var/www/reverse/donut/src/P3D/P3DChunk.cpp
 src/CMakeFiles/donut.dir/P3D/P3DChunk.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_26) "Building CXX object src/CMakeFiles/donut.dir/P3D/P3DChunk.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_27) "Building CXX object src/CMakeFiles/donut.dir/P3D/P3DChunk.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/P3D/P3DChunk.cpp.o -MF CMakeFiles/donut.dir/P3D/P3DChunk.cpp.o.d -o CMakeFiles/donut.dir/P3D/P3DChunk.cpp.o -c /var/www/reverse/donut/src/P3D/P3DChunk.cpp
 
 src/CMakeFiles/donut.dir/P3D/P3DChunk.cpp.i: cmake_force
@@ -436,7 +450,7 @@ src/CMakeFiles/donut.dir/P3D/P3DChunk.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/P3D/P3DFile.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/P3D/P3DFile.cpp.o: /var/www/reverse/donut/src/P3D/P3DFile.cpp
 src/CMakeFiles/donut.dir/P3D/P3DFile.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_27) "Building CXX object src/CMakeFiles/donut.dir/P3D/P3DFile.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_28) "Building CXX object src/CMakeFiles/donut.dir/P3D/P3DFile.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/P3D/P3DFile.cpp.o -MF CMakeFiles/donut.dir/P3D/P3DFile.cpp.o.d -o CMakeFiles/donut.dir/P3D/P3DFile.cpp.o -c /var/www/reverse/donut/src/P3D/P3DFile.cpp
 
 src/CMakeFiles/donut.dir/P3D/P3DFile.cpp.i: cmake_force
@@ -450,7 +464,7 @@ src/CMakeFiles/donut.dir/P3D/P3DFile.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Physics/BulletDebugDraw.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Physics/BulletDebugDraw.cpp.o: /var/www/reverse/donut/src/Physics/BulletDebugDraw.cpp
 src/CMakeFiles/donut.dir/Physics/BulletDebugDraw.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_28) "Building CXX object src/CMakeFiles/donut.dir/Physics/BulletDebugDraw.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_29) "Building CXX object src/CMakeFiles/donut.dir/Physics/BulletDebugDraw.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Physics/BulletDebugDraw.cpp.o -MF CMakeFiles/donut.dir/Physics/BulletDebugDraw.cpp.o.d -o CMakeFiles/donut.dir/Physics/BulletDebugDraw.cpp.o -c /var/www/reverse/donut/src/Physics/BulletDebugDraw.cpp
 
 src/CMakeFiles/donut.dir/Physics/BulletDebugDraw.cpp.i: cmake_force
@@ -464,7 +478,7 @@ src/CMakeFiles/donut.dir/Physics/BulletDebugDraw.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Physics/BulletFenceShape.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Physics/BulletFenceShape.cpp.o: /var/www/reverse/donut/src/Physics/BulletFenceShape.cpp
 src/CMakeFiles/donut.dir/Physics/BulletFenceShape.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_29) "Building CXX object src/CMakeFiles/donut.dir/Physics/BulletFenceShape.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_30) "Building CXX object src/CMakeFiles/donut.dir/Physics/BulletFenceShape.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Physics/BulletFenceShape.cpp.o -MF CMakeFiles/donut.dir/Physics/BulletFenceShape.cpp.o.d -o CMakeFiles/donut.dir/Physics/BulletFenceShape.cpp.o -c /var/www/reverse/donut/src/Physics/BulletFenceShape.cpp
 
 src/CMakeFiles/donut.dir/Physics/BulletFenceShape.cpp.i: cmake_force
@@ -478,7 +492,7 @@ src/CMakeFiles/donut.dir/Physics/BulletFenceShape.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Physics/WorldPhysics.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Physics/WorldPhysics.cpp.o: /var/www/reverse/donut/src/Physics/WorldPhysics.cpp
 src/CMakeFiles/donut.dir/Physics/WorldPhysics.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_30) "Building CXX object src/CMakeFiles/donut.dir/Physics/WorldPhysics.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_31) "Building CXX object src/CMakeFiles/donut.dir/Physics/WorldPhysics.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Physics/WorldPhysics.cpp.o -MF CMakeFiles/donut.dir/Physics/WorldPhysics.cpp.o.d -o CMakeFiles/donut.dir/Physics/WorldPhysics.cpp.o -c /var/www/reverse/donut/src/Physics/WorldPhysics.cpp
 
 src/CMakeFiles/donut.dir/Physics/WorldPhysics.cpp.i: cmake_force
@@ -492,7 +506,7 @@ src/CMakeFiles/donut.dir/Physics/WorldPhysics.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/RCL/RCFFile.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/RCL/RCFFile.cpp.o: /var/www/reverse/donut/src/RCL/RCFFile.cpp
 src/CMakeFiles/donut.dir/RCL/RCFFile.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_31) "Building CXX object src/CMakeFiles/donut.dir/RCL/RCFFile.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_32) "Building CXX object src/CMakeFiles/donut.dir/RCL/RCFFile.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/RCL/RCFFile.cpp.o -MF CMakeFiles/donut.dir/RCL/RCFFile.cpp.o.d -o CMakeFiles/donut.dir/RCL/RCFFile.cpp.o -c /var/www/reverse/donut/src/RCL/RCFFile.cpp
 
 src/CMakeFiles/donut.dir/RCL/RCFFile.cpp.i: cmake_force
@@ -506,7 +520,7 @@ src/CMakeFiles/donut.dir/RCL/RCFFile.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/RCL/RSDFile.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/RCL/RSDFile.cpp.o: /var/www/reverse/donut/src/RCL/RSDFile.cpp
 src/CMakeFiles/donut.dir/RCL/RSDFile.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_32) "Building CXX object src/CMakeFiles/donut.dir/RCL/RSDFile.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_33) "Building CXX object src/CMakeFiles/donut.dir/RCL/RSDFile.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/RCL/RSDFile.cpp.o -MF CMakeFiles/donut.dir/RCL/RSDFile.cpp.o.d -o CMakeFiles/donut.dir/RCL/RSDFile.cpp.o -c /var/www/reverse/donut/src/RCL/RSDFile.cpp
 
 src/CMakeFiles/donut.dir/RCL/RSDFile.cpp.i: cmake_force
@@ -520,7 +534,7 @@ src/CMakeFiles/donut.dir/RCL/RSDFile.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/BillboardBatch.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/BillboardBatch.cpp.o: /var/www/reverse/donut/src/Render/BillboardBatch.cpp
 src/CMakeFiles/donut.dir/Render/BillboardBatch.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_33) "Building CXX object src/CMakeFiles/donut.dir/Render/BillboardBatch.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_34) "Building CXX object src/CMakeFiles/donut.dir/Render/BillboardBatch.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/BillboardBatch.cpp.o -MF CMakeFiles/donut.dir/Render/BillboardBatch.cpp.o.d -o CMakeFiles/donut.dir/Render/BillboardBatch.cpp.o -c /var/www/reverse/donut/src/Render/BillboardBatch.cpp
 
 src/CMakeFiles/donut.dir/Render/BillboardBatch.cpp.i: cmake_force
@@ -534,7 +548,7 @@ src/CMakeFiles/donut.dir/Render/BillboardBatch.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/CompositeModel.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/CompositeModel.cpp.o: /var/www/reverse/donut/src/Render/CompositeModel.cpp
 src/CMakeFiles/donut.dir/Render/CompositeModel.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_34) "Building CXX object src/CMakeFiles/donut.dir/Render/CompositeModel.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_35) "Building CXX object src/CMakeFiles/donut.dir/Render/CompositeModel.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/CompositeModel.cpp.o -MF CMakeFiles/donut.dir/Render/CompositeModel.cpp.o.d -o CMakeFiles/donut.dir/Render/CompositeModel.cpp.o -c /var/www/reverse/donut/src/Render/CompositeModel.cpp
 
 src/CMakeFiles/donut.dir/Render/CompositeModel.cpp.i: cmake_force
@@ -548,7 +562,7 @@ src/CMakeFiles/donut.dir/Render/CompositeModel.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/Font.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/Font.cpp.o: /var/www/reverse/donut/src/Render/Font.cpp
 src/CMakeFiles/donut.dir/Render/Font.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_35) "Building CXX object src/CMakeFiles/donut.dir/Render/Font.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_36) "Building CXX object src/CMakeFiles/donut.dir/Render/Font.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/Font.cpp.o -MF CMakeFiles/donut.dir/Render/Font.cpp.o.d -o CMakeFiles/donut.dir/Render/Font.cpp.o -c /var/www/reverse/donut/src/Render/Font.cpp
 
 src/CMakeFiles/donut.dir/Render/Font.cpp.i: cmake_force
@@ -562,7 +576,7 @@ src/CMakeFiles/donut.dir/Render/Font.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/LineRenderer.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/LineRenderer.cpp.o: /var/www/reverse/donut/src/Render/LineRenderer.cpp
 src/CMakeFiles/donut.dir/Render/LineRenderer.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_36) "Building CXX object src/CMakeFiles/donut.dir/Render/LineRenderer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_37) "Building CXX object src/CMakeFiles/donut.dir/Render/LineRenderer.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/LineRenderer.cpp.o -MF CMakeFiles/donut.dir/Render/LineRenderer.cpp.o.d -o CMakeFiles/donut.dir/Render/LineRenderer.cpp.o -c /var/www/reverse/donut/src/Render/LineRenderer.cpp
 
 src/CMakeFiles/donut.dir/Render/LineRenderer.cpp.i: cmake_force
@@ -576,7 +590,7 @@ src/CMakeFiles/donut.dir/Render/LineRenderer.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/Mesh.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/Mesh.cpp.o: /var/www/reverse/donut/src/Render/Mesh.cpp
 src/CMakeFiles/donut.dir/Render/Mesh.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_37) "Building CXX object src/CMakeFiles/donut.dir/Render/Mesh.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_38) "Building CXX object src/CMakeFiles/donut.dir/Render/Mesh.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/Mesh.cpp.o -MF CMakeFiles/donut.dir/Render/Mesh.cpp.o.d -o CMakeFiles/donut.dir/Render/Mesh.cpp.o -c /var/www/reverse/donut/src/Render/Mesh.cpp
 
 src/CMakeFiles/donut.dir/Render/Mesh.cpp.i: cmake_force
@@ -590,7 +604,7 @@ src/CMakeFiles/donut.dir/Render/Mesh.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/OpenGL/FrameBuffer.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/OpenGL/FrameBuffer.cpp.o: /var/www/reverse/donut/src/Render/OpenGL/FrameBuffer.cpp
 src/CMakeFiles/donut.dir/Render/OpenGL/FrameBuffer.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_38) "Building CXX object src/CMakeFiles/donut.dir/Render/OpenGL/FrameBuffer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_39) "Building CXX object src/CMakeFiles/donut.dir/Render/OpenGL/FrameBuffer.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/OpenGL/FrameBuffer.cpp.o -MF CMakeFiles/donut.dir/Render/OpenGL/FrameBuffer.cpp.o.d -o CMakeFiles/donut.dir/Render/OpenGL/FrameBuffer.cpp.o -c /var/www/reverse/donut/src/Render/OpenGL/FrameBuffer.cpp
 
 src/CMakeFiles/donut.dir/Render/OpenGL/FrameBuffer.cpp.i: cmake_force
@@ -604,7 +618,7 @@ src/CMakeFiles/donut.dir/Render/OpenGL/FrameBuffer.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/OpenGL/GLTexture2D.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/OpenGL/GLTexture2D.cpp.o: /var/www/reverse/donut/src/Render/OpenGL/GLTexture2D.cpp
 src/CMakeFiles/donut.dir/Render/OpenGL/GLTexture2D.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_39) "Building CXX object src/CMakeFiles/donut.dir/Render/OpenGL/GLTexture2D.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_40) "Building CXX object src/CMakeFiles/donut.dir/Render/OpenGL/GLTexture2D.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/OpenGL/GLTexture2D.cpp.o -MF CMakeFiles/donut.dir/Render/OpenGL/GLTexture2D.cpp.o.d -o CMakeFiles/donut.dir/Render/OpenGL/GLTexture2D.cpp.o -c /var/www/reverse/donut/src/Render/OpenGL/GLTexture2D.cpp
 
 src/CMakeFiles/donut.dir/Render/OpenGL/GLTexture2D.cpp.i: cmake_force
@@ -618,7 +632,7 @@ src/CMakeFiles/donut.dir/Render/OpenGL/GLTexture2D.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/OpenGL/IndexBuffer.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/OpenGL/IndexBuffer.cpp.o: /var/www/reverse/donut/src/Render/OpenGL/IndexBuffer.cpp
 src/CMakeFiles/donut.dir/Render/OpenGL/IndexBuffer.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_40) "Building CXX object src/CMakeFiles/donut.dir/Render/OpenGL/IndexBuffer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_41) "Building CXX object src/CMakeFiles/donut.dir/Render/OpenGL/IndexBuffer.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/OpenGL/IndexBuffer.cpp.o -MF CMakeFiles/donut.dir/Render/OpenGL/IndexBuffer.cpp.o.d -o CMakeFiles/donut.dir/Render/OpenGL/IndexBuffer.cpp.o -c /var/www/reverse/donut/src/Render/OpenGL/IndexBuffer.cpp
 
 src/CMakeFiles/donut.dir/Render/OpenGL/IndexBuffer.cpp.i: cmake_force
@@ -632,7 +646,7 @@ src/CMakeFiles/donut.dir/Render/OpenGL/IndexBuffer.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/OpenGL/RenderBuffer.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/OpenGL/RenderBuffer.cpp.o: /var/www/reverse/donut/src/Render/OpenGL/RenderBuffer.cpp
 src/CMakeFiles/donut.dir/Render/OpenGL/RenderBuffer.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_41) "Building CXX object src/CMakeFiles/donut.dir/Render/OpenGL/RenderBuffer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_42) "Building CXX object src/CMakeFiles/donut.dir/Render/OpenGL/RenderBuffer.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/OpenGL/RenderBuffer.cpp.o -MF CMakeFiles/donut.dir/Render/OpenGL/RenderBuffer.cpp.o.d -o CMakeFiles/donut.dir/Render/OpenGL/RenderBuffer.cpp.o -c /var/www/reverse/donut/src/Render/OpenGL/RenderBuffer.cpp
 
 src/CMakeFiles/donut.dir/Render/OpenGL/RenderBuffer.cpp.i: cmake_force
@@ -646,7 +660,7 @@ src/CMakeFiles/donut.dir/Render/OpenGL/RenderBuffer.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/OpenGL/ShaderProgram.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/OpenGL/ShaderProgram.cpp.o: /var/www/reverse/donut/src/Render/OpenGL/ShaderProgram.cpp
 src/CMakeFiles/donut.dir/Render/OpenGL/ShaderProgram.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_42) "Building CXX object src/CMakeFiles/donut.dir/Render/OpenGL/ShaderProgram.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_43) "Building CXX object src/CMakeFiles/donut.dir/Render/OpenGL/ShaderProgram.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/OpenGL/ShaderProgram.cpp.o -MF CMakeFiles/donut.dir/Render/OpenGL/ShaderProgram.cpp.o.d -o CMakeFiles/donut.dir/Render/OpenGL/ShaderProgram.cpp.o -c /var/www/reverse/donut/src/Render/OpenGL/ShaderProgram.cpp
 
 src/CMakeFiles/donut.dir/Render/OpenGL/ShaderProgram.cpp.i: cmake_force
@@ -660,7 +674,7 @@ src/CMakeFiles/donut.dir/Render/OpenGL/ShaderProgram.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/OpenGL/TextureBuffer.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/OpenGL/TextureBuffer.cpp.o: /var/www/reverse/donut/src/Render/OpenGL/TextureBuffer.cpp
 src/CMakeFiles/donut.dir/Render/OpenGL/TextureBuffer.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_43) "Building CXX object src/CMakeFiles/donut.dir/Render/OpenGL/TextureBuffer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_44) "Building CXX object src/CMakeFiles/donut.dir/Render/OpenGL/TextureBuffer.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/OpenGL/TextureBuffer.cpp.o -MF CMakeFiles/donut.dir/Render/OpenGL/TextureBuffer.cpp.o.d -o CMakeFiles/donut.dir/Render/OpenGL/TextureBuffer.cpp.o -c /var/www/reverse/donut/src/Render/OpenGL/TextureBuffer.cpp
 
 src/CMakeFiles/donut.dir/Render/OpenGL/TextureBuffer.cpp.i: cmake_force
@@ -674,7 +688,7 @@ src/CMakeFiles/donut.dir/Render/OpenGL/TextureBuffer.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/OpenGL/VertexBinding.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/OpenGL/VertexBinding.cpp.o: /var/www/reverse/donut/src/Render/OpenGL/VertexBinding.cpp
 src/CMakeFiles/donut.dir/Render/OpenGL/VertexBinding.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_44) "Building CXX object src/CMakeFiles/donut.dir/Render/OpenGL/VertexBinding.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_45) "Building CXX object src/CMakeFiles/donut.dir/Render/OpenGL/VertexBinding.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/OpenGL/VertexBinding.cpp.o -MF CMakeFiles/donut.dir/Render/OpenGL/VertexBinding.cpp.o.d -o CMakeFiles/donut.dir/Render/OpenGL/VertexBinding.cpp.o -c /var/www/reverse/donut/src/Render/OpenGL/VertexBinding.cpp
 
 src/CMakeFiles/donut.dir/Render/OpenGL/VertexBinding.cpp.i: cmake_force
@@ -688,7 +702,7 @@ src/CMakeFiles/donut.dir/Render/OpenGL/VertexBinding.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/OpenGL/VertexBuffer.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/OpenGL/VertexBuffer.cpp.o: /var/www/reverse/donut/src/Render/OpenGL/VertexBuffer.cpp
 src/CMakeFiles/donut.dir/Render/OpenGL/VertexBuffer.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_45) "Building CXX object src/CMakeFiles/donut.dir/Render/OpenGL/VertexBuffer.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_46) "Building CXX object src/CMakeFiles/donut.dir/Render/OpenGL/VertexBuffer.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/OpenGL/VertexBuffer.cpp.o -MF CMakeFiles/donut.dir/Render/OpenGL/VertexBuffer.cpp.o.d -o CMakeFiles/donut.dir/Render/OpenGL/VertexBuffer.cpp.o -c /var/www/reverse/donut/src/Render/OpenGL/VertexBuffer.cpp
 
 src/CMakeFiles/donut.dir/Render/OpenGL/VertexBuffer.cpp.i: cmake_force
@@ -702,7 +716,7 @@ src/CMakeFiles/donut.dir/Render/OpenGL/VertexBuffer.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/OpenGL/glad/glad.c.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/OpenGL/glad/glad.c.o: /var/www/reverse/donut/src/Render/OpenGL/glad/glad.c
 src/CMakeFiles/donut.dir/Render/OpenGL/glad/glad.c.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_46) "Building C object src/CMakeFiles/donut.dir/Render/OpenGL/glad/glad.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_47) "Building C object src/CMakeFiles/donut.dir/Render/OpenGL/glad/glad.c.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/OpenGL/glad/glad.c.o -MF CMakeFiles/donut.dir/Render/OpenGL/glad/glad.c.o.d -o CMakeFiles/donut.dir/Render/OpenGL/glad/glad.c.o -c /var/www/reverse/donut/src/Render/OpenGL/glad/glad.c
 
 src/CMakeFiles/donut.dir/Render/OpenGL/glad/glad.c.i: cmake_force
@@ -716,7 +730,7 @@ src/CMakeFiles/donut.dir/Render/OpenGL/glad/glad.c.s: cmake_force
 src/CMakeFiles/donut.dir/Render/Shader.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/Shader.cpp.o: /var/www/reverse/donut/src/Render/Shader.cpp
 src/CMakeFiles/donut.dir/Render/Shader.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_47) "Building CXX object src/CMakeFiles/donut.dir/Render/Shader.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_48) "Building CXX object src/CMakeFiles/donut.dir/Render/Shader.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/Shader.cpp.o -MF CMakeFiles/donut.dir/Render/Shader.cpp.o.d -o CMakeFiles/donut.dir/Render/Shader.cpp.o -c /var/www/reverse/donut/src/Render/Shader.cpp
 
 src/CMakeFiles/donut.dir/Render/Shader.cpp.i: cmake_force
@@ -730,7 +744,7 @@ src/CMakeFiles/donut.dir/Render/Shader.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/SimpleMesh.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/SimpleMesh.cpp.o: /var/www/reverse/donut/src/Render/SimpleMesh.cpp
 src/CMakeFiles/donut.dir/Render/SimpleMesh.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_48) "Building CXX object src/CMakeFiles/donut.dir/Render/SimpleMesh.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_49) "Building CXX object src/CMakeFiles/donut.dir/Render/SimpleMesh.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/SimpleMesh.cpp.o -MF CMakeFiles/donut.dir/Render/SimpleMesh.cpp.o.d -o CMakeFiles/donut.dir/Render/SimpleMesh.cpp.o -c /var/www/reverse/donut/src/Render/SimpleMesh.cpp
 
 src/CMakeFiles/donut.dir/Render/SimpleMesh.cpp.i: cmake_force
@@ -744,7 +758,7 @@ src/CMakeFiles/donut.dir/Render/SimpleMesh.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/SkinAnimation.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/SkinAnimation.cpp.o: /var/www/reverse/donut/src/Render/SkinAnimation.cpp
 src/CMakeFiles/donut.dir/Render/SkinAnimation.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_49) "Building CXX object src/CMakeFiles/donut.dir/Render/SkinAnimation.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_50) "Building CXX object src/CMakeFiles/donut.dir/Render/SkinAnimation.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/SkinAnimation.cpp.o -MF CMakeFiles/donut.dir/Render/SkinAnimation.cpp.o.d -o CMakeFiles/donut.dir/Render/SkinAnimation.cpp.o -c /var/www/reverse/donut/src/Render/SkinAnimation.cpp
 
 src/CMakeFiles/donut.dir/Render/SkinAnimation.cpp.i: cmake_force
@@ -758,7 +772,7 @@ src/CMakeFiles/donut.dir/Render/SkinAnimation.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/SkinModel.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/SkinModel.cpp.o: /var/www/reverse/donut/src/Render/SkinModel.cpp
 src/CMakeFiles/donut.dir/Render/SkinModel.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_50) "Building CXX object src/CMakeFiles/donut.dir/Render/SkinModel.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_51) "Building CXX object src/CMakeFiles/donut.dir/Render/SkinModel.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/SkinModel.cpp.o -MF CMakeFiles/donut.dir/Render/SkinModel.cpp.o.d -o CMakeFiles/donut.dir/Render/SkinModel.cpp.o -c /var/www/reverse/donut/src/Render/SkinModel.cpp
 
 src/CMakeFiles/donut.dir/Render/SkinModel.cpp.i: cmake_force
@@ -772,7 +786,7 @@ src/CMakeFiles/donut.dir/Render/SkinModel.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/SpriteBatch.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/SpriteBatch.cpp.o: /var/www/reverse/donut/src/Render/SpriteBatch.cpp
 src/CMakeFiles/donut.dir/Render/SpriteBatch.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_51) "Building CXX object src/CMakeFiles/donut.dir/Render/SpriteBatch.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_52) "Building CXX object src/CMakeFiles/donut.dir/Render/SpriteBatch.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/SpriteBatch.cpp.o -MF CMakeFiles/donut.dir/Render/SpriteBatch.cpp.o.d -o CMakeFiles/donut.dir/Render/SpriteBatch.cpp.o -c /var/www/reverse/donut/src/Render/SpriteBatch.cpp
 
 src/CMakeFiles/donut.dir/Render/SpriteBatch.cpp.i: cmake_force
@@ -786,7 +800,7 @@ src/CMakeFiles/donut.dir/Render/SpriteBatch.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/Texture.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/Texture.cpp.o: /var/www/reverse/donut/src/Render/Texture.cpp
 src/CMakeFiles/donut.dir/Render/Texture.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_52) "Building CXX object src/CMakeFiles/donut.dir/Render/Texture.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_53) "Building CXX object src/CMakeFiles/donut.dir/Render/Texture.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/Texture.cpp.o -MF CMakeFiles/donut.dir/Render/Texture.cpp.o.d -o CMakeFiles/donut.dir/Render/Texture.cpp.o -c /var/www/reverse/donut/src/Render/Texture.cpp
 
 src/CMakeFiles/donut.dir/Render/Texture.cpp.i: cmake_force
@@ -800,7 +814,7 @@ src/CMakeFiles/donut.dir/Render/Texture.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/WorldSphere.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/WorldSphere.cpp.o: /var/www/reverse/donut/src/Render/WorldSphere.cpp
 src/CMakeFiles/donut.dir/Render/WorldSphere.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_53) "Building CXX object src/CMakeFiles/donut.dir/Render/WorldSphere.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_54) "Building CXX object src/CMakeFiles/donut.dir/Render/WorldSphere.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/WorldSphere.cpp.o -MF CMakeFiles/donut.dir/Render/WorldSphere.cpp.o.d -o CMakeFiles/donut.dir/Render/WorldSphere.cpp.o -c /var/www/reverse/donut/src/Render/WorldSphere.cpp
 
 src/CMakeFiles/donut.dir/Render/WorldSphere.cpp.i: cmake_force
@@ -814,7 +828,7 @@ src/CMakeFiles/donut.dir/Render/WorldSphere.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/imgui/imgui.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/imgui/imgui.cpp.o: /var/www/reverse/donut/src/Render/imgui/imgui.cpp
 src/CMakeFiles/donut.dir/Render/imgui/imgui.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_54) "Building CXX object src/CMakeFiles/donut.dir/Render/imgui/imgui.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_55) "Building CXX object src/CMakeFiles/donut.dir/Render/imgui/imgui.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/imgui/imgui.cpp.o -MF CMakeFiles/donut.dir/Render/imgui/imgui.cpp.o.d -o CMakeFiles/donut.dir/Render/imgui/imgui.cpp.o -c /var/www/reverse/donut/src/Render/imgui/imgui.cpp
 
 src/CMakeFiles/donut.dir/Render/imgui/imgui.cpp.i: cmake_force
@@ -828,7 +842,7 @@ src/CMakeFiles/donut.dir/Render/imgui/imgui.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/imgui/imgui_demo.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/imgui/imgui_demo.cpp.o: /var/www/reverse/donut/src/Render/imgui/imgui_demo.cpp
 src/CMakeFiles/donut.dir/Render/imgui/imgui_demo.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_55) "Building CXX object src/CMakeFiles/donut.dir/Render/imgui/imgui_demo.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_56) "Building CXX object src/CMakeFiles/donut.dir/Render/imgui/imgui_demo.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/imgui/imgui_demo.cpp.o -MF CMakeFiles/donut.dir/Render/imgui/imgui_demo.cpp.o.d -o CMakeFiles/donut.dir/Render/imgui/imgui_demo.cpp.o -c /var/www/reverse/donut/src/Render/imgui/imgui_demo.cpp
 
 src/CMakeFiles/donut.dir/Render/imgui/imgui_demo.cpp.i: cmake_force
@@ -842,7 +856,7 @@ src/CMakeFiles/donut.dir/Render/imgui/imgui_demo.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/imgui/imgui_draw.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/imgui/imgui_draw.cpp.o: /var/www/reverse/donut/src/Render/imgui/imgui_draw.cpp
 src/CMakeFiles/donut.dir/Render/imgui/imgui_draw.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_56) "Building CXX object src/CMakeFiles/donut.dir/Render/imgui/imgui_draw.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_57) "Building CXX object src/CMakeFiles/donut.dir/Render/imgui/imgui_draw.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/imgui/imgui_draw.cpp.o -MF CMakeFiles/donut.dir/Render/imgui/imgui_draw.cpp.o.d -o CMakeFiles/donut.dir/Render/imgui/imgui_draw.cpp.o -c /var/www/reverse/donut/src/Render/imgui/imgui_draw.cpp
 
 src/CMakeFiles/donut.dir/Render/imgui/imgui_draw.cpp.i: cmake_force
@@ -856,7 +870,7 @@ src/CMakeFiles/donut.dir/Render/imgui/imgui_draw.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/imgui/imgui_impl_opengl3.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/imgui/imgui_impl_opengl3.cpp.o: /var/www/reverse/donut/src/Render/imgui/imgui_impl_opengl3.cpp
 src/CMakeFiles/donut.dir/Render/imgui/imgui_impl_opengl3.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_57) "Building CXX object src/CMakeFiles/donut.dir/Render/imgui/imgui_impl_opengl3.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_58) "Building CXX object src/CMakeFiles/donut.dir/Render/imgui/imgui_impl_opengl3.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/imgui/imgui_impl_opengl3.cpp.o -MF CMakeFiles/donut.dir/Render/imgui/imgui_impl_opengl3.cpp.o.d -o CMakeFiles/donut.dir/Render/imgui/imgui_impl_opengl3.cpp.o -c /var/www/reverse/donut/src/Render/imgui/imgui_impl_opengl3.cpp
 
 src/CMakeFiles/donut.dir/Render/imgui/imgui_impl_opengl3.cpp.i: cmake_force
@@ -870,7 +884,7 @@ src/CMakeFiles/donut.dir/Render/imgui/imgui_impl_opengl3.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/imgui/imgui_impl_sdl.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/imgui/imgui_impl_sdl.cpp.o: /var/www/reverse/donut/src/Render/imgui/imgui_impl_sdl.cpp
 src/CMakeFiles/donut.dir/Render/imgui/imgui_impl_sdl.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_58) "Building CXX object src/CMakeFiles/donut.dir/Render/imgui/imgui_impl_sdl.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_59) "Building CXX object src/CMakeFiles/donut.dir/Render/imgui/imgui_impl_sdl.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/imgui/imgui_impl_sdl.cpp.o -MF CMakeFiles/donut.dir/Render/imgui/imgui_impl_sdl.cpp.o.d -o CMakeFiles/donut.dir/Render/imgui/imgui_impl_sdl.cpp.o -c /var/www/reverse/donut/src/Render/imgui/imgui_impl_sdl.cpp
 
 src/CMakeFiles/donut.dir/Render/imgui/imgui_impl_sdl.cpp.i: cmake_force
@@ -884,7 +898,7 @@ src/CMakeFiles/donut.dir/Render/imgui/imgui_impl_sdl.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/imgui/imgui_user.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/imgui/imgui_user.cpp.o: /var/www/reverse/donut/src/Render/imgui/imgui_user.cpp
 src/CMakeFiles/donut.dir/Render/imgui/imgui_user.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_59) "Building CXX object src/CMakeFiles/donut.dir/Render/imgui/imgui_user.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_60) "Building CXX object src/CMakeFiles/donut.dir/Render/imgui/imgui_user.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/imgui/imgui_user.cpp.o -MF CMakeFiles/donut.dir/Render/imgui/imgui_user.cpp.o.d -o CMakeFiles/donut.dir/Render/imgui/imgui_user.cpp.o -c /var/www/reverse/donut/src/Render/imgui/imgui_user.cpp
 
 src/CMakeFiles/donut.dir/Render/imgui/imgui_user.cpp.i: cmake_force
@@ -898,7 +912,7 @@ src/CMakeFiles/donut.dir/Render/imgui/imgui_user.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Render/imgui/imgui_widgets.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Render/imgui/imgui_widgets.cpp.o: /var/www/reverse/donut/src/Render/imgui/imgui_widgets.cpp
 src/CMakeFiles/donut.dir/Render/imgui/imgui_widgets.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_60) "Building CXX object src/CMakeFiles/donut.dir/Render/imgui/imgui_widgets.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_61) "Building CXX object src/CMakeFiles/donut.dir/Render/imgui/imgui_widgets.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Render/imgui/imgui_widgets.cpp.o -MF CMakeFiles/donut.dir/Render/imgui/imgui_widgets.cpp.o.d -o CMakeFiles/donut.dir/Render/imgui/imgui_widgets.cpp.o -c /var/www/reverse/donut/src/Render/imgui/imgui_widgets.cpp
 
 src/CMakeFiles/donut.dir/Render/imgui/imgui_widgets.cpp.i: cmake_force
@@ -912,7 +926,7 @@ src/CMakeFiles/donut.dir/Render/imgui/imgui_widgets.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/ResourceManager.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/ResourceManager.cpp.o: /var/www/reverse/donut/src/ResourceManager.cpp
 src/CMakeFiles/donut.dir/ResourceManager.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_61) "Building CXX object src/CMakeFiles/donut.dir/ResourceManager.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_62) "Building CXX object src/CMakeFiles/donut.dir/ResourceManager.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/ResourceManager.cpp.o -MF CMakeFiles/donut.dir/ResourceManager.cpp.o.d -o CMakeFiles/donut.dir/ResourceManager.cpp.o -c /var/www/reverse/donut/src/ResourceManager.cpp
 
 src/CMakeFiles/donut.dir/ResourceManager.cpp.i: cmake_force
@@ -926,7 +940,7 @@ src/CMakeFiles/donut.dir/ResourceManager.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Scripting/Commands.generated.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Scripting/Commands.generated.cpp.o: /var/www/reverse/donut/src/Scripting/Commands.generated.cpp
 src/CMakeFiles/donut.dir/Scripting/Commands.generated.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_62) "Building CXX object src/CMakeFiles/donut.dir/Scripting/Commands.generated.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_63) "Building CXX object src/CMakeFiles/donut.dir/Scripting/Commands.generated.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Scripting/Commands.generated.cpp.o -MF CMakeFiles/donut.dir/Scripting/Commands.generated.cpp.o.d -o CMakeFiles/donut.dir/Scripting/Commands.generated.cpp.o -c /var/www/reverse/donut/src/Scripting/Commands.generated.cpp
 
 src/CMakeFiles/donut.dir/Scripting/Commands.generated.cpp.i: cmake_force
@@ -940,7 +954,7 @@ src/CMakeFiles/donut.dir/Scripting/Commands.generated.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Scripting/GameCommands.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Scripting/GameCommands.cpp.o: /var/www/reverse/donut/src/Scripting/GameCommands.cpp
 src/CMakeFiles/donut.dir/Scripting/GameCommands.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_63) "Building CXX object src/CMakeFiles/donut.dir/Scripting/GameCommands.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_64) "Building CXX object src/CMakeFiles/donut.dir/Scripting/GameCommands.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Scripting/GameCommands.cpp.o -MF CMakeFiles/donut.dir/Scripting/GameCommands.cpp.o.d -o CMakeFiles/donut.dir/Scripting/GameCommands.cpp.o -c /var/www/reverse/donut/src/Scripting/GameCommands.cpp
 
 src/CMakeFiles/donut.dir/Scripting/GameCommands.cpp.i: cmake_force
@@ -954,7 +968,7 @@ src/CMakeFiles/donut.dir/Scripting/GameCommands.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Scripting/ScriptEngine.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Scripting/ScriptEngine.cpp.o: /var/www/reverse/donut/src/Scripting/ScriptEngine.cpp
 src/CMakeFiles/donut.dir/Scripting/ScriptEngine.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_64) "Building CXX object src/CMakeFiles/donut.dir/Scripting/ScriptEngine.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_65) "Building CXX object src/CMakeFiles/donut.dir/Scripting/ScriptEngine.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Scripting/ScriptEngine.cpp.o -MF CMakeFiles/donut.dir/Scripting/ScriptEngine.cpp.o.d -o CMakeFiles/donut.dir/Scripting/ScriptEngine.cpp.o -c /var/www/reverse/donut/src/Scripting/ScriptEngine.cpp
 
 src/CMakeFiles/donut.dir/Scripting/ScriptEngine.cpp.i: cmake_force
@@ -968,7 +982,7 @@ src/CMakeFiles/donut.dir/Scripting/ScriptEngine.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Skeleton.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Skeleton.cpp.o: /var/www/reverse/donut/src/Skeleton.cpp
 src/CMakeFiles/donut.dir/Skeleton.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_65) "Building CXX object src/CMakeFiles/donut.dir/Skeleton.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_66) "Building CXX object src/CMakeFiles/donut.dir/Skeleton.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Skeleton.cpp.o -MF CMakeFiles/donut.dir/Skeleton.cpp.o.d -o CMakeFiles/donut.dir/Skeleton.cpp.o -c /var/www/reverse/donut/src/Skeleton.cpp
 
 src/CMakeFiles/donut.dir/Skeleton.cpp.i: cmake_force
@@ -982,7 +996,7 @@ src/CMakeFiles/donut.dir/Skeleton.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Vehicle.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Vehicle.cpp.o: /var/www/reverse/donut/src/Vehicle.cpp
 src/CMakeFiles/donut.dir/Vehicle.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_66) "Building CXX object src/CMakeFiles/donut.dir/Vehicle.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_67) "Building CXX object src/CMakeFiles/donut.dir/Vehicle.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Vehicle.cpp.o -MF CMakeFiles/donut.dir/Vehicle.cpp.o.d -o CMakeFiles/donut.dir/Vehicle.cpp.o -c /var/www/reverse/donut/src/Vehicle.cpp
 
 src/CMakeFiles/donut.dir/Vehicle.cpp.i: cmake_force
@@ -996,7 +1010,7 @@ src/CMakeFiles/donut.dir/Vehicle.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/Window.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/Window.cpp.o: /var/www/reverse/donut/src/Window.cpp
 src/CMakeFiles/donut.dir/Window.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_67) "Building CXX object src/CMakeFiles/donut.dir/Window.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_68) "Building CXX object src/CMakeFiles/donut.dir/Window.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/Window.cpp.o -MF CMakeFiles/donut.dir/Window.cpp.o.d -o CMakeFiles/donut.dir/Window.cpp.o -c /var/www/reverse/donut/src/Window.cpp
 
 src/CMakeFiles/donut.dir/Window.cpp.i: cmake_force
@@ -1010,7 +1024,7 @@ src/CMakeFiles/donut.dir/Window.cpp.s: cmake_force
 src/CMakeFiles/donut.dir/main.cpp.o: src/CMakeFiles/donut.dir/flags.make
 src/CMakeFiles/donut.dir/main.cpp.o: /var/www/reverse/donut/src/main.cpp
 src/CMakeFiles/donut.dir/main.cpp.o: src/CMakeFiles/donut.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_68) "Building CXX object src/CMakeFiles/donut.dir/main.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_69) "Building CXX object src/CMakeFiles/donut.dir/main.cpp.o"
 	cd /var/www/reverse/donut/build_linux/src && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT src/CMakeFiles/donut.dir/main.cpp.o -MF CMakeFiles/donut.dir/main.cpp.o.d -o CMakeFiles/donut.dir/main.cpp.o -c /var/www/reverse/donut/src/main.cpp
 
 src/CMakeFiles/donut.dir/main.cpp.i: cmake_force
@@ -1023,6 +1037,7 @@ src/CMakeFiles/donut.dir/main.cpp.s: cmake_force
 
 # Object files for target donut
 donut_OBJECTS = \
+"CMakeFiles/donut.dir/AI/ChaseManager.cpp.o" \
 "CMakeFiles/donut.dir/AI/PathGraph.cpp.o" \
 "CMakeFiles/donut.dir/AI/TrafficManager.cpp.o" \
 "CMakeFiles/donut.dir/AnimCamera.cpp.o" \
@@ -1095,6 +1110,7 @@ donut_OBJECTS = \
 # External object files for target donut
 donut_EXTERNAL_OBJECTS =
 
+bin/donut: src/CMakeFiles/donut.dir/AI/ChaseManager.cpp.o
 bin/donut: src/CMakeFiles/donut.dir/AI/PathGraph.cpp.o
 bin/donut: src/CMakeFiles/donut.dir/AI/TrafficManager.cpp.o
 bin/donut: src/CMakeFiles/donut.dir/AnimCamera.cpp.o
@@ -1171,7 +1187,7 @@ bin/donut: /tmp/opencode/bullet3/build/src/BulletCollision/libBulletCollision.so
 bin/donut: /tmp/opencode/bullet3/build/src/BulletDynamics/libBulletDynamics.so
 bin/donut: /tmp/opencode/bullet3/build/src/LinearMath/libLinearMath.so
 bin/donut: src/CMakeFiles/donut.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_69) "Linking CXX executable ../bin/donut"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/var/www/reverse/donut/build_linux/CMakeFiles --progress-num=$(CMAKE_PROGRESS_70) "Linking CXX executable ../bin/donut"
 	cd /var/www/reverse/donut/build_linux/src && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/donut.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
