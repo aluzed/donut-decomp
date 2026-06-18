@@ -18,6 +18,9 @@ namespace Donut
 
 void ScriptEngine::SelectMission(const std::string& id)
 {
+	if (_missionActive)
+		return;
+
 	_missionActive = true;
 	_missionId = id;
 	_currentStage = -1;
