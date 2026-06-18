@@ -121,7 +121,8 @@ void BillboardBatch::Draw(GL::ShaderProgram& shader, bool opaque)
 
 	glDepthMask(_zWrite ? GL_TRUE : GL_FALSE);
 
-	shader.SetUniformValue("alphaMask", material->IsAlphaTested() ? 0.5f : 0.0f);
+	if (shader.HasUniform("alphaMask"))
+		shader.SetUniformValue("alphaMask", material->IsAlphaTested() ? 0.5f : 0.0f);
 
 	_vertexBinding->Bind();
 
