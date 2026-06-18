@@ -710,4 +710,5 @@ src/CMakeFiles/donut.dir/Game.cpp.o: /var/www/reverse/donut/src/Game.cpp \
  /var/www/reverse/donut/src/Scripting/ScriptEngine.h \
  /var/www/reverse/donut/src/Vehicle.h \
  /tmp/opencode/bullet3/src/BulletDynamics/Vehicle/btRaycastVehicle.h \
+ /var/www/reverse/donut/src/AI/ChaseManager.h \
  /var/www/reverse/donut/src/Window.h

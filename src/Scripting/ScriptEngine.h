@@ -5,6 +5,8 @@
 #include "Core/Math/Vector3.h"
 #include "Vehicle.h"
 
+#include "AI/ChaseManager.h"
+
 #include <string>
 #include <vector>
 

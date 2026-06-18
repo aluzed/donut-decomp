@@ -236,4 +236,5 @@ src/CMakeFiles/donut.dir/Scripting/GameCommands.cpp.o: \
  /tmp/opencode/bullet3/src/BulletDynamics/Vehicle/btVehicleRaycaster.h \
  /tmp/opencode/bullet3/src/BulletDynamics/Vehicle/btWheelInfo.h \
  /tmp/opencode/bullet3/src/BulletDynamics/Dynamics/btActionInterface.h \
- /tmp/opencode/bullet3/src/BulletDynamics/Dynamics/btRigidBody.h
+ /tmp/opencode/bullet3/src/BulletDynamics/Dynamics/btRigidBody.h \
+ /var/www/reverse/donut/src/AI/ChaseManager.h
