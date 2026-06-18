@@ -168,7 +168,10 @@ void ScriptEngine::InitLevelPlayerVehicle(const std::string& car, const std::str
 	          car, pos.X, pos.Y, pos.Z, role, aiScript);
 
 	auto vehicle = std::make_unique<Vehicle>(car);
-	vehicle->LoadModel("art/cars/" + car + ".p3d");
+	std::string modelPath = "art/cars/" + car + ".p3d";
+	if (!FileSystem::exists(modelPath))
+		modelPath = "art/cars/famil_v.p3d";
+	vehicle->LoadModel(modelPath);
 	vehicle->CreatePhysicsBody(_game.GetWorldPhysics(), pos);
 	_activeVehicle = vehicle.get();
 	_missionVehicles.push_back(std::move(vehicle));
@@ -189,7 +192,10 @@ void ScriptEngine::AddStageVehicle(const std::string& car, const std::string& lo
 	          car, locator, pos.X, pos.Y, pos.Z, behaviour, aiScript, driver);
 
 	auto vehicle = std::make_unique<Vehicle>(car);
-	vehicle->LoadModel("art/cars/" + car + ".p3d");
+	std::string modelPath = "art/cars/" + car + ".p3d";
+	if (!FileSystem::exists(modelPath))
+		modelPath = "art/cars/famil_v.p3d";
+	vehicle->LoadModel(modelPath);
 	vehicle->CreatePhysicsBody(_game.GetWorldPhysics(), pos);
 	_activeVehicle = vehicle.get();
 	_missionVehicles.push_back(std::move(vehicle));
