@@ -20,13 +20,6 @@ namespace GL { class ShaderProgram; }
 class TrafficManager
 {
 public:
-	TrafficManager(Level& level, LineRenderer& lineRenderer, const PathGraph& graph);
-
-	void Update(double dt);
-	void Draw();
-	void DrawSolid(SimpleMesh& carMesh, GL::ShaderProgram& shader, const Matrix4x4& viewProj);
-
-private:
 	struct TrafficCar
 	{
 		Vector3 position;
@@ -38,6 +31,15 @@ private:
 		int targetNode;
 	};
 
+	TrafficManager(Level& level, LineRenderer& lineRenderer, const PathGraph& graph);
+
+	void Update(double dt);
+	void Draw();
+	void DrawSolid(SimpleMesh& carMesh, GL::ShaderProgram& shader, const Matrix4x4& viewProj);
+
+	const std::vector<TrafficCar>& GetCars() const { return _cars; }
+
+private:
 	Level& _level;
 	LineRenderer& _lineRenderer;
 	const PathGraph& _graph;
