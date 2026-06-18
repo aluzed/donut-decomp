@@ -671,6 +671,11 @@ void Game::Run()
 			Log::Info("Debug draw: {}", _showDebug ? "ON" : "OFF");
 		}
 
+		if (Input::JustPressed(Button::KeyF1))
+		{
+			_showHelp = !_showHelp;
+		}
+
 		if (_gameState == GameState::Paused)
 		{
 			ImGui::Render();
@@ -988,6 +993,28 @@ void Game::Run()
 					Vector2((viewportWidth / 2.0f) - 60, viewportHeight / 2.0f + 10),
 					Vector4(0.6f, 0.6f, 0.6f, 1.0f));
 			}
+		}
+
+		if (_showHelp)
+		{
+			const char* lines[] = {
+				"=== CONTROLS ===",
+				"Arrows : Move / Drive",
+				"E      : Jump / Enter-Exit car",
+				"Space  : Vehicle jump",
+				"Shift  : Boost (while driving)",
+				"H      : Horn (while driving)",
+				"M      : Restart mission",
+				"T      : Teleport to vehicle",
+				"R      : Reset best time",
+				"1      : Toggle debug view",
+				"F1     : This help",
+				"ESC    : Pause",
+				"Right Click : Freecam fly",
+			};
+			for (int i = 0; i < 13; ++i)
+				sprites.DrawText(font, lines[i],
+					Vector2(32, 132.0f + i * 18), Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 		}
 
 		sprites.Flush(proj);

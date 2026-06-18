@@ -115,6 +115,7 @@ private:
 	int _lockedMousePosX;
 	int _lockedMousePosY;
 	bool _showDebug = true;
+	bool _showHelp = false;
 	float _health = 100.0f;
 	std::vector<std::pair<Vector3, float>> _buildings;
 	float _shakeAmount = 0.0f;
