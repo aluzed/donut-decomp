@@ -671,7 +671,7 @@ void Game::Run()
 			Log::Info("Debug draw: {}", _showDebug ? "ON" : "OFF");
 		}
 
-		if (Input::JustPressed(Button::KeyF1))
+		if (Input::JustPressed(Button::KeyF))
 		{
 			_showHelp = !_showHelp;
 		}
@@ -902,6 +902,21 @@ void Game::Run()
 				sprites.DrawText(font, "Arrows: Move | E: Action | M: Restart | ESC: Pause",
 					Vector2(32, 92), Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 
+				if (_showHelp)
+				{
+					const char* lines[] = {
+						"=== CONTROLS ===",
+						"Arrows : Move / Drive",
+						"E/Space: Jump | Shift: Boost",
+						"H: Horn | M: Restart | R: Reset",
+						"T: Teleport | 1: Debug | F: Help",
+						"ESC: Pause | RightClick: Fly",
+					};
+					for (int i = 0; i < 6; ++i)
+						sprites.DrawText(font, lines[i],
+							Vector2(32, 112.0f + i * 18), Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+				}
+
 				if (_character && _scriptEngine->IsMissionActive())
 				{
 					for (auto& v : _scriptEngine->GetMissionVehicles())
@@ -993,28 +1008,6 @@ void Game::Run()
 					Vector2((viewportWidth / 2.0f) - 60, viewportHeight / 2.0f + 10),
 					Vector4(0.6f, 0.6f, 0.6f, 1.0f));
 			}
-		}
-
-		if (_showHelp)
-		{
-			const char* lines[] = {
-				"=== CONTROLS ===",
-				"Arrows : Move / Drive",
-				"E      : Jump / Enter-Exit car",
-				"Space  : Vehicle jump",
-				"Shift  : Boost (while driving)",
-				"H      : Horn (while driving)",
-				"M      : Restart mission",
-				"T      : Teleport to vehicle",
-				"R      : Reset best time",
-				"1      : Toggle debug view",
-				"F1     : This help",
-				"ESC    : Pause",
-				"Right Click : Freecam fly",
-			};
-			for (int i = 0; i < 13; ++i)
-				sprites.DrawText(font, lines[i],
-					Vector2(32, 132.0f + i * 18), Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 		}
 
 		sprites.Flush(proj);
