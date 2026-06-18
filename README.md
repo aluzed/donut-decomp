@@ -61,7 +61,21 @@ cmake --build build -j 5
 
 **Mesa drivers on Linux:** if you are trying to run with Mesa drivers and are getting issues with OpenGL context try messing with `MESA_GL_VERSION_OVERRIDE` when running like so: `MESA_GL_VERSION_OVERRIDE=4.3FC MESA_GLSL_VERSION_OVERRIDE=430 bin/donut`
 
+## Controls
+
+Controls are fully rebindable. On first launch the game writes a `keymap.conf`
+next to the executable with the default bindings; edit it by hand, or rebind
+in-game via the **Controls** menu (changes are saved back to `keymap.conf`).
+Keyboard and gamepad work simultaneously, and gamepad axes/buttons/triggers are
+configurable per binding (with dead zones).
+
+Defaults: arrow keys move/drive, `E` interact (enter/exit vehicle, jump),
+`Shift` boost, `H` horn, `Space` jump, right-click to free-fly the camera,
+`Esc` pause. See **[docs/keymap.md](docs/keymap.md)** for the full file format
+and the complete list of actions.
+
 ## Docs
+* [Keymap / controls](docs/keymap.md)
 * [Chunks](dev/Chunks.md)
 * [Commands](dev/Commands.md)
 

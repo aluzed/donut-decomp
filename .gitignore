@@ -12,3 +12,6 @@
 # save data
 donut_save.dat
 art/audio/*.rcf
+
+# runtime-generated control bindings
+keymap.conf

@@ -12,6 +12,7 @@
 #include "FrontendProject.h"
 #include "Game/CollectibleManager.h"
 #include "Input/Input.h"
+#include "Input/Keymap.h"
 #include "AI/PathGraph.h"
 #include "AI/PedestrianManager.h"
 #include "AI/TrafficManager.h"
@@ -59,6 +60,31 @@ const std::string kBuildString = "DEBUG BUILD";
 #else
 const std::string kBuildString = "Release Build";
 #endif
+
+namespace
+{
+// Human label for the input bound to `action`, preferring a gamepad binding
+// when a pad is connected (so the HUD matches the device in use). Reads the
+// live keymap so it stays correct after in-game rebinding.
+std::string ControlLabel(GameAction action, bool preferGamepad)
+{
+	const Keymap& km = Input::GetKeymap();
+	const auto& binds = BindingsFor(km, action);
+	const InputSource* chosen = nullptr;
+	for (const auto& src : binds)
+	{
+		const bool isPad = src.kind == InputSourceKind::GamepadButton || src.kind == InputSourceKind::GamepadAxis;
+		if (isPad == preferGamepad)
+		{
+			chosen = &src;
+			break;
+		}
+	}
+	if (!chosen && !binds.empty())
+		chosen = &binds.front();
+	return chosen ? KeymapConfig::HumanLabel(*chosen) : "—";
+}
+} // namespace
 
 void GLAPIENTRY MessageCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message,
                                 const void* userParam)
@@ -192,6 +218,9 @@ Game::Game(int argc, char** argv)
 
 	loadGlobal();
 	LoadModel("homer", "homer");
+
+	// load control bindings (writes a default keymap.conf if none exists)
+	Input::LoadKeymap("keymap.conf");
 
 	_camera = std::make_unique<FreeCamera>();
 	_camera->SetPosition(Vector3(228.0f, 5.0f, -174.0f));
@@ -379,7 +408,7 @@ void Game::Run()
 			Input::HandleEvent(event);
 		}
 
-		LockMouse(Input::IsDown(Button::MouseRight));
+		LockMouse(Input::IsActionDown(GameAction::CameraLook));
 
 		if (_mouseLocked)
 		{
@@ -392,22 +421,22 @@ void Game::Run()
 		if (_mouseLocked)
 		{
 			auto inputForce = Vector3(0.0f);
-			if (Input::IsDown(Button::KeyW))
+			if (Input::IsActionDown(GameAction::FreeCamForward))
 				inputForce += Vector3::Forward;
-			if (Input::IsDown(Button::KeyS))
+			if (Input::IsActionDown(GameAction::FreeCamBackward))
 				inputForce += Vector3::Backward;
-			if (Input::IsDown(Button::KeyA))
+			if (Input::IsActionDown(GameAction::FreeCamLeft))
 				inputForce += Vector3::Left;
-			if (Input::IsDown(Button::KeyD))
+			if (Input::IsActionDown(GameAction::FreeCamRight))
 				inputForce += Vector3::Right;
-			if (Input::IsDown(Button::KeySPACE))
+			if (Input::IsActionDown(GameAction::FreeCamUp))
 				inputForce += Vector3::Up;
-			if (Input::IsDown(Button::KeyLCONTROL))
+			if (Input::IsActionDown(GameAction::FreeCamDown))
 				inputForce += Vector3::Down;
 			if (inputForce.LengthSquared() > 0.0f)
 			{
 				inputForce.Normalize();
-				inputForce *= Input::IsDown(Button::KeyLSHIFT) ? 60.0f : 10.0f;
+				inputForce *= Input::IsActionDown(GameAction::FreeCamFast) ? 60.0f : 10.0f;
 				_camera->Move(inputForce, static_cast<float>(deltaTime));
 			}
 		}
@@ -416,14 +445,12 @@ void Game::Run()
 		{
 			auto& ctrl = _character->GetCharacterController();
 			auto charMove = Vector3::Zero;
-			float padX = Input::GetGamepadAxisX();
-			float padY = Input::GetGamepadAxisY();
-			if (Input::IsDown(Button::KeyUp) || padY > 0.3f)    charMove += Vector3::Forward;
-			if (Input::IsDown(Button::KeyDown) || padY < -0.3f) charMove += Vector3::Backward;
-			if (Input::IsDown(Button::KeyLeft) || padX < -0.3f) charMove += Vector3::Left;
-			if (Input::IsDown(Button::KeyRight) || padX > 0.3f) charMove += Vector3::Right;
+			charMove += Vector3::Forward * Input::GetActionAxis(GameAction::MoveForward);
+			charMove += Vector3::Backward * Input::GetActionAxis(GameAction::MoveBackward);
+			charMove += Vector3::Left * Input::GetActionAxis(GameAction::MoveLeft);
+			charMove += Vector3::Right * Input::GetActionAxis(GameAction::MoveRight);
 
-			if (Input::JustPressed(Button::KeyE))
+			if (Input::JustPressed(GameAction::Interact))
 			{
 				if (_scriptEngine->IsMissionActive())
 				{
@@ -445,7 +472,7 @@ void Game::Run()
 					ctrl.jump(btVector3(0, 0, 0));
 			}
 
-			if (Input::JustPressed(Button::KeyT) && _scriptEngine->IsMissionActive())
+			if (Input::JustPressed(GameAction::DebugTeleportToVehicle) && _scriptEngine->IsMissionActive())
 			{
 				for (auto& v : _scriptEngine->GetMissionVehicles())
 				{
@@ -485,38 +512,30 @@ void Game::Run()
 				}
 			}
 
-			if (Input::JustPressed(Button::KeyE))
+			if (Input::JustPressed(GameAction::Interact))
 			{
 				_inVehicle = false;
 				SetPlayerPosition(_activeVehicle->GetPosition() + Vector3(3.0f, 0, 0));
 				_activeVehicle = nullptr;
 				Log::Info("Game: exited vehicle");
 			}
-			else if (Input::JustPressed(Button::KeyH))
+			else if (Input::JustPressed(GameAction::Honk))
 			{
 				Log::Info("Vehicle: HONK!");
 			}
-			else if (Input::JustPressed(Button::KeySPACE))
+			else if (Input::JustPressed(GameAction::VehicleJump))
 			{
 				_activeVehicle->Jump();
 				_shakeAmount = 1.0f;
 			}
 			else
 			{
-				float throttle = 0, steer = 0, brake = 0;
-
-				float padX = Input::GetGamepadAxisX();
-				float padY = Input::GetGamepadAxisY();
-				float trigR = Input::GetGamepadTriggerR();
-				float trigL = Input::GetGamepadTriggerL();
-
-				if (Input::IsDown(Button::KeyUp) || padY > 0.3f)    throttle = std::max(1.0f, padY);
-				if (Input::IsDown(Button::KeyDown) || padY < -0.3f)  brake = std::max(1.0f, -padY);
-				if (Input::IsDown(Button::KeyLeft) || padX < -0.3f)  steer = std::min(-1.0f, padX);
-				if (Input::IsDown(Button::KeyRight) || padX > 0.3f)  steer = std::max(1.0f, padX);
-				if (trigR > 0.3f) throttle = std::max(throttle, trigR);
-				if (trigL > 0.3f) brake = std::max(brake, trigL);
-				float boost = Input::IsDown(Button::KeyLSHIFT) ? 3.0f : 1.0f;
+				// throttle/brake are 0..1, steer is -1..1 (right minus left);
+				// keyboard gives full deflection, sticks/triggers scale analogically
+				float throttle = Input::GetActionAxis(GameAction::MoveForward);
+				float brake = Input::GetActionAxis(GameAction::MoveBackward);
+				float steer = Input::GetActionAxis(GameAction::MoveRight) - Input::GetActionAxis(GameAction::MoveLeft);
+				float boost = Input::IsActionDown(GameAction::Boost) ? 3.0f : 1.0f;
 				_activeVehicle->ApplyInput(throttle, steer, brake, boost);
 			}
 		}
@@ -593,8 +612,7 @@ void Game::Run()
 
 		if (_gameState == GameState::Splash)
 		{
-			if (Input::JustPressed(Button::KeySPACE) || Input::JustPressed(Button::KeyENTER) ||
-			    Input::JustPressed(Button::KeyESCAPE))
+			if (Input::JustPressed(GameAction::UIConfirm) || Input::JustPressed(GameAction::PauseToggle))
 			{
 				_gameState = GameState::MainMenu;
 				_missionCompleteTimer = 0.0;
@@ -733,8 +751,9 @@ void Game::Run()
 			_audioManager->DebugGUI(&_debugAudioWindowOpen);
 
 		debugAboutMenu();
+		drawControlsWindow();
 
-		if (Input::JustPressed(Button::KeyESCAPE))
+		if (Input::JustPressed(GameAction::PauseToggle))
 		{
 			if (_gameState == GameState::InGame)
 				_gameState = GameState::Paused;
@@ -742,19 +761,19 @@ void Game::Run()
 				_gameState = GameState::InGame;
 		}
 
-		if (Input::JustPressed(Button::KeyR) && _gameState == GameState::InGame)
+		if (Input::JustPressed(GameAction::ResetBestTime) && _gameState == GameState::InGame)
 		{
 			_scriptEngine->ResetBestTime();
 			Log::Info("Game: best time reset!");
 		}
 
-		if (_gameState == GameState::Paused && Input::JustPressed(Button::KeyQ))
+		if (_gameState == GameState::Paused && Input::JustPressed(GameAction::QuitGame))
 		{
 			running = false;
 			Log::Info("Game: quit from pause menu");
 		}
 
-		if (Input::JustPressed(Button::KeyM) && _gameState == GameState::InGame)
+		if (Input::JustPressed(GameAction::RestartMission) && _gameState == GameState::InGame)
 		{
 			Log::Info("Game: restarting mission...");
 			_scriptEngine->CleanupMission();
@@ -766,13 +785,13 @@ void Game::Run()
 				_scriptEngine->RunFile("scripts/Missions/level01/m1.con");
 		}
 
-		if (Input::JustPressed(Button::Key1))
+		if (Input::JustPressed(GameAction::ToggleDebugDraw))
 		{
 			_showDebug = !_showDebug;
 			Log::Info("Debug draw: {}", _showDebug ? "ON" : "OFF");
 		}
 
-		if (Input::JustPressed(Button::KeyF))
+		if (Input::JustPressed(GameAction::ToggleHelp))
 		{
 			_showHelp = !_showHelp;
 		}
@@ -997,9 +1016,10 @@ void Game::Run()
 
 			if (_inVehicle)
 			{
-				std::string ctrlText = Input::IsGamepadConnected()
-					? "Stick: Drive | A: Exit | X: Horn | B: Boost | Y: Jump"
-					: "Arrows: Drive | Shift: Boost | H: Horn | E: Exit";
+				const bool pad = Input::IsGamepadConnected();
+				std::string ctrlText = fmt::format("{}: Drive | {}: Boost | {}: Horn | {}: Exit",
+					ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Boost, pad),
+					ControlLabel(GameAction::Honk, pad), ControlLabel(GameAction::Interact, pad));
 				sprites.DrawText(font, ctrlText,
 					Vector2(32, 92), Vector4(0.5f, 0.8f, 1.0f, 1.0f));
 				if (_activeVehicle)
@@ -1023,21 +1043,22 @@ void Game::Run()
 			}
 			else if (_gameState == GameState::InGame)
 			{
-				std::string ctrlText = Input::IsGamepadConnected()
-					? "Stick: Move | A: Action | Y: Jump | Back: Restart | Start: Pause"
-					: "Arrows: Move | E: Action | M: Restart | ESC: Pause";
+				const bool pad = Input::IsGamepadConnected();
+				std::string ctrlText = fmt::format("{}: Move | {}: Action | {}: Restart | {}: Pause",
+					ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Interact, pad),
+					ControlLabel(GameAction::RestartMission, pad), ControlLabel(GameAction::PauseToggle, pad));
 				sprites.DrawText(font, ctrlText,
 					Vector2(32, 92), Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 
 				if (_showHelp)
 				{
-					const char* lines[] = {
+					const std::string lines[] = {
 						"=== CONTROLS ===",
-						"Arrows : Move / Drive",
-						"E/Space: Jump | Shift: Boost",
-						"H: Horn | M: Restart | R: Reset",
-						"T: Teleport | 1: Debug | F: Help",
-						"ESC: Pause | RightClick: Fly",
+						fmt::format("{}: Move/Drive", ControlLabel(GameAction::MoveForward, pad)),
+						fmt::format("{}: Action | {}: Boost", ControlLabel(GameAction::Interact, pad), ControlLabel(GameAction::Boost, pad)),
+						fmt::format("{}: Horn | {}: Restart | {}: Reset", ControlLabel(GameAction::Honk, pad), ControlLabel(GameAction::RestartMission, pad), ControlLabel(GameAction::ResetBestTime, pad)),
+						fmt::format("{}: Jump | {}: Debug | {}: Help", ControlLabel(GameAction::VehicleJump, pad), ControlLabel(GameAction::ToggleDebugDraw, pad), ControlLabel(GameAction::ToggleHelp, pad)),
+						fmt::format("{}: Pause | {}: Fly", ControlLabel(GameAction::PauseToggle, pad), ControlLabel(GameAction::CameraLook, pad)),
 					};
 					for (int i = 0; i < 6; ++i)
 						sprites.DrawText(font, lines[i],
@@ -1094,7 +1115,7 @@ void Game::Run()
 						        viewportHeight / 2.0f + 20.0f - (&btn - _pauseMenu->GetButtons().data()) * 30.0f),
 						col);
 				}
-				if (Input::JustPressed(Button::MouseLeft))
+				if (Input::JustPressed(GameAction::UIClick))
 					_pauseMenu->CheckClick(Input::GetMouseX(), Input::GetMouseY());
 				sprites.Flush(proj);
 				_window->Swap();
@@ -1291,6 +1312,9 @@ void Game::imguiMenuBar()
 	if (ImGui::MenuItem("Level Entities"))
 		_debugLevelWindowOpen = true;
 
+	if (ImGui::MenuItem("Controls"))
+		_showControls = true;
+
 	if (ImGui::MenuItem("About"))
 		_debugAboutWindowOpen = true;
 
@@ -1396,6 +1420,85 @@ void Game::debugAboutMenu()
 	if (ImGui::Begin("About", &_debugAboutWindowOpen, ImGuiWindowFlags_NoResize))
 	{
 		ImGui::Markdown(aboutText.c_str(), aboutText.length(), mdConfig);
+	}
+	ImGui::End();
+}
+
+void Game::drawControlsWindow()
+{
+	if (!_showControls)
+		return;
+
+	// which action (if any) is waiting for a captured input this session
+	static GameAction capturingAction = GameAction::Count;
+
+	// pick up a freshly captured input and rebind+save
+	if (Input::IsCapturing())
+	{
+		InputSource captured;
+		if (Input::ConsumeCapturedInput(captured))
+		{
+			if (capturingAction != GameAction::Count)
+			{
+				Input::RebindAction(capturingAction, captured);
+				Input::SaveKeymap("keymap.conf");
+			}
+			capturingAction = GameAction::Count;
+		}
+	}
+	else
+	{
+		capturingAction = GameAction::Count; // capture ended or was cancelled (Esc)
+	}
+
+	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+	ImGui::SetNextWindowSize(ImVec2(440.0f, 540.0f), ImGuiCond_Once);
+	ImGui::SetNextWindowPos(ImVec2(displaySize.x * 0.5f, displaySize.y * 0.5f), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
+	if (ImGui::Begin("Controls", &_showControls))
+	{
+		ImGui::TextWrapped("Click a binding, then press a key, mouse button or gamepad input. Esc cancels. Changes are saved to keymap.conf.");
+		if (ImGui::Button("Reset to defaults"))
+		{
+			Input::ResetKeymapToDefault();
+			Input::SaveKeymap("keymap.conf");
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Save now"))
+			Input::SaveKeymap("keymap.conf");
+		ImGui::Separator();
+
+		const Keymap& km = Input::GetKeymap();
+		for (std::size_t i = 0; i < GameActionCount; ++i)
+		{
+			const auto action = static_cast<GameAction>(i);
+			ImGui::PushID(static_cast<int>(i));
+			ImGui::TextUnformatted(std::string(ToString(action)).c_str());
+			ImGui::SameLine(230.0f);
+
+			std::string label;
+			for (const auto& src : BindingsFor(km, action))
+			{
+				if (!label.empty())
+					label += " / ";
+				label += KeymapConfig::HumanLabel(src);
+			}
+			if (label.empty())
+				label = "(unbound)";
+
+			const bool isCapturing = Input::IsCapturing() && capturingAction == action;
+			if (isCapturing)
+				label = "press input...";
+
+			if (ImGui::Button(label.c_str(), ImVec2(180.0f, 0.0f)))
+			{
+				if (!Input::IsCapturing())
+				{
+					Input::BeginCapture();
+					capturingAction = action;
+				}
+			}
+			ImGui::PopID();
+		}
 	}
 	ImGui::End();
 }

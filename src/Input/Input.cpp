@@ -2,8 +2,11 @@
 
 #include <Input/Input.h>
 
+#include <Input/Keymap.h>
+
 #include "Core/Log.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace Donut
@@ -129,10 +132,12 @@ float Input::MouseDeltaY = 0.0f;
 int Input::MouseX = 0;
 int Input::MouseY = 0;
 SDL_GameController* Input::Gamepad = nullptr;
-float Input::GamepadAxisX = 0.0f;
-float Input::GamepadAxisY = 0.0f;
-float Input::GamepadTriggerL = 0.0f;
-float Input::GamepadTriggerR = 0.0f;
+float Input::GamepadAxes[SDL_CONTROLLER_AXIS_MAX] = {};
+Input::ButtonState Input::GamepadButtonStates[SDL_CONTROLLER_BUTTON_MAX] = {ButtonState()};
+Keymap Input::ActiveKeymap = KeymapConfig::MakeDefault();
+bool Input::Capturing = false;
+bool Input::HasCaptured = false;
+InputSource Input::CapturedSource = InputSource();
 std::unique_ptr<ITextEntryEventHandler> Input::TextEntry = nullptr;
 
 Button Input::KeyCodeToButtonCode(SDL_Keycode key)
@@ -144,6 +149,16 @@ Button Input::KeyCodeToButtonCode(SDL_Keycode key)
 void Input::UpdateButton(Button button, bool down)
 {
 	auto& buttonState = ButtonStates[to_underlying(button)];
+	buttonState.Pressed = !buttonState.Down && down;
+	buttonState.Released = buttonState.Down && !down;
+	buttonState.Down = down;
+}
+
+void Input::UpdateGamepadButton(Uint8 sdlButton, bool down)
+{
+	if (sdlButton >= SDL_CONTROLLER_BUTTON_MAX)
+		return;
+	auto& buttonState = GamepadButtonStates[sdlButton];
 	buttonState.Pressed = !buttonState.Down && down;
 	buttonState.Released = buttonState.Down && !down;
 	buttonState.Down = down;
@@ -165,10 +180,21 @@ void Input::PreEvent()
 		buttonState.Pressed = false;
 		buttonState.Released = false;
 	}
+
+	for (auto& buttonState : GamepadButtonStates)
+	{
+		buttonState.Pressed = false;
+		buttonState.Released = false;
+	}
 }
 
 void Input::HandleEvent(const SDL_Event& e)
 {
+	// when rebinding, the first physical input is captured instead of being
+	// fed to the game (so it doesn't also fire whatever it's currently bound to)
+	if (Capturing && TryCaptureEvent(e))
+		return;
+
 	if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP)
 	{
 		UpdateButton(KeyCodeToButtonCode(e.key.keysym.sym), e.key.state == SDL_PRESSED);
@@ -190,26 +216,14 @@ void Input::HandleEvent(const SDL_Event& e)
 	{
 		float val = static_cast<float>(e.caxis.value) / 32767.0f;
 		if (fabs(val) < 0.1f) val = 0.0f;
-		switch (e.caxis.axis)
-		{
-		case SDL_CONTROLLER_AXIS_LEFTX: GamepadAxisX = val; break;
-		case SDL_CONTROLLER_AXIS_LEFTY: GamepadAxisY = -val; break;
-		case SDL_CONTROLLER_AXIS_TRIGGERLEFT: GamepadTriggerL = val; break;
-		case SDL_CONTROLLER_AXIS_TRIGGERRIGHT: GamepadTriggerR = val; break;
-		}
+		// raw SDL value (down/right positive) for keymap axis resolution
+		if (e.caxis.axis < SDL_CONTROLLER_AXIS_MAX)
+			GamepadAxes[e.caxis.axis] = val;
 	}
 	else if (e.type == SDL_CONTROLLERBUTTONDOWN || e.type == SDL_CONTROLLERBUTTONUP)
 	{
-		bool down = (e.cbutton.state == SDL_PRESSED);
-		switch (e.cbutton.button)
-		{
-		case SDL_CONTROLLER_BUTTON_A: UpdateButton(Button::KeyE, down); break;
-		case SDL_CONTROLLER_BUTTON_B: UpdateButton(Button::KeyLSHIFT, down); break;
-		case SDL_CONTROLLER_BUTTON_X: UpdateButton(Button::KeyH, down); break;
-		case SDL_CONTROLLER_BUTTON_Y: UpdateButton(Button::KeySPACE, down); break;
-		case SDL_CONTROLLER_BUTTON_START: if (down) UpdateButton(Button::KeyESCAPE, true); break;
-		case SDL_CONTROLLER_BUTTON_BACK: if (down) UpdateButton(Button::KeyM, true); break;
-		}
+		// gamepad buttons resolve through the keymap (pad_a, pad_b, ...)
+		UpdateGamepadButton(e.cbutton.button, e.cbutton.state == SDL_PRESSED);
 	}
 	else if (e.type == SDL_CONTROLLERDEVICEADDED)
 	{
@@ -226,6 +240,9 @@ void Input::HandleEvent(const SDL_Event& e)
 		{
 			SDL_GameControllerClose(Gamepad);
 			Gamepad = nullptr;
+			// drop any held analog/button state so nothing stays stuck on
+			for (auto& v : GamepadAxes) v = 0.0f;
+			for (auto& b : GamepadButtonStates) b = ButtonState();
 			Log::Info("Input: gamepad disconnected");
 		}
 	}
@@ -282,10 +299,194 @@ void Input::ReleaseTextEntry()
 	}
 }
 
-float Input::GetGamepadAxisX() { return GamepadAxisX; }
-float Input::GetGamepadAxisY() { return GamepadAxisY; }
-float Input::GetGamepadTriggerL() { return GamepadTriggerL; }
-float Input::GetGamepadTriggerR() { return GamepadTriggerR; }
+// --- keymap / action layer ----------------------------------------------
+
+void Input::SetKeymap(const Keymap& keymap) { ActiveKeymap = keymap; }
+const Keymap& Input::GetKeymap() { return ActiveKeymap; }
+
+void Input::LoadKeymap(const std::string& path)
+{
+	Keymap km;
+	KeymapConfig::LoadOrCreate(path, km);
+	ActiveKeymap = km;
+}
+
+bool Input::SaveKeymap(const std::string& path)
+{
+	return KeymapConfig::Save(path, ActiveKeymap);
+}
+
+void Input::BeginCapture()
+{
+	Capturing = true;
+	HasCaptured = false;
+}
+
+void Input::CancelCapture()
+{
+	Capturing = false;
+	HasCaptured = false;
+}
+
+bool Input::IsCapturing() { return Capturing; }
+
+bool Input::ConsumeCapturedInput(InputSource& out)
+{
+	if (!HasCaptured)
+		return false;
+	out = CapturedSource;
+	HasCaptured = false;
+	return true;
+}
+
+bool Input::TryCaptureEvent(const SDL_Event& e)
+{
+	switch (e.type)
+	{
+	case SDL_KEYDOWN:
+	{
+		// Escape cancels the capture rather than binding itself
+		if (e.key.keysym.sym == SDLK_ESCAPE)
+		{
+			CancelCapture();
+			return true;
+		}
+		Button b = KeyCodeToButtonCode(e.key.keysym.sym);
+		if (b == Button::None)
+			return true; // swallow unmapped keys while capturing
+		CapturedSource = InputSource::Key(b);
+		break;
+	}
+	case SDL_MOUSEBUTTONDOWN:
+		CapturedSource = InputSource::Key(static_cast<Button>(e.button.button));
+		break;
+	case SDL_CONTROLLERBUTTONDOWN:
+		if (e.cbutton.button >= SDL_CONTROLLER_BUTTON_MAX)
+			return true;
+		CapturedSource = InputSource::Pad(static_cast<SDL_GameControllerButton>(e.cbutton.button));
+		break;
+	case SDL_CONTROLLERAXISMOTION:
+	{
+		float val = static_cast<float>(e.caxis.value) / 32767.0f;
+		if (std::fabs(val) < 0.6f) // require a firm push so idle drift isn't captured
+			return false;          // not enough: let the event pass, keep capturing
+		CapturedSource = InputSource::Axis(static_cast<SDL_GameControllerAxis>(e.caxis.axis),
+		                                   val < 0.0f ? -1.0f : 1.0f);
+		break;
+	}
+	default:
+		return false; // not an input we capture; let it through
+	}
+
+	HasCaptured = true;
+	Capturing = false;
+	return true;
+}
+
+void Input::RebindAction(GameAction action, const InputSource& src)
+{
+	auto& bindings = BindingsFor(ActiveKeymap, action);
+	bindings.clear();
+	bindings.push_back(src);
+}
+
+void Input::ResetKeymapToDefault()
+{
+	ActiveKeymap = KeymapConfig::MakeDefault();
+}
+
+float Input::SourceMagnitude(const InputSource& src)
+{
+	switch (src.kind)
+	{
+	case InputSourceKind::Key:
+		return ButtonStates[to_underlying(src.button)].Down ? 1.0f : 0.0f;
+	case InputSourceKind::GamepadButton:
+		if (src.gpButton < 0 || src.gpButton >= SDL_CONTROLLER_BUTTON_MAX)
+			return 0.0f;
+		return GamepadButtonStates[src.gpButton].Down ? 1.0f : 0.0f;
+	case InputSourceKind::GamepadAxis:
+	{
+		if (src.gpAxis < 0 || src.gpAxis >= SDL_CONTROLLER_AXIS_MAX)
+			return 0.0f;
+		// take the requested half of the axis
+		float v = GamepadAxes[src.gpAxis] * src.axisDir;
+		if (v <= src.deadzone)
+			return 0.0f;
+		const float denom = std::max(1e-4f, 1.0f - src.deadzone);
+		return std::min(1.0f, (v - src.deadzone) / denom);
+	}
+	default: return 0.0f;
+	}
+}
+
+bool Input::SourceDown(const InputSource& src)
+{
+	return SourceMagnitude(src) > 0.0f;
+}
+
+bool Input::SourcePressed(const InputSource& src)
+{
+	switch (src.kind)
+	{
+	case InputSourceKind::Key:
+		return ButtonStates[to_underlying(src.button)].Pressed;
+	case InputSourceKind::GamepadButton:
+		if (src.gpButton < 0 || src.gpButton >= SDL_CONTROLLER_BUTTON_MAX)
+			return false;
+		return GamepadButtonStates[src.gpButton].Pressed;
+	default:
+		// analog axes have no meaningful press edge
+		return false;
+	}
+}
+
+bool Input::SourceReleased(const InputSource& src)
+{
+	switch (src.kind)
+	{
+	case InputSourceKind::Key:
+		return ButtonStates[to_underlying(src.button)].Released;
+	case InputSourceKind::GamepadButton:
+		if (src.gpButton < 0 || src.gpButton >= SDL_CONTROLLER_BUTTON_MAX)
+			return false;
+		return GamepadButtonStates[src.gpButton].Released;
+	default:
+		return false;
+	}
+}
+
+bool Input::IsActionDown(GameAction action)
+{
+	for (const auto& src : BindingsFor(ActiveKeymap, action))
+		if (SourceDown(src))
+			return true;
+	return false;
+}
+
+bool Input::JustPressed(GameAction action)
+{
+	for (const auto& src : BindingsFor(ActiveKeymap, action))
+		if (SourcePressed(src))
+			return true;
+	return false;
+}
+
+bool Input::JustReleased(GameAction action)
+{
+	for (const auto& src : BindingsFor(ActiveKeymap, action))
+		if (SourceReleased(src))
+			return true;
+	return false;
+}
+
+float Input::GetActionAxis(GameAction action)
+{
+	float magnitude = 0.0f;
+	for (const auto& src : BindingsFor(ActiveKeymap, action))
+		magnitude = std::max(magnitude, SourceMagnitude(src));
+	return magnitude;
+}
 bool Input::IsGamepadConnected() { return Gamepad != nullptr; }
 
 void Input::InitGamepad()

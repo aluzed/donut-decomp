@@ -91,6 +91,7 @@ private:
 	void loadGlobal();
 	void debugDrawP3D(const P3D::P3DFile&);
 	void debugAboutMenu();
+	void drawControlsWindow();
 	void OnInputTextEntry(const std::string& text);
 
 	std::unique_ptr<Window> _window;
@@ -146,6 +147,7 @@ private:
 	bool _debugLevelWindowOpen = false;
 	bool _debugAudioWindowOpen = false;
 	bool _debugAboutWindowOpen = false;
+	bool _showControls = false;
 	
 	static Game* instance;
 };
