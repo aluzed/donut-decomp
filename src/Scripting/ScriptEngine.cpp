@@ -103,6 +103,7 @@ void ScriptEngine::CleanupMission()
 		v->DestroyPhysics(_game.GetWorldPhysics());
 	_missionVehicles.clear();
 	_activeVehicle = nullptr;
+	_chaseManager.reset();
 	_objectiveType.clear();
 	_objectiveTarget.clear();
 	_stageTimeRemaining = -1.0f;
@@ -126,6 +127,18 @@ void ScriptEngine::Update(double dt)
 	}
 
 	if (!_missionActive || _stageTimeRemaining <= 0.0f) return;
+
+	if (_chaseManager)
+	{
+		Vector3 playerPos = _game.GetPlayerPosition();
+		_chaseManager->Update(dt, playerPos);
+		if (_chaseManager->IsBusted())
+		{
+			Log::Info("ScriptEngine: BUSTED!");
+			_game.SetState(GameState::MissionFailed);
+			return;
+		}
+	}
 
 	_stageTimeRemaining -= static_cast<float>(dt);
 	if (_stageTimeRemaining <= 0.0f)

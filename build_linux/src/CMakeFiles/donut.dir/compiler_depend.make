@@ -6544,6 +6544,7 @@ src/CMakeFiles/donut.dir/Game.cpp.o: /var/www/reverse/donut/src/Game.cpp \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/xsaveoptintrin.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/xsavesintrin.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/xtestintrin.h \
+  /var/www/reverse/donut/src/AI/ChaseManager.h \
   /var/www/reverse/donut/src/AI/PathGraph.h \
   /var/www/reverse/donut/src/AI/TrafficManager.h \
   /var/www/reverse/donut/src/AnimCamera.h \
@@ -17448,6 +17449,7 @@ src/CMakeFiles/donut.dir/Scripting/GameCommands.cpp.o: /var/www/reverse/donut/sr
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdarg.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h \
+  /var/www/reverse/donut/src/AI/ChaseManager.h \
   /var/www/reverse/donut/src/Core/Log.h \
   /var/www/reverse/donut/src/Core/Math/Fwd.h \
   /var/www/reverse/donut/src/Core/Math/Math.h \
