@@ -67,6 +67,7 @@ public:
 	float GetStageTimeRemaining() const { return _stageTimeRemaining; }
 	float GetInitialStageTime() const { return _initialStageTime; }
 	float GetGoTimer() const { return _goTimer; }
+	const std::string& GetObjectiveType() const { return _objectiveType; }
 	const Vector3& GetAIPosition() const { return _aiPosition; }
 	const Quaternion& GetAIRotation() const { return _aiRotation; }
 	const std::vector<Vector3>& GetCheckpoints() const { return _checkpoints; }
