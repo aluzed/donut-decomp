@@ -1,69 +1,53 @@
-# Tickets UI
+# Tickets — UI
 
-## UI-001 — Frontend : charger toutes les pages (pas seulement "MessageBox.pag")
-**Priorité :** P1
-**Fichier :** `src/FrontendProject.cpp:82`
-**Description :** Le `LoadP3D` ne charge que les pages nommées "MessageBox.pag". Le menu principal, pause, options ont d'autres noms de page.
-**Correctif :** Charger toutes les pages (ou au moins par nom demandé).
+## UI-001 — Frontend: load all pages (not just "MessageBox.pag")
+**Priority:** P1
+**File:** `src/FrontendProject.cpp:82`
+**Description:** `LoadP3D` only loads pages named "MessageBox.pag". Main menu, pause, options use other page names.
+**Fix:** Load all pages (or by requested name).
 
----
+## UI-002 — Frontend: implement screen system
+**Priority:** P1
+**Description:** The original game has a screen system (FrontendScreen → FrontendPage → FrontendLayer → FrontendGroup). Implement screen navigation:
+Bootscreen → Main Menu → Level Select → Pause → Options → Credits
 
-## UI-002 — Frontend : implémenter le système de screens
-**Priorité :** P1
-**Description :** Le jeu original a un système de screens (FrontendScreen → FrontendPage → FrontendLayer → FrontendGroup). Implémenter la navigation entre screens :
-- Bootscreen → Main Menu → Level Select → Pause → Options → Credits
+## UI-003 — Frontend: user interaction
+**Priority:** P1
+**Description:** FrontendObject/FrontendGroup have clickable zones. Implement:
+- Mouse picking on sprites
+- State changes (hover, pressed, disabled)
+- Navigation callbacks
 
----
+## UI-004 — Frontend text rendering (MultiText)
+**Priority:** P1
+**File:** `src/FrontendProject.cpp`
+**Description:** `FrontendMultiText` is read but not rendered. Implement text rendering with `TextureFont` and `FrontendStringTextBible` for localization.
 
-## UI-003 — Frontend : interaction utilisateur
-**Priorité :** P1
-**Description :** Les FrontendObject/FrontendGroup ont des zones cliquables. Implémenter la détection de clic/survol et la navigation :
-- Mouse picking sur les sprites
-- Changement d'état (hover, pressed, disabled)
-- Callbacks de navigation
-
----
-
-## UI-004 — Rendu de texte frontend (MultiText)
-**Priorité :** P1
-**Fichier :** `src/FrontendProject.cpp`
-**Description :** Les `FrontendMultiText` sont lus mais non rendus. Implémenter le rendu de texte avec `TextureFont` et `FrontendStringTextBible` pour la localisation.
-
----
-
-## UI-005 — HUD in-game
-**Priorité :** P1
-**Description :** Éléments du HUD :
-- [ ] Barre de vie (hit points)
-- [ ] Jauge de Hit & Run (poursuite police)
-- [ ] Compteur de vitesse
-- [ ] Compteur de monnaie (coins)
-- [ ] Compteur de cartes à collectionner
-- [ ] Timer de mission
-- [ ] Objectifs actuels
+## UI-005 — In-game HUD
+**Priority:** P1
+**Description:** HUD elements:
+- [ ] Health bar (hit points)
+- [ ] Hit & Run gauge (police pursuit)
+- [ ] Speedometer
+- [ ] Coin counter
+- [ ] Card counter
+- [ ] Mission timer
+- [ ] Current objectives
 - [ ] Radar / mini-map
-- [ ] Indicateur de nitro
+- [ ] Nitro indicator
 
----
+## UI-006 — Pause menu
+**Priority:** P2
+**Description:** Pause overlay with options (resume, restart, quit, audio/video options).
 
-## UI-006 — Menu pause
-**Priorité :** P2
-**Description :** Overlay de pause avec options (reprendre, recommencer, quitter, options audio/vidéo).
+## UI-007 — Localized text (bible system)
+**Priority:** P2
+**Description:** The game supports multiple languages via text bibles. Load the configured language bible.
 
----
+## UI-008 — Loading screen
+**Priority:** P3
+**Description:** Screen with progress bar between levels/zones. Display hint text.
 
-## UI-007 — Textes localisés (bible system)
-**Priorité :** P2
-**Description :** Le jeu supporte plusieurs langues via des bibles de texte. Charger la bible de la langue configurée (FrontendLanguage, FrontendTextBible).
-
----
-
-## UI-008 — Écran de chargement
-**Priorité :** P3
-**Description :** Écran avec barre de progression entre niveaux/zones. Afficher le texte de hint (tips).
-
----
-
-## UI-009 — Cinématiques (RMV player)
-**Priorité :** P3
-**Description :** Les vidéos du jeu sont au format RMV (Radical Movie). Reverser ou trouver un codec existant pour lire les FMV.
+## UI-009 — Cutscenes (RMV player)
+**Priority:** P3
+**Description:** Game videos are in RMV (Radical Movie) format. Reverse or find existing codec to play FMVs.

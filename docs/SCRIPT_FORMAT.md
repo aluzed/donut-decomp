@@ -1,22 +1,22 @@
-# Format de script (.con)
+# Script Format (.con)
 
 ## Confirmation
 
-Les fichiers `.con` sont en **texte clair**, pas du bytecode. Confirmé par extraction des ISOs du jeu PC.
+`.con` files are **plain text**, not bytecode. Confirmed by extraction from PC game ISOs.
 
-## Syntaxe
+## Syntax
 
 ```
 CommandName(param1, param2, ...);
-AutreCommande("string", 42);
+OtherCommand("string", 42);
 ```
 
-- Une commande par ligne (ou plusieurs séparées par `;`)
-- Commentaires `//` supportés
-- Paramètres : strings entre guillemets, entiers, flottants
-- Lignes vides ignorées
+- One command per line (or multiple separated by `;`)
+- `//` comments supported
+- Parameters: quoted strings, integers, floats
+- Empty lines ignored
 
-### Exemple réel (extrait de `Missions/level01/M1race.con`)
+### Real Example (from `Missions/level01/M1race.con`)
 
 ```
 SelectMission("m1");
@@ -34,22 +34,22 @@ CloseStage();
 CloseMission();
 ```
 
-## Arborescence (~120 fichiers)
+## Directory Tree (~120 files)
 
-Les scripts sont dans `data3.cab` (CD2) :
+Scripts are in `data3.cab` (CD2):
 
 ```
 scripts/
 ├── Missions/
-│   ├── level01/   # Niveau 1 (Evergreen Terrace)
+│   ├── level01/   # Level 1 (Evergreen Terrace)
 │   │   ├── M1race.con, M3dest.con, M5evade.con, M6dump.con, M7race.con
 │   │   └── sr2_1st.con ... sr3_4th.con  (Street Races)
-│   ├── level02/   # Niveau 2
-│   ├── level03/   # Niveau 3
-│   ├── level04/   # Niveau 4
-│   ├── level05/   # Niveau 5
-│   ├── level06/   # Niveau 6
-│   └── level07/   # Niveau 7
+│   ├── level02/   # Level 2
+│   ├── level03/   # Level 3
+│   ├── level04/   # Level 4
+│   ├── level05/   # Level 5
+│   ├── level06/   # Level 6
+│   └── level07/   # Level 7
 ├── EasyRace/
 │   └── AI_5th.con
 ├── HardRace/
@@ -66,56 +66,56 @@ scripts/
     └── bg*.con  (bonus missions)
 ```
 
-## Types de scripts
+## Script Types
 
-| Type | Description | Exemples |
+| Type | Description | Examples |
 |------|-------------|----------|
-| **Mx*.con** | Missions principales (7 par niveau) | `M1race.con`, `M3dest.con`, `M5evade.con` |
-| **sr*_*.con** | Street Races (courses bonus) | `sr2_1st.con` (2ᵉ perso, 1ʳᵉ place) |
-| **AI_*.con** | Comportement IA véhicules | `AI_1st.con` (1ʳᵉ place, easy race) |
-| **Lxcop.con** | Comportement police | `L1cop.con` (poursuite niveau 1) |
+| **Mx*.con** | Main missions (7 per level) | `M1race.con`, `M3dest.con`, `M5evade.con` |
+| **sr*_*.con** | Street Races (bonus races) | `sr2_1st.con` (2nd character, 1st place) |
+| **AI_*.con** | Vehicle AI behavior | `AI_1st.con` (1st place, easy race) |
+| **Lxcop.con** | Police behavior | `L1cop.con` (level 1 pursuit) |
 | **BM*.con** | Bonus missions | `BM1dest.con` |
 
-## Cycle de vie d'un script de mission
+## Mission Script Lifecycle
 
 ```
-SelectMission("id")                    # Début mission
-SetMissionResetPlayerInCar("locator")  # Position reset
-SetDynaLoadData("zones")              # Zones à charger
+SelectMission("id")                    # Mission start
+SetMissionResetPlayerInCar("locator")  # Reset position
+SetDynaLoadData("zones")              # Zones to load
 
-AddStage(0)                           # Étape 0
+AddStage(0)                           # Stage 0
 SetHUDIcon("icon")
 AddObjective("type")
 SetStageTime(seconds)
 AddNPC("name", "locator")
 AddStageVehicle("car", "locator", "behaviour", "AI.con")
-CloseStage()                          # Fin étape
+CloseStage()                          # Stage end
 
 AddStage(1)
 ...
 CloseStage()
 
-CloseMission()                        # Fin mission
+CloseMission()                        # Mission end
 ```
 
-## Intégration avec le parser existant
+## Integration with Existing Parser
 
-Le parser `Commands::RunLine()` (dans `src/Scripting/Commands.h`) est déjà compatible avec ce format :
-- `RunScript(filename)` lit les fichiers ligne par ligne
-- `RunLine(line)` parse `CommandName(params)` et appelle `Run(name, params)`
-- `Run(name, params)` dispatche vers `GameCommands::CommandName(params...)`
+The `Commands::RunLine()` parser (in `src/Scripting/Commands.h`) is already compatible with this format:
+- `RunScript(filename)` reads files line by line
+- `RunLine(line)` parses `CommandName(params)` and calls `Run(name, params)`
+- `Run(name, params)` dispatches to `GameCommands::CommandName(params...)`
 
-**Il suffit d'implémenter les 250 méthodes de `GameCommands` !**
+**All that's needed is implementing the 250 `GameCommands` methods!**
 
-## Plan d'exécution
+## Execution Plan
 
-1. **Extraire les .con** du CAB → `assets/scripts/`
-2. **Implémenter les commandes** P0 (~20 commandes pour une mission basique)
-3. **Implémenter les commandes** P1 (~50 commandes pour véhicules, courses)
-4. **Implémenter les commandes** P2 (~100 commandes pour Hit & Run, IA, UI)
-5. **Implémenter les commandes** P3 (reste pour polish)
+1. **Extract .con files** from CAB → `assets/scripts/`
+2. **Implement P0 commands** (~20 commands for a basic mission)
+3. **Implement P1 commands** (~50 commands for vehicles, races)
+4. **Implement P2 commands** (~100 commands for Hit & Run, AI, UI)
+5. **Implement P3 commands** (rest for polish)
 
-### Commandes P0 (minimum mission jouable)
+### P0 Commands (minimum playable mission)
 
 `SelectMission`, `SetMissionResetPlayerInCar`, `SetDynaLoadData`,
 `AddStage`, `SetHUDIcon`, `AddObjective`, `SetStageTime`,
@@ -124,4 +124,4 @@ Le parser `Commands::RunLine()` (dans `src/Scripting/Commands.h`) est déjà com
 `AddCharacter`, `InitLevelPlayerVehicle`, `EnableTutorialMode`,
 `CreateChaseManager`, `SetPresentationBitmap`
 
-→ Ces 18 commandes suffisent pour jouer `M1race.con` !
+→ These 18 commands are enough to run `M1race.con`!
