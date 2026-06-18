@@ -38,6 +38,7 @@ class TrafficManager;
 class PathGraph;
 class FrontendProject;
 class SimpleMesh;
+class GameMenu;
 
 namespace P3D
 {
@@ -103,6 +104,8 @@ private:
 	std::unique_ptr<SimpleMesh> _playerMesh;
 	std::unique_ptr<SimpleMesh> _carMesh;
 	std::unique_ptr<SimpleMesh> _buildingMesh;
+	std::unique_ptr<GameMenu> _mainMenu;
+	std::unique_ptr<GameMenu> _pauseMenu;
 	std::unique_ptr<P3D::P3DFile> _animP3D;
 	std::unique_ptr<P3D::P3DFile> _globalP3D;
 	std::unique_ptr<P3D::TextureFont> _textureFontP3D;

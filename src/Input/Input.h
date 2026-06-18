@@ -50,6 +50,8 @@ public:
 	static bool JustReleased(Button button);
 	static float GetMouseDeltaX();
 	static float GetMouseDeltaY();
+	static int GetMouseX();
+	static int GetMouseY();
 
 	template <class Instance, typename Callback>
 	static void CaptureTextEntry(Instance* instance, Callback callback)
@@ -78,6 +80,8 @@ private:
 
 	static float MouseDeltaX;
 	static float MouseDeltaY;
+	static int MouseX;
+	static int MouseY;
 
 	static Button KeyCodeToButtonCode(SDL_Keycode key);
 	static std::map<SDL_Keycode, Button> KeyCodeToButtonCodeMap;

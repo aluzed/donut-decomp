@@ -122,6 +122,8 @@ std::map<SDL_Keycode, Button> Input::KeyCodeToButtonCodeMap = {
 Input::ButtonState Input::ButtonStates[to_underlying(Button::Count)] = {ButtonState()};
 float Input::MouseDeltaX = 0.0f;
 float Input::MouseDeltaY = 0.0f;
+int Input::MouseX = 0;
+int Input::MouseY = 0;
 std::unique_ptr<ITextEntryEventHandler> Input::TextEntry = nullptr;
 
 Button Input::KeyCodeToButtonCode(SDL_Keycode key)
@@ -165,11 +167,15 @@ void Input::HandleEvent(const SDL_Event& e)
 	else if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP)
 	{
 		UpdateButton((Button)(e.button.button), (e.button.state == SDL_PRESSED));
+		MouseX = e.button.x;
+		MouseY = e.button.y;
 	}
 	else if (e.type == SDL_MOUSEMOTION)
 	{
 		MouseDeltaX += (float)e.motion.xrel;
 		MouseDeltaY += (float)e.motion.yrel;
+		MouseX = e.motion.x;
+		MouseY = e.motion.y;
 	}
 	else if (e.type == SDL_TEXTINPUT)
 	{
@@ -188,6 +194,16 @@ float Input::GetMouseDeltaX()
 float Input::GetMouseDeltaY()
 {
 	return MouseDeltaY;
+}
+
+int Input::GetMouseX()
+{
+	return MouseX;
+}
+
+int Input::GetMouseY()
+{
+	return MouseY;
 }
 
 bool Input::IsDown(Button button)

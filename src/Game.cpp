@@ -29,6 +29,7 @@
 #include "Render/SimpleMesh.h"
 #include "Render/SkinModel.h"
 #include "Render/SpriteBatch.h"
+#include "UI/GameMenu.h"
 #include "Render/imgui/imgui.h"
 #include "Render/imgui/imgui_impl_opengl3.h"
 #include "Render/imgui/imgui_impl_sdl.h"
@@ -195,6 +196,32 @@ Game::Game(int argc, char** argv)
 	_camera->SetZFar(100000.0f);
 
 	_mouseLocked = false;
+
+	_mainMenu = std::make_unique<GameMenu>();
+	_mainMenu->AddButton("New Game", 0, 0, 200, 40, [this]() {
+		_gameState = GameState::InGame;
+	});
+	_mainMenu->AddButton("Quit", 0, 0, 200, 40, [this]() {
+		SDL_Event quitEvent;
+		quitEvent.type = SDL_QUIT;
+		SDL_PushEvent(&quitEvent);
+	});
+
+	_pauseMenu = std::make_unique<GameMenu>();
+	_pauseMenu->AddButton("Resume", 0, 0, 200, 40, [this]() {
+		_gameState = GameState::InGame;
+	});
+	_pauseMenu->AddButton("Restart", 0, 0, 200, 40, [this]() {
+		_scriptEngine->CleanupMission();
+		_scriptEngine->RunFile("scripts/Missions/level01/M1race.con");
+		_gameState = GameState::InGame;
+		_missionCompleteTimer = 0.0;
+	});
+	_pauseMenu->AddButton("Quit", 0, 0, 200, 40, [this]() {
+		SDL_Event quitEvent;
+		quitEvent.type = SDL_QUIT;
+		SDL_PushEvent(&quitEvent);
+	});
 }
 
 Game::~Game()
@@ -538,7 +565,7 @@ void Game::Run()
 			if (Input::JustPressed(Button::KeySPACE) || Input::JustPressed(Button::KeyENTER) ||
 			    Input::JustPressed(Button::KeyESCAPE))
 			{
-				_gameState = GameState::InGame;
+				_gameState = GameState::MainMenu;
 				_missionCompleteTimer = 0.0;
 			}
 		}
@@ -648,8 +675,10 @@ void Game::Run()
 
 		if (Input::JustPressed(Button::KeyESCAPE))
 		{
-			_gameState = (_gameState == GameState::InGame) ? GameState::Paused : GameState::InGame;
-			Log::Info("GameState: {}", static_cast<int>(_gameState));
+			if (_gameState == GameState::InGame)
+				_gameState = GameState::Paused;
+			else if (_gameState == GameState::Paused)
+				_gameState = GameState::InGame;
 		}
 
 		if (Input::JustPressed(Button::KeyR) && _gameState == GameState::InGame)
@@ -962,11 +991,23 @@ void Game::Run()
 			if (_gameState == GameState::Paused)
 			{
 				sprites.DrawText(font, "PAUSED",
-					Vector2((viewportWidth / 2.0f) - 40, viewportHeight / 2.0f - 30),
+					Vector2((viewportWidth / 2.0f) - 40, viewportHeight / 2.0f + 40),
 					Vector4(1.0f, 1.0f, 0.0f, 1.0f));
-				sprites.DrawText(font, "ESC: Resume  |  Q: Quit",
-					Vector2((viewportWidth / 2.0f) - 100, viewportHeight / 2.0f + 10),
-					Vector4(0.7f, 0.7f, 0.7f, 1.0f));
+				_pauseMenu->Update(Input::GetMouseX(), Input::GetMouseY());
+				for (const auto& btn : _pauseMenu->GetButtons())
+				{
+					Vector4 col = btn.hovered ? Vector4(1.0f, 0.3f, 0.3f, 1.0f)
+					                         : Vector4(0.5f, 0.5f, 0.5f, 1.0f);
+					sprites.DrawText(font, btn.label,
+						Vector2(viewportWidth / 2.0f - 50.0f,
+						        viewportHeight / 2.0f + 20.0f - (&btn - _pauseMenu->GetButtons().data()) * 30.0f),
+						col);
+				}
+				if (Input::JustPressed(Button::MouseLeft))
+					_pauseMenu->CheckClick(Input::GetMouseX(), Input::GetMouseY());
+				sprites.Flush(proj);
+				_window->Swap();
+				continue;
 			}
 
 			if (_gameState == GameState::MissionComplete)
@@ -1015,6 +1056,30 @@ void Game::Run()
 					Vector2((viewportWidth / 2.0f) - 60, viewportHeight / 2.0f + 10),
 					Vector4(0.6f, 0.6f, 0.6f, 1.0f));
 			}
+		}
+
+		if (_gameState == GameState::MainMenu)
+		{
+			auto font = _resourceManager->GetFont("boulder_16");
+			SpriteBatch menuSprites;
+			menuSprites.DrawText(font, "donut",
+				Vector2((viewportWidth / 2.0f) - 30, viewportHeight / 2.0f + 80),
+				Vector4(1.0f, 0.84f, 0.0f, 1.0f));
+			_mainMenu->Update(Input::GetMouseX(), Input::GetMouseY());
+			int btnIndex = 0;
+			for (const auto& btn : _mainMenu->GetButtons())
+			{
+				Vector4 col = btn.hovered ? Vector4(1.0f, 0.84f, 0.0f, 1.0f)
+				                         : Vector4(0.8f, 0.8f, 0.8f, 1.0f);
+				menuSprites.DrawText(font, btn.label,
+					Vector2(viewportWidth / 2.0f - 50.0f,
+					        viewportHeight / 2.0f + 40.0f - btnIndex * 30.0f),
+					col);
+				++btnIndex;
+			}
+			if (Input::JustPressed(Button::MouseLeft))
+				_mainMenu->CheckClick(Input::GetMouseX(), Input::GetMouseY());
+			menuSprites.Flush(proj);
 		}
 
 		sprites.Flush(proj);
