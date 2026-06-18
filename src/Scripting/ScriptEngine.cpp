@@ -271,8 +271,16 @@ void ScriptEngine::UpdateAI(double dt)
 		return;
 	}
 
+	float aiSpeed = _aiSpeed;
+	if (_currentCheckpoint > _aiCheckpoint)
+		aiSpeed += 3.0f;
+	else if (_currentCheckpoint < _aiCheckpoint)
+		aiSpeed -= 2.0f;
+	if (aiSpeed < 6.0f) aiSpeed = 6.0f;
+	if (aiSpeed > 20.0f) aiSpeed = 20.0f;
+
 	dir.Normalize();
-	_aiPosition += dir * _aiSpeed * static_cast<float>(dt);
+	_aiPosition += dir * aiSpeed * static_cast<float>(dt);
 	float yaw = atan2f(dir.X, dir.Z);
 	_aiRotation = Quaternion::MakeFromEuler(Vector3(0, yaw, 0));
 }
