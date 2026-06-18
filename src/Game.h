@@ -36,6 +36,7 @@ class ScriptEngine;
 class Vehicle;
 class TrafficManager;
 class PathGraph;
+class PedestrianManager;
 class FrontendProject;
 class SimpleMesh;
 class GameMenu;
@@ -102,6 +103,7 @@ private:
 	std::unique_ptr<ScriptEngine> _scriptEngine;
 	std::unique_ptr<TrafficManager> _trafficManager;
 	std::unique_ptr<PathGraph> _pathGraph;
+	std::unique_ptr<PedestrianManager> _pedestrianManager;
 	std::unique_ptr<FrontendProject> _frontend;
 	std::unique_ptr<GL::ShaderProgram> _meshShader;
 	std::unique_ptr<SimpleMesh> _playerMesh;

@@ -12,6 +12,7 @@
 #include "FrontendProject.h"
 #include "Input/Input.h"
 #include "AI/PathGraph.h"
+#include "AI/PedestrianManager.h"
 #include "AI/TrafficManager.h"
 #include "Level.h"
 #include "P3D/P3D.generated.h"
@@ -137,6 +138,7 @@ Game::Game(int argc, char** argv)
 	_level->DynaLoadData("l1z1.p3d;l1r1.p3d;l1r7.p3d;");
 	_pathGraph = std::make_unique<PathGraph>(*_level);
 	_trafficManager = std::make_unique<TrafficManager>(*_level, *_lineRenderer, *_pathGraph);
+	_pedestrianManager = std::make_unique<PedestrianManager>(*_worldPhysics);
 
 	const auto& paths = _level->GetPaths();
 	if (!paths.empty())
@@ -669,6 +671,21 @@ void Game::Run()
 			_trafficManager->Update(deltaTime);
 		}
 		_scriptEngine->Update(deltaTime);
+
+		if (_character != nullptr && _gameState == GameState::InGame)
+		{
+			static double pedSpawnTimer = 0.0;
+			pedSpawnTimer += deltaTime;
+			if (pedSpawnTimer > 0.5)
+			{
+				pedSpawnTimer = 0.0;
+				if (_pedestrianManager)
+				{
+					_pedestrianManager->Spawn(_character->GetPosition(), 40.0f);
+					_pedestrianManager->Update(deltaTime, _character->GetPosition());
+				}
+			}
+		}
 		_scriptEngine->UpdateAI(deltaTime);
 
 		ImGui_ImplOpenGL3_NewFrame();
@@ -847,6 +864,9 @@ void Game::Run()
 
 		if (!_showDebug)
 			_trafficManager->DrawSolid(*_carMesh, *_meshShader, viewProjection);
+
+		if (!_showDebug && _pedestrianManager)
+			_pedestrianManager->Draw(*_meshShader, *_playerMesh, viewProjection);
 
 		if (_scriptEngine->IsMissionActive() && !_scriptEngine->GetCheckpoints().empty())
 		{
