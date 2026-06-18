@@ -5,6 +5,7 @@
 #include "Core/Math/Vector3.h"
 
 #include <memory>
+#include <vector>
 
 namespace Donut
 {
