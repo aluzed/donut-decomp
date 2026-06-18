@@ -556,59 +556,12 @@ void Game::Run()
 		_worldPhysics->Update(static_cast<float>(deltaTime));
 
 		_audioManager->Update();
-
+		/*
 		if (_inVehicle && _activeVehicle)
 		{
-			auto vehPos = _activeVehicle->GetPosition();
-			float vehSpeed = _activeVehicle->GetSpeedKmh();
-
-			for (auto& v : _scriptEngine->GetMissionVehicles())
-			{
-				if (v.get() == _activeVehicle) continue;
-				float dist = (v->GetPosition() - vehPos).Length();
-				if (dist < 1.5f && vehSpeed > 20.0f)
-				{
-					float dmg = vehSpeed * 0.5f * static_cast<float>(deltaTime);
-					_health -= dmg;
-					AddShake(0.3f);
-					if (_health < 0.0f) _health = 0.0f;
-				}
-			}
-
-			if (_trafficManager)
-			{
-				for (const auto& tc : _trafficManager->GetCars())
-				{
-					float dist = (tc.position - vehPos).Length();
-					if (dist < 1.5f && vehSpeed > 20.0f)
-					{
-						float dmg = vehSpeed * 0.3f * static_cast<float>(deltaTime);
-						_health -= dmg;
-						AddShake(0.2f);
-						if (_health < 0.0f) _health = 0.0f;
-					}
-				}
-			}
-
-			if (_scriptEngine->IsMissionActive())
-			{
-				auto* chase = _scriptEngine->GetChaseManager();
-				if (chase)
-				{
-					for (auto& cop : chase->GetCopCars())
-					{
-						float dist = (cop->GetPosition() - vehPos).Length();
-						if (dist < 1.5f && vehSpeed > 10.0f)
-						{
-							float dmg = vehSpeed * 0.7f * static_cast<float>(deltaTime);
-							_health -= dmg;
-							AddShake(0.5f);
-							if (_health < 0.0f) _health = 0.0f;
-						}
-					}
-				}
-			}
+			// collision damage disabled for debugging
 		}
+		*/
 
 		if (_shakeAmount > 0.0f)
 		{
@@ -728,6 +681,7 @@ void Game::Run()
 		}
 		_scriptEngine->Update(deltaTime);
 
+		/*
 		if (_character != nullptr && _gameState == GameState::InGame)
 		{
 			if (_level->CheckTrigger(_character->GetPosition(), ""))
@@ -755,6 +709,7 @@ void Game::Run()
 					_collectibleManager->Update(_character->GetPosition(), 3.0f);
 			}
 		}
+		*/
 		_scriptEngine->UpdateAI(deltaTime);
 
 		ImGui_ImplOpenGL3_NewFrame();
