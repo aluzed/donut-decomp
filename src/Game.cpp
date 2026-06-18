@@ -896,6 +896,7 @@ void Game::Run()
 		{
 			GL::FrameBuffer::Format fmt;
 			fmt.EnableColourBuffer(true, 1);
+			fmt.EnableDepthBuffer(true, true);
 			fmt.SetColourInternalFormat(GL_RGBA8);
 			fmt.SetFilterMin(GL_LINEAR);
 			fmt.SetFilterMag(GL_LINEAR);
@@ -904,7 +905,7 @@ void Game::Run()
 		_sceneFBO->Bind();
 
 		glEnable(GL_DEPTH_TEST);
-		glDisable(GL_BLEND);
+		glEnable(GL_BLEND);
 		glClearColor(0.62f, 0.78f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -1009,9 +1010,10 @@ void Game::Run()
 		glDisable(GL_BLEND);
 
 		_postProcessShader->Bind();
+		_postProcessShader->SetUniformValue("sceneTex", 0);
 		_postProcessShader->SetUniformValue("screenSize", Vector2(static_cast<float>(viewportWidth), static_cast<float>(viewportHeight)));
-		_sceneFBO->BindColorTexture(0);
 		glActiveTexture(GL_TEXTURE0);
+		_sceneFBO->BindColorTexture(0);
 		_fullscreenQuadBinding->Bind();
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 		_fullscreenQuadBinding->Unbind();
