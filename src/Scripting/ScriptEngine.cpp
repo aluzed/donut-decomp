@@ -131,6 +131,7 @@ void ScriptEngine::Update(double dt)
 	{
 		_stageTimeRemaining = 0.0f;
 		Log::Info("ScriptEngine: stage timer expired - mission failed!");
+		_game.AddShake(2.0f);
 		_game.GetAudioManager().PlayRaw(SoundGenerator::Beep(150, 0.5f), 22050, 1, 16);
 		_game.SetState(GameState::MissionFailed);
 	}
@@ -254,6 +255,7 @@ void ScriptEngine::AdvanceCheckpoint()
 		Log::Info("ScriptEngine: checkpoint {}/{} (lap {}/{}) reached!",
 		          _currentCheckpoint, _checkpoints.size(), _currentLap + 1, _totalLaps);
 
+		_game.AddShake(0.3f);
 		AudioManager& audio = _game.GetAudioManager();
 		if (_currentCheckpoint >= static_cast<int>(_checkpoints.size()))
 		{

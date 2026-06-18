@@ -75,6 +75,7 @@ public:
 	void LockMouse(bool lockMouse);
 	void SetPlayerPosition(const Vector3& pos);
 	Vector3 GetPlayerPosition() const;
+	void AddShake(float amount) { _shakeAmount = std::max(_shakeAmount, amount); }
 
 	static Game& GetInstance() { return *instance; }
 
@@ -115,6 +116,8 @@ private:
 	bool _showDebug = true;
 	float _health = 100.0f;
 	std::vector<std::pair<Vector3, float>> _buildings;
+	float _shakeAmount = 0.0f;
+	float _prevVehicleY = 0.0f;
 
 	GameState _gameState = GameState::InGame;
 	bool _inVehicle = false;

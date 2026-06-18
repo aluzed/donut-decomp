@@ -450,6 +450,7 @@ void Game::Run()
 			else if (Input::JustPressed(Button::KeySPACE))
 			{
 				_activeVehicle->Jump();
+				_shakeAmount = 1.0f;
 			}
 			else
 			{
@@ -496,6 +497,15 @@ void Game::Run()
 		//_camera->SetPosition(cameraTransform.Translation());
 
 		_worldPhysics->Update(static_cast<float>(deltaTime));
+
+		if (_shakeAmount > 0.0f)
+		{
+			float sx = (rand() % 100 - 50) * 0.001f * _shakeAmount;
+			float sy = (rand() % 100 - 50) * 0.001f * _shakeAmount;
+			_camera->SetPosition(_camera->GetPosition() + Vector3(sx, sy, 0));
+			_shakeAmount -= static_cast<float>(deltaTime) * 5.0f;
+			if (_shakeAmount < 0.0f) _shakeAmount = 0.0f;
+		}
 
 		if (_gameState == GameState::MissionComplete || _gameState == GameState::MissionFailed)
 		{
