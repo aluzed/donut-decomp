@@ -1,122 +1,122 @@
-# Analyse Ghidra — Simpsons Hit & Run
+# Ghidra Analysis — Simpsons Hit & Run
 
-## Statut
+## Status
 
-Le vrai binaire du jeu est dans `data3.cab` (CD2), un archive InstallShield auto-extractible.
-Le CAB contient le jeu complet (assets + DLLs + EXE). L'extraction nécessite `unshield`.
+The real game binary is inside `data3.cab` (CD2), an InstallShield self-extracting archive.
+The CAB contains the complete game (assets + DLLs + EXE). Extraction requires `unshield`.
 
 ## Setup
 
 ```bash
-# Installer unshield
+# Install unshield
 sudo apt install unshield
 
-# Extraire le CAB
+# Extract the CAB
 unshield x /tmp/cd2/data3.cab -d /tmp/game_files
 
-# Trouver le binaire principal
+# Find the main binary
 find /tmp/game_files -name "*.exe" -o -name "*.dll" | xargs ls -lh
 ```
 
-Le jeu original utilise probablement une architecture :
+The original game likely uses this architecture:
 - `Simpsons.exe` → launcher (22KB)
-- `game.dll` ou `engine.dll` → logique principale
+- `game.dll` or `engine.dll` → main logic
 
-## Cibles d'analyse priorisées
+## Priority Analysis Targets
 
-### 1. P3DZ — Compression propriétaire (0x5A443350)
+### 1. P3DZ — Proprietary Compression (0x5A443350)
 
-**Rechercher dans Ghidra :**
-- Search → Memory → chercher la valeur `43 50 44 5A` (P3DZ big-endian) ou `5A 44 50 43` (little-endian)
-- Identifier la fonction qui compare avec `0x5A443350`
-- La fonction de décompression est probablement proche
-- Chercher les références à `zlib`, `deflate`, `compress`
+**Search in Ghidra:**
+- Search → Memory → look for bytes `43 50 44 5A` (P3DZ big-endian) or `5A 44 50 43` (little-endian)
+- Identify the function that compares with `0x5A443350`
+- The decompression function is likely nearby
+- Look for references to `zlib`, `deflate`, `compress`
 
-**Classes C++ probables :**
+**Likely C++ classes:**
 - `tP3DFile`, `tP3DFileHandler`
 - `tFile` → `LoadP3D`
 
 ### 2. Character Controller
 
-**Fonctions à identifier :**
-- Chercher les strings `"gravity"`, `"stepHeight"`, `"walkDirection"`
-- La classe contient probablement : `mVerticalVelocity`, `mVerticalOffset`, `mStepHeight`
-- `OnGround()` → chercher la fonction qui teste `mVerticalVelocity == 0` ou fait un raycast
+**Functions to identify:**
+- Search for strings `"gravity"`, `"stepHeight"`, `"walkDirection"`
+- The class likely contains: `mVerticalVelocity`, `mVerticalOffset`, `mStepHeight`
+- `OnGround()` → find the function that tests `mVerticalVelocity == 0` or does a raycast
 
-**Classes C++ identifiées (via RTTI) :**
-- `BaseDamper` (amortisseur)
-- `JumpAction` (saut)
-- `SteeringSpring` (direction)
-- `SuspensionJointDriver` (suspension)
+**C++ classes identified (via RTTI):**
+- `BaseDamper`
+- `JumpAction`
+- `SteeringSpring`
+- `SuspensionJointDriver`
 
-### 3. Constantes physiques véhicules
+### 3. Vehicle Physics Constants
 
-**Valeurs par défaut à extraire :**
-- `SetMass` → masse par défaut (~1000-1500 kg)
-- `SetGasScale` → accélération
-- `SetTopSpeedKmh` → vitesse max (~180 km/h)
-- `SetSuspensionLimit` → limite suspension
-- `SetSpringK` → raideur ressort
-- `SetDamperC` → amortissement
+**Default values to extract:**
+- `SetMass` → default mass (~1000-1500 kg)
+- `SetGasScale` → acceleration
+- `SetTopSpeedKmh` → max speed (~180 km/h)
+- `SetSuspensionLimit` → suspension limit
+- `SetSpringK` → spring stiffness
+- `SetDamperC` → damping
 
-Chercher les valeurs initialisées dans le constructeur du véhicule.
+Search for initialized values in the vehicle constructor.
 
-### 4. Format script .con
+### 4. Script .con Format
 
-**Déjà confirmé :** texte clair, pas bytecode.
+**Already confirmed:** plain text, not bytecode.
 
-**À vérifier dans Ghidra :**
-- Chercher la fonction qui lit/parse `.con` (probablement `tScriptLoader` ou `tMission`)
-- Confirmer la syntaxe exacte
-- Identifier toutes les commandes non documentées
+**To verify in Ghidra:**
+- Find the function that reads/parses `.con` (likely `tScriptLoader` or `tMission`)
+- Confirm exact syntax
+- Identify all undocumented commands
 
-### 5. Game flow / State machine
+### 5. Game Flow / State Machine
 
-**Fonctions à identifier :**
-- `SelectMission` → charge le `.con`, init MissionState
-- `AddStage` / `CloseStage` → gestion étapes
-- `CloseMission` → fin de mission
+**Functions to identify:**
+- `SelectMission` → loads `.con`, initializes MissionState
+- `AddStage` / `CloseStage` → stage management
+- `CloseMission` → mission end
 
-## Méthodologie
+## Methodology
 
-1. **Importer le binaire dans Ghidra**
-   - File → Import → sélectionner le .exe ou .dll
-   - Langage : x86 32-bit / PE
-   - Analyse avec options par défaut
+1. **Import binary into Ghidra**
+   - File → Import → select the .exe or .dll
+   - Language: x86 32-bit / PE
+   - Analyze with default options
 
-2. **Chercher les strings significatives**
+2. **Find meaningful strings**
    - Window → Defined Strings
-   - Filtrer par : `p3d`, `gravity`, `jump`, `SelectMission`, `chunk`
+   - Filter by: `p3d`, `gravity`, `jump`, `SelectMission`, `chunk`
 
-3. **Identifier les classes via RTTI**
-   - Chercher les patterns `.?AV` (MSVC RTTI)
-   - Ghidra peut reconstruire la hiérarchie via Class Recovery
+3. **Identify classes via RTTI**
+   - Search for `.?AV` patterns (MSVC RTTI)
+   - Ghidra can rebuild the hierarchy via Class Recovery
 
-4. **Renommer les fonctions**
-   - Double-clic sur un symbole → press `L` → entrer le nom
-   - Exporter : File → Export Program → format XML ou C header
+4. **Rename functions**
+   - Double-click a symbol → press `L` → enter name
+   - Export: File → Export Program → XML format or C header
 
-5. **Exporter les données**
-   - Script Python headless :
+5. **Export data**
+   - Headless Python script:
    ```python
    fm = currentProgram.getFunctionManager()
    for func in fm.getFunctions(True):
        print(func.getName())
    ```
 
-## Constantes déjà connues (depuis les strings)
+## Known Constants (from strings)
 
-| Commande | Valeur par défaut | Source |
-|----------|-------------------|--------|
+| Command | Default Value | Source |
+|---------|---------------|--------|
 | `SetHitPoints` | 15.0 | `SetHitPoints(15.0)` |
 | `SetGamblingOdds` | 2.0 | `SetGamblingOdds(2.0)` |
-| `Gravity` | 9.8 | Standard physique |
-| `Jump velocity` | ~5.0 | déduction |
-| `Step height` | 0.5 | P3D données |
+| `Gravity` | 9.8 | Standard physics |
+| `Jump velocity` | ~5.0 | Deduced |
+| `Step height` | 0.5 | P3D data |
 
-## Alternatives sans Ghidra
+## Alternatives Without Ghidra
 
-- **Cheat Engine** : scanner la mémoire du jeu en cours pour trouver les adresses
-- **x64dbg** : debugger le processus, poser des breakpoints sur les fonctions
-- **Process Monitor** : voir quels fichiers le jeu charge
-- **DLL export viewer** : `dumpbin /exports game.dll`
+- **Cheat Engine**: scan game memory at runtime to find addresses
+- **x64dbg**: debug the process, set breakpoints on functions
+- **Process Monitor**: see what files the game loads
+- **DLL export viewer**: `dumpbin /exports game.dll`

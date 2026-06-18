@@ -1,86 +1,83 @@
-# Tickets Scripting — Mise à jour
+# Tickets — Scripting (Updated)
 
-**Découverte majeure :** Les scripts `.con` sont en **texte clair** (pas de bytecode). Le parser existant `Commands::RunLine()` est directement compatible.
+**Major discovery:** `.con` scripts are **plain text** (not bytecode). The existing `Commands::RunLine()` parser is directly compatible.
 
-Les scripts sont dans `data3.cab` (CD2), ~120 fichiers organisés en `Missions/level0X/`, `EasyRace/`, `HardRace/`, `Pursuit/`, etc.
-
----
-
-## Phase 1 : Extraction et parser (P0)
-
-### SCRIPT-001 — Extraire les .con depuis les ISOs
-**Statut :** Format confirmé, chemins listés  
-**À faire :**
-- [ ] Extraire `data3.cab` du CD2 avec `cabextract`
-- [ ] Copier l'arborescence `scripts/` dans `assets/scripts/`
-- [ ] Script d'extraction automatique dans `tools/extract_assets.sh` (mis à jour)
-
-### SCRIPT-002 — Tester le parser sur un vrai script
-**À faire :**
-- [ ] Charger `Missions/level01/M1race.con` via `Commands::RunScript()`
-- [ ] Vérifier que la boucle de parsing lit toutes les lignes
-- [ ] Logger les commandes non implémentées
+Scripts are in `data3.cab` (CD2), ~120 files organized in `Missions/level0X/`, `EasyRace/`, `HardRace/`, `Pursuit/`, etc.
 
 ---
 
-## Phase 2 : Commandes P0 — Mission jouable (~18 commandes)
+## Phase 1: Extraction and Parser (P0)
 
-Ces commandes suffisent pour faire tourner `M1race.con` et avoir une mission race basique :
+### SCRIPT-001 — Extract .con files from ISOs
+**Status:** Format confirmed, paths listed
+- [ ] Extract `data3.cab` from CD2 with `cabextract`
+- [ ] Copy `scripts/` tree to `assets/scripts/`
+- [ ] Auto-extraction script in `tools/extract_assets.sh` (updated)
 
-| # | Commande | Rôle |
-|---|----------|------|
-| 1 | `SelectMission(id)` | Init state machine mission |
-| 2 | `SetMissionResetPlayerInCar(loc)` | Point de respawn |
-| 3 | `SetDynaLoadData(zones)` | Charger les zones du niveau |
-| 4 | `AddStage(num)` | Début d'étape de mission |
-| 5 | `SetHUDIcon(name)` | Icône HUD |
-| 6 | `AddObjective(type, ...)` | Objectif (race, destroy, collect...) |
-| 7 | `SetStageTime(secs)` | Timer de l'étape |
-| 8 | `AddNPC(name, loc)` | Ajouter un PNJ |
-| 9 | `AddStageVehicle(car, loc, mode, aiScript, driver)` | Ajouter véhicule IA |
-| 10 | `CloseStage()` | Fin d'étape |
-| 11 | `CloseMission()` | Fin de mission |
-| 12 | `ShowStageComplete()` | Afficher écran de complétion |
-| 13 | `AddCharacter(name, loc)` | Ajouter personnage |
-| 14 | `InitLevelPlayerVehicle(car, loc, ...)` | Initialiser véhicule joueur |
-| 15 | `PlacePlayerCar(car, loc)` | Placer voiture joueur |
-| 16 | `CreateChaseManager(cop, script, count)` | Créer poursuite police |
-| 17 | `SetPresentationBitmap(tex)` | Image de présentation mission |
-| 18 | `EnableTutorialMode(bool)` | Mode tutoriel |
+### SCRIPT-002 — Test parser on a real script
+- [ ] Load `Missions/level01/M1race.con` via `Commands::RunScript()`
+- [ ] Verify the parsing loop reads all lines
+- [ ] Log unimplemented commands
 
-### SCRIPT-003 — Implémenter les commandes P0
-**Implémentation :**
-- [ ] Créer `ScriptEngine` class qui gère l'état mission
+---
+
+## Phase 2: P0 Commands — Playable Mission (~18 commands)
+
+These commands are enough to run `M1race.con` and have a basic race mission:
+
+| # | Command | Role |
+|---|--------|------|
+| 1 | `SelectMission(id)` | Init mission state machine |
+| 2 | `SetMissionResetPlayerInCar(loc)` | Respawn point |
+| 3 | `SetDynaLoadData(zones)` | Load level zones |
+| 4 | `AddStage(num)` | Stage start |
+| 5 | `SetHUDIcon(name)` | HUD icon |
+| 6 | `AddObjective(type, ...)` | Objective (race, destroy, collect...) |
+| 7 | `SetStageTime(secs)` | Stage timer |
+| 8 | `AddNPC(name, loc)` | Add NPC |
+| 9 | `AddStageVehicle(car, loc, mode, aiScript, driver)` | Add AI vehicle |
+| 10 | `CloseStage()` | Stage end |
+| 11 | `CloseMission()` | Mission end |
+| 12 | `ShowStageComplete()` | Show completion screen |
+| 13 | `AddCharacter(name, loc)` | Add character |
+| 14 | `InitLevelPlayerVehicle(car, loc, ...)` | Init player vehicle |
+| 15 | `PlacePlayerCar(car, loc)` | Place player car |
+| 16 | `CreateChaseManager(cop, script, count)` | Create police pursuit |
+| 17 | `SetPresentationBitmap(tex)` | Mission briefing image |
+| 18 | `EnableTutorialMode(bool)` | Tutorial mode |
+
+### SCRIPT-003 — Implement P0 commands
+- [ ] Create `ScriptEngine` class that manages mission state
 - [ ] `SelectMission` → init MissionState
 - [ ] `AddStage` / `CloseStage` → stage state machine
 - [ ] `AddNPC` → spawn Character via Game
-- [ ] `AddStageVehicle` → spawn Vehicle avec comportement IA
-- [ ] Les autres → stocker état, appliquer au monde
+- [ ] `AddStageVehicle` → spawn Vehicle with AI behavior
+- [ ] Others → store state, apply to world
 
 ---
 
-## Phase 3 : Commandes P1 (~50 commandes)
+## Phase 3: P1 Commands (~50 commands)
 
-### SCRIPT-004 — Commandes véhicule (~30)
-Tuning physique : `SetMass`, `SetGasScale`, `SetTopSpeedKmh`, `SetTireGrip`, `SetSuspensionLimit`, etc.
+### SCRIPT-004 — Vehicle commands (~30)
+Physics tuning: `SetMass`, `SetGasScale`, `SetTopSpeedKmh`, `SetTireGrip`, `SetSuspensionLimit`, etc.
 
-### SCRIPT-005 — Commandes caméra
+### SCRIPT-005 — Camera commands
 `SetAnimatedCameraName`, `SetConversationCam`, `SetCarStartCamera`, etc.
 
-### SCRIPT-006 — Commandes course
+### SCRIPT-006 — Race commands
 `SetRaceLaps`, `SetStageAIRaceCatchupParams`, `SetVehicleAIParams`, etc.
 
 ---
 
-## Phase 4 : Commandes P2 (~100 commandes)
+## Phase 4: P2 Commands (~100 commands)
 
 ### SCRIPT-007 — Gags (collectibles)
-`GagBegin`, `GagSetPosition`, `GagSetTrigger`, `GagEnd`, etc. (~51 commandes)
+`GagBegin`, `GagSetPosition`, `GagSetTrigger`, `GagEnd`, etc. (~51 commands)
 
 ### SCRIPT-008 — Hit & Run (police)
 `EnableHitAndRun`, `SetHitAndRunDecay`, `SetChaseSpawnRate`, etc.
 
-### SCRIPT-009 — Trafic / Piétons
+### SCRIPT-009 — Traffic / Pedestrians
 `CreateTrafficGroup`, `CreatePedGroup`, `SetMaxTraffic`, etc.
 
 ### SCRIPT-010 — UI / HUD
@@ -88,21 +85,21 @@ Tuning physique : `SetMass`, `SetGasScale`, `SetTopSpeedKmh`, `SetTireGrip`, `Se
 
 ---
 
-## Phase 5 : Trigger system
+## Phase 5: Trigger System
 
-### SCRIPT-011 — Volumes de déclenchement
-- [ ] Charger les `Locator2` et `TriggerVolume` depuis P3D
-- [ ] Détecter entrée/sortie de zone
+### SCRIPT-011 — Trigger volumes
+- [ ] Load `Locator2` and `TriggerVolume` from P3D
+- [ ] Detect zone entry/exit
 - [ ] `ActivateTrigger(name)`, `DeactivateTrigger(name)`
 
 ---
 
-## Phase 6 : Polish (P3)
+## Phase 6: Polish (P3)
 
-### SCRIPT-012 — Achats / Récompenses
+### SCRIPT-012 — Purchases / Rewards
 `AddPurchaseCarReward`, `SetCoinFee`, `BindReward`, etc.
 
-### SCRIPT-013 — Dialogues / FMV
+### SCRIPT-013 — Dialogue / FMV
 `SetDialogueInfo`, `SetFMVInfo`, `GagPlayFMV`, etc.
 
 ### SCRIPT-014 — Bonus missions
@@ -110,13 +107,13 @@ Tuning physique : `SetMass`, `SetGasScale`, `SetTopSpeedKmh`, `SetTireGrip`, `Se
 
 ---
 
-## Architecture proposée
+## Proposed Architecture
 
-```
+```cpp
 class ScriptEngine {
-    MissionState _mission;       // Mission en cours
-    std::vector<Stage> _stages;  // Étapes
-    Game& _game;                 // Référence au monde
+    MissionState _mission;
+    std::vector<Stage> _stages;
+    Game& _game;
 
     void RunFile(const std::string& path);
     void ExecuteCommand(const std::string& name, const std::string& params);
@@ -139,4 +136,4 @@ class Stage {
 };
 ```
 
-Le `ScriptEngine` remplace le `Commands::Run` statique actuel par un système avec état.
+The `ScriptEngine` replaces the static `Commands::Run` with a stateful system.

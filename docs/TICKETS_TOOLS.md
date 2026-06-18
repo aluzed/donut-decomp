@@ -1,119 +1,62 @@
-# Tickets Outils / Reverse Engineering
+# Tickets — Tools / Reverse Engineering
 
-## TOOL-001 — Extraction automatique des assets depuis les ISOs
-**Priorité :** P0
-**Description :** Script pour extraire les fichiers de jeu depuis les 3 CDs :
-1. Extraire les .7z → ISOs
-2. Monter ISOs ou utiliser 7z pour lister/extraire
-3. Extraire les CAB InstallShield (DATA1.CAB, DATA2.CAB...) avec `unshield` ou `cabextract`
-4. Organiser dans `assets/` selon l'arborescence attendue (GAME-002)
-5. Documenter l'arborescence complète des fichiers
+## TOOL-001 — Automatic asset extraction from ISOs
+**Priority:** P0
+**Description:** Script to extract game files from 3 CDs: extract .7z → ISOs, extract CABs with unshield, organize into `assets/` tree.
 
-```bash
-# Exemple de pipeline
-7z x CD1.7z
-# Trouver le vrai exe (pas le launcher)
-# Extraire les CAB
-unshield x DATA1.CAB -d assets/
-```
+## TOOL-002 — Reverse SIMPSONS.EXE in Ghidra
+**Priority:** P0
+**Description:** The real game binary (not the 22KB launcher). Goals:
+- [ ] Identify entry point and main loop
+- [ ] Find P3D parsing functions (for unknown chunks)
+- [ ] Find script parsing (.con)
+- [ ] Find P3DZ algorithm (header 0x5A443350)
+- [ ] Find RMV format (if needed)
+- [ ] Document key data structures
+- [ ] Rename identified functions
+- [ ] Export symbol file
 
----
+## TOOL-003 — Create Ghidra test script (headless)
+**Priority:** P3
+**Description:** Automate data extraction from Ghidra.
 
-## TOOL-002 — Reverser SIMPSONS.EXE dans Ghidra
-**Priorité :** P0
-**Description :** Le vrai binaire du jeu (pas le launcher 22KB du CD1). Objectifs :
-- [ ] Identifier l'entry point et la boucle principale
-- [ ] Trouver les fonctions de parsing P3D (pour les chunks inconnus)
-- [ ] Trouver les fonctions de parsing de script (.con)
-- [ ] Trouver l'algorithme P3DZ (header 0x5A443350)
-- [ ] Trouver le format RMV (si nécessaire)
-- [ ] Documenter les structures de données clés (GameState, Entity, Vehicle)
-- [ ] Renommer les fonctions identifiées dans la base Ghidra
-- [ ] Exporter un fichier de symboles
+## TOOL-004 — Update donut-codegen.exe for new chunks
+**Priority:** P1
+**Description:** The tool `dev/codegen/donut-codegen.exe` takes `p3d.json` and generates `P3D.generated.h/.cpp`.
+- [ ] Verify the exe works (Windows? .NET? Mono?)
+- [ ] Add missing definitions to `p3d.json`
+- [ ] Re-run generation
+- [ ] Fix resulting compilation errors
 
-**Setup Ghidra :**
-- Créer un projet "SimpsonsHitAndRun"
-- Importer le vrai exe (probablement dans les CAB CD2/CD3)
-- Analyser avec les options par défaut
-- Chercher les strings "p3d", "rcf", "Pure3D" pour trouver les fonctions
+## TOOL-005 — P3D chunk visualization tool
+**Priority:** P2
+**Description:** Extend `debugDrawP3D` in `Game.cpp` with:
+- Raw data hex dump
+- Comparison between two P3D files
+- Search by chunk type
+- Texture export
 
----
+## TOOL-006 — Auto-extract commands from original exe
+**Priority:** P2
+**Description:** Ghidra script to auto-extract registered commands from the string table.
 
-## TOOL-003 — Créer un script de test Ghidra (headless)
-**Priorité :** P3
-**Description :** Automatiser l'extraction de données depuis Ghidra :
-```python
-# Exemple: extraire tous les noms de chunks P3D
-fm = currentProgram.getFunctionManager()
-funcs = fm.getFunctions(True)
-for func in funcs:
-    if "Chunk" in func.getName():
-        print(func.getName())
-```
+## TOOL-007 — Automatic P3D parsing validation
+**Priority:** P3
+**Description:** Unit tests for P3D parsing: canonical P3D file → parse → re-serialize → binary compare.
 
----
+## TOOL-008 — Script format documentation (.con)
+**Priority:** P0
+**Description:** Create `docs/script_format.md` with file structure, opcode list (if bytecode), command mapping, parameter format, decompiled script examples.
 
-## TOOL-004 — Mettre à jour donut-codegen.exe pour supporter les nouveaux chunks
-**Priorité :** P1
-**Description :** L'outil existant `dev/codegen/donut-codegen.exe` prend `p3d.json` et génère `P3D.generated.h/.cpp`. Quand on ajoute des chunks à `p3d.json`, il faut relancer le codegen.
-- [ ] Vérifier que l'exe fonctionne (Windows ? .NET ? Mono ?)
-- [ ] Ajouter les définitions manquantes dans `p3d.json`
-- [ ] Relancer la génération
-- [ ] Corriger les erreurs de compilation résultantes
+## TOOL-009 — Cross-reference with similar projects
+**Priority:** P3
+**Description:** The Radical engine was used in multiple games. Study:
+- **OpenC1** (Crazy Taxi-like, modified Radical engine)
+- **Donut Mod Loader** (existing Simpsons H&R mods)
+- **Lucas' Pure3D Editor** (P3D editing tool)
+- **P3DView** (viewer)
+- Community wiki documentation
 
----
-
-## TOOL-005 — Outil de visualisation de chunks P3D
-**Priorité :** P2
-**Description :** La fonction `debugDrawP3D` dans `Game.cpp` affiche un arbre ImGui des chunks. L'étendre en :
-- [ ] Hex dump des données brutes
-- [ ] Comparaison entre deux fichiers P3D
-- [ ] Recherche par type de chunk
-- [ ] Export de texture
-
----
-
-## TOOL-006 — Script d'extraction des commandes depuis l'exe original
-**Priorité :** P2
-**Description :** Ghidra script pour extraire automatiquement les commandes enregistrées (si elles sont dans une table de strings) pour compléter `cmd.json`.
-
----
-
-## TOOL-007 — Validation automatique du parsing P3D
-**Priorité :** P3
-**Description :** Tests unitaires pour le parsing P3D :
-- Fichier P3D canonique → parse → re-serialize → compare binaire
-- Roundtrip test pour chaque chunk type
-- Comparaison entre parsing donut et lecture hex manuelle
-
----
-
-## TOOL-008 — Documentation du format de script (.con)
-**Priorité :** P0
-**Description :** Créer `docs/script_format.md` avec :
-- Structure du fichier (header, bytecode/texte)
-- Liste des opcodes (si bytecode)
-- Mapping opcode → commande
-- Format des paramètres
-- Exemples de scripts décompilés
-
----
-
-## TOOL-009 — Cross-reference avec les projets similaires
-**Priorité :** P3
-**Description :** Le moteur Radical a été utilisé dans plusieurs jeux. Étudier les projets de reverse :
-- **OpenC1** (Crazy Taxi-like, moteur Radical modifié)
-- **Donut Mod Loader** (mods existants pour Simpsons H&R)
-- **Lucas' Pure3D Editor** (outil d'édition P3D)
-- **P3DView** (visualisateur)
-- Documentation Pure3D existante sur les wikis communautaires
-
----
-
-## TOOL-010 — Setup CI/CD (Azure Pipelines ou GitHub Actions)
-**Priorité :** P3
-**Description :** Le projet mentionnait Azure Pipelines dans les commits (d3fda55). Configurer une CI :
-- Build Linux (GCC/Clang) + Windows (MSVC)
-- Tests unitaires (quand ajoutés)
-- Code style check (clang-format)
-- Le projet a déjà une target `clang-format` dans CMake
+## TOOL-010 — Setup CI/CD (Azure Pipelines or GitHub Actions)
+**Priority:** P3
+**Description:** Configure CI: Linux + Windows build, unit tests, code style check (clang-format target already exists).

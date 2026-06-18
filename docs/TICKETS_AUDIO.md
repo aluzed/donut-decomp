@@ -1,55 +1,41 @@
-# Tickets Audio
+# Tickets — Audio
 
-## AUDIO-001 — Gestion multi-sources
-**Priorité :** P1
-**Fichier :** `src/Audio/AudioManager.h/.cpp`
-**Description :** Une seule source OpenAL (`_source`) et un seul buffer. Impossible de jouer plusieurs sons simultanément (moteur + musique + dialogue).
-**Correctif :** Pool de sources (par ex. 32). Gérer l'allocation/libération dynamique.
+## AUDIO-001 — Multi-source management
+**Priority:** P1
+**File:** `src/Audio/AudioManager.h/.cpp`
+**Description:** Single OpenAL source and buffer. Cannot play multiple sounds simultaneously (engine + music + dialogue).
+**Fix:** Source pool (e.g. 32). Dynamic allocation/release.
 
----
+## AUDIO-002 — Audio streaming (music)
+**Priority:** P1
+**Description:** RSD music files are too large for full buffer. Implement circular buffer double-buffering streaming.
 
-## AUDIO-002 — Streaming audio (musique)
-**Priorité :** P1
-**Description :** Les fichiers musique RSD sont trop gros pour être chargés en mémoire entièrement. Implémenter le streaming par buffer circulaire (double buffering).
+## AUDIO-003 — Spatial / 3D audio
+**Priority:** P2
+**Description:** Position sources in 3D space. Car sounds, pedestrians, dialogue must be spatialized. OpenAL supports this natively.
 
----
+## AUDIO-004 — Implement PlayAudio with hash
+**Priority:** P1
+**File:** `src/Audio/AudioManager.cpp`
+**Description:** `PlayAudio(uint32_t hash)` overload is declared but missing. Mission scripts reference sounds by hash.
 
-## AUDIO-003 — Audio spatial / 3D
-**Priorité :** P2
-**Description :** Positionner les sources dans l'espace 3D. Les sons de voiture, piétons, dialogues doivent être spatialisés. OpenAL le supporte nativement (`alSource3f` avec position).
+## AUDIO-005 — Populate `_sounds` cache
+**Priority:** P2
+**File:** `src/Audio/AudioManager.cpp`
+**Description:** `LoadRCF` doesn't populate `_sounds` map. Add index on load.
 
----
+## AUDIO-006 — Auto-load RCF files
+**Priority:** P3
+**File:** `src/Audio/AudioManager.cpp` (constructor)
+**Description:** Hardcoded list of 10 names. Scan `audio/` directory automatically.
 
-## AUDIO-004 — Implémenter PlayAudio avec hash
-**Priorité :** P1
-**Fichier :** `src/Audio/AudioManager.cpp`
-**Description :** La surcharge `PlayAudio(uint32_t hash)` est déclarée mais absente du .cpp. Les scripts de mission référencent les sons par hash.
+## AUDIO-007 — Dialogue management
+**Priority:** P2
+**Description:** `DIALOGF.RCF` (159MB) contains all game dialogue. Implement:
+- Lip sync (based on sample durations?)
+- Subtitles (from text bibles)
+- Dialogue priority (cutscene > gameplay)
 
----
-
-## AUDIO-005 — Populer le cache `_sounds`
-**Priorité :** P2
-**Fichier :** `src/Audio/AudioManager.cpp`
-**Description :** `LoadRCF` ne remplit pas la map `_sounds`. À chaque PlayAudio, on recherche linéairement dans tous les RCF. Ajouter un index au chargement.
-
----
-
-## AUDIO-006 — Chargement automatique des RCF
-**Priorité :** P3
-**Fichier :** `src/Audio/AudioManager.cpp` (constructeur)
-**Description :** La liste des RCF est hardcodée (10 noms). Scanner le dossier `audio/` automatiquement.
-
----
-
-## AUDIO-007 — Gestion des dialogues
-**Priorité :** P2
-**Description :** Le fichier `DIALOGF.RCF` (159MB) contient tous les dialogues du jeu. Implémenter :
-- Lip sync (basé sur les durées des samples ?)
-- Sous-titres (depuis les bibles de texte, P3D-005)
-- Priorité des dialogues (cutscene > gameplay)
-
----
-
-## AUDIO-008 — Support EFX (réverbération)
-**Priorité :** P3
-**Description :** Réverbération par zone pour les intérieurs vs extérieur. OpenAL EFX.
+## AUDIO-008 — EFX support (reverb)
+**Priority:** P3
+**Description:** Per-zone reverb for interiors vs exterior. OpenAL EFX.

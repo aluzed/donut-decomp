@@ -1,80 +1,80 @@
-# donut Engine - Roadmap de Reverse Engineering
+# donut Engine - Reverse Engineering Roadmap
 
-## État des lieux
+## Status
 
-**Projet :** Réimplémentation open source du moteur de *The Simpsons: Hit & Run* (2003, PC)
-**Moteur original :** Radical Engine (Pure3D + RCL)
-**Langage :** C++17 / OpenGL 4.3
-**Assets requis :** Fichiers originaux du jeu (.p3d, .rcf, .rsd, scripts .con)
+**Project:** Open source reimplementation of *The Simpsons: Hit & Run* (2003, PC)
+**Original Engine:** Radical Engine (Pure3D + RCL)
+**Language:** C++17 / OpenGL 4.3
+**Assets Required:** Original game files (.p3d, .rcf, .rsd, .con scripts)
 
-### Modules existants
+### Existing Modules
 
-| Module | Statut | Fichiers | Chunks P3D parsés | Notes |
-|--------|--------|----------|-------------------|-------|
-| **P3D** | 90% | 6 | 139/182 | Il manque ~50 chunk types (particules, lumières, etc.) |
-| **RCL** | 100% | 4 | N/A | Archive RCF + audio RSD complets |
-| **Core** | 95% | 18 | N/A | Bugs mineurs sur Matrix3x3, Quaternion, Vector4 |
-| **Render** | 80% | 32 | N/A | SkinAnimation et DrawBox sont stubbés |
-| **Physics** | 50% | 8 | N/A | Step simulation désactivé, CharacterController partiel |
-| **Audio** | 40% | 2 | N/A | Une seule source, pas de cache |
-| **Scripting** | 5% | 4 | N/A | 185 commandes définies, 1 implémentée |
-| **Top-level** | 70% | 25 | N/A | Level chargé, Game::Run fonctionnel mais viewer-only |
+| Module | Status | Files | P3D Chunks Parsed | Notes |
+|--------|--------|-------|-------------------|-------|
+| **P3D** | 90% | 6 | 165+/182 | Missing ~17 chunk types (particles, lights, etc.) |
+| **RCL** | 100% | 4 | N/A | RCF archive + RSD audio complete |
+| **Core** | 95% | 18 | N/A | Minor bugs fixed (Vector4, Quaternion, Matrix3x3) |
+| **Render** | 80% | 32 | N/A | SkinAnimation and DrawBox fixed |
+| **Physics** | 80% | 8 | N/A | stepSimulation active, CharacterController working |
+| **Audio** | 70% | 2 | N/A | 24-source pool, spatial audio, procedural sounds |
+| **Scripting** | 60% | 4 | N/A | 185 commands defined, 40+ implemented |
+| **AI** | 50% | 4 | N/A | Traffic, race opponent, police chase |
 
-### Assets disponibles
-- `files/` : 3 CD du jeu (ISO dans .7z)
-  - CD1 : SIMPSONS.EXE (22KB launcher), DIALOGF.RCF (159MB), MOVIES/
-  - CD2/CD3 : Assets du jeu (P3D, RCF, Scripts) — extraire des CAB
-- L'exécutable original est un petit launcher ; la logique est dans le CAB/DLL
+### Available Assets
+- `files/`: 3 game CDs (ISO in .7z)
+  - CD1: SIMPSONS.EXE (22KB launcher), DIALOGF.RCF (159MB), MOVIES/, data1.cab + data2.cab
+  - CD2/CD3: Game assets (P3D, RCF, Scripts) - CD2 has data3.cab (650MB), CD3 has data4.cab (606MB)
 
 ---
 
-## Architecture cible du moteur
+## Target Architecture
 
 ```
 donut
-├── Core/           # Types mathématiques, I/O, mémoire, logging
-├── P3D/            # Parsing du format Pure3D (~182 chunk types)
-├── RCL/            # Archives RCF, audio RSD/RADP
-├── Render/         # OpenGL 4.3 : meshes, shaders, skinning, sprites, post-FX
-├── Physics/        # Intégration Bullet Physics
-├── Audio/          # OpenAL : spatial audio, musique, dialogues
-├── Scripting/      # Moteur de script (VM) exécutant les missions .con
-├── Game/           # Gameplay : personnages, véhicules, IA, missions
-├── UI/             # Frontend (menus, HUD) — basé sur FrontendProject existant
-├── Input/          # Gestion clavier/souris/manette
-└── docs/           # Documentation et tickets
+├── Core/           # Math types, I/O, memory, logging
+├── P3D/            # Pure3D format parsing (~182 chunk types)
+├── RCL/            # RCF archives, RSD/RADP audio
+├── Render/         # OpenGL 4.3: meshes, shaders, skinning, sprites, post-FX
+├── Physics/        # Bullet Physics integration
+├── Audio/          # OpenAL: spatial audio, music, dialogue
+├── Scripting/      # Script engine executing .con missions
+├── AI/             # Traffic, pathfinding, police, race AI
+├── Game/           # Gameplay: characters, vehicles, missions
+├── UI/             # Frontend (menus, HUD)
+├── Input/          # Keyboard/mouse/gamepad
+└── docs/           # Documentation and tickets
 ```
 
 ---
 
-## Phases et priorités
+## Phases and Priorities
 
-### Phase 1 : Fondations (bugs critiques, parsing P3D manquant)
-Fixer ce qui empêche le projet de fonctionner correctement.
+### Phase 1: Foundation ✅
+Fix critical bugs in math, complete P3D parsing.
 
-### Phase 2 : Rendu et physique
-Rendre le viewer pleinement fonctionnel : toutes les entités, animations, physique active.
+### Phase 2: Rendering + Physics ✅
+Fully functional viewer: all entities, animations, active physics.
 
-### Phase 3 : Gameplay de base
-Personnage jouable, véhicules, collisions, caméra de jeu.
+### Phase 3: Basic Gameplay ✅
+Playable character, vehicles, collisions, game camera.
 
-### Phase 4 : Mission system
-Scripting VM, exécution des missions, IA de base.
+### Phase 4: Mission System ✅
+Script VM, .con execution, basic AI.
 
-### Phase 5 : Polish
-Audio spatial, post-processing, UI complète, multiplateforme.
+### Phase 5: Polish (in progress)
+Spatial audio, post-processing, complete UI, gamepad support.
 
 ---
 
-## Liste complète des tickets
+## Ticket Files
 
-Voir les fichiers détaillés par module :
-- [TICKETS_CORE.md](TICKETS_CORE.md) — Bugs mathématiques, logging, P3DZ/RZ
-- [TICKETS_P3D.md](TICKETS_P3D.md) — Chunks P3D manquants, codegen
-- [TICKETS_RENDER.md](TICKETS_RENDER.md) — SkinAnimation, DrawBox, LOD, post-FX
-- [TICKETS_PHYSICS.md](TICKETS_PHYSICS.md) — Physique véhicules, CharacterController
-- [TICKETS_AUDIO.md](TICKETS_AUDIO.md) — Audio spatial, multi-sources, streaming
-- [TICKETS_SCRIPTING.md](TICKETS_SCRIPTING.md) — Script VM, commandes jeu
-- [TICKETS_GAMEPLAY.md](TICKETS_GAMEPLAY.md) — Joueur, véhicules, IA, missions
-- [TICKETS_UI.md](TICKETS_UI.md) — Frontend complet, HUD, menus
-- [TICKETS_TOOLS.md](TICKETS_TOOLS.md) — Outils, codegen, Ghidra
+See detailed tickets per module:
+- TICKETS_CORE.md — Math bugs, P3DZ/RZ
+- TICKETS_P3D.md — Missing P3D chunks, codegen
+- TICKETS_RENDER.md — LOD, post-FX
+- TICKETS_PHYSICS.md — Vehicle physics, CharacterController
+- TICKETS_AUDIO.md — Streaming, spatial audio
+- TICKETS_SCRIPTING.md — Script commands
+- TICKETS_GAMEPLAY.md — Player, vehicles, AI
+- TICKETS_UI.md — Frontend, HUD
+- TICKETS_TOOLS.md — Tools, codegen, Ghidra

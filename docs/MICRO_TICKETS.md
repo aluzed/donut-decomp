@@ -1,191 +1,191 @@
-# Micro-tickets restants — découpage fin
+# Micro-Tickets — Remaining Tasks
 
-## 1. Extraction assets (6 tickets)
+## 1. Asset Extraction (6 tickets)
 
-### ASSET-001 — Compiler unshield en statique
-- Compiler `unshield` depuis https://github.com/twogood/unshield
-- S'assurer que la commande `unshield -d out x data1.cab` fonctionne
+### ASSET-001 — Build unshield statically
+- Build `unshield` from https://github.com/twogood/unshield
+- Verify `unshield -d out x data1.cab` works
 - **~5 min**
 
-### ASSET-002 — Extraire data1.cab + data2.cab depuis le CD1
-- Utiliser `7z e` pour extraire les CABs de l'ISO
-- Placer dans `assets/`
+### ASSET-002 — Extract data1.cab + data2.cab from CD1
+- Use `7z e` to extract CABs from the ISO
+- Place in `assets/`
 - **~10 min**
 
-### ASSET-003 — Tester l'extraction d'un fichier P3D
-- `unshield x data1.cab` → vérifier que `Art/b00.p3d` est extrait
-- Ouvrir le fichier avec `P3DFile` dans donut
+### ASSET-003 — Test extraction of a P3D file
+- `unshield x data1.cab` → verify `Art/b00.p3d` is extracted
+- Open the file with `P3DFile` in donut
 - **~15 min**
 
-### ASSET-004 — Extraire tous les fichiers du CAB
-- Lancer l'extraction complète
-- Organiser dans l'arborescence `art/`, `audio/`, `movies/`
+### ASSET-004 — Extract all CAB files
+- Run full extraction
+- Organize into `art/`, `audio/`, `movies/` tree
 - **~20 min**
 
-### ASSET-005 — Charger un vrai modèle de personnage
-- Remplacer `SimpleMesh` par le P3D chargé depuis `art/chars/homer_m.p3d`
-- Vérifier que le skinning + animations marchent
+### ASSET-005 — Load a real character model
+- Replace `SimpleMesh` with P3D loaded from `art/chars/homer_m.p3d`
+- Verify skinning + animations work
 - **~30 min**
 
-### ASSET-006 — Charger les textures et shaders du jeu
-- Charger les vraies textures depuis les P3D du CAB
-- Vérifier que les shaders P3D sont correctement interprétés
+### ASSET-006 — Load real game textures and shaders
+- Load real textures from CAB P3Ds
+- Verify P3D shaders are correctly interpreted
 - **~30 min**
 
 ---
 
-## 2. IA Police/Poursuite (8 tickets)
+## 2. Police/Pursuit AI (8 tickets)
 
-### POLICE-001 — Créer une classe ChaseManager
-- Stocker le niveau de heat (0-5)
-- Stocker la voiture de police à spawn
+### POLICE-001 — Create ChaseManager class
+- Store heat level (0-5)
+- Store police car to spawn
 - **~15 min**
 
-### POLICE-002 — Spawn d'une voiture de police
-- Créer un Vehicle avec CreatePhysicsBody
-- Placer à une intersection proche du joueur
+### POLICE-002 — Spawn a police car
+- Create Vehicle with CreatePhysicsBody
+- Place at an intersection near the player
 - **~20 min**
 
-### POLICE-003 — IA de poursuite basique
-- La voiture de police suit le joueur
-- Utilise `seekSteer` vers la position du joueur
+### POLICE-003 — Basic pursuit AI
+- Police car follows the player
+- Uses `seekSteer` toward player position
 - **~20 min**
 
-### POLICE-004 — Gestion du heat level
-- Augmente quand le joueur percute des voitures de trafic
-- Diminue avec le temps
+### POLICE-004 — Heat level management
+- Increases when player hits traffic cars
+- Decreases over time
 - **~15 min**
 
-### POLICE-005 — Multiples voitures de police
-- Spawn 1-5 voitures selon le heat level
-- Chacune suit le joueur avec un offset
+### POLICE-005 — Multiple police cars
+- Spawn 1-5 cars based on heat level
+- Each follows the player with an offset
 - **~20 min**
 
-### POLICE-006 — Comportement de déploiement
-- Les voitures apparaissent devant le joueur (pas derrière)
-- Utilisent les Paths pour trouver des positions
+### POLICE-006 — Deployment behavior
+- Cars appear in front of the player (not behind)
+- Use Paths to find positions
 - **~20 min**
 
-### POLICE-007 — Arrestation
-- Si une voiture de police touche le joueur → BUSTED!
-- Afficher "BUSTED!" → MissionFailed
+### POLICE-007 — Arrest
+- If a police car touches the player → BUSTED!
+- Display "BUSTED!" → MissionFailed
 - **~15 min**
 
-### POLICE-008 — Évasion
-- Si le joueur s'éloigne assez des voitures → heat baisse
-- Heat à 0 → EVADED! → poursuite terminée
+### POLICE-008 — Evasion
+- If player gets far enough from cops → heat drops
+- Heat at 0 → EVADED! → pursuit ends
 - **~15 min**
 
 ---
 
-## 3. UI Menus/Boutons (6 tickets)
+## 3. UI Menus/Buttons (6 tickets)
 
-### UI-001 — Détection de clic souris sur FrontendMultiSprite
-- Lire la position de la souris via SDL
-- Comparer avec les sprites chargés
-- Loguer le nom du sprite cliqué
+### UI-001 — Mouse click detection on FrontendMultiSprite
+- Read mouse position via SDL
+- Compare with loaded sprites
+- Log clicked sprite name
 - **~20 min**
 
-### UI-002 — Callbacks de navigation
-- Associer un nom de sprite à un ScreenName
-- Sur clic, changer de screen (pile LIFO)
+### UI-002 — Navigation callbacks
+- Map sprite name to ScreenName
+- On click, change screen (LIFO stack)
 - **~15 min**
 
-### UI-003 — États visuels des boutons
-- Normal : opacité 100%
-- Hover : opacité 80% + surbrillance
-- Pressed : opacité 60%
-- Disabled : grisé
+### UI-003 — Button visual states
+- Normal: 100% opacity
+- Hover: 80% opacity + highlight
+- Pressed: 60% opacity
+- Disabled: greyed out
 - **~20 min**
 
-### UI-004 — Rendu de texte (FrontendMultiText)
-- Lire les données MultiText du P3D
-- Dessiner le texte avec TextureFont via SpriteBatch
-- Gérer l'alignement horizontal/vertical
+### UI-004 — Text rendering (FrontendMultiText)
+- Read MultiText data from P3D
+- Draw text with TextureFont via SpriteBatch
+- Handle horizontal/vertical alignment
 - **~30 min**
 
-### UI-005 — Écran principal (MainMenu)
-- Charger `BootScreen.p3d` → afficher les boutons
-- "New Game" → charger le niveau
-- "Options" → écran options (placeholder)
-- "Quit" → fermer le jeu
+### UI-005 — Main menu screen
+- Load `BootScreen.p3d` → display buttons
+- "New Game" → load level
+- "Options" → options screen (placeholder)
+- "Quit" → close game
 - **~30 min**
 
-### UI-006 — Écran pause in-game
-- Afficher un overlay semi-transparent
+### UI-006 — Pause menu in-game
+- Display semi-transparent overlay
 - "Resume", "Restart", "Main Menu", "Quit"
-- Navigation au clavier (flèches + Enter)
+- Keyboard navigation (arrows + Enter)
 - **~25 min**
 
 ---
 
-## 4. Audio streaming/dialogues (5 tickets)
+## 4. Audio Streaming/Dialogue (5 tickets)
 
-### AUDIO-001 — Streaming double-buffer
-- Créer 2 buffers OpenAL pour la musique
-- Remplir buffer 1, jouer, remplir buffer 2 pendant que 1 joue
-- Boucler
+### AUDIO-001 — Double-buffer streaming
+- Create 2 OpenAL buffers for music
+- Fill buffer 1, play, fill buffer 2 while 1 plays
+- Loop
 - **~30 min**
 
-### AUDIO-002 — Charger un fichier RCF de musique
-- Extraire `music00.rcf` du CAB
-- Charger via `AudioManager::LoadRCF`
-- Jouer en streaming
+### AUDIO-002 — Load a music RCF file
+- Extract `music00.rcf` from CAB
+- Load via `AudioManager::LoadRCF`
+- Play via streaming
 - **~20 min**
 
-### AUDIO-003 — Système de dialogues priorisés
-- File d'attente : `std::deque<Dialogue>`
-- Niveau 0 (cutscene) interrompt tout
-- Niveau 1 (mission) interrompt niveau 2
-- Niveau 2 (gameplay) joue si file vide
+### AUDIO-003 — Prioritized dialogue system
+- Queue: `std::deque<Dialogue>`
+- Level 0 (cutscene) interrupts everything
+- Level 1 (mission) interrupts level 2
+- Level 2 (gameplay) plays if queue empty
 - **~20 min**
 
-### AUDIO-004 — Callback de fin de son
-- Détecter quand une source OpenAL termine
-- Déclencher le prochain dialogue dans la file
+### AUDIO-004 — End-of-sound callback
+- Detect when an OpenAL source finishes
+- Trigger next dialogue in queue
 - **~20 min**
 
-### AUDIO-005 — Sous-titres synchronisés
-- Extraire le texte des bibles depuis les P3D Frontend
-- Afficher le texte en bas de l'écran pendant la durée du son
+### AUDIO-005 — Synchronized subtitles
+- Extract text from P3D Frontend bibles
+- Display text at bottom of screen during sound duration
 - **~25 min**
 
 ---
 
-## 5. Post-FX / Ombres (5 tickets)
+## 5. Post-FX / Shadows (5 tickets)
 
-### FX-001 — Bloom basique
-- Rendre la scène dans un FBO
-- Flou gaussien (2 passes)
-- Additionner à l'image originale
+### FX-001 — Basic bloom
+- Render scene to FBO
+- Gaussian blur (2 passes)
+- Add to original image
 - **~30 min**
 
 ### FX-002 — Vignette
-- Ajouter un overlay sombre sur les bords dans le shader post-process
-- Intensité configurable
+- Add dark edges overlay in post-process shader
+- Configurable intensity
 - **~10 min**
 
 ### FX-003 — Motion blur
-- Sauvegarder la matrice viewProj de la frame précédente
-- Reprojetter les pixels dans le shader
-- Mélanger avec l'image courante
+- Save previous frame's viewProj matrix
+- Reproject pixels in shader
+- Blend with current image
 - **~30 min**
 
-### FX-004 — Shadow mapping basique
-- Rendre la scène depuis la lumière directionnelle dans un depth FBO
-- Projeter la depth texture dans le shader world
-- Comparer pour déterminer les ombres
+### FX-004 — Basic shadow mapping
+- Render scene from directional light into depth FBO
+- Project depth texture in world shader
+- Compare for shadow determination
 - **~45 min**
 
 ### FX-005 — Color grading LUT
-- Charger une texture LUT 16×16×16
-- Appliquer dans le shader post-process
-- Ajuster contraste/saturation
+- Load 16×16×16 LUT texture
+- Apply in post-process shader
+- Adjust contrast/saturation
 - **~20 min**
 
 ---
 
-## Total : 30 micro-tickets
+## Total: 30 micro-tickets
 
-Tous faisables en sessions de 10-45 minutes.
-Priorité suggérée : ASSET (débloque les vrais graphismes) → POLICE (gameplay).
+All achievable in 10-45 minute sessions.
+Suggested priority: ASSET (unlocks real graphics) → POLICE (gameplay).
