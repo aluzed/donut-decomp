@@ -527,8 +527,8 @@ void Game::Run()
 
 		if (_gameState == GameState::Splash)
 		{
-			_missionCompleteTimer += deltaTime;
-			if (_missionCompleteTimer > 2.0)
+			if (Input::JustPressed(Button::KeySPACE) || Input::JustPressed(Button::KeyENTER) ||
+			    Input::JustPressed(Button::KeyESCAPE))
 			{
 				_gameState = GameState::InGame;
 				_missionCompleteTimer = 0.0;
@@ -824,6 +824,13 @@ void Game::Run()
 					sprites.DrawText(font, lapText,
 						Vector2((viewportWidth / 2.0f) - 80, 72),
 						Vector4(0.0f, 1.0f, 1.0f, 1.0f));
+				}
+
+				if (_gameState == GameState::Splash)
+				{
+					sprites.DrawText(font, "PRESS ENTER TO START",
+						Vector2((viewportWidth / 2.0f) - 100, viewportHeight - 80.0f),
+						Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 				}
 			}
 
