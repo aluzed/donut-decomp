@@ -555,6 +555,59 @@ void Game::Run()
 
 		_audioManager->Update();
 
+		if (_inVehicle && _activeVehicle)
+		{
+			auto vehPos = _activeVehicle->GetPosition();
+			float vehSpeed = _activeVehicle->GetSpeedKmh();
+
+			for (auto& v : _scriptEngine->GetMissionVehicles())
+			{
+				if (v.get() == _activeVehicle) continue;
+				float dist = (v->GetPosition() - vehPos).Length();
+				if (dist < 1.5f && vehSpeed > 20.0f)
+				{
+					float dmg = vehSpeed * 0.5f * static_cast<float>(deltaTime);
+					_health -= dmg;
+					AddShake(0.3f);
+					if (_health < 0.0f) _health = 0.0f;
+				}
+			}
+
+			if (_trafficManager)
+			{
+				for (const auto& tc : _trafficManager->GetCars())
+				{
+					float dist = (tc.position - vehPos).Length();
+					if (dist < 1.5f && vehSpeed > 20.0f)
+					{
+						float dmg = vehSpeed * 0.3f * static_cast<float>(deltaTime);
+						_health -= dmg;
+						AddShake(0.2f);
+						if (_health < 0.0f) _health = 0.0f;
+					}
+				}
+			}
+
+			if (_scriptEngine->IsMissionActive())
+			{
+				auto* chase = _scriptEngine->GetChaseManager();
+				if (chase)
+				{
+					for (auto& cop : chase->GetCopCars())
+					{
+						float dist = (cop->GetPosition() - vehPos).Length();
+						if (dist < 1.5f && vehSpeed > 10.0f)
+						{
+							float dmg = vehSpeed * 0.7f * static_cast<float>(deltaTime);
+							_health -= dmg;
+							AddShake(0.5f);
+							if (_health < 0.0f) _health = 0.0f;
+						}
+					}
+				}
+			}
+		}
+
 		if (_shakeAmount > 0.0f)
 		{
 			float sx = (rand() % 100 - 50) * 0.001f * _shakeAmount;
@@ -995,6 +1048,14 @@ void Game::Run()
 					                             Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 					sprites.DrawText(font, speedText,
 						Vector2(viewportWidth - 130.0f, viewportHeight - 50.0f), spdCol);
+
+					float dmgRatio = 1.0f - (_health / 100.0f);
+					std::string carHp = fmt::format("Car: {:.0f}%", _health);
+					Vector4 dmgCol(dmgRatio, 1.0f - dmgRatio, 0.0f, 1.0f);
+					if (_health <= 25.0f)
+						dmgCol = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
+					sprites.DrawText(font, carHp,
+						Vector2(viewportWidth - 130.0f, viewportHeight - 30.0f), dmgCol);
 				}
 			}
 			else if (_gameState == GameState::InGame)
