@@ -131,22 +131,32 @@ donut/
 
 ### Extraction depuis les CDs (PC)
 
-Le jeu PC original est sur 3 CDs. Chaque CD contient des archives CAB (InstallShield) :
+Le jeu PC original utilise des archives **InstallShield CAB**. L'outil `cabextract` ne fonctionne pas — il faut `unshield`.
 
 ```bash
-# 1. Monter ou extraire les ISOs
+# 1. Installer ou compiler unshield
+git clone --depth 1 https://github.com/twogood/unshield.git
+cmake -S unshield -B unshield/build && cmake --build unshield/build -j$(nproc)
+
+# 2. Extraire les CABs de l'ISO CD1
+sudo apt install p7zip-full
+mkdir -p /tmp/cd1 assets
 7z x CD1.iso -o/tmp/cd1
+7z e -so /tmp/cd1/data1.cab > /tmp/cd1_data1.cab
+7z e -so /tmp/cd1/data1.hdr > /tmp/cd1_data1.hdr
+7z e -so /tmp/cd1/data2.cab > /tmp/cd1_data2.cab
 
-# 2. Extraire les archives CAB
-# sudo apt install cabextract unshield   (si pas déjà installé)
-cabextract /tmp/cd1/DATA1.CAB -d assets/
-cabextract /tmp/cd2/DATA1.CAB -d assets/  # CD2
-cabextract /tmp/cd3/DATA1.CAB -d assets/  # CD3
+# 3. Extraire avec unshield
+unshield/build/src/unshield -d assets x /tmp/cd1_data1.cab
 
-# 3. Copier les fichiers RCF des CDs (audio)
-cp /tmp/cd1/DIALOGF.RCF assets/audio/dialog/
-# ... etc pour chaque CD
+# 4. Organiser les assets
+mv assets/Art/*.p3d art/           # Niveaux, modèles
+mv assets/Art/cars/*.p3d art/cars/ # Véhicules
+mv assets/Art/chars/*.p3d art/chars/ # Personnages
+cp /tmp/cd1/dialogf.rcf audio/     # Dialogues (optionnel)
 ```
+
+**Note :** CD2 et CD3 contiennent le frontend, la musique et les scripts. L'extraction multi-volume nécessite tous les CABs ensemble.
 
 ---
 
@@ -156,10 +166,26 @@ cp /tmp/cd1/DIALOGF.RCF assets/audio/dialog/
 ./build/bin/donut
 ```
 
-Le jeu démarre avec ImGui debug UI. Les contrôles par défaut :
-- **WASD** : Déplacer la caméra libre
-- **Souris** : Orienter la caméra
-- La barre de menu ImGui permet de charger des niveaux, personnages, etc.
+> Si Bullet est compilé depuis les sources (pas via apt), ajouter le LD_LIBRARY_PATH :
+> ```bash
+> LD_LIBRARY_PATH=<path_to_bullet_libs> ./build/bin/donut
+> ```
+
+**Contrôles :**
+
+| Touche | À pied | En véhicule |
+|--------|--------|-------------|
+| Flèches | Se déplacer | Conduire |
+| E | Sauter / Entrer dans véhicule | Sortir du véhicule |
+| Espace | — | Saut du véhicule |
+| Shift | — | Boost (3× puissance) |
+| H | — | Klaxon |
+| M | Redémarrer la mission | — |
+| T | Se téléporter au véhicule | — |
+| F | Aide (contrôles) | — |
+| 1 | Debug on/off | — |
+| ESC | Pause | Pause |
+| Clic droit | Caméra libre | Caméra libre |
 
 ---
 
