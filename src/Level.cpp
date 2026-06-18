@@ -45,11 +45,18 @@ void Level::LoadP3D(const std::string& filename)
 	_loadedP3Ds.insert(filename);
 
 	std::string fullpath = "./art/" + filename;
-
 	if (!FileSystem::exists(fullpath))
 	{
-		Log::Warn("Level not found: {}", filename);
-		return;
+		fullpath = "./art/level/" + filename;
+		if (!FileSystem::exists(fullpath))
+		{
+			fullpath = filename;
+			if (!FileSystem::exists(fullpath))
+			{
+				Log::Warn("Level not found: {}", filename);
+				return;
+			}
+		}
 	}
 
 	Log::Info("Loading level: {}", filename);
