@@ -122,6 +122,7 @@ std::unique_ptr<CompositeModel> CompositeModel::LoadP3D(const std::string& filen
 
 void CompositeModel::Draw(GL::ShaderProgram& shader, const Matrix4x4& viewProj, const Matrix4x4& modelMatrix, bool opaque)
 {
+	shader.Bind();
 	for (const auto& prop : _props)
 	{
 		shader.SetUniformValue("viewProj", viewProj * modelMatrix * prop.transform);

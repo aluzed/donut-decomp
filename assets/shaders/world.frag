@@ -20,18 +20,18 @@ out vec4 fragColor;
 
 void main()
 {
-	vec4 diffuseColor = texture(diffuseTex, inData.uv);
+    vec4 diffuseColor = texture(diffuseTex, inData.uv);
 
-	if (diffuseColor.a < alphaMask) discard;
+    if (diffuseColor.a < alphaMask) discard;
 
-	vec4 color = diffuseColor * inData.color;
+    vec4 color = diffuseColor * inData.color;
 
-	vec4 lightmap = texture(lightmapTex, inData.lightmapUV);
-	color.rgb *= mix(vec3(1.0), lightmap.rgb, lightmapIntensity);
+    vec4 lightmap = texture(lightmapTex, inData.lightmapUV);
+    color.rgb *= mix(vec3(1.0), lightmap.rgb, lightmapIntensity);
 
-	float dist = length(inData.worldPos - cameraPos);
-	float fogFactor = 1.0 - exp(-fogDensity * dist);
-	fogFactor = clamp(fogFactor, 0.0, 1.0);
+    float dist = length(inData.worldPos - cameraPos);
+    float fogFactor = 1.0 - exp(-fogDensity * dist);
+    fogFactor = clamp(fogFactor, 0.0, 1.0);
 
-	fragColor = mix(color, fogColor, fogFactor);
+    fragColor = mix(color, fogColor, fogFactor);
 }
