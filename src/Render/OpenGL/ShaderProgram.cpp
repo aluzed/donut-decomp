@@ -94,58 +94,42 @@ void ShaderProgram::Unbind()
 
 void ShaderProgram::SetUniformValue(const char* uniformName, int value)
 {
-	auto it = _uniforms.find(uniformName);
-	if (it != _uniforms.end())
-		glUniform1i(it->second, value);
+	glUniform1i(_uniforms[uniformName], value);
 }
 
 void ShaderProgram::SetUniformValue(const char* uniformName, float value)
 {
-	auto it = _uniforms.find(uniformName);
-	if (it != _uniforms.end())
-		glUniform1f(it->second, value);
+	glUniform1f(_uniforms[uniformName], value);
 }
 
 void ShaderProgram::SetUniformValue(const char* uniformName, const Vector2& v)
 {
-	auto it = _uniforms.find(uniformName);
-	if (it != _uniforms.end())
-		glUniform2fv(it->second, 1, &v.X);
+	glUniform2fv(_uniforms[uniformName], 1, &v.X);
 }
 
 void ShaderProgram::SetUniformValue(const char* uniformName, const Vector3& v)
 {
-	auto it = _uniforms.find(uniformName);
-	if (it != _uniforms.end())
-		glUniform3fv(it->second, 1, v.Data());
+	glUniform3fv(_uniforms[uniformName], 1, v.Data());
 }
 
 void ShaderProgram::SetUniformValue(const char* uniformName, const Vector4& v)
 {
-	auto it = _uniforms.find(uniformName);
-	if (it != _uniforms.end())
-		glUniform4fv(it->second, 1, &v.X);
+	glUniform4fv(_uniforms[uniformName], 1, &v.X);
 }
 
 void ShaderProgram::SetUniformValue(const char* uniformName, const Matrix3x3& m)
 {
-	auto it = _uniforms.find(uniformName);
-	if (it != _uniforms.end())
-		glUniformMatrix3fv(it->second, 1, GL_FALSE, &m.M[0][0]);
+	glUniformMatrix3fv(_uniforms[uniformName], 1, GL_FALSE, &m.M[0][0]);
 }
 
 void ShaderProgram::SetUniformValue(const char* uniformName, const Matrix4x4& m)
 {
-	auto it = _uniforms.find(uniformName);
-	if (it != _uniforms.end())
-		glUniformMatrix4fv(it->second, 1, GL_FALSE, m.M16);
+	glUniformMatrix4fv(_uniforms[uniformName], 1, GL_FALSE, m.M16);
 }
 
 void ShaderProgram::SetUniformValue(const char* uniformName, std::size_t count, const Matrix4x4* m)
 {
-	auto it = _uniforms.find(uniformName);
-	if (it != _uniforms.end())
-		glUniformMatrix4fv(it->second, (GLsizei)count, GL_FALSE, &m[0].M[0][0]);
+	glUniformMatrix4fv(_uniforms[uniformName], (GLsizei)count, GL_FALSE, &m[0].M[0][0]);
 }
 
 GLuint ShaderProgram::createSubShader(GLenum type, const std::string& source)

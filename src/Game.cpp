@@ -206,20 +206,6 @@ Game::Game(int argc, char** argv)
 	_camera->SetZNear(1.0f);
 	_camera->SetZFar(100000.0f);
 
-	float quadVerts[] = {
-		-1.0f, -1.0f, 0.0f,
-		-1.0f,  1.0f, 0.0f,
-		 1.0f, -1.0f, 0.0f,
-		 1.0f,  1.0f, 0.0f,
-	};
-	_fullscreenQuadVB = std::make_shared<GL::VertexBuffer>(quadVerts, 4, 3 * sizeof(float));
-	GL::ArrayElement quadLayout[] = {
-		GL::ArrayElement(_fullscreenQuadVB.get(), 0, 3, GL::AE_FLOAT, 3 * sizeof(float), 0),
-	};
-	_fullscreenQuadBinding = std::make_shared<GL::VertexBinding>();
-	GL::IndexBuffer dummyIB(nullptr, 0, GL_UNSIGNED_INT);
-	_fullscreenQuadBinding->Create(quadLayout, 1, dummyIB, GL::AE_UINT);
-
 	_mouseLocked = false;
 
 	_mainMenu = std::make_unique<GameMenu>();
@@ -541,16 +527,6 @@ void Game::Run()
 		{
 			auto vehPos = _activeVehicle->GetPosition();
 			auto vehRot = _activeVehicle->GetRotation();
-
-			static double engineTimer = 0.0;
-			engineTimer += deltaTime;
-			if (engineTimer > 0.15)
-			{
-				engineTimer = 0.0;
-				float rpm = _activeVehicle->GetSpeedKmh() * 50.0f + 500.0f;
-				if (rpm > 4000.0f) rpm = 4000.0f;
-				_audioManager->PlayRaw(SoundGenerator::Engine(rpm, 0.15f, 22050), 22050, 1, 16);
-			}
 			Vector3 camTarget = vehPos + vehRot * Vector3(0, 1.5f, 0);
 			Vector3 targetPos = camTarget + vehRot * Vector3(0, 3.0f, 12.0f);
 
@@ -578,16 +554,6 @@ void Game::Run()
 		//_camera->SetPosition(cameraTransform.Translation());
 
 		_worldPhysics->Update(static_cast<float>(deltaTime));
-
-		{
-			static double musicTimer = 0.0;
-			musicTimer += deltaTime;
-			if (musicTimer > 3.0 && _gameState == GameState::InGame)
-			{
-				musicTimer = 0.0;
-				_audioManager->PlayRaw(SoundGenerator::Ambient(3.0f, 22050), 22050, 1, 16);
-			}
-		}
 
 		_audioManager->Update();
 
@@ -892,18 +858,6 @@ void Game::Run()
 
 		glViewport(0, 0, viewportWidth, viewportHeight);
 
-		if (!_sceneFBO || _sceneFBO->GetWidth() != viewportWidth || _sceneFBO->GetHeight() != viewportHeight)
-		{
-			GL::FrameBuffer::Format fmt;
-			fmt.EnableColourBuffer(true, 1);
-			fmt.EnableDepthBuffer(true, true);
-			fmt.SetColourInternalFormat(GL_RGBA8);
-			fmt.SetFilterMin(GL_LINEAR);
-			fmt.SetFilterMag(GL_LINEAR);
-			_sceneFBO = std::make_unique<GL::FrameBuffer>(viewportWidth, viewportHeight, fmt);
-		}
-		_sceneFBO->Bind();
-
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_BLEND);
 		glClearColor(0.62f, 0.78f, 1.0f, 1.0f);
@@ -1002,21 +956,6 @@ void Game::Run()
 		glDisable(GL_DEPTH_TEST);
 		_lineRenderer->Flush(viewProjection);
 		glEnable(GL_DEPTH_TEST);
-
-		GL::FrameBuffer::Unbind();
-
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glDisable(GL_DEPTH_TEST);
-		glDisable(GL_BLEND);
-
-		_postProcessShader->Bind();
-		_postProcessShader->SetUniformValue("sceneTex", 0);
-		_postProcessShader->SetUniformValue("screenSize", Vector2(static_cast<float>(viewportWidth), static_cast<float>(viewportHeight)));
-		glActiveTexture(GL_TEXTURE0);
-		_sceneFBO->BindColorTexture(0);
-		_fullscreenQuadBinding->Bind();
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-		_fullscreenQuadBinding->Unbind();
 
 		Matrix4x4 proj = Matrix4x4::MakeOrtho(0.0f, viewportWidth, viewportHeight, 0.0f);
 
