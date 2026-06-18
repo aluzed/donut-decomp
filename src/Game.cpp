@@ -582,6 +582,19 @@ void Game::Run()
 				                                 Vector4(1.0f, 0.0f, 0.0f, 1.0f);
 				Vector3 cpBase = checkpoints[i] + Vector3(0, 0.5f, 0);
 				_lineRenderer->DrawLine(cpBase, cpBase + Vector3(0, 15.0f, 0), cpCol);
+
+				int next = (i + 1) % checkpoints.size();
+				Vector3 from = checkpoints[i] + Vector3(0, 0.1f, 0);
+				Vector3 to = checkpoints[next] + Vector3(0, 0.1f, 0);
+				Vector3 mid = (from + to) * 0.5f;
+				int segments = 8;
+				for (int s = 0; s < segments; s += 2)
+				{
+					float t1 = s / (float)segments;
+					float t2 = (s + 1) / (float)segments;
+					_lineRenderer->DrawLine(from + (to - from) * t1, from + (to - from) * t2,
+						Vector4(1.0f, 1.0f, 1.0f, 0.3f));
+				}
 			}
 
 			_lineRenderer->DrawSkeleton(_character->GetPosition(), _character->GetSkeleton());
