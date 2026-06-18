@@ -222,6 +222,7 @@ void ScriptEngine::AddObjective(const std::string& type)
 	_currentCheckpoint = 0;
 	_currentLap = 0;
 	_checkpoints.clear();
+	_aiCheckpoint = 0;
 
 	if (type == "race")
 	{
@@ -238,6 +239,12 @@ void ScriptEngine::AddObjective(const std::string& type)
 		for (int i = 0; i < numCheckpoints; ++i)
 			_checkpoints.push_back(bestPath->points[i * step]);
 
+		if (!_checkpoints.empty())
+		{
+			_aiPosition = _checkpoints[0] + Vector3(10.0f, 0, 0);
+			_aiRotation = Quaternion::Identity;
+		}
+
 		Log::Info("ScriptEngine: race circuit with {} checkpoints on path with {} points",
 		          _checkpoints.size(), bestPath->points.size());
 	}
@@ -245,6 +252,29 @@ void ScriptEngine::AddObjective(const std::string& type)
 	{
 		Log::Info("ScriptEngine: objective type = '{}'", type);
 	}
+}
+
+void ScriptEngine::UpdateAI(double dt)
+{
+	if (_checkpoints.empty() || _aiCheckpoint >= static_cast<int>(_checkpoints.size()))
+		return;
+
+	const auto& target = _checkpoints[_aiCheckpoint];
+	Vector3 dir = target - _aiPosition;
+	float dist = dir.Length();
+
+	if (dist < 3.0f)
+	{
+		_aiCheckpoint++;
+		if (_aiCheckpoint >= static_cast<int>(_checkpoints.size()))
+			_aiCheckpoint = 0;
+		return;
+	}
+
+	dir.Normalize();
+	_aiPosition += dir * _aiSpeed * static_cast<float>(dt);
+	float yaw = atan2f(dir.X, dir.Z);
+	_aiRotation = Quaternion::MakeFromEuler(Vector3(0, yaw, 0));
 }
 
 void ScriptEngine::AdvanceCheckpoint()

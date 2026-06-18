@@ -53,6 +53,7 @@ public:
 	void SetHUDIcon(const std::string& icon);
 	void AddObjective(const std::string& type);
 	void ShowStageComplete();
+	void UpdateAI(double dt);
 	void SetPresentationBitmap(const std::string& path);
 	void EnableTutorialMode(bool enable);
 	void CreateChaseManager(const std::string& copCar, const std::string& aiScript, int count);
@@ -66,7 +67,8 @@ public:
 	float GetStageTimeRemaining() const { return _stageTimeRemaining; }
 	float GetInitialStageTime() const { return _initialStageTime; }
 	float GetGoTimer() const { return _goTimer; }
-	const std::string& GetObjectiveType() const { return _objectiveType; }
+	const Vector3& GetAIPosition() const { return _aiPosition; }
+	const Quaternion& GetAIRotation() const { return _aiRotation; }
 	const std::vector<Vector3>& GetCheckpoints() const { return _checkpoints; }
 	int GetCurrentCheckpoint() const { return _currentCheckpoint; }
 	int GetCurrentLap() const { return _currentLap; }
@@ -95,6 +97,10 @@ private:
 	int _currentLap = 0;
 	int _totalLaps = 2;
 	float _bestTime = 999.0f;
+	Vector3 _aiPosition;
+	Quaternion _aiRotation;
+	int _aiCheckpoint = 0;
+	float _aiSpeed = 12.0f;
 };
 
 } // namespace Donut

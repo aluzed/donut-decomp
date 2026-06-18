@@ -598,6 +598,7 @@ void Game::Run()
 			_trafficManager->Update(deltaTime);
 		}
 		_scriptEngine->Update(deltaTime);
+		_scriptEngine->UpdateAI(deltaTime);
 
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplSDL2_NewFrame(static_cast<SDL_Window*>(*_window));
@@ -756,6 +757,14 @@ void Game::Run()
 
 		if (!_showDebug)
 			_trafficManager->DrawSolid(*_carMesh, *_meshShader, viewProjection);
+
+		if (_scriptEngine->IsMissionActive() && !_scriptEngine->GetCheckpoints().empty())
+		{
+			_carMesh->Draw(*_meshShader,
+				Matrix4x4::MakeTranslate(_scriptEngine->GetAIPosition()) *
+					Matrix4x4(_scriptEngine->GetAIRotation()),
+				viewProjection, Vector4(1.0f, 0.2f, 0.2f, 1.0f));
+		}
 
 		glDisable(GL_DEPTH_TEST);
 		_lineRenderer->Flush(viewProjection);
