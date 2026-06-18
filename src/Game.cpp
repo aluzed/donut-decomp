@@ -377,23 +377,8 @@ void Game::Run()
 
 			if (Input::JustPressed(Button::KeyE))
 			{
-			if (_scriptEngine->IsMissionActive())
-			{
-				auto* chase = _scriptEngine->GetChaseManager();
-				if (_gameState != GameState::Paused && chase && chase->IsActive())
+				if (_scriptEngine->IsMissionActive())
 				{
-					float heat = chase->GetHeat();
-					std::string heatText = fmt::format("HEAT: {:.0f}/10", heat);
-					Vector4 heatCol(1.0f, heat > 7 ? 0.0f : 0.5f, 0.0f, 1.0f);
-					sprites.DrawText(font, heatText, Vector2(32, 132), heatCol);
-
-					if (chase->IsBusted())
-					{
-						sprites.DrawText(font, "BUSTED!",
-							Vector2((viewportWidth / 2.0f) - 40, viewportHeight / 2.0f - 40),
-							Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-					}
-				}
 					for (auto& v : _scriptEngine->GetMissionVehicles())
 					{
 						if ((v->GetPosition() - _character->GetPosition()).Length() < 5.0f)
@@ -926,6 +911,24 @@ void Game::Run()
 						sprites.DrawText(font, distText, Vector2(32, 72), Vector4(0.8f, 0.8f, 0.8f, 1.0f));
 						break;
 					}
+				}
+			}
+
+			auto* chase = _scriptEngine->GetChaseManager();
+			if (chase && chase->IsActive())
+			{
+				float heat = chase->GetHeat();
+				std::string heatText = fmt::format("HEAT: {:.0f}/10", heat);
+				Vector4 heatCol = heat > 7 ? Vector4(1.0f, 0.0f, 0.0f, 1.0f) :
+				                  heat > 3 ? Vector4(1.0f, 0.5f, 0.0f, 1.0f) :
+				                             Vector4(1.0f, 1.0f, 0.0f, 1.0f);
+				sprites.DrawText(font, heatText, Vector2(32, 72), heatCol);
+
+				if (chase->IsBusted())
+				{
+					sprites.DrawText(font, "BUSTED!",
+						Vector2((viewportWidth / 2.0f) - 40, viewportHeight / 2.0f - 40),
+						Vector4(1.0f, 0.0f, 0.0f, 1.0f));
 				}
 			}
 
