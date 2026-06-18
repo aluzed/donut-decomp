@@ -45,10 +45,12 @@ void Mesh::CreateMeshBuffers(const P3D::Geometry& geometry)
 	{
 		auto verts = prim->GetVertices();
 		auto uvs = prim->GetUvs(0);
-		auto lightmapUVs = prim->GetUvs(1);
 		auto colors = prim->GetColors();
 		auto indices = prim->GetIndices();
 		bool hasColors = !colors.empty();
+
+		std::vector<Vector2> lightmapUVs;
+		try { lightmapUVs = prim->GetUvs(1); } catch (...) {}
 		bool hasLightmap = !lightmapUVs.empty();
 
 		for (uint32_t i = 0; i < verts.size(); i++)

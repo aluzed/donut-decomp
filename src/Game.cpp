@@ -138,25 +138,28 @@ Game::Game(int argc, char** argv)
 	_trafficManager = std::make_unique<TrafficManager>(*_level, *_lineRenderer, *_pathGraph);
 
 	const auto& paths = _level->GetPaths();
-	const auto* bestPath = &paths[0];
-	for (const auto& p : paths)
-		if (p.points.size() > bestPath->points.size())
-			bestPath = &p;
-
-	srand(42);
-	for (size_t i = 0; i < bestPath->points.size(); i += 2)
+	if (!paths.empty())
 	{
-		const auto& pt = bestPath->points[i];
-		Vector3 dir;
-		if (i + 1 < bestPath->points.size())
-			dir = (bestPath->points[i + 1] - pt).Normalized();
-		Vector3 perp(-dir.Z, 0, dir.X);
-		float height = 2.0f + (rand() % 10) * 1.5f;
-		_buildings.push_back({pt + perp * (15.0f + (rand() % 10) * 2.0f), height});
-		_buildings.push_back({pt - perp * (15.0f + (rand() % 10) * 2.0f), height});
-	}
+		const auto* bestPath = &paths[0];
+		for (const auto& p : paths)
+			if (p.points.size() > bestPath->points.size())
+				bestPath = &p;
 
-	Log::Info("Game: generated {} buildings", _buildings.size());
+		srand(42);
+		for (size_t i = 0; i < bestPath->points.size(); i += 2)
+		{
+			const auto& pt = bestPath->points[i];
+			Vector3 dir;
+			if (i + 1 < bestPath->points.size())
+				dir = (bestPath->points[i + 1] - pt).Normalized();
+			Vector3 perp(-dir.Z, 0, dir.X);
+			float height = 2.0f + (rand() % 10) * 1.5f;
+			_buildings.push_back({pt + perp * (15.0f + (rand() % 10) * 2.0f), height});
+			_buildings.push_back({pt - perp * (15.0f + (rand() % 10) * 2.0f), height});
+		}
+
+		Log::Info("Game: generated {} buildings", _buildings.size());
+	}
 
 	const auto skinVertSrc = File::ReadAll("shaders/skin.vert");
 	const auto skinFragSrc = File::ReadAll("shaders/skin.frag");
