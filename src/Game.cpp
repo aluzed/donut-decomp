@@ -10,6 +10,7 @@
 #include "Core/Math/Math.h"
 #include "FreeCamera.h"
 #include "FrontendProject.h"
+#include "Game/CollectibleManager.h"
 #include "Input/Input.h"
 #include "AI/PathGraph.h"
 #include "AI/PedestrianManager.h"
@@ -139,6 +140,8 @@ Game::Game(int argc, char** argv)
 	_pathGraph = std::make_unique<PathGraph>(*_level);
 	_trafficManager = std::make_unique<TrafficManager>(*_level, *_lineRenderer, *_pathGraph);
 	_pedestrianManager = std::make_unique<PedestrianManager>(*_worldPhysics);
+	_collectibleManager = std::make_unique<CollectibleManager>(*_level, *_lineRenderer);
+	_collectibleManager->SpawnOnPath();
 
 	const auto& paths = _level->GetPaths();
 	if (!paths.empty())
@@ -233,6 +236,7 @@ Game::Game(int argc, char** argv)
 	});
 	_pauseMenu->AddButton("Restart", 0, 0, 200, 40, [this]() {
 		_scriptEngine->CleanupMission();
+		if (_collectibleManager) _collectibleManager->SpawnOnPath();
 		_scriptEngine->RunFile("scripts/Missions/level01/M1race.con");
 		_gameState = GameState::InGame;
 		_missionCompleteTimer = 0.0;
@@ -625,6 +629,7 @@ void Game::Run()
 				_gameState = GameState::InGame;
 				_missionCompleteTimer = 0.0;
 				_scriptEngine->CleanupMission();
+				if (_collectibleManager) _collectibleManager->SpawnOnPath();
 				if (_inVehicle)
 				{
 					_inVehicle = false;
@@ -737,6 +742,8 @@ void Game::Run()
 					_pedestrianManager->Spawn(_character->GetPosition(), 40.0f);
 					_pedestrianManager->Update(deltaTime, _character->GetPosition());
 				}
+				if (_collectibleManager)
+					_collectibleManager->Update(_character->GetPosition(), 3.0f);
 			}
 		}
 		_scriptEngine->UpdateAI(deltaTime);
@@ -787,6 +794,7 @@ void Game::Run()
 		{
 			Log::Info("Game: restarting mission...");
 			_scriptEngine->CleanupMission();
+			if (_collectibleManager) _collectibleManager->SpawnOnPath();
 			if (_inVehicle) { _inVehicle = false; _activeVehicle = nullptr; }
 			if (FileSystem::exists("scripts/Missions/level01/M1race.con"))
 				_scriptEngine->RunFile("scripts/Missions/level01/M1race.con");
@@ -921,6 +929,9 @@ void Game::Run()
 		if (!_showDebug && _pedestrianManager)
 			_pedestrianManager->Draw(*_meshShader, *_playerMesh, viewProjection);
 
+		if (_collectibleManager)
+			_collectibleManager->Draw();
+
 		if (_scriptEngine->IsMissionActive() && !_scriptEngine->GetCheckpoints().empty())
 		{
 			_carMesh->Draw(*_meshShader,
@@ -970,6 +981,16 @@ void Game::Run()
 			auto font = _resourceManager->GetFont("boulder_16");
 			sprites.DrawText(font, fps, Vector2(32 + 3, 32 + 3), Vector4(0.0f, 0.0f, 0.0f, 1.0f));
 			sprites.DrawText(font, fps, Vector2(32, 32), Vector4(1.0f, 1.0f, 0.0f, 1.0f));
+
+			if (_collectibleManager)
+			{
+				std::string coins = fmt::format("Coins: {}/{}",
+					_collectibleManager->GetCollected(), _collectibleManager->GetTotalAvailable());
+				sprites.DrawText(font, coins,
+					Vector2(32 + 3, 142 + 3), Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+				sprites.DrawText(font, coins,
+					Vector2(32, 142), Vector4(1.0f, 0.84f, 0.0f, 1.0f));
+			}
 
 			if (_character)
 			{
