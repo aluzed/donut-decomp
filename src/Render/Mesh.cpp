@@ -121,7 +121,8 @@ void Mesh::Draw(GL::ShaderProgram& shader, bool opaque)
 			}
 		}
 
-		shader.SetUniformValue("alphaMask", (prim.cacheShader->IsAlphaTested()) ? 0.5f : 0.0f);
+		if (shader.HasUniform("alphaMask"))
+			shader.SetUniformValue("alphaMask", (prim.cacheShader->IsAlphaTested()) ? 0.5f : 0.0f);
 
 		if (prim.cacheShader->IsTwoSided())
 			glDisable(GL_CULL_FACE);

@@ -20,6 +20,8 @@ public:
 
 	void Bind();
 	void Unbind();
+	bool IsValid() const { return _program != 0; }
+	bool HasUniform(const char* name) const { return _uniforms.find(name) != _uniforms.end(); }
 
 	void SetUniformValue(const char* uniformName, int value);
 	void SetUniformValue(const char* uniformName, float value);
