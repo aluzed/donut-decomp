@@ -170,6 +170,10 @@ Game::Game(int argc, char** argv)
 	const auto meshFragSrc = File::ReadAll("shaders/mesh.frag");
 	_meshShader = std::make_unique<GL::ShaderProgram>(meshVertSrc, meshFragSrc);
 
+	const auto ppVertSrc = File::ReadAll("shaders/postprocess.vert");
+	const auto ppFragSrc = File::ReadAll("shaders/postprocess.frag");
+	_postProcessShader = std::make_unique<GL::ShaderProgram>(ppVertSrc, ppFragSrc);
+
 	_playerMesh = SimpleMesh::CreateCapsule(0.3f, 1.8f, Vector4(0.2f, 1.0f, 0.2f, 1.0f), 12);
 	_carMesh = SimpleMesh::CreateBox(Vector3(0.9f, 0.5f, 2.2f), Vector4(0.2f, 0.5f, 1.0f, 1.0f));
 	_buildingMesh = SimpleMesh::CreateBox(Vector3(2.0f, 4.0f, 2.0f), Vector4(0.7f, 0.6f, 0.5f, 1.0f));
@@ -194,6 +198,20 @@ Game::Game(int argc, char** argv)
 
 	_camera->SetZNear(1.0f);
 	_camera->SetZFar(100000.0f);
+
+	float quadVerts[] = {
+		-1.0f, -1.0f, 0.0f,
+		-1.0f,  1.0f, 0.0f,
+		 1.0f, -1.0f, 0.0f,
+		 1.0f,  1.0f, 0.0f,
+	};
+	_fullscreenQuadVB = std::make_shared<GL::VertexBuffer>(quadVerts, 4, 3 * sizeof(float));
+	GL::ArrayElement quadLayout[] = {
+		GL::ArrayElement(_fullscreenQuadVB.get(), 0, 3, GL::AE_FLOAT, 3 * sizeof(float), 0),
+	};
+	_fullscreenQuadBinding = std::make_shared<GL::VertexBinding>();
+	GL::IndexBuffer dummyIB(nullptr, 0, GL_UNSIGNED_INT);
+	_fullscreenQuadBinding->Create(quadLayout, 1, dummyIB, GL::AE_UINT);
 
 	_mouseLocked = false;
 
@@ -753,9 +771,19 @@ void Game::Run()
 
 		glViewport(0, 0, viewportWidth, viewportHeight);
 
-		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_BLEND);
+		if (!_sceneFBO || _sceneFBO->GetWidth() != viewportWidth || _sceneFBO->GetHeight() != viewportHeight)
+		{
+			GL::FrameBuffer::Format fmt;
+			fmt.EnableColourBuffer(true, 1);
+			fmt.SetColourInternalFormat(GL_RGBA8);
+			fmt.SetFilterMin(GL_LINEAR);
+			fmt.SetFilterMag(GL_LINEAR);
+			_sceneFBO = std::make_unique<GL::FrameBuffer>(viewportWidth, viewportHeight, fmt);
+		}
+		_sceneFBO->Bind();
 
+		glEnable(GL_DEPTH_TEST);
+		glDisable(GL_BLEND);
 		glClearColor(0.62f, 0.78f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -846,6 +874,20 @@ void Game::Run()
 		glDisable(GL_DEPTH_TEST);
 		_lineRenderer->Flush(viewProjection);
 		glEnable(GL_DEPTH_TEST);
+
+		GL::FrameBuffer::Unbind();
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glDisable(GL_DEPTH_TEST);
+		glDisable(GL_BLEND);
+
+		_postProcessShader->Bind();
+		_postProcessShader->SetUniformValue("screenSize", Vector2(static_cast<float>(viewportWidth), static_cast<float>(viewportHeight)));
+		_sceneFBO->BindColorTexture(0);
+		glActiveTexture(GL_TEXTURE0);
+		_fullscreenQuadBinding->Bind();
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+		_fullscreenQuadBinding->Unbind();
 
 		Matrix4x4 proj = Matrix4x4::MakeOrtho(0.0f, viewportWidth, viewportHeight, 0.0f);
 
