@@ -179,7 +179,7 @@ Game::Game(int argc, char** argv)
 		_scriptEngine->RunFile("scripts/Missions/level01/m1.con");
 
 	loadGlobal();
-	LoadModel("bart", "bart");
+	LoadModel("homer", "homer");
 
 	_camera = std::make_unique<FreeCamera>();
 	_camera->SetPosition(Vector3(228.0f, 5.0f, -174.0f));
@@ -604,9 +604,12 @@ void Game::Run()
 				}
 			}
 
-			_lineRenderer->DrawSkeleton(_character->GetPosition(), _character->GetSkeleton());
-			_lineRenderer->DrawBox(_character->GetPosition(), _character->GetRotation(),
-				Vector3(-0.3f, 0.0f, -0.2f), Vector3(0.3f, 1.8f, 0.3f), Vector4(0.2f, 1.0f, 0.2f, 1.0f));
+			if (_showDebug)
+			{
+				_lineRenderer->DrawSkeleton(_character->GetPosition(), _character->GetSkeleton());
+				_lineRenderer->DrawBox(_character->GetPosition(), _character->GetRotation(),
+					Vector3(-0.3f, 0.0f, -0.2f), Vector3(0.3f, 1.8f, 0.3f), Vector4(0.2f, 1.0f, 0.2f, 1.0f));
+			}
 		}
 		_level->Update(deltaTime);
 		if (_showDebug)
@@ -748,9 +751,6 @@ void Game::Run()
 		if (_character != nullptr && !_inVehicle)
 		{
 			_character->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
-			_playerMesh->Draw(*_meshShader,
-				Matrix4x4::MakeTranslate(_character->GetPosition()) * Matrix4x4(_character->GetRotation()),
-				viewProjection, Vector4(0.2f, 1.0f, 0.2f, 1.0f));
 		}
 
 		if (_scriptEngine->IsMissionActive())

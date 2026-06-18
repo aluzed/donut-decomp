@@ -71,17 +71,14 @@ void Character::LoadAnimations(const std::string& name)
 
 void Character::Draw(const Matrix4x4& viewProjection, GL::ShaderProgram& shaderProgram, const ResourceManager& rm)
 {
-	// wtf just
-	const auto localPosition = _position; // -Vector3(0.0f, _characterController->GetShape().getHalfHeight() * 2, 0.0f);
-	// const Matrix4x4 mvp        = glm::translate(viewProjection, localPosition) * glm::toMat4(_rotation);
-	// const Matrix4x4 mvp        = glm::translate(viewProjection, localPosition) * glm::toMat4(_rotation);
+	Matrix4x4 model = Matrix4x4::MakeTranslate(_position) * Matrix4x4(_rotation);
+	Matrix4x4 mvp = viewProjection * model;
 
-	shaderProgram.Bind(); // todo optimize: should already be bound?
-	shaderProgram.SetUniformValue("viewProj", viewProjection);
-	shaderProgram.SetUniformValue("diffuseTex", 0); // todo optimize: should already be set
-	shaderProgram.SetUniformValue("boneBuffer", 1); // todo optimize: should already be set
+	shaderProgram.Bind();
+	shaderProgram.SetUniformValue("viewProj", mvp);
+	shaderProgram.SetUniformValue("diffuseTex", 0);
+	shaderProgram.SetUniformValue("boneBuffer", 1);
 
-	// bind the bone buffer to tex1
 	glActiveTexture(GL_TEXTURE1);
 	_boneBuffer->Bind();
 
