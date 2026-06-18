@@ -629,6 +629,12 @@ void Game::Run()
 			Log::Info("GameState: {}", static_cast<int>(_gameState));
 		}
 
+		if (Input::JustPressed(Button::KeyR) && _gameState == GameState::InGame)
+		{
+			_scriptEngine->ResetBestTime();
+			Log::Info("Game: best time reset!");
+		}
+
 		if (_gameState == GameState::Paused && Input::JustPressed(Button::KeyQ))
 		{
 			running = false;

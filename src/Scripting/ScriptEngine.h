@@ -54,6 +54,7 @@ public:
 	void AddObjective(const std::string& type);
 	void ShowStageComplete();
 	void UpdateAI(double dt);
+	void ResetBestTime();
 	void SetPresentationBitmap(const std::string& path);
 	void EnableTutorialMode(bool enable);
 	void CreateChaseManager(const std::string& copCar, const std::string& aiScript, int count);

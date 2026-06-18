@@ -285,6 +285,13 @@ void ScriptEngine::UpdateAI(double dt)
 	_aiRotation = Quaternion::MakeFromEuler(Vector3(0, yaw, 0));
 }
 
+void ScriptEngine::ResetBestTime()
+{
+	_bestTime = 999.0f;
+	std::remove("donut_save.dat");
+	Log::Info("ScriptEngine: best time reset to default");
+}
+
 void ScriptEngine::AdvanceCheckpoint()
 {
 	if (_currentCheckpoint < static_cast<int>(_checkpoints.size()))
