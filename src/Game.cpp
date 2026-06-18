@@ -94,6 +94,8 @@ Game::Game(int argc, char** argv)
 	ImGui_ImplSDL2_InitForOpenGL(static_cast<SDL_Window*>(*_window), static_cast<SDL_GLContext*>(*_window));
 	ImGui_ImplOpenGL3_Init("#version 130");
 
+	Input::InitGamepad();
+
 	// const float dpi_scale = 2.0f;
 	// ImGuiIO& io = ImGui::GetIO();
 	// ImGui::GetStyle().ScaleAllSizes(dpi_scale);
@@ -428,10 +430,12 @@ void Game::Run()
 		{
 			auto& ctrl = _character->GetCharacterController();
 			auto charMove = Vector3::Zero;
-			if (Input::IsDown(Button::KeyUp))    charMove += Vector3::Forward;
-			if (Input::IsDown(Button::KeyDown))  charMove += Vector3::Backward;
-			if (Input::IsDown(Button::KeyLeft))  charMove += Vector3::Left;
-			if (Input::IsDown(Button::KeyRight)) charMove += Vector3::Right;
+			float padX = Input::GetGamepadAxisX();
+			float padY = Input::GetGamepadAxisY();
+			if (Input::IsDown(Button::KeyUp) || padY > 0.3f)    charMove += Vector3::Forward;
+			if (Input::IsDown(Button::KeyDown) || padY < -0.3f) charMove += Vector3::Backward;
+			if (Input::IsDown(Button::KeyLeft) || padX < -0.3f) charMove += Vector3::Left;
+			if (Input::IsDown(Button::KeyRight) || padX > 0.3f) charMove += Vector3::Right;
 
 			if (Input::JustPressed(Button::KeyE))
 			{
@@ -514,10 +518,18 @@ void Game::Run()
 			else
 			{
 				float throttle = 0, steer = 0, brake = 0;
-				if (Input::IsDown(Button::KeyUp))    throttle = 1.0f;
-				if (Input::IsDown(Button::KeyDown))  brake = 1.0f;
-				if (Input::IsDown(Button::KeyLeft))  steer = -1.0f;
-				if (Input::IsDown(Button::KeyRight)) steer = 1.0f;
+
+				float padX = Input::GetGamepadAxisX();
+				float padY = Input::GetGamepadAxisY();
+				float trigR = Input::GetGamepadTriggerR();
+				float trigL = Input::GetGamepadTriggerL();
+
+				if (Input::IsDown(Button::KeyUp) || padY > 0.3f)    throttle = std::max(1.0f, padY);
+				if (Input::IsDown(Button::KeyDown) || padY < -0.3f)  brake = std::max(1.0f, -padY);
+				if (Input::IsDown(Button::KeyLeft) || padX < -0.3f)  steer = std::min(-1.0f, padX);
+				if (Input::IsDown(Button::KeyRight) || padX > 0.3f)  steer = std::max(1.0f, padX);
+				if (trigR > 0.3f) throttle = std::max(throttle, trigR);
+				if (trigL > 0.3f) brake = std::max(brake, trigL);
 				float boost = Input::IsDown(Button::KeyLSHIFT) ? 3.0f : 1.0f;
 				_activeVehicle->ApplyInput(throttle, steer, brake, boost);
 			}

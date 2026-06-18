@@ -2,6 +2,10 @@
 
 #include <Input/Input.h>
 
+#include "Core/Log.h"
+
+#include <cmath>
+
 namespace Donut
 {
 std::map<SDL_Keycode, Button> Input::KeyCodeToButtonCodeMap = {
@@ -124,6 +128,11 @@ float Input::MouseDeltaX = 0.0f;
 float Input::MouseDeltaY = 0.0f;
 int Input::MouseX = 0;
 int Input::MouseY = 0;
+SDL_GameController* Input::Gamepad = nullptr;
+float Input::GamepadAxisX = 0.0f;
+float Input::GamepadAxisY = 0.0f;
+float Input::GamepadTriggerL = 0.0f;
+float Input::GamepadTriggerR = 0.0f;
 std::unique_ptr<ITextEntryEventHandler> Input::TextEntry = nullptr;
 
 Button Input::KeyCodeToButtonCode(SDL_Keycode key)
@@ -177,6 +186,49 @@ void Input::HandleEvent(const SDL_Event& e)
 		MouseX = e.motion.x;
 		MouseY = e.motion.y;
 	}
+	else if (e.type == SDL_CONTROLLERAXISMOTION)
+	{
+		float val = static_cast<float>(e.caxis.value) / 32767.0f;
+		if (fabs(val) < 0.1f) val = 0.0f;
+		switch (e.caxis.axis)
+		{
+		case SDL_CONTROLLER_AXIS_LEFTX: GamepadAxisX = val; break;
+		case SDL_CONTROLLER_AXIS_LEFTY: GamepadAxisY = -val; break;
+		case SDL_CONTROLLER_AXIS_TRIGGERLEFT: GamepadTriggerL = val; break;
+		case SDL_CONTROLLER_AXIS_TRIGGERRIGHT: GamepadTriggerR = val; break;
+		}
+	}
+	else if (e.type == SDL_CONTROLLERBUTTONDOWN || e.type == SDL_CONTROLLERBUTTONUP)
+	{
+		bool down = (e.cbutton.state == SDL_PRESSED);
+		switch (e.cbutton.button)
+		{
+		case SDL_CONTROLLER_BUTTON_A: UpdateButton(Button::KeyE, down); break;
+		case SDL_CONTROLLER_BUTTON_B: UpdateButton(Button::KeyLSHIFT, down); break;
+		case SDL_CONTROLLER_BUTTON_X: UpdateButton(Button::KeyH, down); break;
+		case SDL_CONTROLLER_BUTTON_Y: UpdateButton(Button::KeySPACE, down); break;
+		case SDL_CONTROLLER_BUTTON_START: if (down) UpdateButton(Button::KeyESCAPE, true); break;
+		case SDL_CONTROLLER_BUTTON_BACK: if (down) UpdateButton(Button::KeyM, true); break;
+		}
+	}
+	else if (e.type == SDL_CONTROLLERDEVICEADDED)
+	{
+		if (!Gamepad)
+		{
+			Gamepad = SDL_GameControllerOpen(e.cdevice.which);
+			Log::Info("Input: gamepad connected");
+		}
+	}
+	else if (e.type == SDL_CONTROLLERDEVICEREMOVED)
+	{
+		if (Gamepad && e.cdevice.which == SDL_JoystickInstanceID(
+			SDL_GameControllerGetJoystick(Gamepad)))
+		{
+			SDL_GameControllerClose(Gamepad);
+			Gamepad = nullptr;
+			Log::Info("Input: gamepad disconnected");
+		}
+	}
 	else if (e.type == SDL_TEXTINPUT)
 	{
 		if (TextEntry != nullptr)
@@ -227,6 +279,34 @@ void Input::ReleaseTextEntry()
 	{
 		TextEntry = nullptr;
 		SDL_StopTextInput();
+	}
+}
+
+float Input::GetGamepadAxisX() { return GamepadAxisX; }
+float Input::GetGamepadAxisY() { return GamepadAxisY; }
+float Input::GetGamepadTriggerL() { return GamepadTriggerL; }
+float Input::GetGamepadTriggerR() { return GamepadTriggerR; }
+bool Input::IsGamepadConnected() { return Gamepad != nullptr; }
+
+void Input::InitGamepad()
+{
+	for (int i = 0; i < SDL_NumJoysticks(); ++i)
+	{
+		if (SDL_IsGameController(i))
+		{
+			Gamepad = SDL_GameControllerOpen(i);
+			Log::Info("Input: gamepad detected");
+			break;
+		}
+	}
+}
+
+void Input::CloseGamepad()
+{
+	if (Gamepad)
+	{
+		SDL_GameControllerClose(Gamepad);
+		Gamepad = nullptr;
 	}
 }
 } // namespace Donut

@@ -53,6 +53,15 @@ public:
 	static int GetMouseX();
 	static int GetMouseY();
 
+	static float GetGamepadAxisX();
+	static float GetGamepadAxisY();
+	static float GetGamepadTriggerL();
+	static float GetGamepadTriggerR();
+	static bool IsGamepadConnected();
+
+	static void InitGamepad();
+	static void CloseGamepad();
+
 	template <class Instance, typename Callback>
 	static void CaptureTextEntry(Instance* instance, Callback callback)
 	{
@@ -82,6 +91,12 @@ private:
 	static float MouseDeltaY;
 	static int MouseX;
 	static int MouseY;
+
+	static SDL_GameController* Gamepad;
+	static float GamepadAxisX;
+	static float GamepadAxisY;
+	static float GamepadTriggerL;
+	static float GamepadTriggerR;
 
 	static Button KeyCodeToButtonCode(SDL_Keycode key);
 	static std::map<SDL_Keycode, Button> KeyCodeToButtonCodeMap;
