@@ -146,8 +146,12 @@ void CharacterController::jump(const btVector3& dir)
 bool CharacterController::onGround() const
 {
 	btVector3 pos = BulletCast<btVector3>(_position);
+	// reach past the bottom of the capsule (halfHeight + radius below centre)
+	// plus a small margin; the old _stepHeight*2 ray was far too short and
+	// onGround() always returned false (breaking jump + safe-respawn tracking)
+	btScalar reach = _physShape->getHalfHeight() + _physShape->getRadius() + 0.1f;
 	btVector3 from = pos + btVector3(0, 0.1f, 0);
-	btVector3 to = pos - btVector3(0, _stepHeight * 2.0f, 0);
+	btVector3 to = pos - btVector3(0, reach, 0);
 
 	struct GroundRayCallback : btCollisionWorld::ClosestRayResultCallback
 	{
@@ -306,6 +310,10 @@ btVector3 CharacterController::perpendicularComponent(const btVector3& direction
 
 void CharacterController::stepUp(btCollisionWorld* world)
 {
+	// reset every frame; only set when we actually climb so stepDown can
+	// reclaim the exact height gained here (see stepDown)
+	_currentStepOffset = 0.0f;
+
 	if (_walkDirection.LengthSquared() < 0.001f)
 		return;
 
@@ -330,6 +338,10 @@ void CharacterController::stepUp(btCollisionWorld* world)
 	if (callback.hasHit())
 	{
 		_targetPosition.setInterpolate3(start.getOrigin(), end.getOrigin(), callback.m_closestHitFraction);
+		// remember how much we just climbed; stepDown subtracts this back so
+		// the lift does not accumulate every frame (otherwise the character,
+		// and the follow camera, shoots up into the sky while walking)
+		_currentStepOffset = _targetPosition.y() - start.getOrigin().y();
 		_position = BulletCast<Vector3>(_targetPosition);
 	}
 }
@@ -413,7 +425,11 @@ void CharacterController::stepForwardAndStrafe(btCollisionWorld* collsionWorld, 
 void CharacterController::stepDown(btCollisionWorld* collisionWorld, btScalar dt)
 {
 	btTransform start, end;
-	btVector3 origPosition = BulletCast<btVector3>(_position);
+	// IMPORTANT: sweep down from the position produced by stepForwardAndStrafe
+	// (which lives in _targetPosition), not from the stale _position. Using
+	// _position here snaps the character back to its pre-move spot every frame
+	// when the down-sweep hits the ground, so it never actually moves.
+	btVector3 origPosition = _targetPosition;
 
 	// going up
 	if (_verticalVelocity > 0.0)
@@ -425,7 +441,12 @@ void CharacterController::stepDown(btCollisionWorld* collisionWorld, btScalar dt
 	if (downVelocity > 0.0 && downVelocity < _stepHeight)
 		downVelocity = _stepHeight;
 
-	_targetPosition -= btVector3(0.0, downVelocity, 0.0);
+	// reclaim the height that stepUp added this frame in addition to the
+	// gravity-driven drop, then sweep down to snap onto the real ground/step.
+	// Without this the lift accumulates and the player flies upward.
+	btScalar stepDrop = _currentStepOffset + downVelocity;
+
+	_targetPosition -= btVector3(0.0, stepDrop, 0.0);
 
 	btKinematicClosestNotMeConvexResultCallback callback(_physGhostObject.get(), btVector3(0.0, 1.0, 0.0),
 	                                                     btCos(btRadians(45.0)));

@@ -15,7 +15,7 @@
 namespace Donut
 {
 
-Character::Character(std::string name): _name(std::move(name)), _position(Vector3(0.0f)), _rotation(Quaternion())
+Character::Character(std::string name): _name(std::move(name)), _position(Vector3(0.0f)), _rotation(Quaternion::Identity)
 {
 	_characterController = std::make_unique<CharacterController>(this, &Game::GetInstance().GetWorldPhysics());
 	_boneBuffer = std::make_unique<GL::TextureBuffer>();

@@ -75,6 +75,7 @@ private:
 	btScalar _verticalVelocity;
 	btScalar _verticalOffset;
 	btScalar _stepHeight;
+	btScalar _currentStepOffset = 0.0f;
 	btScalar _jumpCooldown = 0.0f;
 
 	btVector3 _touchingNormal;
