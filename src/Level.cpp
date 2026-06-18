@@ -322,6 +322,9 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 
 	_worldInstancedShader->Bind();
 	_worldInstancedShader->SetUniformValue("viewProj", viewProj);
+	_worldInstancedShader->SetUniformValue("fogDensity", 0.0004f);
+	_worldInstancedShader->SetUniformValue("fogColor", Vector4(0.62f, 0.78f, 1.0f, 1.0f));
+	_worldInstancedShader->SetUniformValue("cameraPos", cameraPos);
 
 	for (const auto& ent : _instances) ent->Draw(*_worldInstancedShader, true);
 
@@ -341,6 +344,9 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 
 	_worldInstancedShader->Bind();
 	_worldInstancedShader->SetUniformValue("viewProj", viewProj);
+	_worldInstancedShader->SetUniformValue("fogDensity", 0.0004f);
+	_worldInstancedShader->SetUniformValue("fogColor", Vector4(0.62f, 0.78f, 1.0f, 1.0f));
+	_worldInstancedShader->SetUniformValue("cameraPos", cameraPos);
 
 	for (const auto& ent : _instances) ent->Draw(*_worldInstancedShader, false);
 }
