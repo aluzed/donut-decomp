@@ -49,6 +49,9 @@ class TextureFont;
 namespace GL
 {
 class ShaderProgram;
+class FrameBuffer;
+class VertexBuffer;
+class VertexBinding;
 }
 
 class Game
@@ -106,6 +109,10 @@ private:
 	std::unique_ptr<SimpleMesh> _buildingMesh;
 	std::unique_ptr<GameMenu> _mainMenu;
 	std::unique_ptr<GameMenu> _pauseMenu;
+	std::unique_ptr<GL::ShaderProgram> _postProcessShader;
+	std::unique_ptr<GL::FrameBuffer> _sceneFBO;
+	std::shared_ptr<GL::VertexBuffer> _fullscreenQuadVB;
+	std::shared_ptr<GL::VertexBinding> _fullscreenQuadBinding;
 	std::unique_ptr<P3D::P3DFile> _animP3D;
 	std::unique_ptr<P3D::P3DFile> _globalP3D;
 	std::unique_ptr<P3D::TextureFont> _textureFontP3D;
