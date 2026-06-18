@@ -88,6 +88,7 @@ std::unique_ptr<SimpleMesh> SimpleMesh::CreateCapsule(float radius, float height
 void SimpleMesh::Draw(GL::ShaderProgram& shader, const Matrix4x4& model, const Matrix4x4& viewProj,
                       const Vector4& color)
 {
+	shader.Bind();
 	shader.SetUniformValue("viewProj", viewProj * model);
 	shader.SetUniformValue("meshColor", color);
 	_vertexBinding->Bind();
