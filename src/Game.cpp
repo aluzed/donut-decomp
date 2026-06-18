@@ -212,6 +212,12 @@ Game::~Game()
 
 void Game::loadGlobal()
 {
+	if (!FileSystem::exists("art/chars/global.p3d"))
+	{
+		Log::Warn("Global P3D not found: art/chars/global.p3d");
+		return;
+	}
+
 	_globalP3D = std::make_unique<P3D::P3DFile>("art/chars/global.p3d");
 
 	const auto& root = _globalP3D->GetRoot();
