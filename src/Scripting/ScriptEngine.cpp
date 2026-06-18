@@ -332,15 +332,19 @@ void ScriptEngine::SetObjTargetVehicle(const std::string& target)
 void ScriptEngine::ShowStageComplete()
 {
 	float elapsed = _initialStageTime - _stageTimeRemaining;
+	_isNewRecord = false;
 	if (elapsed < _bestTime)
 	{
 		_bestTime = elapsed;
+		_isNewRecord = true;
 		std::ofstream saveFile("donut_save.dat");
 		if (saveFile.good())
 			saveFile << _bestTime;
+		_game.GetAudioManager().PlayRaw(SoundGenerator::Chirp(600, 1200, 0.5f), 22050, 1, 16);
 	}
 
-	Log::Info("ScriptEngine: stage complete! Time: {:.1f}s (Best: {:.1f}s)", elapsed, _bestTime);
+	Log::Info("ScriptEngine: stage complete! Time: {:.1f}s (Best: {:.1f}s){}",
+	          elapsed, _bestTime, _isNewRecord ? " NEW RECORD!" : "");
 	_stageTimeRemaining = -1.0f;
 	_game.SetState(GameState::MissionComplete);
 }

@@ -892,6 +892,13 @@ void Game::Run()
 
 			if (_gameState == GameState::MissionComplete)
 			{
+				if (_scriptEngine->IsNewRecord())
+				{
+					sprites.DrawText(font, "NEW RECORD!",
+						Vector2((viewportWidth / 2.0f) - 60, viewportHeight / 2.0f - 70),
+						Vector4(1.0f, 0.84f, 0.0f, 1.0f));
+				}
+
 				sprites.DrawText(font, "STAGE COMPLETE!",
 					Vector2((viewportWidth / 2.0f) - 100, viewportHeight / 2.0f - 50),
 					Vector4(1.0f, 0.84f, 0.0f, 1.0f));

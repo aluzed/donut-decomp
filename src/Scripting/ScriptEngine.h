@@ -75,6 +75,7 @@ public:
 	int GetCurrentLap() const { return _currentLap; }
 	int GetTotalLaps() const { return _totalLaps; }
 	float GetBestTime() const { return _bestTime; }
+	bool IsNewRecord() const { return _isNewRecord; }
 	void AdvanceCheckpoint();
 	std::vector<std::unique_ptr<Vehicle>>& GetMissionVehicles() { return _missionVehicles; }
 
@@ -98,6 +99,7 @@ private:
 	int _currentLap = 0;
 	int _totalLaps = 2;
 	float _bestTime = 999.0f;
+	bool _isNewRecord = false;
 	Vector3 _aiPosition;
 	Quaternion _aiRotation;
 	int _aiCheckpoint = 0;
