@@ -8,6 +8,7 @@ layout(location = 3) in mat4 transform;
 out VertexData
 {
     vec2 uv;
+    vec2 lightmapUV;
     vec4 color;
     vec3 worldPos;
 } outData;
@@ -17,6 +18,7 @@ uniform mat4 viewProj;
 void main()
 {
     outData.uv = uv;
+    outData.lightmapUV = uv;
     outData.color = color;
 
     vec4 worldPos4 = transform * vec4(position, 1.0);

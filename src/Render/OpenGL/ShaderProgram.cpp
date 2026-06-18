@@ -22,13 +22,11 @@ ShaderProgram::ShaderProgram(const std::string& vertexSource, const std::string&
 {
 	_program = glCreateProgram();
 
-	// lazy assert, todo: better error handling
 	assert(_program != 0);
 
 	GLuint vertexShader = createSubShader(GL_VERTEX_SHADER, vertexSource.c_str());
 	GLuint fragmentShader = createSubShader(GL_FRAGMENT_SHADER, fragmentSource.c_str());
 
-	// lazy assert, todo: better error handling
 	assert(vertexShader != 0 && fragmentShader != 0);
 
 	glAttachShader(_program, vertexShader);
@@ -41,12 +39,17 @@ ShaderProgram::ShaderProgram(const std::string& vertexSource, const std::string&
 	if (linkStatus == GL_FALSE)
 	{
 		GLint infoLogLen = 0;
-		glGetShaderiv(_program, GL_INFO_LOG_LENGTH, &infoLogLen);
+		glGetProgramiv(_program, GL_INFO_LOG_LENGTH, &infoLogLen);
 
-		char* infoLog = new char[infoLogLen];
-		glGetProgramInfoLog(_program, infoLogLen, &infoLogLen, infoLog);
-		Log::Error("ShaderProgram linking errors:\n{}", infoLog);
-		delete[] infoLog;
+		std::string log;
+		if (infoLogLen > 0)
+		{
+			log.resize(infoLogLen);
+			glGetProgramInfoLog(_program, infoLogLen, &infoLogLen, &log[0]);
+		}
+		Log::Error("ShaderProgram link FAILED (vert={} bytes, frag={} bytes): {}",
+		           vertexSource.size(), fragmentSource.size(),
+		           log.empty() ? "(no log)" : log);
 
 		glDeleteProgram(_program);
 		glDeleteShader(vertexShader);

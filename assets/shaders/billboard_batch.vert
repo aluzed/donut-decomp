@@ -9,7 +9,9 @@ layout(location = 4) in mat4x2 uvs;
 out VertexData
 {
     vec2 uv;
+    vec2 lightmapUV;
     vec4 color;
+    vec3 worldPos;
 } outData;
 
 uniform mat4 viewProj;
@@ -17,9 +19,11 @@ uniform mat4 viewProj;
 void main()
 {
     outData.uv = uvs[gl_VertexID];
+    outData.lightmapUV = vec2(0.0);
     outData.color = color;
+    outData.worldPos = offset;
 
     vec4 p = viewProj * vec4(vec3(vertex.xy * vec2(0, size.y), 0) + offset, 1.0);
     p.x += vertex.x * size.x;
-	gl_Position = p;
+    gl_Position = p;
 }
