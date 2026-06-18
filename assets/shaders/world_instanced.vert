@@ -9,6 +9,7 @@ out VertexData
 {
     vec2 uv;
     vec4 color;
+    vec3 worldPos;
 } outData;
 
 uniform mat4 viewProj;
@@ -18,5 +19,7 @@ void main()
     outData.uv = uv;
     outData.color = color;
 
-	gl_Position = viewProj * transform * vec4(position, 1.0);
+    vec4 worldPos4 = transform * vec4(position, 1.0);
+    outData.worldPos = worldPos4.xyz;
+    gl_Position = viewProj * worldPos4;
 }

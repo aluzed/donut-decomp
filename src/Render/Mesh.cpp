@@ -122,9 +122,15 @@ void Mesh::Draw(GL::ShaderProgram& shader, bool opaque)
 		}
 
 		shader.SetUniformValue("alphaMask", (prim.cacheShader->IsAlphaTested()) ? 0.5f : 0.0f);
+
+		if (prim.cacheShader->IsTwoSided())
+			glDisable(GL_CULL_FACE);
 		prim.cacheShader->Bind(0);
 
 		DrawPrimGroup(prim);
+
+		if (prim.cacheShader->IsTwoSided())
+			glEnable(GL_CULL_FACE);
 	}
 
 	_vertexBinding->Unbind();
