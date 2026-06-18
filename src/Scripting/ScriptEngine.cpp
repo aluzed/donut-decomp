@@ -37,16 +37,6 @@ void ScriptEngine::SelectMission(const std::string& id)
 	}
 
 	Log::Info("ScriptEngine: mission {} started", id);
-
-	std::string scriptPath = "scripts/Missions/level01/" + id + ".con";
-	if (FileSystem::exists(scriptPath))
-		RunFile(scriptPath);
-	else
-	{
-		scriptPath = "scripts/" + id + ".con";
-		if (FileSystem::exists(scriptPath))
-			RunFile(scriptPath);
-	}
 }
 
 void ScriptEngine::SetMissionResetPlayerInCar(const std::string& locator)

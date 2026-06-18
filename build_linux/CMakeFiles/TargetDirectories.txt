@@ -1,5 +1,0 @@
-/var/www/reverse/donut/build_linux/CMakeFiles/edit_cache.dir
-/var/www/reverse/donut/build_linux/CMakeFiles/rebuild_cache.dir
-/var/www/reverse/donut/build_linux/src/CMakeFiles/donut.dir
-/var/www/reverse/donut/build_linux/src/CMakeFiles/edit_cache.dir
-/var/www/reverse/donut/build_linux/src/CMakeFiles/rebuild_cache.dir
