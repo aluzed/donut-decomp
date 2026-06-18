@@ -529,6 +529,16 @@ void Game::Run()
 		{
 			auto vehPos = _activeVehicle->GetPosition();
 			auto vehRot = _activeVehicle->GetRotation();
+
+			static double engineTimer = 0.0;
+			engineTimer += deltaTime;
+			if (engineTimer > 0.15)
+			{
+				engineTimer = 0.0;
+				float rpm = _activeVehicle->GetSpeedKmh() * 50.0f + 500.0f;
+				if (rpm > 4000.0f) rpm = 4000.0f;
+				_audioManager->PlayRaw(SoundGenerator::Engine(rpm, 0.15f, 22050), 22050, 1, 16);
+			}
 			Vector3 camTarget = vehPos + vehRot * Vector3(0, 1.5f, 0);
 			Vector3 targetPos = camTarget + vehRot * Vector3(0, 3.0f, 12.0f);
 
@@ -556,6 +566,16 @@ void Game::Run()
 		//_camera->SetPosition(cameraTransform.Translation());
 
 		_worldPhysics->Update(static_cast<float>(deltaTime));
+
+		{
+			static double musicTimer = 0.0;
+			musicTimer += deltaTime;
+			if (musicTimer > 3.0 && _gameState == GameState::InGame)
+			{
+				musicTimer = 0.0;
+				_audioManager->PlayRaw(SoundGenerator::Ambient(3.0f, 22050), 22050, 1, 16);
+			}
+		}
 
 		_audioManager->Update();
 

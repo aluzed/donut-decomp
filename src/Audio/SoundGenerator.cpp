@@ -47,4 +47,62 @@ std::vector<uint8_t> SoundGenerator::Chirp(float startFreq, float endFreq, float
 	return data;
 }
 
+std::vector<uint8_t> SoundGenerator::Ambient(float duration, int sampleRate)
+{
+	int numSamples = static_cast<int>(sampleRate * duration);
+	std::vector<uint8_t> data(numSamples * 2);
+
+	float phases[3] = {0.0f, 0.3f, 0.7f};
+	float freqs[3] = {110.0f, 138.59f, 164.81f};
+
+	for (int i = 0; i < numSamples; ++i)
+	{
+		float t = static_cast<float>(i) / sampleRate;
+		float tremolo = 0.5f + 0.5f * sinf(2.0f * 3.14159f * 0.25f * t);
+		float sample = 0.0f;
+
+		for (int ch = 0; ch < 3; ++ch)
+		{
+			phases[ch] += freqs[ch] / sampleRate;
+			if (phases[ch] > 1.0f) phases[ch] -= 1.0f;
+			sample += sinf(2.0f * 3.14159f * phases[ch]) * 0.04f;
+		}
+
+		sample *= tremolo;
+
+		int16_t val = static_cast<int16_t>(sample * 32767.0f);
+		data[i * 2] = val & 0xFF;
+		data[i * 2 + 1] = (val >> 8) & 0xFF;
+	}
+
+	return data;
+}
+
+std::vector<uint8_t> SoundGenerator::Engine(float rpm, float duration, int sampleRate)
+{
+	int numSamples = static_cast<int>(sampleRate * duration);
+	std::vector<uint8_t> data(numSamples * 2);
+
+	float freq = 30.0f + rpm * 0.5f;
+	float phase = 0.0f;
+
+	for (int i = 0; i < numSamples; ++i)
+	{
+		float t = static_cast<float>(i) / sampleRate;
+		float modulation = sinf(2.0f * 3.14159f * 4.0f * t) * 0.5f + 0.5f;
+		freq = 30.0f + rpm * 0.5f * modulation;
+		phase += freq / sampleRate;
+		if (phase > 1.0f) phase -= 1.0f;
+
+		float sample = sinf(2.0f * 3.14159f * phase) * 0.03f;
+		sample += (sinf(2.0f * 3.14159f * freq * 0.5f * t) * 0.01f);
+
+		int16_t val = static_cast<int16_t>(sample * 32767.0f);
+		data[i * 2] = val & 0xFF;
+		data[i * 2 + 1] = (val >> 8) & 0xFF;
+	}
+
+	return data;
+}
+
 } // namespace Donut
