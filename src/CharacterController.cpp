@@ -16,7 +16,7 @@ CharacterController::CharacterController(Character* character, WorldPhysics* phy
 	_walkDirection = Vector3(0.0f, 0.0f, 0.0f);
 	_verticalVelocity = 0.0f;
 	_verticalOffset = 0.0f;
-	_stepHeight = 0.5f;
+	_stepHeight = 0.05;
 
 	btTransform transform;
 	transform.setIdentity();
@@ -310,13 +310,14 @@ void CharacterController::stepUp(btCollisionWorld* world)
 		return;
 
 	btVector3 forward = BulletCast<btVector3>(_walkDirection.Normalized());
+	btScalar stepHeight = 0.5f;
 
 	btTransform start, end;
 	start.setIdentity();
 	end.setIdentity();
 	start.setOrigin(BulletCast<btVector3>(_position));
 	btVector3 targetPos = start.getOrigin() + forward * 0.3f;
-	targetPos.setY(targetPos.y() + _stepHeight);
+	targetPos.setY(targetPos.y() + stepHeight);
 	end.setOrigin(targetPos);
 
 	btKinematicClosestNotMeConvexResultCallback callback(_physGhostObject.get(), -forward, 0.0f);
@@ -329,23 +330,7 @@ void CharacterController::stepUp(btCollisionWorld* world)
 	if (callback.hasHit())
 	{
 		_targetPosition.setInterpolate3(start.getOrigin(), end.getOrigin(), callback.m_closestHitFraction);
-
-		btTransform ceilingStart, ceilingEnd;
-		ceilingStart.setIdentity();
-		ceilingEnd.setIdentity();
-		btVector3 steppedPos = _targetPosition;
-		ceilingStart.setOrigin(steppedPos);
-		ceilingEnd.setOrigin(steppedPos + btVector3(0, _stepHeight, 0));
-
-		btKinematicClosestNotMeConvexResultCallback ceilingCallback(_physGhostObject.get(), btVector3(0, 1, 0), 0.0f);
-		ceilingCallback.m_collisionFilterGroup = _physGhostObject->getBroadphaseHandle()->m_collisionFilterGroup;
-		ceilingCallback.m_collisionFilterMask = _physGhostObject->getBroadphaseHandle()->m_collisionFilterMask;
-
-		world->convexSweepTest(_physShape.get(), ceilingStart, ceilingEnd, ceilingCallback,
-		                       world->getDispatchInfo().m_allowedCcdPenetration);
-
-		if (!ceilingCallback.hasHit())
-			_position = BulletCast<Vector3>(_targetPosition);
+		_position = BulletCast<Vector3>(_targetPosition);
 	}
 }
 
