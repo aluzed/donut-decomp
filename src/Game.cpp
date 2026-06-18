@@ -107,11 +107,6 @@ Game::Game(int argc, char** argv)
 	if (FileSystem::exists("./assets/audio/ambience/ambience.rcf"))
 		_audioManager->LoadRCF("./assets/audio/ambience/ambience.rcf");
 
-	if (FileSystem::exists("scripts/Missions/level01/M1race.con"))
-		_scriptEngine->RunFile("scripts/Missions/level01/M1race.con");
-	else if (FileSystem::exists("scripts/Missions/level01/m1.con"))
-		_scriptEngine->RunFile("scripts/Missions/level01/m1.con");
-
 	if (FileSystem::exists("./art/frontend/scrooby2/resource/fonts/font0_16.p3d"))
 	{
 		const P3D::P3DFile p3dFont("./art/frontend/scrooby2/resource/fonts/font0_16.p3d");
@@ -122,8 +117,6 @@ Game::Game(int argc, char** argv)
 	}
 
 	_level = std::make_unique<Level>();
-
-	//
 	_level->LoadP3D("L1_TERRA.p3d");
 
 	// simpsons house
@@ -176,6 +169,11 @@ Game::Game(int argc, char** argv)
 	_playerMesh = SimpleMesh::CreateCapsule(0.3f, 1.8f, Vector4(0.2f, 1.0f, 0.2f, 1.0f), 12);
 	_carMesh = SimpleMesh::CreateBox(Vector3(0.9f, 0.5f, 2.2f), Vector4(0.2f, 0.5f, 1.0f, 1.0f));
 	_buildingMesh = SimpleMesh::CreateBox(Vector3(2.0f, 4.0f, 2.0f), Vector4(0.7f, 0.6f, 0.5f, 1.0f));
+
+	if (FileSystem::exists("scripts/Missions/level01/M1race.con"))
+		_scriptEngine->RunFile("scripts/Missions/level01/M1race.con");
+	else if (FileSystem::exists("scripts/Missions/level01/m1.con"))
+		_scriptEngine->RunFile("scripts/Missions/level01/m1.con");
 
 	loadGlobal();
 	LoadModel("bart", "bart");
