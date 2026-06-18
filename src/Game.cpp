@@ -377,8 +377,23 @@ void Game::Run()
 
 			if (Input::JustPressed(Button::KeyE))
 			{
-				if (_scriptEngine->IsMissionActive())
+			if (_scriptEngine->IsMissionActive())
+			{
+				auto* chase = _scriptEngine->GetChaseManager();
+				if (_gameState != GameState::Paused && chase && chase->IsActive())
 				{
+					float heat = chase->GetHeat();
+					std::string heatText = fmt::format("HEAT: {:.0f}/10", heat);
+					Vector4 heatCol(1.0f, heat > 7 ? 0.0f : 0.5f, 0.0f, 1.0f);
+					sprites.DrawText(font, heatText, Vector2(32, 132), heatCol);
+
+					if (chase->IsBusted())
+					{
+						sprites.DrawText(font, "BUSTED!",
+							Vector2((viewportWidth / 2.0f) - 40, viewportHeight / 2.0f - 40),
+							Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+					}
+				}
 					for (auto& v : _scriptEngine->GetMissionVehicles())
 					{
 						if ((v->GetPosition() - _character->GetPosition()).Length() < 5.0f)
@@ -783,6 +798,21 @@ void Game::Run()
 				Matrix4x4::MakeTranslate(_scriptEngine->GetAIPosition()) *
 					Matrix4x4(_scriptEngine->GetAIRotation()),
 				viewProjection, Vector4(1.0f, 0.2f, 0.2f, 1.0f));
+		}
+
+		if (_scriptEngine->IsMissionActive())
+		{
+			auto* chase = _scriptEngine->GetChaseManager();
+			if (chase)
+			{
+				for (auto& cop : chase->GetCopCars())
+				{
+					_carMesh->Draw(*_meshShader,
+						Matrix4x4::MakeTranslate(cop->GetPosition()) *
+							Matrix4x4(cop->GetRotation()),
+						viewProjection, Vector4(0.1f, 0.1f, 0.1f, 1.0f));
+				}
+			}
 		}
 
 		glDisable(GL_DEPTH_TEST);

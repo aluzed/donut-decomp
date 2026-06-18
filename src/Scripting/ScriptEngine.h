@@ -74,6 +74,7 @@ public:
 	const std::string& GetObjectiveType() const { return _objectiveType; }
 	const Vector3& GetAIPosition() const { return _aiPosition; }
 	const Quaternion& GetAIRotation() const { return _aiRotation; }
+	ChaseManager* GetChaseManager() const { return _chaseManager.get(); }
 	const std::vector<Vector3>& GetCheckpoints() const { return _checkpoints; }
 	int GetCurrentCheckpoint() const { return _currentCheckpoint; }
 	int GetCurrentLap() const { return _currentLap; }
