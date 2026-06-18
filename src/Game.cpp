@@ -533,6 +533,8 @@ void Game::Run()
 
 		_worldPhysics->Update(static_cast<float>(deltaTime));
 
+		_audioManager->Update();
+
 		if (_shakeAmount > 0.0f)
 		{
 			float sx = (rand() % 100 - 50) * 0.001f * _shakeAmount;

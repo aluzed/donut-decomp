@@ -120,7 +120,102 @@ void AudioManager::PlayAudio(const std::string& name, const Vector3& position)
 
 void AudioManager::PlayDialogue(const std::string& name)
 {
-	PlayAudio(name);
+	QueueDialogue(name, DialoguePriority::Gameplay);
+}
+
+void AudioManager::QueueDialogue(const std::string& name, DialoguePriority priority)
+{
+	_dialogueQueue.push_back({name, priority});
+}
+
+void AudioManager::processDialogueQueue()
+{
+	if (_dialogueQueue.empty())
+		return;
+
+	Source* src = findFreeSource();
+	if (src == nullptr)
+		return;
+
+	const auto& dialogue = _dialogueQueue.front();
+	_dialogueQueue.pop_front();
+	PlayAudio(dialogue.name);
+}
+
+void AudioManager::Update()
+{
+	cleanupFinished();
+	processDialogueQueue();
+}
+
+void AudioManager::cleanupFinished()
+{
+	for (auto& src : _sources)
+	{
+		if (!src.inUse) continue;
+		ALint state;
+		alGetSourcei(src.id, AL_SOURCE_STATE, &state);
+		if (state != AL_PLAYING)
+			src.inUse = false;
+	}
+}
+
+ALenum AudioManager::getFormat(int channels, int bits) const
+{
+	if (channels == 1)
+	{
+		if (bits == 8) return AL_FORMAT_MONO8;
+		if (bits == 16) return AL_FORMAT_MONO16;
+	}
+	else if (channels == 2)
+	{
+		if (bits == 8) return AL_FORMAT_STEREO8;
+		if (bits == 16) return AL_FORMAT_STEREO16;
+	}
+	return AL_FORMAT_STEREO16;
+}
+
+void AudioManager::PlayMusic(const std::string& name)
+{
+	_music.reset();
+
+	auto soundIt = _sounds.find(name);
+	if (soundIt == _sounds.end())
+		return;
+
+	RCL::RCFFile* rcfFile = soundIt->second;
+	auto ms = rcfFile->GetFileStream(name);
+	RCL::RSDFile rsdFile(*ms);
+
+	_music = std::make_unique<MusicSource>();
+	_music->sampleRate = rsdFile.GetSampleRate();
+	_music->channels = rsdFile.GetNumChannels();
+	_music->bits = rsdFile.GetBitsPerChannel();
+	_music->playing = false;
+
+	alGenSources(1, &_music->id);
+	alGenBuffers(kStreamingBuffers, _music->buffers);
+
+	ALenum format = getFormat(_music->channels, _music->bits);
+	const auto& data = rsdFile.GetData();
+	size_t totalBytes = data.size();
+
+	if (totalBytes < 2 * kStreamingBufferSize)
+	{
+		alBufferData(_music->buffers[0], format, data.data(), static_cast<ALsizei>(totalBytes), _music->sampleRate);
+		alSourceQueueBuffers(_music->id, 1, _music->buffers);
+		alSourcei(_music->id, AL_LOOPING, AL_TRUE);
+	}
+	else
+	{
+		size_t half = totalBytes / 2;
+		alBufferData(_music->buffers[0], format, data.data(), static_cast<ALsizei>(half), _music->sampleRate);
+		alBufferData(_music->buffers[1], format, data.data() + half, static_cast<ALsizei>(totalBytes - half), _music->sampleRate);
+		alSourceQueueBuffers(_music->id, 2, _music->buffers);
+	}
+
+	alSourcePlay(_music->id);
+	_music->playing = true;
 }
 
 void AudioManager::SetListenerPosition(const Vector3& position, const Vector3& direction, const Vector3& up)
@@ -208,6 +303,20 @@ void AudioManager::initializeOpenAL()
 
 void AudioManager::shutdownOpenAL()
 {
+	if (_music)
+	{
+		alSourceStop(_music->id);
+		alDeleteSources(1, &_music->id);
+		alDeleteBuffers(2, _music->buffers);
+		_music.reset();
+	}
+
+	for (auto& src : _sources)
+	{
+		if (src.buffer) alDeleteBuffers(1, &src.buffer);
+		if (src.id) alDeleteSources(1, &src.id);
+	}
+
 	if (_alContext)
 	{
 		alcMakeContextCurrent(nullptr);
