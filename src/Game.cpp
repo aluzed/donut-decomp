@@ -483,14 +483,15 @@ void Game::Run()
 
 			if (charMove.LengthSquared() > 0.0f)
 			{
+				// Strafe scheme: move in world/screen space directly. We do NOT
+				// rotate the character toward the movement direction — doing so
+				// fed back into the next frame's `rot * charMove` and made the
+				// character (and the follow camera) spin 180° every frame on
+				// Down/Left/Right. Keeping a fixed facing means only the
+				// character translates; the camera just trails its position.
 				charMove.Normalize();
 				charMove *= 5.0f;
-				Quaternion rot = _character->GetRotation();
-				Vector3 worldMove = rot * charMove;
-				ctrl.setWalkDirection(BulletCast<btVector3>(worldMove));
-
-				float targetYaw = atan2f(worldMove.X, worldMove.Z);
-				_character->SetRotation(Quaternion::MakeFromEuler(Vector3(0, targetYaw, 0)));
+				ctrl.setWalkDirection(BulletCast<btVector3>(charMove));
 			}
 			else
 			{
@@ -547,7 +548,9 @@ void Game::Run()
 			auto vehPos = _activeVehicle->GetPosition();
 			auto vehRot = _activeVehicle->GetRotation();
 			Vector3 camTarget = vehPos + vehRot * Vector3(0, 1.5f, 0);
-			Vector3 targetPos = camTarget + vehRot * Vector3(0, 3.0f, 12.0f);
+			// camera sits behind the vehicle; forward is +Z (left-handed proj),
+			// so "behind" is -Z in the vehicle's local frame
+			Vector3 targetPos = camTarget + vehRot * Vector3(0, 3.0f, -12.0f);
 
 			float lerpFactor = 1.0f - exp(-8.0f * static_cast<float>(deltaTime));
 			if (_smoothCamPos == Vector3::Zero) _smoothCamPos = targetPos;
@@ -561,7 +564,8 @@ void Game::Run()
 			auto charPos = _character->GetPosition();
 			auto rot = _character->GetRotation();
 			Vector3 camTarget = charPos + rot * Vector3(0, 1.5f, 0);
-			Vector3 targetPos = camTarget + rot * Vector3(0, 3.0f, 8.0f);
+			// camera sits behind the character (forward is +Z, so behind is -Z)
+			Vector3 targetPos = camTarget + rot * Vector3(0, 3.0f, -8.0f);
 
 			float lerpFactor = 1.0f - exp(-8.0f * static_cast<float>(deltaTime));
 			if (_smoothCamPos == Vector3::Zero) _smoothCamPos = targetPos;
