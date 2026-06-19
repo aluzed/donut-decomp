@@ -475,22 +475,34 @@ void Game::Run()
 				}
 			}
 
-			if (charMove.LengthSquared() > 0.0f)
+			const bool moving = charMove.LengthSquared() > 0.0f;
+			if (moving)
 			{
-				// Strafe scheme: move in world/screen space directly. We do NOT
-				// rotate the character toward the movement direction — doing so
-				// fed back into the next frame's `rot * charMove` and made the
-				// character (and the follow camera) spin 180° every frame on
-				// Down/Left/Right. Keeping a fixed facing means only the
-				// character translates; the camera just trails its position.
+				// GTA-style pivot: move in world space (so input never feeds back
+				// into the character's own rotation) and turn the character to
+				// face its movement direction, smoothing the yaw so the follow
+				// camera trails instead of snapping.
 				charMove.Normalize();
-				charMove *= 5.0f;
-				ctrl.setWalkDirection(BulletCast<btVector3>(charMove));
+				ctrl.setWalkDirection(BulletCast<btVector3>(charMove * 5.0f));
+
+				float targetYaw = atan2f(charMove.X, charMove.Z);
+				float curYaw = _character->GetRotation().Euler().Y;
+				float delta = targetYaw - curYaw;
+				while (delta > 3.14159265f) delta -= 6.28318531f;
+				while (delta < -3.14159265f) delta += 6.28318531f;
+				float t = 1.0f - static_cast<float>(exp(-12.0 * deltaTime));
+				_character->SetRotation(Quaternion::MakeFromEuler(Vector3(0.0f, curYaw + delta * t, 0.0f)));
 			}
 			else
 			{
 				ctrl.setWalkDirection(btVector3(0, 0, 0));
 			}
+
+			// walk while moving, idle otherwise — only switch on change so the
+			// animation isn't reset to frame 0 every frame
+			const char* desiredAnim = moving ? "hom_loco_walk" : "hom_loco_idle_rest";
+			if (_character->GetAnimName() != desiredAnim)
+				_character->SetAnimation(desiredAnim);
 		}
 
 		if (_inVehicle && _activeVehicle)
