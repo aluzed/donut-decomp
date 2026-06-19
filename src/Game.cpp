@@ -816,6 +816,12 @@ void Game::Run()
 
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_BLEND);
+		// SH&R geometry uses Direct3D winding (clockwise front faces); OpenGL
+		// defaults to CCW, which back-face-culled the ground/road away. Match
+		// the source winding so single-sided world geometry renders.
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+		glFrontFace(GL_CW);
 		glClearColor(0.62f, 0.78f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
