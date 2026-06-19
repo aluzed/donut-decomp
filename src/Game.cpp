@@ -441,7 +441,9 @@ void Game::Run()
 			}
 		}
 
-		if (_character && !_inVehicle)
+		// not while free-flying the camera (RMB): then WASD drives the camera,
+		// not the character
+		if (_character && !_inVehicle && !_mouseLocked)
 		{
 			auto& ctrl = _character->GetCharacterController();
 			auto charMove = Vector3::Zero;
