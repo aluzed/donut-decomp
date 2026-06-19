@@ -412,10 +412,10 @@ const char* DefaultFileContents()
 # action = input [, input ...]
 
 # --- movement (on foot + driving) ---
-move_forward  = up,    pad_lefty-, pad_rt
-move_backward = down,  pad_lefty+, pad_lt
-move_left     = left,  pad_leftx-
-move_right    = right, pad_leftx+
+move_forward  = up,    w, pad_lefty-, pad_rt
+move_backward = down,  s, pad_lefty+, pad_lt
+move_left     = left,  a, pad_leftx-
+move_right    = right, d, pad_leftx+
 
 # --- character / vehicle ---
 interact      = e,      pad_a
