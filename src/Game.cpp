@@ -568,17 +568,29 @@ void Game::Run()
 		else if (_character && !_mouseLocked)
 		{
 			auto charPos = _character->GetPosition();
-			auto rot = _character->GetRotation();
-			Vector3 camTarget = charPos + rot * Vector3(0, 1.5f, 0);
-			// camera sits behind the character (forward is +Z, so behind is -Z)
-			Vector3 targetPos = camTarget + rot * Vector3(0, 3.0f, -8.0f);
+
+			// The camera yaw TRAILS the character's facing rather than being
+			// locked to it. If it were locked, the character and camera would
+			// rotate together and the pivot would be invisible (you'd only see
+			// the camera swing). Lagging it lets you see the character turn,
+			// then the camera catches up (GTA-style).
+			float charYaw = _character->GetRotation().Euler().Y;
+			float dy = charYaw - _camYaw;
+			while (dy > 3.14159265f) dy -= 6.28318531f;
+			while (dy < -3.14159265f) dy += 6.28318531f;
+			_camYaw += dy * (1.0f - static_cast<float>(exp(-5.0 * deltaTime)));
+
+			Quaternion camRot = Quaternion::MakeFromEuler(Vector3(0, _camYaw, 0));
+			Vector3 camTarget = charPos + camRot * Vector3(0, 1.5f, 0);
+			// camera sits behind (forward is +Z, so behind is -Z)
+			Vector3 targetPos = camTarget + camRot * Vector3(0, 3.0f, -8.0f);
 
 			float lerpFactor = 1.0f - exp(-8.0f * static_cast<float>(deltaTime));
 			if (_smoothCamPos == Vector3::Zero) _smoothCamPos = targetPos;
 			_smoothCamPos = _smoothCamPos + (targetPos - _smoothCamPos) * lerpFactor;
 
 			_camera->SetPosition(_smoothCamPos);
-			_camera->SetQuaternion(Quaternion::MakeFromEuler(Vector3(-0.3f, rot.Euler().Y, 0)));
+			_camera->SetQuaternion(Quaternion::MakeFromEuler(Vector3(-0.3f, _camYaw, 0)));
 		}
 		//_camera->SetPosition(cameraTransform.Translation());
 
