@@ -41,6 +41,14 @@ void Character::LoadModel(const std::string& name)
 		case P3D::ChunkType::Texture: Game::GetInstance().GetResourceManager().LoadTexture(*P3D::Texture::Load(*chunk)); break;
 		case P3D::ChunkType::PolySkin: _skinModel->LoadPolySkin(*P3D::PolySkin::Load(*chunk)); break;
 		case P3D::ChunkType::Skeleton: _skeleton = std::make_unique<Skeleton>(*P3D::Skeleton::Load(*chunk)); break;
+		// Part of P3D's composite-drawable / animation system. We render the
+		// character directly from its PolySkin + Skeleton and load its
+		// animations from the separate <name>_a.p3d, so these are intentionally
+		// ignored here (acknowledged to keep the loader output clean).
+		case P3D::ChunkType::CompositeDrawable:
+		case P3D::ChunkType::MultiController:
+		case P3D::ChunkType::Animation:
+		case P3D::ChunkType::FrameController: break;
 		default: fmt::print("unhandled chunk {:#x} in character {}\n", static_cast<uint32_t>(chunk->GetType()), name); break;
 		}
 	}
