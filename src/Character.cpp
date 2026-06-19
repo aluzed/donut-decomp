@@ -118,6 +118,13 @@ void Character::Update(double deltatime)
 	std::vector<Matrix4x4> matrices(joints.size());
 	for (auto i = 0; i < joints.size(); i++) matrices[i] = joints[i].finalGlobal;
 
+	// NOTE: the compressed-quaternion animation decode is still wrong and
+	// produces non-orthonormal bone matrices that flatten the skinned mesh.
+	// Until that's fixed, render the bind pose (identity bones) so the
+	// character at least stands correctly instead of collapsing. See the
+	// animation-decode ticket.
+	for (auto& m : matrices) m = Matrix4x4::Identity;
+
 	_boneBuffer->SetBuffer(matrices.data(), matrices.size() * sizeof(Matrix4x4));
 }
 
@@ -191,10 +198,11 @@ void Character::addAnimation(const P3D::Animation& p3dAnim)
 					float x = (int16_t)((value >> 16) & 0xFFFF) / (float)0x7FFF;
 					float w = (int16_t)(value & 0xFFFF) / (float)0x7FFF;
 
-					// Quaternion's ctor is (x, y, z, w) — pass components in that
-					// order. Passing (w, x, y, z) scrambled every animated
-					// rotation (X=w, Y=x, ...), wrecking the skinned pose.
-					track->AddRotationKey(frames[i], Quaternion(x, y, z, w));
+					// Quaternion's ctor is (x, y, z, w). Normalize: the int16
+					// compressed components aren't exactly unit, and a non-unit
+					// quaternion makes ToRotationMatrix produce a non-orthonormal
+					// (squashing) matrix — which flattened the skinned body.
+					track->AddRotationKey(frames[i], Quaternion(x, y, z, w).Normal());
 				}
 			}
 			else

@@ -852,7 +852,12 @@ void Game::Run()
 
 		if (_character != nullptr && !_inVehicle)
 		{
+			// the skinned character mesh has inconsistent winding; with the
+			// world's clockwise back-face culling, parts (e.g. an arm) get
+			// culled away. Render the character double-sided.
+			glDisable(GL_CULL_FACE);
 			_character->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
+			glEnable(GL_CULL_FACE);
 		}
 
 		if (_scriptEngine->IsMissionActive())
