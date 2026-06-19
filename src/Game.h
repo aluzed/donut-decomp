@@ -111,7 +111,6 @@ private:
 	std::unique_ptr<GL::ShaderProgram> _meshShader;
 	std::unique_ptr<SimpleMesh> _playerMesh;
 	std::unique_ptr<SimpleMesh> _carMesh;
-	std::unique_ptr<SimpleMesh> _buildingMesh;
 	std::unique_ptr<GameMenu> _mainMenu;
 	std::unique_ptr<GameMenu> _pauseMenu;
 	std::unique_ptr<GL::ShaderProgram> _postProcessShader;
@@ -132,7 +131,6 @@ private:
 	bool _showDebug = true;
 	bool _showHelp = false;
 	float _health = 100.0f;
-	std::vector<std::pair<Vector3, float>> _buildings;
 	float _shakeAmount = 0.0f;
 	float _prevVehicleY = 0.0f;
 
