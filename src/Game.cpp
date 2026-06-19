@@ -171,29 +171,6 @@ Game::Game(int argc, char** argv)
 	_collectibleManager = std::make_unique<CollectibleManager>(*_level, *_lineRenderer);
 	_collectibleManager->SpawnOnPath();
 
-	const auto& paths = _level->GetPaths();
-	if (!paths.empty())
-	{
-		const auto* bestPath = &paths[0];
-		for (const auto& p : paths)
-			if (p.points.size() > bestPath->points.size())
-				bestPath = &p;
-
-		srand(42);
-		for (size_t i = 0; i < bestPath->points.size(); i += 2)
-		{
-			const auto& pt = bestPath->points[i];
-			Vector3 dir;
-			if (i + 1 < bestPath->points.size())
-				dir = (bestPath->points[i + 1] - pt).Normalized();
-			Vector3 perp(-dir.Z, 0, dir.X);
-			float height = 2.0f + (rand() % 10) * 1.5f;
-			_buildings.push_back({pt + perp * (15.0f + (rand() % 10) * 2.0f), height});
-			_buildings.push_back({pt - perp * (15.0f + (rand() % 10) * 2.0f), height});
-		}
-
-		Log::Info("Game: generated {} buildings", _buildings.size());
-	}
 
 	const auto skinVertSrc = File::ReadAll("shaders/skin.vert");
 	const auto skinFragSrc = File::ReadAll("shaders/skin.frag");
@@ -209,7 +186,6 @@ Game::Game(int argc, char** argv)
 
 	_playerMesh = SimpleMesh::CreateCapsule(0.3f, 1.8f, Vector4(0.2f, 1.0f, 0.2f, 1.0f), 12);
 	_carMesh = SimpleMesh::CreateBox(Vector3(0.9f, 0.5f, 2.2f), Vector4(0.2f, 0.5f, 1.0f, 1.0f));
-	_buildingMesh = SimpleMesh::CreateBox(Vector3(2.0f, 4.0f, 2.0f), Vector4(0.7f, 0.6f, 0.5f, 1.0f));
 
 	if (FileSystem::exists("scripts/Missions/level01/M1race.con"))
 		_scriptEngine->RunFile("scripts/Missions/level01/M1race.con");
@@ -851,17 +827,6 @@ void Game::Run()
 
 		if (_level != nullptr)
 			_level->Draw(viewProjection);
-
-		for (const auto& b : _buildings)
-		{
-			float h = b.second;
-			Vector4 col(0.8f, 0.7f, 0.6f, 1.0f);
-			if (h > 10) col = Vector4(0.6f, 0.6f, 0.7f, 1.0f);
-
-			_buildingMesh->Draw(*_meshShader,
-				Matrix4x4::MakeTranslate(b.first + Vector3(0, h * 0.5f, 0)),
-				viewProjection, col);
-		}
 
 		if (_character != nullptr && !_inVehicle)
 		{
