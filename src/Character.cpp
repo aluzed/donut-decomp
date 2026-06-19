@@ -183,7 +183,10 @@ void Character::addAnimation(const P3D::Animation& p3dAnim)
 					float x = (int16_t)((value >> 16) & 0xFFFF) / (float)0x7FFF;
 					float w = (int16_t)(value & 0xFFFF) / (float)0x7FFF;
 
-					track->AddRotationKey(frames[i], Quaternion(w, x, y, z));
+					// Quaternion's ctor is (x, y, z, w) — pass components in that
+					// order. Passing (w, x, y, z) scrambled every animated
+					// rotation (X=w, Y=x, ...), wrecking the skinned pose.
+					track->AddRotationKey(frames[i], Quaternion(x, y, z, w));
 				}
 			}
 			else
