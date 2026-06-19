@@ -265,7 +265,10 @@ inline Matrix4x4 Matrix4x4::Inverse() const
 
 FORCEINLINE Vector3 Matrix4x4::Translation() const
 {
-	return Vector3(M[0][3], M[1][3], M[2][3]);
+	// column-major storage (M[col][row]): translation lives in column 3,
+	// i.e. M[3][0..2] (matching MakeTranslate). Reading M[0..2][3] returned the
+	// bottom row (0,0,0) and collapsed every skeleton joint to the origin.
+	return Vector3(M[3][0], M[3][1], M[3][2]);
 }
 
 // clang-format on

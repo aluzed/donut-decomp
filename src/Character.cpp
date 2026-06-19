@@ -118,13 +118,6 @@ void Character::Update(double deltatime)
 	std::vector<Matrix4x4> matrices(joints.size());
 	for (auto i = 0; i < joints.size(); i++) matrices[i] = joints[i].finalGlobal;
 
-	// NOTE: the compressed-quaternion animation decode is still wrong and
-	// produces non-orthonormal bone matrices that flatten the skinned mesh.
-	// Until that's fixed, render the bind pose (identity bones) so the
-	// character at least stands correctly instead of collapsing. See the
-	// animation-decode ticket.
-	for (auto& m : matrices) m = Matrix4x4::Identity;
-
 	_boneBuffer->SetBuffer(matrices.data(), matrices.size() * sizeof(Matrix4x4));
 }
 
