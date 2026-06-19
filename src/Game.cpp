@@ -195,6 +195,22 @@ Game::Game(int argc, char** argv)
 	loadGlobal();
 	LoadModel("homer", "homer");
 
+	// spawn on the main road (longest path) so the physics ground lines up with
+	// the visual ground — the raised grass at the old spawn buried the player
+	if (_level)
+	{
+		const auto& paths = _level->GetPaths();
+		if (!paths.empty())
+		{
+			size_t bi = 0;
+			for (size_t i = 1; i < paths.size(); ++i)
+				if (paths[i].points.size() > paths[bi].points.size()) bi = i;
+			const auto& pts = paths[bi].points;
+			if (!pts.empty())
+				SetPlayerPosition(pts[pts.size() / 2] + Vector3(0.0f, 1.0f, 0.0f));
+		}
+	}
+
 	// load control bindings (writes a default keymap.conf if none exists)
 	Input::LoadKeymap("keymap.conf");
 
