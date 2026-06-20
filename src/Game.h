@@ -139,7 +139,8 @@ private:
 	Vehicle* _activeVehicle = nullptr;
 	double _missionCompleteTimer = 0.0;
 	Vector3 _smoothCamPos = Vector3::Zero;
-	float _camYaw = 0.0f; // follow-camera yaw, lags behind the character's facing
+	float _camYaw = 0.0f;     // third-person camera orbit yaw (mouse-controlled)
+	float _camPitch = -0.2f;  // third-person camera orbit pitch (mouse-controlled; negative looks down)
 	Vector3 _lastSafePos = Vector3(220, 4.5f, -172);
 
 	bool _debugResourceManagerWindowOpen = false;

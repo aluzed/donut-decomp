@@ -400,42 +400,20 @@ void Game::Run()
 			Input::HandleEvent(event);
 		}
 
-		LockMouse(Input::IsActionDown(GameAction::CameraLook));
-
-		if (_mouseLocked)
+		// Third-person camera: capture the mouse during on-foot gameplay so its
+		// motion orbits the camera around the character. The camera no longer
+		// follows the character's facing — only the mouse turns it.
+		const bool onFoot = (_gameState == GameState::InGame) && _character && !_inVehicle;
+		LockMouse(onFoot);
+		if (onFoot && _mouseLocked)
 		{
-			const float mouseDeltaX = Input::GetMouseDeltaX();
-			const float mouseDeltaY = Input::GetMouseDeltaY();
-
-			_camera->LookDelta(mouseDeltaX * 0.25f, mouseDeltaY * 0.25f);
+			_camYaw += Input::GetMouseDeltaX() * 0.005f;
+			_camPitch -= Input::GetMouseDeltaY() * 0.005f; // mouse up -> look up
+			if (_camPitch < -1.0f) _camPitch = -1.0f; // steep down
+			if (_camPitch > 0.2f) _camPitch = 0.2f;    // slightly up
 		}
 
-		if (_mouseLocked)
-		{
-			auto inputForce = Vector3(0.0f);
-			if (Input::IsActionDown(GameAction::FreeCamForward))
-				inputForce += Vector3::Forward;
-			if (Input::IsActionDown(GameAction::FreeCamBackward))
-				inputForce += Vector3::Backward;
-			if (Input::IsActionDown(GameAction::FreeCamLeft))
-				inputForce += Vector3::Left;
-			if (Input::IsActionDown(GameAction::FreeCamRight))
-				inputForce += Vector3::Right;
-			if (Input::IsActionDown(GameAction::FreeCamUp))
-				inputForce += Vector3::Up;
-			if (Input::IsActionDown(GameAction::FreeCamDown))
-				inputForce += Vector3::Down;
-			if (inputForce.LengthSquared() > 0.0f)
-			{
-				inputForce.Normalize();
-				inputForce *= Input::IsActionDown(GameAction::FreeCamFast) ? 60.0f : 10.0f;
-				_camera->Move(inputForce, static_cast<float>(deltaTime));
-			}
-		}
-
-		// not while free-flying the camera (RMB): then WASD drives the camera,
-		// not the character
-		if (_character && !_inVehicle && !_mouseLocked)
+		if (onFoot)
 		{
 			auto& ctrl = _character->GetCharacterController();
 			auto charMove = Vector3::Zero;
@@ -478,14 +456,15 @@ void Game::Run()
 			const bool moving = charMove.LengthSquared() > 0.0f;
 			if (moving)
 			{
-				// GTA-style pivot: move in world space (so input never feeds back
-				// into the character's own rotation) and turn the character to
-				// face its movement direction, smoothing the yaw so the follow
-				// camera trails instead of snapping.
+				// Camera-relative movement: "forward" is where the camera looks.
+				// worldMove depends on the (mouse-driven) camera yaw, not on the
+				// character's own rotation, so there's no feedback loop. The
+				// character then pivots to face its movement direction.
 				charMove.Normalize();
-				ctrl.setWalkDirection(BulletCast<btVector3>(charMove * 5.0f));
+				Vector3 worldMove = Quaternion::MakeFromEuler(Vector3(0.0f, _camYaw, 0.0f)) * charMove;
+				ctrl.setWalkDirection(BulletCast<btVector3>(worldMove * 5.0f));
 
-				float targetYaw = atan2f(charMove.X, charMove.Z);
+				float targetYaw = atan2f(worldMove.X, worldMove.Z);
 				float curYaw = _character->GetRotation().Euler().Y;
 				float delta = targetYaw - curYaw;
 				while (delta > 3.14159265f) delta -= 6.28318531f;
@@ -565,32 +544,24 @@ void Game::Run()
 			_camera->SetPosition(_smoothCamPos);
 			_camera->SetQuaternion(Quaternion::MakeFromEuler(Vector3(-0.2f, vehRot.Euler().Y, 0)));
 		}
-		else if (_character && !_mouseLocked)
+		else if (_character)
 		{
+			// Mouse-controlled orbit camera: the camera yaw/pitch come from the
+			// mouse (above), the camera orbits the character at a fixed distance
+			// and looks at it. It follows the character's position but not its
+			// facing, so it no longer swings around when the character turns.
 			auto charPos = _character->GetPosition();
+			Quaternion camRot = Quaternion::MakeFromEuler(Vector3(_camPitch, _camYaw, 0.0f));
+			Vector3 lookAt = charPos + Vector3(0.0f, 1.2f, 0.0f);
+			Vector3 forward = camRot * Vector3::Forward;
+			Vector3 targetPos = lookAt - forward * 6.0f;
 
-			// The camera yaw TRAILS the character's facing rather than being
-			// locked to it. If it were locked, the character and camera would
-			// rotate together and the pivot would be invisible (you'd only see
-			// the camera swing). Lagging it lets you see the character turn,
-			// then the camera catches up (GTA-style).
-			float charYaw = _character->GetRotation().Euler().Y;
-			float dy = charYaw - _camYaw;
-			while (dy > 3.14159265f) dy -= 6.28318531f;
-			while (dy < -3.14159265f) dy += 6.28318531f;
-			_camYaw += dy * (1.0f - static_cast<float>(exp(-5.0 * deltaTime)));
-
-			Quaternion camRot = Quaternion::MakeFromEuler(Vector3(0, _camYaw, 0));
-			Vector3 camTarget = charPos + camRot * Vector3(0, 1.5f, 0);
-			// camera sits behind (forward is +Z, so behind is -Z)
-			Vector3 targetPos = camTarget + camRot * Vector3(0, 3.0f, -8.0f);
-
-			float lerpFactor = 1.0f - exp(-8.0f * static_cast<float>(deltaTime));
+			float lerpFactor = 1.0f - exp(-12.0f * static_cast<float>(deltaTime));
 			if (_smoothCamPos == Vector3::Zero) _smoothCamPos = targetPos;
 			_smoothCamPos = _smoothCamPos + (targetPos - _smoothCamPos) * lerpFactor;
 
 			_camera->SetPosition(_smoothCamPos);
-			_camera->SetQuaternion(Quaternion::MakeFromEuler(Vector3(-0.3f, _camYaw, 0)));
+			_camera->SetQuaternion(camRot);
 		}
 		//_camera->SetPosition(cameraTransform.Translation());
 
