@@ -66,15 +66,11 @@ Spatial audio, post-processing, complete UI, gamepad support.
 
 ---
 
-## Ticket Files
+## Backlog
 
-See detailed tickets per module:
-- TICKETS_CORE.md — Math bugs, P3DZ/RZ
-- TICKETS_P3D.md — Missing P3D chunks, codegen
-- TICKETS_RENDER.md — LOD, post-FX
-- TICKETS_PHYSICS.md — Vehicle physics, CharacterController
-- TICKETS_AUDIO.md — Streaming, spatial audio
-- TICKETS_SCRIPTING.md — Script commands
-- TICKETS_GAMEPLAY.md — Player, vehicles, AI
-- TICKETS_UI.md — Frontend, HUD
-- TICKETS_TOOLS.md — Tools, codegen, Ghidra
+**Single source of truth: [BACKLOG.md](BACKLOG.md)** — verified statuses (DONE/PARTIAL/TODO),
+canonical IDs, epics broken into sub-tickets, and a crosswalk from the old IDs.
+
+> The previous per-module `TICKETS_*.md`, `MICRO_TICKETS.md` and `TICKETS_RESTANTS.md` files
+> (three conflicting ID generations of the same backlog) were consolidated into BACKLOG.md
+> on 2026-06-23 and removed. Recover them from git history if needed.
