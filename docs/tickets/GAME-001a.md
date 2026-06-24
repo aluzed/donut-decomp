@@ -1,6 +1,6 @@
 # GAME-001a — Extraire GameInput (lectures SDL clavier/souris/manette → struct d'intentions)
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P1
 - **Module:** Game
 - **Depends on:** —

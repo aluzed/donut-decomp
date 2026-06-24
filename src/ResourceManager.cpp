@@ -9,10 +9,10 @@
 
 #include "Render/OpenGL/glad/glad.h"
 #include "Render/imgui/imgui.h"
+#include "Core/Log.h"
 
 #include <chrono>
 #include <ctime>
-#include <fmt/format.h>
 
 namespace Donut
 {
@@ -23,7 +23,7 @@ ResourceManager::~ResourceManager() = default;
 void ResourceManager::LoadTexture(const P3D::Texture& texture)
 {
 	if (_textures.find(texture.GetName()) != _textures.end())
-		fmt::print("Texture {0} already loaded\n", texture.GetName());
+		Log::Warn("Texture {0} already loaded", texture.GetName());
 
 	_textures[texture.GetName()] = std::make_unique<Texture>(texture);
 }
@@ -31,7 +31,7 @@ void ResourceManager::LoadTexture(const P3D::Texture& texture)
 void ResourceManager::LoadTexture(const P3D::Sprite& sprite)
 {
 	if (_textures.find(sprite.GetName()) != _textures.end())
-		fmt::print("Sprite {0} already loaded\n", sprite.GetName());
+		Log::Warn("Sprite {0} already loaded", sprite.GetName());
 
 	_textures[sprite.GetName()] = std::make_unique<Texture>(sprite);
 }
@@ -39,7 +39,7 @@ void ResourceManager::LoadTexture(const P3D::Sprite& sprite)
 void ResourceManager::LoadShader(const P3D::Shader& shader)
 {
 	if (_shaders.find(shader.GetName()) != _shaders.end())
-		fmt::print("Shader {0} already loaded\n", shader.GetName());
+		Log::Warn("Shader {0} already loaded", shader.GetName());
 
 	_shaders[shader.GetName()] = std::make_unique<Shader>(shader);
 }
@@ -47,7 +47,7 @@ void ResourceManager::LoadShader(const P3D::Shader& shader)
 void ResourceManager::LoadSet(const P3D::Set& set)
 {
 	if (_textures.find(set.GetName()) != _textures.end())
-		fmt::print("Set {0} already loaded\n", set.GetName());
+		Log::Warn("Set {0} already loaded", set.GetName());
 
 	std::srand((uint32_t)std::time(0));
 	int idx = std::rand() % set.GetTextures().size();
@@ -57,7 +57,7 @@ void ResourceManager::LoadSet(const P3D::Set& set)
 void ResourceManager::LoadGeometry(const P3D::Geometry& geo)
 {
 	if (_geometries.find(geo.GetName()) != _geometries.end())
-		fmt::print("Geometry {0} already loaded\n", geo.GetName());
+		Log::Warn("Geometry {0} already loaded", geo.GetName());
 
 	_geometries[geo.GetName()] = std::make_unique<Mesh>(geo);
 }
@@ -123,7 +123,7 @@ Shader* ResourceManager::GetShader(const std::string& name) const
 {
 	if (_shaders.find(name) == _shaders.end())
 	{
-		fmt::print("could not find shader {0}\n", name);
+		Log::Warn("could not find shader {0}", name);
 		return nullptr; // todo: return an error shader
 	}
 
@@ -135,7 +135,7 @@ Shader* ResourceManager::GetShader(const std::string& name) const
 		shader->SetDiffuseTexture(_textures.at(texName).get());
 	else
 	{
-		fmt::print("could not find texture {1} for shader {0}\n", name, texName);
+		Log::Warn("could not find texture {1} for shader {0}", name, texName);
 		shader->SetDiffuseTexture(_textures.begin()->second.get()); // todo: set an error texture
 	}
 

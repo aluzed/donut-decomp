@@ -5,7 +5,6 @@
 #include <Core/Log.h>
 #include <Game.h>
 #include <Scripting/ScriptEngine.h>
-#include <fmt/format.h>
 
 namespace Donut
 {

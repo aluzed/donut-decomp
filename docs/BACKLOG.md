@@ -59,13 +59,13 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 ### CORE — nettoyage (P3)
 | ID | Statut | Sujet | Pointeur |
 |---|---|---|---|
-| CORE-014 | ⬜ | Log : Warn/Error→stderr, filtrage niveau, remplacer `cout`/`printf` épars | `Core/Log.h` |
-| CORE-015 | ⬜ | Retirer includes `<iostream>`/`<fmt>` superflus → `Core/Log.h` | multiple |
+| CORE-014 | ✅ | Log : Warn/Error→stderr, filtrage niveau, remplacer `cout`/`printf` épars | `Core/Log.h` |
+| CORE-015 | ✅ | Retirer includes `<iostream>`/`<fmt>` superflus → `Core/Log.h` | multiple |
 
 ### P3D — chunks manquants (additif, déjà bien scopé)
 | ID | Statut | Pri | Sujet |
 |---|---|---|---|
-| P3D-013 | ⬜ | P3 | `GetShaderTexture()` — **faux bug** : 0 occurrence dans `src/` (ni déclaration ni appel). Ticket = confirmer et clore. Rétrogradé de P0 |
+| P3D-013 | ✅ | P3 | `GetShaderTexture()` — **faux bug** : 0 occurrence dans `src/` (ni déclaration ni appel). Ticket = confirmer et clore. Rétrogradé de P0 |
 | P3D-001 | ⬜ | P1 | Particle System (8 chunks) — fumée/feu/nitro |
 | P3D-006 | ⬜ | P1 | Entity variants (`AnimDynamicPhysicsWrapper`, `AnimCollision`…) |
 | P3D-008 | ⬜ | P1 | Spline / LocatorMatrix / SurfaceTypeList |
@@ -90,7 +90,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 | RENDER-011 | ⬜ | P2 | Billboards WorldSphere (lens flare, halo soleil) | `WorldSphere.cpp` — commenté |
 | RENDER-014 | ⬜ | P2 | Multi-UV (canal 1 = lightmap) | prérequis RENDER-015 |
 | RENDER-015 | ⬜ | P2 | Lightmaps / éclairage statique | dépend RENDER-014 |
-| RENDER-013 | ⬜ | P3 | Cache/précompilation shaders | recompile à chaque lancement |
+| RENDER-013 | ✅ | P3 | Cache/précompilation shaders | recompile à chaque lancement |
 | RENDER-008 | 🧩 | P2 | LOD + culling spatial | → § C.3 |
 | RENDER-009 | 🧩 | P3 | Pipeline post-process | → § C.4 (FBO `_sceneFBO` alloué jamais rendu, `Game.h:116-117`) |
 
@@ -99,7 +99,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 |---|---|---|---|---|
 | PHYS-004 | ⬜ | P1 | Callbacks collision (damage / pickup / sound) | seules les vérifs manifold/pénétration existent |
 | PHYS-011 | ⬜ | P1 | Corps rigides dynamiques pour `AnimDynamicPhysics` | `Level.cpp:149-169` — instancié visuellement, **pas de body** |
-| PHYS-005 | ⬜ | P2 | Utiliser `BulletFenceShape` au lieu de `btBoxShape` | `AddP3DFence` |
+| PHYS-005 | ✅ | P2 | Utiliser `BulletFenceShape` au lieu de `btBoxShape` | `AddP3DFence` |
 | PHYS-008 | ⬜ | P2 | Frictions par surface (route/herbe/trottoir) | actuellement `_tireGrip` figé, pas de système matériau |
 
 ### AUDIO
@@ -107,9 +107,9 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 |---|---|---|---|---|
 | AUDIO-002 | 🟡 | P1 | **Finir** streaming musique double-buffer | `MusicSource` déclaré (`AudioManager.h:71-79`), `PlayMusic()` incomplet |
 | AUDIO-007 | 🟡 | P2 | Dialogue : **sous-titres** + lip sync | queue priorité ✅ ; sous-titres **absents** |
-| AUDIO-006 | ⬜ | P3 | Auto-scan dossier `audio/` (au lieu de 10 noms en dur) | constructeur |
+| AUDIO-006 | ✅ | P3 | Auto-scan dossier `audio/` (au lieu de 10 noms en dur) | constructeur |
 | AUDIO-008 | ⬜ | P3 | EFX reverb par zone (intérieur/extérieur) | |
-| AUDIO-009 | ⬜ | P3 | Son de klaxon (actuellement `Game.cpp:508` log « HONK! ») | quick win |
+| AUDIO-009 | ✅ | P3 | Son de klaxon (actuellement `Game.cpp:508` log « HONK! ») | quick win |
 
 ### AI
 | ID | Statut | Pri | Sujet | Note |
@@ -169,7 +169,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 
 | Sous-ticket | Sujet | Critère d'acceptation |
 |---|---|---|
-| GAME-001a | Extraire `GameInput` (lecture clavier/souris/manette → struct d'intentions) | `Game::Run` n'appelle plus SDL directement ; jeu jouable à l'identique |
+| GAME-001a | ✅ | Extraire `GameInput` (lecture clavier/souris/manette → struct d'intentions) | `Game::Run` n'appelle plus SDL directement ; jeu jouable à l'identique |
 | GAME-001b | Extraire `GameCamera` (logique orbite/follow/freecam, ~150 l. de `Game.cpp:403-554`) | aucune var `_cam*` dans `Game` ; caméra identique |
 | GAME-001c | Extraire `GameHud`/`GameUiRenderer` (rendu HUD + menus + texte d'aide) | tout le draw 2D hors `Game::Run` |
 | GAME-001d | Extraire `GameStateMachine` (splash/menu/ingame/pause/result) | transitions pilotées par un enum + table, pas par `if` épars |
@@ -205,8 +205,8 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 
 | Sous-ticket | Sujet | Pri | Critère |
 |---|---|---|---|
-| FX-000 | Câbler le pipeline FBO (scène→`_sceneFBO`→quad plein écran) | P2 | prérequis ; image identique en passthrough |
-| FX-002 | Vignette | P3 | bords assombris réglables |
+| FX-000 | ✅ Câbler le pipeline FBO (scène→`_sceneFBO`→quad plein écran) | P2 | prérequis ; image identique en passthrough |
+| FX-002 | ✅ Vignette | P3 | bords assombris réglables |
 | FX-005 | Color grading LUT 16³ | P3 | contraste/saturation ajustés |
 | FX-001 | Bloom (blur gaussien 2 passes) | P3 | halo sur sources vives |
 | FX-004 | Shadow mapping (depth FBO directionnel) = ex-RENDER-012 | P3 | ombres portées du soleil |

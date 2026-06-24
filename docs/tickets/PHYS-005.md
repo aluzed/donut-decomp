@@ -1,6 +1,6 @@
 # PHYS-005 — Utiliser BulletFenceShape au lieu de btBoxShape dans AddP3DFence
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P2
 - **Module:** Physics
 - **Depends on:** —

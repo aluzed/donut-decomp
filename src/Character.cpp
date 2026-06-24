@@ -10,7 +10,7 @@
 #include <Render/SkinModel.h>
 #include <Skeleton.h>
 #include "Core/FileSystem.h"
-#include <fmt/format.h>
+#include "Core/Log.h"
 
 namespace Donut
 {
@@ -49,7 +49,7 @@ void Character::LoadModel(const std::string& name)
 		case P3D::ChunkType::MultiController:
 		case P3D::ChunkType::Animation:
 		case P3D::ChunkType::FrameController: break;
-		default: fmt::print("unhandled chunk {:#x} in character {}\n", static_cast<uint32_t>(chunk->GetType()), name); break;
+		default: Log::Warn("unhandled chunk {:#x} in character {}", static_cast<uint32_t>(chunk->GetType()), name); break;
 		}
 	}
 }

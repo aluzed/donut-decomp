@@ -15,3 +15,6 @@ art/audio/*.rcf
 
 # runtime-generated control bindings
 keymap.conf
+
+# runtime-generated shader binary cache
+/cache/

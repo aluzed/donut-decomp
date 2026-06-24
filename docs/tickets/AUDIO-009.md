@@ -1,6 +1,6 @@
 # AUDIO-009 — Son de klaxon
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P3
 - **Module:** Audio
 - **Depends on:** —

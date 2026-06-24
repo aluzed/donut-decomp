@@ -11,6 +11,7 @@
 #include "FreeCamera.h"
 #include "FrontendProject.h"
 #include "Game/CollectibleManager.h"
+#include "Game/GameInput.h"
 #include "Input/Input.h"
 #include "Input/Keymap.h"
 #include "AI/PathGraph.h"
@@ -27,6 +28,8 @@
 #include "Render/LineRenderer.h"
 #include "Render/OpenGL/FrameBuffer.h"
 #include "Render/OpenGL/ShaderProgram.h"
+#include "Render/OpenGL/VertexBuffer.h"
+#include "Render/OpenGL/VertexBinding.h"
 #include "Render/OpenGL/glad/glad.h"
 #include "Render/Shader.h"
 #include "Render/SimpleMesh.h"
@@ -43,10 +46,9 @@
 #include "Window.h"
 
 #include <SDL.h>
-#include <fmt/format.h>
+#include "Core/Log.h"
 
 #include <array>
-#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -90,7 +92,7 @@ void GLAPIENTRY MessageCallback(GLenum source, GLenum type, GLuint id, GLenum se
                                 const void* userParam)
 {
 	if (type == GL_DEBUG_TYPE_ERROR)
-		fprintf(stderr, "GL CALLBACK: ** GL ERROR ** severity = 0x%x, message = %s\n", severity, message);
+		Log::Warn("GL CALLBACK: ** GL ERROR ** severity = 0x{:x}, message = {}", severity, message);
 }
 
 Game::Game(int argc, char** argv)
@@ -170,6 +172,8 @@ Game::Game(int argc, char** argv)
 	_pedestrianManager = std::make_unique<PedestrianManager>(*_worldPhysics);
 	_collectibleManager = std::make_unique<CollectibleManager>(*_level, *_lineRenderer);
 	_collectibleManager->SpawnOnPath();
+	_gameInput = std::make_unique<GameInput>();
+	Input::CaptureTextEntry(this, &Game::OnInputTextEntry);
 
 
 	const auto skinVertSrc = File::ReadAll("shaders/skin.vert");
@@ -226,8 +230,6 @@ Game::Game(int argc, char** argv)
 
 	_camera->SetZNear(1.0f);
 	_camera->SetZFar(100000.0f);
-
-	_mouseLocked = false;
 
 	_mainMenu = std::make_unique<GameMenu>();
 	_mainMenu->AddButton("New Game", 0, 0, 200, 40, [this]() {
@@ -305,23 +307,9 @@ void Game::LoadModel(const std::string& name, const std::string& anim)
 
 void Game::LockMouse(bool lockMouse)
 {
-	if (_mouseLocked == lockMouse)
+	if (!_gameInput)
 		return;
-
-	_mouseLocked = lockMouse;
-
-	SDL_SetRelativeMouseMode(lockMouse ? SDL_TRUE : SDL_FALSE);
-
-	if (lockMouse)
-	{
-		SDL_GetMouseState(&_lockedMousePosX, &_lockedMousePosY);
-	}
-
-	int w, h;
-	SDL_GetWindowSize(static_cast<SDL_Window*>(*_window), &w, &h);
-	SDL_WarpMouseInWindow(static_cast<SDL_Window*>(*_window), w / 2, h / 2);
-
-	Input::ResetMouseDelta();
+	_gameInput->LockMouse(static_cast<SDL_Window*>(*_window), lockMouse);
 }
 
 void Game::SetPlayerPosition(const Vector3& pos)
@@ -362,6 +350,86 @@ std::vector<std::pair<std::string, std::string>> models {
 
 void Game::OnInputTextEntry(const std::string& text) {}
 
+void Game::ensureFullscreenQuad()
+{
+	if (_fullscreenQuadVB)
+		return;
+
+	// Two triangles in NDC (xyz), covering the whole screen. The postprocess
+	// vertex shader derives texCoord from position.xy so we only need positions.
+	const float quad[] = {
+		-1.0f, -1.0f, 0.0f,
+		1.0f, -1.0f, 0.0f,
+		1.0f, 1.0f, 0.0f,
+		-1.0f, -1.0f, 0.0f,
+		1.0f, 1.0f, 0.0f,
+		-1.0f, 1.0f, 0.0f,
+	};
+
+	_fullscreenQuadVB = std::make_shared<GL::VertexBuffer>(quad, 6, sizeof(float) * 3);
+	_fullscreenQuadBinding = std::make_shared<GL::VertexBinding>();
+	GL::ArrayElement element(_fullscreenQuadVB.get(), 0, 3, GL::AE_FLOAT, sizeof(float) * 3, 0);
+	_fullscreenQuadBinding->Create(&element, 1, *_fullscreenQuadVB);
+}
+
+void Game::ensureSceneFBO(int width, int height)
+{
+	if (width <= 0 || height <= 0)
+		return;
+
+	if (!_sceneFBO)
+	{
+		GL::FrameBuffer::Format format;
+		format.EnableColourBuffer(true, 1);
+		format.EnableDepthBuffer(true, true);
+		_sceneFBO = std::make_unique<GL::FrameBuffer>(width, height, format);
+		_sceneFboW = width;
+		_sceneFboH = height;
+	}
+	else if (width != _sceneFboW || height != _sceneFboH)
+	{
+		_sceneFBO->SetSize(width, height);
+		_sceneFboW = width;
+		_sceneFboH = height;
+	}
+}
+
+void Game::blitSceneToBackbuffer(int width, int height)
+{
+	if (!_sceneFBO || !_postProcessShader || !_fullscreenQuadBinding)
+		return;
+
+	GL::FrameBuffer::Unbind();
+	glViewport(0, 0, width, height);
+
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+
+	_postProcessShader->Bind();
+
+	// Passthrough by default: neutralise every effect so the image is identical
+	// to a direct render. Individual FX tickets raise the relevant uniforms.
+	glActiveTexture(GL_TEXTURE0);
+	// The world renderer leaves a sampler object bound to unit 0; it requests
+	// mipmapped filtering, which makes our single-level FBO colour texture
+	// sampler-incomplete (every fetch returns black). Detach it so the
+	// texture's own GL_LINEAR parameters apply for the post-process pass.
+	glBindSampler(0, 0);
+	_sceneFBO->BindColorTexture(0);
+	_postProcessShader->SetUniformValue("sceneTex", 0);
+	_postProcessShader->SetUniformValue("screenSize", Vector2(static_cast<float>(width), static_cast<float>(height)));
+	_postProcessShader->SetUniformValue("bloomIntensity", 0.0f);
+	_postProcessShader->SetUniformValue("vignetteIntensity", _vignetteIntensity);
+	_postProcessShader->SetUniformValue("contrast", 1.0f);
+	_postProcessShader->SetUniformValue("saturation", 1.0f);
+
+	_fullscreenQuadBinding->Bind();
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	_fullscreenQuadBinding->Unbind();
+
+	glEnable(GL_DEPTH_TEST);
+}
+
 void Game::Run()
 {
 	// measure our delta time
@@ -376,9 +444,6 @@ void Game::Run()
 
 	auto animCamera = AnimCamera::LoadP3D("art/missions/level01/mission0cam.p3d");
 
-	Input::CaptureTextEntry(this, &Game::OnInputTextEntry);
-
-	SDL_Event event;
 	bool running = true;
 	while (running)
 	{
@@ -387,28 +452,22 @@ void Game::Run()
 
 		deltaTime = ((now - last) / (double)SDL_GetPerformanceFrequency());
 		timer.Update(deltaTime);
+		if (_hornCooldown > 0.0f)
+			_hornCooldown = std::max(0.0f, _hornCooldown - static_cast<float>(deltaTime));
 
-		Input::PreEvent();
-
-		while (SDL_PollEvent(&event))
-		{
-			if (event.type == SDL_QUIT)
-				running = false;
-
-			ImGui_ImplSDL2_ProcessEvent(&event);
-
-			Input::HandleEvent(event);
-		}
+		GameIntent intent = _gameInput->Poll(static_cast<SDL_Window*>(*_window));
+		if (intent.requestQuit)
+			running = false;
 
 		// Third-person camera: capture the mouse during on-foot gameplay so its
 		// motion orbits the camera around the character. The camera no longer
 		// follows the character's facing — only the mouse turns it.
 		const bool onFoot = (_gameState == GameState::InGame) && _character && !_inVehicle;
 		LockMouse(onFoot);
-		if (onFoot && _mouseLocked)
+		if (onFoot && _gameInput->IsMouseLocked())
 		{
-			_camYaw += Input::GetMouseDeltaX() * 0.005f;
-			_camPitch -= Input::GetMouseDeltaY() * 0.005f; // mouse up -> look up
+			_camYaw += intent.mouseDX * 0.005f;
+			_camPitch -= intent.mouseDY * 0.005f; // mouse up -> look up
 			if (_camPitch < -1.0f) _camPitch = -1.0f; // steep down
 			if (_camPitch > 0.2f) _camPitch = 0.2f;    // slightly up
 		}
@@ -417,12 +476,12 @@ void Game::Run()
 		{
 			auto& ctrl = _character->GetCharacterController();
 			auto charMove = Vector3::Zero;
-			charMove += Vector3::Forward * Input::GetActionAxis(GameAction::MoveForward);
-			charMove += Vector3::Backward * Input::GetActionAxis(GameAction::MoveBackward);
-			charMove += Vector3::Left * Input::GetActionAxis(GameAction::MoveLeft);
-			charMove += Vector3::Right * Input::GetActionAxis(GameAction::MoveRight);
+			charMove += Vector3::Forward * intent.moveForward;
+			charMove += Vector3::Backward * intent.moveBackward;
+			charMove += Vector3::Left * intent.moveLeft;
+			charMove += Vector3::Right * intent.moveRight;
 
-			if (Input::JustPressed(GameAction::Interact))
+			if (intent.interact)
 			{
 				if (_scriptEngine->IsMissionActive())
 				{
@@ -444,7 +503,7 @@ void Game::Run()
 					ctrl.jump(btVector3(0, 0, 0));
 			}
 
-			if (Input::JustPressed(GameAction::DebugTeleportToVehicle) && _scriptEngine->IsMissionActive())
+			if (intent.debugTeleportToVehicle && _scriptEngine->IsMissionActive())
 			{
 				for (auto& v : _scriptEngine->GetMissionVehicles())
 				{
@@ -498,18 +557,23 @@ void Game::Run()
 				}
 			}
 
-			if (Input::JustPressed(GameAction::Interact))
+			if (intent.interact)
 			{
 				_inVehicle = false;
 				SetPlayerPosition(_activeVehicle->GetPosition() + Vector3(3.0f, 0, 0));
 				_activeVehicle = nullptr;
 				Log::Info("Game: exited vehicle");
 			}
-			else if (Input::JustPressed(GameAction::Honk))
+		else if (intent.honk)
+		{
+			if (_hornCooldown <= 0.0f)
 			{
-				Log::Info("Vehicle: HONK!");
+				auto horn = SoundGenerator::Horn(0.4f);
+				_audioManager->PlayRaw(horn, 22050, 1, 16);
+				_hornCooldown = 0.4f;
 			}
-			else if (Input::JustPressed(GameAction::VehicleJump))
+		}
+			else if (intent.vehicleJump)
 			{
 				_activeVehicle->Jump();
 				_shakeAmount = 1.0f;
@@ -518,17 +582,17 @@ void Game::Run()
 			{
 				// throttle/brake are 0..1, steer is -1..1 (right minus left);
 				// keyboard gives full deflection, sticks/triggers scale analogically
-				float throttle = Input::GetActionAxis(GameAction::MoveForward);
-				float brake = Input::GetActionAxis(GameAction::MoveBackward);
-				float steer = Input::GetActionAxis(GameAction::MoveRight) - Input::GetActionAxis(GameAction::MoveLeft);
-				float boost = Input::IsActionDown(GameAction::Boost) ? 3.0f : 1.0f;
+				float throttle = intent.moveForward;
+				float brake = intent.moveBackward;
+				float steer = intent.moveRight - intent.moveLeft;
+				float boost = intent.boostHeld ? 3.0f : 1.0f;
 				_activeVehicle->ApplyInput(throttle, steer, brake, boost);
 			}
 		}
 
 		auto cameraTransform = animCamera->Update(deltaTime * 35.0);
 
-		if (_inVehicle && _activeVehicle && !_mouseLocked)
+		if (_inVehicle && _activeVehicle && !_gameInput->IsMouseLocked())
 		{
 			auto vehPos = _activeVehicle->GetPosition();
 			auto vehRot = _activeVehicle->GetRotation();
@@ -605,7 +669,7 @@ void Game::Run()
 
 		if (_gameState == GameState::Splash)
 		{
-			if (Input::JustPressed(GameAction::UIConfirm) || Input::JustPressed(GameAction::PauseToggle))
+			if (intent.uiConfirm || intent.pauseToggle)
 			{
 				_gameState = GameState::MainMenu;
 				_missionCompleteTimer = 0.0;
@@ -746,7 +810,7 @@ void Game::Run()
 		debugAboutMenu();
 		drawControlsWindow();
 
-		if (Input::JustPressed(GameAction::PauseToggle))
+		if (intent.pauseToggle)
 		{
 			if (_gameState == GameState::InGame)
 				_gameState = GameState::Paused;
@@ -754,19 +818,19 @@ void Game::Run()
 				_gameState = GameState::InGame;
 		}
 
-		if (Input::JustPressed(GameAction::ResetBestTime) && _gameState == GameState::InGame)
+		if (intent.resetBest && _gameState == GameState::InGame)
 		{
 			_scriptEngine->ResetBestTime();
 			Log::Info("Game: best time reset!");
 		}
 
-		if (_gameState == GameState::Paused && Input::JustPressed(GameAction::QuitGame))
+		if (_gameState == GameState::Paused && intent.quit)
 		{
 			running = false;
 			Log::Info("Game: quit from pause menu");
 		}
 
-		if (Input::JustPressed(GameAction::RestartMission) && _gameState == GameState::InGame)
+		if (intent.restart && _gameState == GameState::InGame)
 		{
 			Log::Info("Game: restarting mission...");
 			_scriptEngine->CleanupMission();
@@ -778,13 +842,13 @@ void Game::Run()
 				_scriptEngine->RunFile("scripts/Missions/level01/m1.con");
 		}
 
-		if (Input::JustPressed(GameAction::ToggleDebugDraw))
+		if (intent.toggleDebug)
 		{
 			_showDebug = !_showDebug;
 			Log::Info("Debug draw: {}", _showDebug ? "ON" : "OFF");
 		}
 
-		if (Input::JustPressed(GameAction::ToggleHelp))
+		if (intent.toggleHelp)
 		{
 			_showHelp = !_showHelp;
 		}
@@ -815,6 +879,16 @@ void Game::Run()
 		}
 		ImGui::End();
 
+		// Post-FX debug controls (FX-002 vignette, etc.).
+		ImGui::SetNextWindowBgAlpha(0.35f);
+		ImGui::SetNextWindowSize(ImVec2(220, 0), ImGuiCond_Once);
+		if (ImGui::Begin("Post-FX", NULL,
+		                 ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::SliderFloat("Vignette", &_vignetteIntensity, 0.0f, 1.0f);
+		}
+		ImGui::End();
+
 		if (_character != nullptr)
 			_character->Update(deltaTime);
 
@@ -822,6 +896,13 @@ void Game::Run()
 
 		int viewportWidth = (int)io.DisplaySize.x;
 		int viewportHeight = (int)io.DisplaySize.y;
+
+		// Render the 3D scene into an offscreen FBO so a post-process pass can
+		// sample it (FX-000). The HUD/ImGui are drawn afterwards on the
+		// backbuffer so they are not filtered.
+		ensureFullscreenQuad();
+		ensureSceneFBO(viewportWidth, viewportHeight);
+		_sceneFBO->Bind();
 
 		glViewport(0, 0, viewportWidth, viewportHeight);
 
@@ -924,6 +1005,10 @@ void Game::Run()
 		_lineRenderer->Flush(viewProjection);
 		glEnable(GL_DEPTH_TEST);
 
+		// Scene complete: blit the FBO to the backbuffer through the
+		// post-process shader (passthrough when all effects are neutralised).
+		blitSceneToBackbuffer(viewportWidth, viewportHeight);
+
 		Matrix4x4 proj = Matrix4x4::MakeOrtho(0.0f, viewportWidth, viewportHeight, 0.0f);
 
 		if (_textureFontP3D != nullptr)
@@ -1009,7 +1094,7 @@ void Game::Run()
 
 			if (_inVehicle)
 			{
-				const bool pad = Input::IsGamepadConnected();
+				const bool pad = intent.gamepadConnected;
 				std::string ctrlText = fmt::format("{}: Drive | {}: Boost | {}: Horn | {}: Exit",
 					ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Boost, pad),
 					ControlLabel(GameAction::Honk, pad), ControlLabel(GameAction::Interact, pad));
@@ -1036,7 +1121,7 @@ void Game::Run()
 			}
 			else if (_gameState == GameState::InGame)
 			{
-				const bool pad = Input::IsGamepadConnected();
+				const bool pad = intent.gamepadConnected;
 				std::string ctrlText = fmt::format("{}: Move | {}: Action | {}: Restart | {}: Pause",
 					ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Interact, pad),
 					ControlLabel(GameAction::RestartMission, pad), ControlLabel(GameAction::PauseToggle, pad));
@@ -1098,7 +1183,7 @@ void Game::Run()
 				sprites.DrawText(font, "PAUSED",
 					Vector2((viewportWidth / 2.0f) - 40, viewportHeight / 2.0f + 40),
 					Vector4(1.0f, 1.0f, 0.0f, 1.0f));
-				_pauseMenu->Update(Input::GetMouseX(), Input::GetMouseY());
+				_pauseMenu->Update(intent.mouseX, intent.mouseY);
 				for (const auto& btn : _pauseMenu->GetButtons())
 				{
 					Vector4 col = btn.hovered ? Vector4(1.0f, 0.3f, 0.3f, 1.0f)
@@ -1108,8 +1193,8 @@ void Game::Run()
 						        viewportHeight / 2.0f + 20.0f - (&btn - _pauseMenu->GetButtons().data()) * 30.0f),
 						col);
 				}
-				if (Input::JustPressed(GameAction::UIClick))
-					_pauseMenu->CheckClick(Input::GetMouseX(), Input::GetMouseY());
+				if (intent.uiClick)
+					_pauseMenu->CheckClick(intent.mouseX, intent.mouseY);
 				sprites.Flush(proj);
 				_window->Swap();
 				continue;
@@ -1170,7 +1255,7 @@ void Game::Run()
 			menuSprites.DrawText(font, "donut",
 				Vector2((viewportWidth / 2.0f) - 30, viewportHeight / 2.0f + 80),
 				Vector4(1.0f, 0.84f, 0.0f, 1.0f));
-			_mainMenu->Update(Input::GetMouseX(), Input::GetMouseY());
+			_mainMenu->Update(intent.mouseX, intent.mouseY);
 			int btnIndex = 0;
 			for (const auto& btn : _mainMenu->GetButtons())
 			{
@@ -1182,8 +1267,8 @@ void Game::Run()
 					col);
 				++btnIndex;
 			}
-			if (Input::JustPressed(Button::MouseLeft))
-				_mainMenu->CheckClick(Input::GetMouseX(), Input::GetMouseY());
+			if (intent.mouseLeftClick)
+				_mainMenu->CheckClick(intent.mouseX, intent.mouseY);
 			menuSprites.Flush(proj);
 		}
 

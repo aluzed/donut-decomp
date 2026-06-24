@@ -11,18 +11,140 @@
 #include "Core/Math/Vector4.h"
 
 #include <cassert>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
+#include <filesystem>
+#include <functional>
+#include <vector>
 
 namespace Donut::GL
 {
+
+namespace
+{
+
+// On-disk cache layout: a short header (magic + binary format) followed by the
+// raw program blob. Keyed by a hash of the GLSL sources so any edit invalidates.
+constexpr uint32_t kCacheMagic = 0x4453544Bu; // "DSTK" (donut shader cache)
+
+std::filesystem::path cachePathFor(uint64_t hash)
+{
+	return std::filesystem::path("cache") / "shaders" / (std::to_string(hash) + ".bin");
+}
+
+uint64_t sourceHash(const std::string& vert, const std::string& frag)
+{
+	uint64_t h = 1469598103934665603ull; // FNV-1a offset basis
+	auto mix = [&](const std::string& s) {
+		for (unsigned char c : s)
+		{
+			h ^= c;
+			h *= 1099511628211ull;
+		}
+		h ^= '|';
+		h *= 1099511628211ull;
+	};
+	mix(vert);
+	mix(frag);
+	return h;
+}
+
+bool cacheDisabled()
+{
+	return std::getenv("DONUT_NO_SHADER_CACHE") != nullptr;
+}
+
+bool tryLoadFromCache(GLuint program, uint64_t hash)
+{
+	if (cacheDisabled())
+		return false;
+
+	auto path = cachePathFor(hash);
+	std::ifstream in(path, std::ios::binary);
+	if (!in)
+		return false;
+
+	uint32_t magic = 0;
+	GLenum format = 0;
+	in.read(reinterpret_cast<char*>(&magic), sizeof(magic));
+	in.read(reinterpret_cast<char*>(&format), sizeof(format));
+	if (!in || magic != kCacheMagic)
+		return false;
+
+	std::vector<uint8_t> blob((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+	if (blob.empty())
+		return false;
+
+	glProgramBinary(program, format, blob.data(), static_cast<GLsizei>(blob.size()));
+
+	GLint linkStatus = GL_FALSE;
+	glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
+	return linkStatus == GL_TRUE;
+}
+
+void trySaveToCache(GLuint program, uint64_t hash)
+{
+	if (cacheDisabled())
+		return;
+
+	GLint length = 0;
+	glGetProgramiv(program, GL_PROGRAM_BINARY_LENGTH, &length);
+	if (length <= 0)
+		return;
+
+	std::vector<uint8_t> blob(static_cast<std::size_t>(length));
+	GLenum format = 0;
+	GLsizei written = 0;
+	glGetProgramBinary(program, length, &written, &format, blob.data());
+	if (written <= 0)
+		return;
+
+	auto path = cachePathFor(hash);
+	std::error_code ec;
+	std::filesystem::create_directories(path.parent_path(), ec);
+
+	std::ofstream out(path, std::ios::binary | std::ios::trunc);
+	if (!out)
+		return;
+	out.write(reinterpret_cast<const char*>(&kCacheMagic), sizeof(kCacheMagic));
+	out.write(reinterpret_cast<const char*>(&format), sizeof(format));
+	out.write(reinterpret_cast<const char*>(blob.data()), written);
+}
+
+} // namespace
 
 ShaderProgram::ShaderProgram(const std::string& vertexSource, const std::string& fragmentSource)
 {
 	_program = glCreateProgram();
 
 	assert(_program != 0);
+
+	const uint64_t hash = sourceHash(vertexSource, fragmentSource);
+
+	auto populateUniforms = [this]() {
+		int uniformCount = -1;
+		glGetProgramiv(_program, GL_ACTIVE_UNIFORMS, &uniformCount);
+		for (int i = 0; i < uniformCount; i++)
+		{
+			int name_len = -1, num = -1;
+			GLenum type = GL_ZERO;
+			char name[64];
+			glGetActiveUniform(_program, GLuint(i), sizeof(name) - 1, &name_len, &num, &type, name);
+			name[name_len] = 0;
+			_uniforms[std::string(name)] = glGetUniformLocation(_program, name);
+		}
+	};
+
+	// Fast path: reuse a previously cached program binary if the sources match.
+	if (tryLoadFromCache(_program, hash))
+	{
+		populateUniforms();
+		trySaveToCache(_program, hash); // refresh in case the driver changed format
+		return;
+	}
 
 	GLuint vertexShader = createSubShader(GL_VERTEX_SHADER, vertexSource.c_str());
 	GLuint fragmentShader = createSubShader(GL_FRAGMENT_SHADER, fragmentSource.c_str());
@@ -62,18 +184,10 @@ ShaderProgram::ShaderProgram(const std::string& vertexSource, const std::string&
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
 
-	int uniformCount = -1;
-	glGetProgramiv(_program, GL_ACTIVE_UNIFORMS, &uniformCount);
-	for (int i = 0; i < uniformCount; i++)
-	{
-		int name_len = -1, num = -1;
-		GLenum type = GL_ZERO;
-		char name[64];
-		glGetActiveUniform(_program, GLuint(i), sizeof(name) - 1, &name_len, &num, &type, name);
-		name[name_len] = 0;
+	populateUniforms();
 
-		_uniforms[std::string(name)] = glGetUniformLocation(_program, name);
-	}
+	// Warm the cache for next launch (best-effort, driver may not support it).
+	trySaveToCache(_program, hash);
 }
 
 ShaderProgram::~ShaderProgram()

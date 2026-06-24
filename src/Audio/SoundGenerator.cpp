@@ -105,4 +105,30 @@ std::vector<uint8_t> SoundGenerator::Engine(float rpm, float duration, int sampl
 	return data;
 }
 
+std::vector<uint8_t> SoundGenerator::Horn(float duration, int sampleRate)
+{
+	int numSamples = static_cast<int>(sampleRate * duration);
+	std::vector<uint8_t> data(numSamples * 2);
+
+	// Two-tone klaxon (~440 Hz + 587 Hz) with a soft attack and decay so it
+	// doesn't click. Mono 16-bit PCM matches the rest of SoundGenerator.
+	const float freqA = 440.0f;
+	const float freqB = 587.33f;
+
+	for (int i = 0; i < numSamples; ++i)
+	{
+		float t = static_cast<float>(i) / sampleRate;
+		float attack = std::min(1.0f, t / 0.02f);
+		float decay = std::max(0.0f, 1.0f - (t / duration));
+		float envelope = attack * decay;
+		float sample = (sinf(2.0f * 3.14159f * freqA * t) + sinf(2.0f * 3.14159f * freqB * t)) * 0.15f * envelope;
+
+		int16_t val = static_cast<int16_t>(std::max(-1.0f, std::min(1.0f, sample)) * 32767.0f);
+		data[i * 2] = val & 0xFF;
+		data[i * 2 + 1] = (val >> 8) & 0xFF;
+	}
+
+	return data;
+}
+
 } // namespace Donut

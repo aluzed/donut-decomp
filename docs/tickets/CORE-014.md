@@ -1,6 +1,6 @@
 # CORE-014 — Système de log : Warn/Error→stderr, filtrage par niveau, remplacer cout/printf épars
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P3
 - **Module:** Core
 - **Depends on:** —

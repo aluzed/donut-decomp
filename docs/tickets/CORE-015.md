@@ -1,6 +1,6 @@
 # CORE-015 — Supprimer les includes <iostream>/<fmt> superflus → Core/Log.h
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P3
 - **Module:** Core
 - **Depends on:** CORE-014

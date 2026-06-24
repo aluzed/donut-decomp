@@ -1,6 +1,6 @@
 # RENDER-013 — Cache binaire / précompilation des shaders
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P3
 - **Module:** Render
 - **Depends on:** —

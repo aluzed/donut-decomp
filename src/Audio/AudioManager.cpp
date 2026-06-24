@@ -381,10 +381,23 @@ void AudioManager::playOnSource(Source* src, const RCL::RSDFile& rsdFile)
 void AudioManager::discoverFiles(const std::string& directory, const std::string& extension)
 {
 	if (!FileSystem::exists(directory))
+	{
+		Log::Warn("Audio: directory '{}' not found, skipping scan", directory);
+		return;
+	}
+
+	if (!FileSystem::is_directory(directory))
 		return;
 
-	for (const auto& entry : FileSystem::directory_iterator(directory))
+	// Recursive scan: any RCF anywhere under the audio tree is picked up,
+	// so dropping a new file in a subdirectory requires no code change.
+	std::error_code ec;
+	for (const auto& entry : FileSystem::recursive_directory_iterator(directory, ec))
 	{
+		if (ec)
+			break;
+		if (!entry.is_regular_file())
+			continue;
 		auto path = entry.path();
 		if (path.extension() == extension)
 			LoadRCF(path.string());

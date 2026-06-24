@@ -41,6 +41,7 @@ class CollectibleManager;
 class FrontendProject;
 class SimpleMesh;
 class GameMenu;
+class GameInput;
 
 namespace P3D
 {
@@ -93,6 +94,9 @@ private:
 	void debugAboutMenu();
 	void drawControlsWindow();
 	void OnInputTextEntry(const std::string& text);
+	void ensureSceneFBO(int width, int height);
+	void ensureFullscreenQuad();
+	void blitSceneToBackbuffer(int width, int height);
 
 	std::unique_ptr<Window> _window;
 	std::unique_ptr<AudioManager> _audioManager;
@@ -107,6 +111,7 @@ private:
 	std::unique_ptr<PathGraph> _pathGraph;
 	std::unique_ptr<PedestrianManager> _pedestrianManager;
 	std::unique_ptr<CollectibleManager> _collectibleManager;
+	std::unique_ptr<GameInput> _gameInput;
 	std::unique_ptr<FrontendProject> _frontend;
 	std::unique_ptr<GL::ShaderProgram> _meshShader;
 	std::unique_ptr<SimpleMesh> _playerMesh;
@@ -117,6 +122,9 @@ private:
 	std::unique_ptr<GL::FrameBuffer> _sceneFBO;
 	std::shared_ptr<GL::VertexBuffer> _fullscreenQuadVB;
 	std::shared_ptr<GL::VertexBinding> _fullscreenQuadBinding;
+	int _sceneFboW = 0;
+	int _sceneFboH = 0;
+	float _vignetteIntensity = 0.0f;
 	std::unique_ptr<P3D::P3DFile> _animP3D;
 	std::unique_ptr<P3D::P3DFile> _globalP3D;
 	std::unique_ptr<P3D::TextureFont> _textureFontP3D;
@@ -125,14 +133,12 @@ private:
 
 	std::unique_ptr<GL::ShaderProgram> _skinShaderProgram;
 
-	bool _mouseLocked;
-	int _lockedMousePosX;
-	int _lockedMousePosY;
 	bool _showDebug = true;
 	bool _showHelp = false;
 	float _health = 100.0f;
 	float _shakeAmount = 0.0f;
 	float _prevVehicleY = 0.0f;
+	float _hornCooldown = 0.0f;
 
 	GameState _gameState = GameState::InGame;
 	bool _inVehicle = false;

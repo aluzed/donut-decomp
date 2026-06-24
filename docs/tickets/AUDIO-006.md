@@ -1,6 +1,6 @@
 # AUDIO-006 — Auto-scan du répertoire `audio/`
 
-- **Status:** TODO
+- **Status:** DONE
 - **Priority:** P3
 - **Module:** Audio
 - **Depends on:** —

@@ -201,14 +201,20 @@ void WorldPhysics::AddP3DCylinder(const P3D::CollisionCylinder& cylinder)
 
 void WorldPhysics::AddP3DFence(const P3D::Fence& fence)
 {
+	// BulletFenceShape stores LOCAL coordinates relative to the collision
+	// object's world transform. We anchor the transform at the fence start so
+	// the shape is expressed in that local frame (start = origin, end = delta).
+	const btVector3 start = BulletCast<btVector3>(fence.GetStart());
+	const btVector3 end = BulletCast<btVector3>(fence.GetEnd());
+
 	auto fenceShape = new BulletFenceShape(
-		BulletCast<btVector3>(fence.GetStart()),
-		BulletCast<btVector3>(fence.GetEnd()),
+		btVector3(0, 0, 0),
+		end - start,
 		BulletCast<btVector3>(fence.GetNormal()));
 
 	btTransform worldTransform;
 	worldTransform.setIdentity();
-	worldTransform.setOrigin(BulletCast<btVector3>(fence.GetStart()));
+	worldTransform.setOrigin(start);
 
 	auto colObj = new btCollisionObject();
 	colObj->setCollisionShape(fenceShape);
