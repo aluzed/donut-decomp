@@ -15,6 +15,6 @@ Le constructeur d'`AudioManager` charge une liste de ~10 noms de fichiers RCF co
 - Gérer proprement répertoire absent / liste vide (log d'avertissement, pas de crash) et éviter les doubles chargements.
 
 ## Critères d'acceptation
-- [ ] Tous les RCF présents dans `audio/` sont chargés automatiquement, sans liste codée en dur.
-- [ ] Un nouveau fichier RCF déposé dans `audio/` est pris en compte au démarrage sans modification du code.
-- [ ] Un répertoire `audio/` vide ou absent ne provoque pas de crash.
+- [x] Tous les RCF présents dans `audio/` sont chargés automatiquement, sans liste codée en dur.
+- [x] Un nouveau fichier RCF déposé dans `audio/` est pris en compte au démarrage sans modification du code.
+- [x] Un répertoire `audio/` vide ou absent ne provoque pas de crash.

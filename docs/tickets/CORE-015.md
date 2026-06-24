@@ -16,7 +16,7 @@ De nombreux fichiers incluent directement `<iostream>` ou `<fmt/...>` alors qu'i
 4. Rebuild complet pour vérifier qu'aucun symbole `fmt`/`std::cout` n'était utilisé via include transitif supprimé.
 
 ## Critères d'acceptation
-- [ ] Plus de `#include <iostream>` superflus dans les fichiers applicatifs listés.
-- [ ] Plus de `#include <fmt/...>` directs hors `Core/Log.h` côté applicatif.
-- [ ] Les fichiers ayant besoin de log incluent `Core/Log.h`.
-- [ ] Le projet compile sans erreur après nettoyage.
+- [x] Plus de `#include <iostream>` superflus dans les fichiers applicatifs listés.
+- [x] Plus de `#include <fmt/...>` directs hors `Core/Log.h` côté applicatif.
+- [x] Les fichiers ayant besoin de log incluent `Core/Log.h`.
+- [x] Le projet compile sans erreur après nettoyage.

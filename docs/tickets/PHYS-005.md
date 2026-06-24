@@ -16,7 +16,7 @@
 4. Tester en collision contre une barrière (véhicule + personnage) que la réponse suit le plan et non une boîte.
 
 ## Critères d'acceptation
-- [ ] Les barrières utilisent `BulletFenceShape`, plus de `btBoxShape` pour ce cas.
-- [ ] `processAllTriangles` génère le quad orienté par `m_normal` (vérifié en debug draw).
-- [ ] La collision véhicule/personnage contre une barrière reste solide (pas de traversée).
-- [ ] Pas de régression sur `AddIntersect` pour les volumes réellement boîtes.
+- [x] Les barrières utilisent `BulletFenceShape`, plus de `btBoxShape` pour ce cas.
+- [x] `processAllTriangles` génère le quad orienté par `m_normal` (vérifié en debug draw).
+- [x] La collision véhicule/personnage contre une barrière reste solide (pas de traversée).
+- [x] Pas de régression sur `AddIntersect` pour les volumes réellement boîtes.

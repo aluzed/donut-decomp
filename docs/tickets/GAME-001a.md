@@ -26,7 +26,7 @@
    subsiste dans `Game::Run`.
 
 ## Critères d'acceptation
-- [ ] `Game::Run` n'appelle plus directement SDL (`SDL_PollEvent`, `SDL_*MouseMode`, etc.) ni `Input::*` ; tout passe par `GameInput`/`GameIntent`.
-- [ ] Le mapping des touches (clavier/souris/manette) est inchangé, rebind compris.
-- [ ] Le jeu se joue à l'identique (déplacement, véhicule, pause, debug toggles).
-- [ ] Le jeu compile et reste runnable à l'identique.
+- [x] `Game::Run` n'appelle plus directement SDL (`SDL_PollEvent`, `SDL_*MouseMode`, etc.) ni `Input::*` ; tout passe par `GameInput`/`GameIntent`.
+- [x] Le mapping des touches (clavier/souris/manette) est inchangé, rebind compris.
+- [x] Le jeu se joue à l'identique (déplacement, véhicule, pause, debug toggles).
+- [x] Le jeu compile et reste runnable à l'identique.

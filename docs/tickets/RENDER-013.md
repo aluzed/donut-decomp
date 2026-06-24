@@ -27,8 +27,8 @@ l'arrivée des passes FX (bloom/blur/LUT/shadow).
    éviter la duplication des `File::ReadAll(...) + make_unique` de `Game.cpp:175-185`.
 
 ## Critères d'acceptation
-- [ ] Au 2e lancement (cache chaud), aucun `glCompileShader` n'est appelé pour les
+- [x] Au 2e lancement (cache chaud), aucun `glCompileShader` n'est appelé pour les
       shaders inchangés.
-- [ ] Modifier un `.vert`/`.frag` invalide le cache et recompile.
-- [ ] Fallback transparent si `glProgramBinary` échoue (driver/format) — le jeu
+- [x] Modifier un `.vert`/`.frag` invalide le cache et recompile.
+- [x] Fallback transparent si `glProgramBinary` échoue (driver/format) — le jeu
       démarre quand même.

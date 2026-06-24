@@ -16,8 +16,8 @@
 4. Permettre de régler le niveau au démarrage (`main.cpp`, ex. via flag/env).
 
 ## Critères d'acceptation
-- [ ] `Log` supporte un niveau global filtrant (`SetLevel`).
-- [ ] Les messages sous le seuil ne sont pas imprimés.
-- [ ] `Warn`/`Error` sortent sur `stderr`, `Debug`/`Info` sur `stdout`.
-- [ ] Plus de `std::cout`/`printf` applicatifs hors `ThirdParty`/`imgui`.
-- [ ] Le niveau est réglable au démarrage.
+- [x] `Log` supporte un niveau global filtrant (`SetLevel`).
+- [x] Les messages sous le seuil ne sont pas imprimés.
+- [x] `Warn`/`Error` sortent sur `stderr`, `Debug`/`Info` sur `stdout`.
+- [x] Plus de `std::cout`/`printf` applicatifs hors `ThirdParty`/`imgui`.
+- [x] Le niveau est réglable au démarrage.

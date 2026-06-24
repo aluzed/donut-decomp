@@ -15,6 +15,6 @@
 - Jouer le son en 3D à la position du véhicule (`PlayAudio(name, position)`, `AudioManager.h:45`) ; éviter le spam (anti-répétition pendant la durée du son).
 
 ## Critères d'acceptation
-- [ ] Appuyer sur la touche klaxon joue réellement un son (échantillon ou synthétisé).
-- [ ] Le son n'est plus un simple `Log::Info("HONK!")`.
-- [ ] Maintenir/spammer la touche ne sature pas le pool de sources audio.
+- [x] Appuyer sur la touche klaxon joue réellement un son (échantillon ou synthétisé).
+- [x] Le son n'est plus un simple `Log::Info("HONK!")`.
+- [x] Maintenir/spammer la touche ne sature pas le pool de sources audio.
