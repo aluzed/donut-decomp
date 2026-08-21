@@ -51,13 +51,13 @@ target_link_libraries(${PROJECT_NAME}
 		Bullet::Bullet
 		OpenAL::OpenAL
 		fmt::fmt
+		ZLIB::ZLIB
 	)
 
 if (UNIX)
 	target_link_libraries(${PROJECT_NAME}
 			PRIVATE
 			${CMAKE_DL_LIBS}
-			z
 		)
 endif()
 
