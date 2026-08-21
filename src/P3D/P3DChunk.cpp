@@ -7,6 +7,8 @@
 #define STBI_ONLY_PNG
 #include <ThirdParty/stb_image.h>
 
+#include <cstdint>
+
 namespace Donut::P3D
 {
 // just does png for now

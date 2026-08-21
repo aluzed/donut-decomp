@@ -4,6 +4,7 @@
 
 #include "Core/Math/Matrix4x4.h"
 
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <vector>

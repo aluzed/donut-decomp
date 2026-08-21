@@ -9,6 +9,8 @@
 #include <P3D/P3D.generated.h>
 #include <P3D/P3DFile.h>
 
+#include <cstdint>
+
 namespace Donut
 {
 AnimCamera::AnimCamera(const P3D::P3DChunk& chunk): _time(0.0)

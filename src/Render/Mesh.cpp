@@ -4,6 +4,7 @@
 #include <Render/Mesh.h>
 #include <Render/Shader.h>
 #include <Render/SkinModel.h>
+#include <cstdint>
 #include <vector>
 
 namespace Donut

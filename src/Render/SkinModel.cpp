@@ -5,6 +5,8 @@
 #include <Render/Shader.h>
 #include <Render/SkinModel.h>
 
+#include <cstdint>
+
 namespace Donut
 {
 

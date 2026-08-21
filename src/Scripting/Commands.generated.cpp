@@ -16,6 +16,8 @@
 
 #include "Commands.h"
 
+#include <cstdint>
+
 namespace Donut
 {
 static void Impl_HelloWorld()

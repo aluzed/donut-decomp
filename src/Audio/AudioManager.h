@@ -10,6 +10,7 @@
 #include <AL/alext.h>
 #include <AL/efx.h>
 
+#include <cstdint>
 #include <deque>
 #include <memory>
 #include <string>

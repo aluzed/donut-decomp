@@ -12,6 +12,7 @@
 #include "ResourceManager.h"
 
 #include <array>
+#include <cstdint>
 
 namespace Donut
 {

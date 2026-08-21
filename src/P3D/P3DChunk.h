@@ -6,6 +6,7 @@
 #include "Core/Math/Vector4.h"
 
 #include <fmt/format.h>
+#include <cstdint>
 #include <memory>
 #include <vector>
 #include <iostream>

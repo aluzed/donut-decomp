@@ -4,6 +4,7 @@
 #include <Render/SkinAnimation.h>
 #include <Skeleton.h>
 #include <cassert>
+#include <cstdint>
 
 namespace Donut
 {

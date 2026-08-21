@@ -3,6 +3,9 @@
 #include <P3D/P3D.generated.h>
 #include <Render/Texture.h>
 
+#include <cstdint>
+#include <cstring>
+
 namespace Donut
 {
 Texture::Texture(const P3D::Texture& texture)

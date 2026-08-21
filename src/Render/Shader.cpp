@@ -4,6 +4,8 @@
 #include <P3D/P3D.generated.h>
 #include <Render/Shader.h>
 
+#include <cstdint>
+
 namespace Donut
 {
 

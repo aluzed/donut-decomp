@@ -7,6 +7,8 @@
 #include <CharacterController.h>
 #include <Physics/BulletDebugDraw.h>
 
+#include <cstdint>
+
 namespace Donut
 {
 

@@ -2,6 +2,8 @@
 
 #include "MemoryStream.h"
 
+#include <cstdint>
+
 namespace Donut
 {
 

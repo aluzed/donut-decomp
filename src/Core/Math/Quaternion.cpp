@@ -9,6 +9,8 @@
 
 #include <fmt/format.h>
 
+#include <cstdint>
+
 namespace Donut
 {
 

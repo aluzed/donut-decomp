@@ -6,6 +6,8 @@
 #include <Game.h>
 #include <Scripting/ScriptEngine.h>
 
+#include <cstdint>
+
 namespace Donut
 {
 void GameCommands::HelloWorld()

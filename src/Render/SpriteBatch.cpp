@@ -9,6 +9,8 @@
 #include "Render/OpenGL/VertexBuffer.h"
 #include "Render/Texture.h"
 
+#include <cstdint>
+
 namespace Donut
 {
 std::string SpriteBatchVertSrc = R"glsl(

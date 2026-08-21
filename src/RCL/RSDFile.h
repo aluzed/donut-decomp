@@ -3,6 +3,7 @@
 #pragma once
 
 #include <Core/MemoryStream.h>
+#include <cstdint>
 #include <vector>
 
 namespace Donut::RCL

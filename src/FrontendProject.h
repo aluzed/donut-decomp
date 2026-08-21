@@ -4,6 +4,7 @@
 
 #include "Render/OpenGL/glad/glad.h"
 #include <Render/SpriteBatch.h>
+#include <cstdint>
 #include <memory>
 #include <string>
 
