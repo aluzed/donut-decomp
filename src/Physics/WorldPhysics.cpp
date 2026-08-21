@@ -6,6 +6,7 @@
 #include "Physics/BulletDebugDraw.h"
 #include "Physics/BulletFenceShape.h"
 
+#include <BulletCollision/CollisionDispatch/btGhostObject.h>
 #include <BulletCollision/CollisionShapes/btBox2dShape.h>
 
 #include <cstdint>
@@ -20,6 +21,13 @@ WorldPhysics::WorldPhysics(LineRenderer* lineRenderer)
 	_constraintSolver = new btSequentialImpulseConstraintSolver();
 
 	_dynamicsWorld = new btDiscreteDynamicsWorld(_collisionDispatcher, _broadphase, _constraintSolver, _collisionConfiguration);
+
+	// btPairCachingGhostObject (the character capsule) only accumulates overlapping
+	// pairs if this callback is installed on the broadphase. Without it the ghost
+	// reports no contacts at all, so CharacterController::recoverFromPenetration
+	// never de-penetrates and horizontal movement has no collision whatsoever.
+	_ghostPairCallback = new btGhostPairCallback();
+	_broadphase->getOverlappingPairCache()->setInternalGhostPairCallback(_ghostPairCallback);
 
 	_debugDraw = std::make_unique<BulletDebugDraw>(lineRenderer);
 	_debugDraw->setDebugMode(btIDebugDraw::DBG_NoDebug);
@@ -52,6 +60,7 @@ WorldPhysics::~WorldPhysics()
 
 	delete _dynamicsWorld;
 	delete _constraintSolver;
+	delete _ghostPairCallback;
 	delete _collisionConfiguration;
 	delete _collisionDispatcher;
 	delete _broadphase;
