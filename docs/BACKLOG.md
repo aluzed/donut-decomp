@@ -41,7 +41,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 | GAME-013 (G1) | Parsing DynaLoadData | `Level.cpp:227-251` |
 | SCRIPT-001/002/003 (G1) | ScriptEngine + machine d'état mission (Select→AddStage→Close) | `Scripting/ScriptEngine.cpp:1-420` |
 | GAME-007 (G1), POLICE-* (G2), AI-004 (G3) | Traffic AI, ChaseManager (heat, busted) | `AI/TrafficManager.cpp`, `ChaseManager.cpp` |
-| GAME-008 (G1), AI-003 (G3) | Pedestrian AI — **code OK mais boucle Update désactivée** (cf. REGR-001) | `AI/PedestrianManager.cpp` (construit, mais `Game.cpp:714-720` commenté) |
+| GAME-008 (G1), AI-003 (G3) | Pedestrian AI — boucle Update réactivée le 2026-08-22 (REGR-001) | `AI/PedestrianManager.cpp`; appelée depuis `Game.cpp:813` |
 | AUDIO-001/003 (G1) | Pool 24 sources, audio spatial, sons procéduraux, file dialogue | `Audio/AudioManager.cpp:98-143` |
 | LEVEL-004 (G3) — parse | Locator2/TriggerVolume parsés + stockés | `Level.cpp:177-199` (reste : câbler les callbacks → LEVEL-TRIG) |
 
@@ -49,12 +49,16 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 
 ## B. Backlog ouvert
 
-### B.0 — Régression bloquante (P0)
+### B.0 — Bloquants (P0)
 | ID | Statut | Sujet | Pointeur |
 |---|---|---|---|
-| **REGR-001** | ⬜ | **Crash au déplacement → tout un bloc gameplay désactivé.** Le commit `db9c8db` a commenté (pour isoler un crash) la boucle Update de : piétons, collectibles, triggers, **dégâts de collision** — jamais réactivée. Diagnostiquer le crash, corriger, **décommenter** | `Game.cpp:695-723` (bloc `/* */`) + `Game.cpp:574` (« collision damage disabled ») |
+| **REGR-001** | ✅ | **Boucle gameplay désactivée réactivée.** La cause du crash n'était pas dans le bloc : `db9c8db` l'a commenté pour isoler un crash que `9860a4f` a corrigé le même jour (`Character::_rotation` non initialisé + bugs `stepUp`/`stepDown`/`onGround`) ; le désactivage a survécu 22 commits. Vérifié 2026-08-22 : 91 882 exécutions, 0 crash, triggers ✅, collectibles ✅, piétons ✅ | `Game.cpp:813` + `Game.cpp:643` |
+| **CHARCTRL-FALL** | ⬜ | **Le personnage traverse le sol dès qu'il avance** (21 respawns en 25 s de marche). Indépendant de REGR-001 — vérifié en A/B. Le jeu n'est pas jouable à pied | `CharacterController.cpp` (`stepDown`, `onGround`) |
+| **UI-SPLASH** | ⬜ | **Bloqué sur Splash, aucun texte 2D dessiné.** Entrée puis clic « New Game » ne changent rien ; ni titre, ni boutons, ni HUD ne s'affichent (la police se charge pourtant correctement). Force `InGame` à l'init contourne le problème | `Game.cpp:232`, `Game.cpp:~726`, `SpriteBatch` |
 
-> ⚠️ Tant que REGR-001 n'est pas réglé : **PedestrianManager, CollectibleManager, le système de triggers et les dégâts de collision ne s'exécutent pas**, même si leur code existe. Plusieurs tickets en dépendent (GAME-010, LEVEL-TRIG, PHYS-004, SCRIPT-E/G).
+> ⚠️ CHARCTRL-FALL et UI-SPLASH remplacent REGR-001 comme verrous : le code gameplay
+> s'exécute désormais, mais on ne peut ni marcher normalement ni atteindre le jeu par les
+> commandes normales, donc rien ne se **valide visuellement** (UI-HUD, GAME-010, LEVEL-TRIG).
 
 ### CORE — nettoyage (P3)
 | ID | Statut | Sujet | Pointeur |
@@ -141,7 +145,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 ### UI / HUD
 | ID | Statut | Pri | Sujet | Note |
 |---|---|---|---|---|
-| UI-MENU | 🟡 | P1 | **Rendre** main menu + pause (résume/restart/quit) | `GameMenu` (hover/click) existe ; rendu non câblé (`Game.h:114-115`) |
+| UI-MENU | 🟡 | P1 | **Rendre** main menu + pause (résume/restart/quit) | hit-test corrigé 2026-08-22 (`GameMenu::SetButtonRect` + `Font::MeasureWidth`) ; le rendu du texte reste muet → bloqué par UI-SPLASH |
 | UI-TEXT | 🟡 | P1 | MultiText + text bible (localisation) via TextureFont | SpriteBatch dispo ; MultiText lu non rendu |
 | UI-HUD | 🟡 | P1 | HUD complet (PV, jauge H&R, speedo, coins, cards, timer, objectifs, radar, nitro) | HUD minimal actuel |
 | UI-LANG | ⬜ | P2 | Bibles de langue | dépend P3D-005 |
@@ -175,9 +179,12 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 | GAME-001d | Extraire `GameStateMachine` (splash/menu/ingame/pause/result) | transitions pilotées par un enum + table, pas par `if` épars |
 | GAME-001e | `Game` devient orchestrateur mince (< 400 l.) tenant les sous-systèmes | build vert, run identique, diff comportement nul |
 
-### C.2 — SCRIPT : 138/203 commandes `.con` encore en stub vide `{}`
+### C.2 — SCRIPT : 215/247 commandes `.con` encore en stub vide `{}`
 
-> **Le plus gros poste restant.** Le moteur (`ScriptEngine`) et ~65 commandes marchent.
+> **Le plus gros poste restant.** Le moteur (`ScriptEngine`) marche ; audit 2026-08-22 :
+> sur 247 commandes définies dans `GameCommands.cpp`, **29 portent de la vraie logique**
+> (3 de plus ne font que logger). Le chiffre « 138/203, ~65 marchent » des anciennes docs
+> était optimiste.
 > On éclate par **catégorie fonctionnelle** : chaque lot = un .con représentatif rejoué sans
 > warning « unimplemented command » pour cette catégorie. Cibles : `Scripting/GameCommands.cpp`.
 
@@ -216,7 +223,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 
 ## D. Chemins d'attaque conseillés
 
-0. **Débloquer d'abord** : **REGR-001** — sans ça, peds/collectibles/triggers/dégâts sont morts et plusieurs pistes ci-dessous n'ont aucun effet visible.
+0. **Débloquer d'abord** : **CHARCTRL-FALL** puis **UI-SPLASH** — le gameplay tourne depuis REGR-001, mais tant qu'on traverse le sol et qu'on ne peut pas quitter le Splash, aucune des pistes ci-dessous ne se valide à l'écran.
 1. **Jouabilité visible** : UI-HUD → UI-MENU → GAME-010 (collectibles) → SCRIPT-E/H. Donne une boucle de jeu lisible.
 2. **Fidélité monde** : LEVEL-STREAM → LEVEL-TRIG → PHYS-011 → PHYS-004. Le monde réagit.
 3. **Contenu missions** : SCRIPT-A → SCRIPT-B → AI-RACE → SCRIPT-D. Les vraies missions tournent.
