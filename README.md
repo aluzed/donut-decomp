@@ -75,6 +75,7 @@ Defaults: arrow keys move/drive, `E` interact (enter/exit vehicle, jump),
 and the complete list of actions.
 
 ## Docs
+* [Building on Windows (MSYS2 / MinGW-w64)](docs/WINDOWS_BUILD.md)
 * [Keymap / controls](docs/keymap.md)
 * [Chunks](dev/Chunks.md)
 * [Commands](dev/Commands.md)
