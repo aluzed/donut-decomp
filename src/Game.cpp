@@ -640,12 +640,58 @@ void Game::Run()
 		_worldPhysics->Update(static_cast<float>(deltaTime));
 
 		_audioManager->Update();
-		/*
 		if (_inVehicle && _activeVehicle)
 		{
-			// collision damage disabled for debugging
+			auto vehPos = _activeVehicle->GetPosition();
+			float vehSpeed = _activeVehicle->GetSpeedKmh();
+
+			for (auto& v : _scriptEngine->GetMissionVehicles())
+			{
+				if (v.get() == _activeVehicle) continue;
+				float dist = (v->GetPosition() - vehPos).Length();
+				if (dist < 1.5f && vehSpeed > 20.0f)
+				{
+					float dmg = vehSpeed * 0.5f * static_cast<float>(deltaTime);
+					_health -= dmg;
+					AddShake(0.3f);
+					if (_health < 0.0f) _health = 0.0f;
+				}
+			}
+
+			if (_trafficManager)
+			{
+				for (const auto& tc : _trafficManager->GetCars())
+				{
+					float dist = (tc.position - vehPos).Length();
+					if (dist < 1.5f && vehSpeed > 20.0f)
+					{
+						float dmg = vehSpeed * 0.3f * static_cast<float>(deltaTime);
+						_health -= dmg;
+						AddShake(0.2f);
+						if (_health < 0.0f) _health = 0.0f;
+					}
+				}
+			}
+
+			if (_scriptEngine->IsMissionActive())
+			{
+				auto* chase = _scriptEngine->GetChaseManager();
+				if (chase)
+				{
+					for (auto& cop : chase->GetCopCars())
+					{
+						float dist = (cop->GetPosition() - vehPos).Length();
+						if (dist < 1.5f && vehSpeed > 10.0f)
+						{
+							float dmg = vehSpeed * 0.7f * static_cast<float>(deltaTime);
+							_health -= dmg;
+							AddShake(0.5f);
+							if (_health < 0.0f) _health = 0.0f;
+						}
+					}
+				}
+			}
 		}
-		*/
 
 		if (_shakeAmount > 0.0f)
 		{
@@ -764,7 +810,9 @@ void Game::Run()
 		}
 		_scriptEngine->Update(deltaTime);
 
-		/*
+		// Re-enabled (REGR-001): db9c8db commented this out to isolate a crash on "press
+		// up"; 9860a4f fixed that same day (uninitialised Character::_rotation feeding the
+		// follow camera, plus stepUp/stepDown/onGround bugs) but the block was never restored.
 		if (_character != nullptr && _gameState == GameState::InGame)
 		{
 			if (_level->CheckTrigger(_character->GetPosition(), ""))
@@ -792,7 +840,6 @@ void Game::Run()
 					_collectibleManager->Update(_character->GetPosition(), 3.0f);
 			}
 		}
-		*/
 		_scriptEngine->UpdateAI(deltaTime);
 
 		ImGui_ImplOpenGL3_NewFrame();
@@ -1191,15 +1238,21 @@ void Game::Run()
 				sprites.DrawText(font, "PAUSED",
 					Vector2((viewportWidth / 2.0f) - 40, viewportHeight / 2.0f + 40),
 					Vector4(1.0f, 1.0f, 0.0f, 1.0f));
+				const float pauseLineHeight = font != nullptr ? font->GetHeight() : 16.0f;
+				for (size_t i = 0; i < _pauseMenu->GetButtons().size(); ++i)
+				{
+					const auto& btn = _pauseMenu->GetButtons()[i];
+					const float bx = viewportWidth / 2.0f - 50.0f;
+					const float by = viewportHeight / 2.0f + 20.0f - i * 30.0f;
+					const float bw = font != nullptr ? font->MeasureWidth(btn.label) : btn.width;
+					_pauseMenu->SetButtonRect(i, bx, by, bw, pauseLineHeight);
+				}
 				_pauseMenu->Update(intent.mouseX, intent.mouseY);
 				for (const auto& btn : _pauseMenu->GetButtons())
 				{
 					Vector4 col = btn.hovered ? Vector4(1.0f, 0.3f, 0.3f, 1.0f)
 					                         : Vector4(0.5f, 0.5f, 0.5f, 1.0f);
-					sprites.DrawText(font, btn.label,
-						Vector2(viewportWidth / 2.0f - 50.0f,
-						        viewportHeight / 2.0f + 20.0f - (&btn - _pauseMenu->GetButtons().data()) * 30.0f),
-						col);
+					sprites.DrawText(font, btn.label, Vector2(btn.x, btn.y), col);
 				}
 				if (intent.uiClick)
 					_pauseMenu->CheckClick(intent.mouseX, intent.mouseY);
@@ -1263,17 +1316,23 @@ void Game::Run()
 			menuSprites.DrawText(font, "donut",
 				Vector2((viewportWidth / 2.0f) - 30, viewportHeight / 2.0f + 80),
 				Vector4(1.0f, 0.84f, 0.0f, 1.0f));
+			// lay out first, then hit-test: hover and click must use the rects the
+			// labels are actually drawn at, not the placeholder passed to AddButton
+			const float menuLineHeight = font != nullptr ? font->GetHeight() : 16.0f;
+			for (size_t i = 0; i < _mainMenu->GetButtons().size(); ++i)
+			{
+				const auto& btn = _mainMenu->GetButtons()[i];
+				const float bx = viewportWidth / 2.0f - 50.0f;
+				const float by = viewportHeight / 2.0f + 40.0f - i * 30.0f;
+				const float bw = font != nullptr ? font->MeasureWidth(btn.label) : btn.width;
+				_mainMenu->SetButtonRect(i, bx, by, bw, menuLineHeight);
+			}
 			_mainMenu->Update(intent.mouseX, intent.mouseY);
-			int btnIndex = 0;
 			for (const auto& btn : _mainMenu->GetButtons())
 			{
 				Vector4 col = btn.hovered ? Vector4(1.0f, 0.84f, 0.0f, 1.0f)
 				                         : Vector4(0.8f, 0.8f, 0.8f, 1.0f);
-				menuSprites.DrawText(font, btn.label,
-					Vector2(viewportWidth / 2.0f - 50.0f,
-					        viewportHeight / 2.0f + 40.0f - btnIndex * 30.0f),
-					col);
-				++btnIndex;
+				menuSprites.DrawText(font, btn.label, Vector2(btn.x, btn.y), col);
 			}
 			if (intent.mouseLeftClick)
 				_mainMenu->CheckClick(intent.mouseX, intent.mouseY);
