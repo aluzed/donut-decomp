@@ -1,6 +1,8 @@
 # cmake build directory
 /build/
 /build_linux/
+/dist/
+/out/
 
 # ide files
 .vs
@@ -9,9 +11,20 @@
 # game assets and dumps
 /files/
 
+# on Windows the `shaders` and `audio` symlinks are replaced by directory
+# junctions, which git walks into; ignore their contents (the real files are
+# tracked under assets/shaders, and art/audio is CD-extracted audio)
+/shaders/
+/audio/
+
+# runtime assets extracted from the original CDs (see docs/ASSETS.md)
+/art/audio/
+/art/frontend/
+/art/missions/
+/art/chars/*.cho
+
 # save data
 donut_save.dat
-art/audio/*.rcf
 
 # runtime-generated control bindings
 keymap.conf
