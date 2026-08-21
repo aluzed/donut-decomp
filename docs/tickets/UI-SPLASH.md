@@ -36,6 +36,20 @@ Forcer `_gameState = GameState::InGame` à l'init contourne entièrement le prob
 se déroule alors normalement (physique, piétons, collectibles, triggers, véhicule). Le
 blocage est donc dans la transition d'état ou dans le rendu 2D, pas dans le gameplay.
 
+## Pistes écartées (2026-08-22)
+
+- **Police non chargée** : instrumenté, `GetFont("boulder_16")` renvoie un pointeur valide
+  (cf. ci-dessus).
+- **`GL_DEPTH_TEST` laissé actif pour la passe 2D** : `blitSceneToBackbuffer()` réactive le
+  test de profondeur juste avant que le HUD / les menus ne soient dessinés sur le backbuffer,
+  dont le depth buffer n'est jamais nettoyé (la scène va dans `_sceneFBO`). Hypothèse
+  plausible mais **testée sans effet** : le désactiver ne fait apparaître ni texte ni lignes.
+  (Le laisser actif reste douteux et pourrait être corrigé au passage.)
+- Le debug draw de Bullet **s'exécute** (activer `DrawWireframe` fait chuter le FPS de 650 à
+  176) mais **aucune ligne n'apparaît**. Le `LineRenderer` est pourtant vidé *à l'intérieur*
+  du FBO, avant le blit. Donc le problème touche `LineRenderer` **et** `SpriteBatch` — c'est
+  un souci de rendu commun, pas un bug propre au menu ni à la machine à états.
+
 ## Pistes d'investigation
 
 - `intent.uiConfirm` vient de `Input::JustPressed(GameAction::UIConfirm)` : vérifier que

@@ -53,12 +53,12 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 | ID | Statut | Sujet | Pointeur |
 |---|---|---|---|
 | **REGR-001** | ✅ | **Boucle gameplay désactivée réactivée.** La cause du crash n'était pas dans le bloc : `db9c8db` l'a commenté pour isoler un crash que `9860a4f` a corrigé le même jour (`Character::_rotation` non initialisé + bugs `stepUp`/`stepDown`/`onGround`) ; le désactivage a survécu 22 commits. Vérifié 2026-08-22 : 91 882 exécutions, 0 crash, triggers ✅, collectibles ✅, piétons ✅ | `Game.cpp:813` + `Game.cpp:643` |
-| **CHARCTRL-FALL** | ⬜ | **Le personnage traverse le sol dès qu'il avance** (21 respawns en 25 s de marche). Indépendant de REGR-001 — vérifié en A/B. Le jeu n'est pas jouable à pied | `CharacterController.cpp` (`stepDown`, `onGround`) |
+| **CHARCTRL-FALL** | ✅ | **Le personnage traversait le sol dès qu'il avançait.** Cause : aucun `btGhostPairCallback` installé sur le broadphase, donc le ghost object du personnage n'accumulait aucune paire — ni dépénétration, ni collision horizontale. 56 chutes → **0** sur le même parcours de 60 s | `WorldPhysics.cpp` (constructeur) |
 | **UI-SPLASH** | ⬜ | **Bloqué sur Splash, aucun texte 2D dessiné.** Entrée puis clic « New Game » ne changent rien ; ni titre, ni boutons, ni HUD ne s'affichent (la police se charge pourtant correctement). Force `InGame` à l'init contourne le problème | `Game.cpp:232`, `Game.cpp:~726`, `SpriteBatch` |
 
-> ⚠️ CHARCTRL-FALL et UI-SPLASH remplacent REGR-001 comme verrous : le code gameplay
-> s'exécute désormais, mais on ne peut ni marcher normalement ni atteindre le jeu par les
-> commandes normales, donc rien ne se **valide visuellement** (UI-HUD, GAME-010, LEVEL-TRIG).
+> ⚠️ **UI-SPLASH** est le dernier verrou : le gameplay s'exécute (REGR-001) et la marche
+> est saine (CHARCTRL-FALL), mais tant qu'on ne peut pas quitter le Splash et qu'aucun texte
+> 2D ne se dessine, rien ne se **valide visuellement** (UI-HUD, UI-MENU, GAME-010, LEVEL-TRIG).
 
 ### CORE — nettoyage (P3)
 | ID | Statut | Sujet | Pointeur |
@@ -223,7 +223,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 
 ## D. Chemins d'attaque conseillés
 
-0. **Débloquer d'abord** : **CHARCTRL-FALL** puis **UI-SPLASH** — le gameplay tourne depuis REGR-001, mais tant qu'on traverse le sol et qu'on ne peut pas quitter le Splash, aucune des pistes ci-dessous ne se valide à l'écran.
+0. **Débloquer d'abord** : **UI-SPLASH** — le gameplay tourne (REGR-001) et la marche est saine (CHARCTRL-FALL), mais aucune des pistes ci-dessous ne se valide à l'écran tant que le Splash bloque et que le texte 2D reste invisible.
 1. **Jouabilité visible** : UI-HUD → UI-MENU → GAME-010 (collectibles) → SCRIPT-E/H. Donne une boucle de jeu lisible.
 2. **Fidélité monde** : LEVEL-STREAM → LEVEL-TRIG → PHYS-011 → PHYS-004. Le monde réagit.
 3. **Contenu missions** : SCRIPT-A → SCRIPT-B → AI-RACE → SCRIPT-D. Les vraies missions tournent.
