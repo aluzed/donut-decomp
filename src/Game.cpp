@@ -49,8 +49,16 @@
 #include "Core/Log.h"
 
 #include <array>
+#include <cstdint>
 #include <sstream>
 #include <string>
+
+#ifdef _WIN32
+#include <Windows.h>
+#include <shellapi.h>
+// windows.h maps DrawText to DrawTextA, which collides with SpriteBatch::DrawText
+#undef DrawText
+#endif
 
 namespace Donut
 {
@@ -1461,12 +1469,6 @@ This software uses open source components, whose copyright and other rights belo
 * fmt [https://github.com/fmtlib/fmt/](https://github.com/fmtlib/fmt/)
 * stb [https://github.com/nothings/stb](https://github.com/nothings/stb)
 )";
-
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#include <shellapi.h>
-#endif
 
 void LinkCallback(ImGui::MarkdownLinkCallbackData data_)
 {
