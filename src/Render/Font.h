@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace Donut
@@ -38,6 +39,9 @@ public:
 	float GetHeight() const { return _height; }
 
 	bool TryGetGlyph(int32_t id, Glyph& glyph) const;
+
+	// Width in pixels the string occupies when drawn by SpriteBatch::DrawText.
+	float MeasureWidth(const std::string& text) const;
 
 private:
 	float _height;
