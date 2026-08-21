@@ -33,4 +33,29 @@ bool Font::TryGetGlyph(int32_t id, Font::Glyph& glyph) const
 
 	return false;
 }
+
+float Font::MeasureWidth(const std::string& text) const
+{
+	float width = 0.0f;
+	float lineWidth = 0.0f;
+	Glyph glyph;
+
+	for (const char& c : text)
+	{
+		if (c == '\n')
+		{
+			if (lineWidth > width) width = lineWidth;
+			lineWidth = 0.0f;
+			continue;
+		}
+
+		if (!TryGetGlyph(c, glyph))
+			continue;
+
+		lineWidth += glyph.advance;
+	}
+
+	return lineWidth > width ? lineWidth : width;
+}
+
 } // namespace Donut
