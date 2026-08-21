@@ -7,6 +7,7 @@
 #include "Render/OpenGL/VertexBinding.h"
 #include "Render/OpenGL/VertexBuffer.h"
 
+#include <cstdint>
 #include <vector>
 
 namespace Donut

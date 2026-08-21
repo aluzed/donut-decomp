@@ -8,6 +8,8 @@
 #include "Core/Math/Vector4.h"
 #include "Skeleton.h"
 
+#include <cstdint>
+
 namespace Donut
 {
 std::string VertSrc = R"glsl(

@@ -16,6 +16,7 @@
 
 #include "P3D.generated.h"
 #include <Core/MemoryStream.h>
+#include <cstdint>
 #include <iostream>
 
 namespace Donut::P3D

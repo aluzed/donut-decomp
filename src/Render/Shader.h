@@ -2,6 +2,7 @@
 #include "OpenGL/glad/glad.h"
 
 #include <Render/Texture.h>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>

@@ -2,6 +2,7 @@
 
 #include "Audio/SoundGenerator.h"
 #include <cmath>
+#include <cstdint>
 
 namespace Donut
 {

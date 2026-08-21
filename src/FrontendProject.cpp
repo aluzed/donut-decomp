@@ -12,6 +12,8 @@
 #include <ResourceManager.h>
 #include "Core/FileSystem.h"
 
+#include <cstdint>
+
 namespace Donut
 {
 enum class Alignment

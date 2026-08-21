@@ -2,6 +2,7 @@
 
 #include <Core/File.h>
 #include <cassert>
+#include <cstdint>
 #include <sstream>
 #include <stdexcept>
 #include <vector>

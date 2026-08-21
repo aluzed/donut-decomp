@@ -6,6 +6,8 @@
 
 #include <zlib.h>
 
+#include <cstdint>
+
 namespace Donut::P3D
 {
 

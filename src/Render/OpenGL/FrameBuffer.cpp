@@ -7,6 +7,8 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <ThirdParty/stb_image_write.h>
 
+#include <cstdint>
+
 namespace Donut::GL
 {
 GLint FrameBuffer::MAX_ATTACHMENTS = -1;

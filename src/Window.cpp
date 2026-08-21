@@ -4,6 +4,8 @@
 #include <Core/Log.h>
 #include <Window.h>
 
+#include <cstdint>
+
 namespace Donut
 {
 

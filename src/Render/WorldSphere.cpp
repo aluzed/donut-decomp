@@ -7,6 +7,8 @@
 #include "Render/SkinAnimation.h"
 #include "Skeleton.h"
 
+#include <cstdint>
+
 namespace Donut
 {
 

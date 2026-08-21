@@ -8,6 +8,8 @@
 
 #include <BulletCollision/CollisionShapes/btBox2dShape.h>
 
+#include <cstdint>
+
 namespace Donut
 {
 WorldPhysics::WorldPhysics(LineRenderer* lineRenderer)

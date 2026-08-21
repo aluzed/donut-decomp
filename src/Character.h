@@ -6,6 +6,7 @@
 #include "Core/Math/Quaternion.h"
 #include "Core/Math/Vector3.h"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>

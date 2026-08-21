@@ -12,6 +12,8 @@
 #include "Core/FileSystem.h"
 #include "Core/Log.h"
 
+#include <cstdint>
+
 namespace Donut
 {
 

@@ -6,6 +6,8 @@
 #include <P3D/P3DChunk.h>
 #include <Render/Texture.h>
 
+#include <cstdint>
+
 namespace Donut
 {
 Font::Font(P3D::TextureFont& fontP3D)

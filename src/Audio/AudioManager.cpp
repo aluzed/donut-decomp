@@ -6,6 +6,7 @@
 #include "Core/Log.h"
 #include "Render/imgui/imgui.h"
 
+#include <cstdint>
 #include <stdexcept>
 
 namespace Donut

@@ -23,6 +23,7 @@
 #include "Core/Math/Vector4.h"
 #include "P3D/P3DChunk.h"
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <string>

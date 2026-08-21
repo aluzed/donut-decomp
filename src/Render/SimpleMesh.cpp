@@ -3,6 +3,8 @@
 #include "Render/SimpleMesh.h"
 #include "Render/OpenGL/glad/glad.h"
 
+#include <cstdint>
+
 namespace Donut
 {
 

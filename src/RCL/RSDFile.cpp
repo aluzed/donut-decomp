@@ -4,6 +4,7 @@
 
 #include <Core/Log.h>
 #include <array>
+#include <cstdint>
 
 namespace Donut::RCL
 {

@@ -12,6 +12,7 @@
 #include "Core/Log.h"
 
 #include <chrono>
+#include <cstdint>
 #include <ctime>
 
 namespace Donut
