@@ -65,6 +65,8 @@ private:
 	btSequentialImpulseConstraintSolver* _constraintSolver;
 	btCollisionDispatcher* _collisionDispatcher;
 	btBroadphaseInterface* _broadphase;
+	// required for btPairCachingGhostObject to accumulate overlapping pairs
+	class btGhostPairCallback* _ghostPairCallback;
 
 	std::unique_ptr<BulletDebugDraw> _debugDraw;
 
