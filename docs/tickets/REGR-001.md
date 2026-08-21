@@ -1,11 +1,11 @@
 # REGR-001 — Crash au déplacement : réactiver la boucle gameplay désactivée
 
-- **Status:** TODO
+- **Status:** DONE (2026-08-22)
 - **Priority:** P0 (bloquant)
 - **Module:** Game / Régression
 - **Depends on:** —
 - **Blocks:** GAME-010, LEVEL-TRIG, PHYS-004, SCRIPT-E, SCRIPT-G
-- **Files:** `src/Game.cpp:695-723` (bloc `/* */`), `src/Game.cpp:574` (« collision damage disabled »)
+- **Files:** `src/Game.cpp:813` (bloc gameplay), `src/Game.cpp:643` (dégâts de collision)
 
 ## Contexte
 
@@ -60,13 +60,41 @@ piétons / collectibles / triggers / dégâts tournent à nouveau, sans crash.
 4. Décommenter `Game.cpp:695-723` **et** réactiver le bloc dégâts `Game.cpp:574`.
 5. Retirer les commentaires « disabled for debugging » devenus obsolètes.
 
+## Cause racine (résolue)
+
+Le crash n'a **jamais eu de cause dans le bloc désactivé**. `db9c8db` (18 juin) a commenté
+ces blocs pour isoler un crash « appuyer sur flèche haut → crash » ; **le même jour**,
+`9860a4f` (« fix(gameplay): character spawn camera + movement + step controller ») a corrigé
+les quatre bugs qui produisaient exactement ce symptôme :
+
+- `Character::_rotation` construit par `Quaternion()`, dont le constructeur laisse X/Y/Z/W
+  **non initialisés** — la caméra de suivi calculait `rot * offset` sur des ordures et
+  partait à ~1e6 unités au spawn ;
+- `stepUp()` soulevait la capsule sans que `stepDown()` ne rende la hauteur gagnée ;
+- `stepDown()` balayait depuis `_position` (pré-déplacement) au lieu de `_targetPosition` ;
+- le raycast `onGround()` (0.2u) était plus court que la demi-hauteur de la capsule (~0.875u).
+
+Le correctif a été livré mais **personne n'est revenu décommenter les blocs** : le
+désactivage de debug a survécu à son motif pendant 22 commits.
+
+## Vérification (2026-08-22, Windows / GCC 16 / UCRT)
+
+Reproduction tentée sur le build actuel avec les blocs réactivés :
+
+- **91 882 exécutions** du bloc gameplay sur ~90 s de marche + conduite : **aucun crash**.
+- « player entered trigger zone » émis **34 fois** → les volumes de trigger répondent.
+- Collectibles : 1/10 ramassé au contact.
+- Piétons : 1 → 15 (plafond `_maxPedestrians`), positions qui évoluent d'une frame à l'autre.
+- A/B : bloc **désactivé**, marche 25 s → le joueur traverse quand même le sol 21 fois.
+  La chute est donc **indépendante** de ce ticket (→ voir `CHARCTRL-FALL`).
+
 ## Critères d'acceptation
 
-- [ ] Le bloc `Game.cpp:695-723` est décommenté (plus de `/* */`).
-- [ ] Les dégâts de collision (`Game.cpp:574`) sont réactivés.
-- [ ] Se déplacer à pied **et** en véhicule pendant ≥ 60 s ne crashe pas.
-- [ ] Des piétons apparaissent et se déplacent autour du joueur.
-- [ ] Les collectibles se mettent à jour (collecte fonctionnelle au contact).
-- [ ] L'entrée en zone trigger émet le log « entered trigger zone ».
-- [ ] La cause racine est notée en commentaire ou dans le message de commit (pas juste un
-      garde null masquant le symptôme).
+- [x] Le bloc `Game.cpp:695-723` est décommenté (plus de `/* */`).
+- [x] Les dégâts de collision (`Game.cpp:574`) sont réactivés — le corps de la boucle, supprimé par `db9c8db`, a été restauré depuis `db9c8db^`.
+- [x] Se déplacer à pied **et** en véhicule pendant ≥ 60 s ne crashe pas (~90 s testées).
+- [x] Des piétons apparaissent et se déplacent autour du joueur (vérifié en instrumentant le compteur et la position ; la confirmation *visuelle* reste bloquée par `UI-SPLASH`).
+- [x] Les collectibles se mettent à jour (collecte fonctionnelle au contact).
+- [x] L'entrée en zone trigger émet le log « entered trigger zone ».
+- [x] La cause racine est notée en commentaire ou dans le message de commit (pas juste un
+      garde null masquant le symptôme) — cf. § Cause racine et le commentaire à `Game.cpp:813`.
