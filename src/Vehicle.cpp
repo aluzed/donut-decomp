@@ -66,6 +66,12 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 	_rayVehicle->addWheel(btVector3(-0.8f, 0.0f, -1.8f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, false);
 	_rayVehicle->addWheel(btVector3( 0.8f, 0.0f, -1.8f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, false);
 
+	// A btRaycastVehicle drives its chassis through applyEngineForce/setBrake,
+	// which do NOT activate the body. Once Bullet puts the chassis to sleep the
+	// car simply ignores the throttle: it sat parked with the engine at full
+	// force. Vehicles are expected to opt out of deactivation.
+	chassis->setActivationState(DISABLE_DEACTIVATION);
+
 	physics.GetDynamicsWorld()->addRigidBody(chassis);
 	physics.GetDynamicsWorld()->addAction(_rayVehicle.get());
 

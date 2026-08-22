@@ -623,10 +623,15 @@ void Game::Run()
 		{
 			auto vehPos = _activeVehicle->GetPosition();
 			auto vehRot = _activeVehicle->GetRotation();
-			Vector3 camTarget = vehPos + vehRot * Vector3(0, 1.5f, 0);
-			// camera sits behind the vehicle; forward is +Z (left-handed proj),
-			// so "behind" is -Z in the vehicle's local frame
-			Vector3 targetPos = camTarget + vehRot * Vector3(0, 3.0f, -12.0f);
+			Vector3 camTarget = vehPos + Vector3(0, 1.5f, 0);
+			// Camera sits behind the vehicle; forward is +Z (left-handed proj), so
+			// "behind" is -Z in the vehicle's local frame. Use the vehicle's yaw
+			// only: the chassis is a physics body that pitches and rolls over
+			// bumps, and rotating the offset by the full orientation swung the
+			// camera under the terrain. The look rotation below already takes
+			// yaw alone.
+			const Quaternion vehYaw = Quaternion::MakeFromEuler(Vector3(0.0f, vehRot.Euler().Y, 0.0f));
+			Vector3 targetPos = camTarget + vehYaw * Vector3(0, 3.0f, -12.0f);
 
 			float lerpFactor = 1.0f - exp(-8.0f * static_cast<float>(deltaTime));
 			if (_smoothCamPos == Vector3::Zero) _smoothCamPos = targetPos;

@@ -1,11 +1,11 @@
-# VEH-SINK — Le véhicule s'enfonce sous le terrain une fois embarqué
+# VEH-SINK — Le véhicule ne bougeait pas et la caméra passait sous le décor
 
-- **Status:** TODO (une cause corrigée, symptôme toujours présent)
+- **Status:** DONE (2026-08-22)
 - **Priority:** P1
 - **Module:** Physics / Vehicle
 - **Depends on:** —
 - **Blocks:** AI-RACE, SCRIPT-D, toute mission de course jouable
-- **Files:** `src/Vehicle.cpp` (`CreatePhysicsBody`), `src/Physics/WorldPhysics.cpp`
+- **Files:** `src/Vehicle.cpp` (`CreatePhysicsBody`), `src/Physics/WorldPhysics.cpp`, `src/Game.cpp` (caméra véhicule), `src/Scripting/ScriptEngine.cpp` (`SelectMission`)
 
 ## Contexte
 
@@ -34,9 +34,45 @@ avant embarquement la voiture **repose** sur le sol (Y stable à 2,98, corps end
 nulle) au lieu de tomber indéfiniment ; et la marche du personnage ne régresse pas
 (60 s, 0 « fell off the map »).
 
-## Ce qui reste
+## Correction du diagnostic
 
-Après embarquement, le véhicule descend quand même sous le terrain. Pistes non explorées :
+**Le titre initial était faux : le véhicule ne s'enfonçait pas.** J'avais lu la position de la
+*caméra* (Y ≈ -1,9) comme celle de la voiture. Mesuré ensuite image par image, le châssis
+restait à Y = 2,98, immobile et endormi. Trois vrais problèmes se cumulaient :
+
+1. **Décor statique en `btCollisionObject` nu** (corrigé plus haut) — les roues ne trouvaient
+   pas le sol, donc ni suspension ni adhérence.
+2. **Le châssis s'endormait.** `btRaycastVehicle` pilote son corps par `applyEngineForce` /
+   `setBrake`, qui **n'activent pas** le rigid body. Une fois Bullet l'ayant endormi
+   (`ISLAND_SLEEPING`), la voiture ignorait purement et simplement l'accélérateur : elle
+   restait garée moteur à fond. `setActivationState(DISABLE_DEACTIVATION)` — ce que tout
+   véhicule Bullet doit faire.
+3. **Caméra pivotée par l'orientation complète du châssis.**
+   `camTarget + vehRot * Vector3(0, 3, -12)` : le châssis étant un corps physique qui tangue
+   et roule, l'offset partait sous le terrain. La rotation de visée, elle, ne prenait déjà que
+   le lacet. L'offset est désormais aligné dessus, et le point visé est relevé selon le haut
+   *monde* et non celui de la caisse.
+
+Corrigé aussi : `SelectMission` vidait `_missionVehicles` sans détruire la physique, laissant
+un corps et une action orphelins dans le monde. Une voiture du premier chargement tombait
+ainsi indéfiniment (Y = -440 relevé).
+
+## Vérification
+
+- Accélération : le compteur monte à **58 km/h**, l'arc et l'aiguille suivent.
+- 55 s de conduite avec virages : la voiture parcourt Springfield (X 80 → 150), **0**
+  « vehicle fell off the map », **0** « player fell off the map », aucun crash.
+- Caméra au-dessus du sol pendant toute la conduite (Y de 5,5 à 8,4), vue de conduite normale.
+
+## Reste à faire (hors périmètre)
+
+- Aucun checkpoint franchi pendant le test : je conduisais sans savoir où ils sont, le HUD
+  n'affiche pas encore de guidage. À reprendre avec `AI-RACE` / `SCRIPT-D`.
+- Le modèle du véhicule n'est pas visible depuis la caméra de conduite.
+
+## Pistes envisagées à l'époque (conservées pour mémoire)
+
+Toutes fausses ou sans effet :
 
 - `maxSuspensionTravelCm = 500` (5 m !) dans `CreatePhysicsBody` — une compression aussi
   large peut laisser le châssis passer sous la surface.
@@ -58,6 +94,6 @@ partir de cette lecture.
 
 ## Critères d'acceptation
 
-- [ ] Rouler 60 s ne fait pas passer le véhicule sous le terrain.
-- [ ] Le compteur de vitesse affiche une valeur non nulle en accélérant.
-- [ ] Franchir un checkpoint incrémente `CP n/6` dans le HUD.
+- [x] Rouler 60 s ne fait pas passer le véhicule sous le terrain (55 s testées, 0 chute).
+- [x] Le compteur de vitesse affiche une valeur non nulle en accélérant (58 km/h).
+- [ ] Franchir un checkpoint incrémente `CP n/6` dans le HUD — non testé, aucun repère à l'écran pour les trouver (→ AI-RACE / SCRIPT-D).
