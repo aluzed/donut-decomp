@@ -96,4 +96,4 @@ partir de cette lecture.
 
 - [x] Rouler 60 s ne fait pas passer le véhicule sous le terrain (55 s testées, 0 chute).
 - [x] Le compteur de vitesse affiche une valeur non nulle en accélérant (58 km/h).
-- [ ] Franchir un checkpoint incrémente `CP n/6` dans le HUD — non testé, aucun repère à l'écran pour les trouver (→ AI-RACE / SCRIPT-D).
+- [ ] Franchir un checkpoint incrémente `CP n/6` dans le HUD — les repères existent désormais (cf. [UI-RACE-GUIDE](UI-RACE-GUIDE.md)), mais le franchissement lui-même reste à confirmer à la main.

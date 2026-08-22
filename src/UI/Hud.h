@@ -59,6 +59,10 @@ struct HudState
 	float playerHeading = 0.0f; // radians, 0 = +Z
 	std::vector<Vector2> missionBlips;
 	std::vector<Vector2> policeBlips;
+	std::vector<Vector2> checkpointBlips; // upcoming checkpoints, in order
+	bool hasNextCheckpoint = false;
+	Vector2 nextCheckpointXZ;
+	float nextCheckpointDistance = 0.0f;
 	float radarRange = 120.0f;
 
 	// free-form lines drawn under the HUD (control hints, help overlay)
