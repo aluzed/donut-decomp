@@ -8,6 +8,7 @@
 
 #include <BulletCollision/CollisionDispatch/btGhostObject.h>
 #include <BulletCollision/CollisionShapes/btBox2dShape.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
 
 #include <cstdint>
 
@@ -72,6 +73,26 @@ void WorldPhysics::Update(const float dt) const
 	_dynamicsWorld->debugDrawWorld();
 }
 
+btCollisionObject* WorldPhysics::addStaticBody(btCollisionShape* shape, const btTransform& transform)
+{
+	// Static geometry has to be a zero-mass btRigidBody, not a bare
+	// btCollisionObject: btDefaultVehicleRaycaster (the wheel raycaster behind
+	// btRaycastVehicle) discards any hit whose object does not upcast to
+	// btRigidBody. With plain collision objects the wheels never found the
+	// ground, so vehicles had no suspension and no traction and sank through
+	// the world -- while the character, which sweeps the world directly, was
+	// unaffected.
+	btRigidBody::btRigidBodyConstructionInfo info(0.0f, nullptr, shape, btVector3(0, 0, 0));
+	info.m_startWorldTransform = transform;
+
+	auto* body = new btRigidBody(info);
+	body->setCollisionFlags(body->getCollisionFlags() | btCollisionObject::CF_STATIC_OBJECT);
+	_dynamicsWorld->addRigidBody(body);
+
+	_allocatedCollisionObjects.push_back(body);
+	return body;
+}
+
 void WorldPhysics::AddIntersect(const P3D::Intersect& intersect)
 {
 	// copy this shit over first (todo: free it?)
@@ -91,13 +112,9 @@ void WorldPhysics::AddIntersect(const P3D::Intersect& intersect)
 
 	auto trimeshShape = new btBvhTriangleMeshShape(meshInterface, true);
 
-	auto colObj = new btCollisionObject();
-	colObj->setCollisionShape(trimeshShape);
-
-	_dynamicsWorld->addCollisionObject(colObj);
+	addStaticBody(trimeshShape, btTransform::getIdentity());
 
 	// add for cleanup
-	_allocatedCollisionObjects.push_back(colObj);
 	_allocatedVertexArrays.push_back(verts);
 	_allocatedIndexArrays.push_back(indices);
 }
@@ -143,13 +160,7 @@ void WorldPhysics::AddP3DOBBoxVolume(const P3D::CollisionOBBoxVolume& volume)
 	worldTransform.setOrigin(BulletCast<btVector3>(centre));
 	worldTransform.setRotation(BulletCast<btQuaternion>(rotation));
 
-	auto colObj = new btCollisionObject();
-	colObj->setCollisionShape(bulletShape);
-	colObj->setWorldTransform(worldTransform);
-
-	_dynamicsWorld->addCollisionObject(colObj);
-
-	_allocatedCollisionObjects.push_back(colObj);
+	addStaticBody(bulletShape, worldTransform);
 }
 
 void WorldPhysics::AddP3DSphere(const P3D::CollisionSphere& sphere)
@@ -160,13 +171,7 @@ void WorldPhysics::AddP3DSphere(const P3D::CollisionSphere& sphere)
 	worldTransform.setIdentity();
 	worldTransform.setOrigin(BulletCast<btVector3>(sphere.GetVectors()[0]));
 
-	auto colObj = new btCollisionObject();
-	colObj->setCollisionShape(bulletSphere);
-	colObj->setWorldTransform(worldTransform);
-
-	_dynamicsWorld->addCollisionObject(colObj);
-
-	_allocatedCollisionObjects.push_back(colObj);
+	addStaticBody(bulletSphere, worldTransform);
 }
 
 void WorldPhysics::AddP3DCylinder(const P3D::CollisionCylinder& cylinder)
@@ -201,13 +206,7 @@ void WorldPhysics::AddP3DCylinder(const P3D::CollisionCylinder& cylinder)
 	worldTransform.setOrigin(BulletCast<btVector3>(cylinder.GetVectors()[0]));
 	worldTransform.setRotation(BulletCast<btQuaternion>(rotation));
 
-	auto colObj = new btCollisionObject();
-	colObj->setCollisionShape(shape);
-	colObj->setWorldTransform(worldTransform);
-
-	_dynamicsWorld->addCollisionObject(colObj);
-
-	_allocatedCollisionObjects.push_back(colObj);
+	addStaticBody(shape, worldTransform);
 }
 
 void WorldPhysics::AddP3DFence(const P3D::Fence& fence)
@@ -227,12 +226,7 @@ void WorldPhysics::AddP3DFence(const P3D::Fence& fence)
 	worldTransform.setIdentity();
 	worldTransform.setOrigin(start);
 
-	auto colObj = new btCollisionObject();
-	colObj->setCollisionShape(fenceShape);
-	colObj->setWorldTransform(worldTransform);
-
-	_dynamicsWorld->addCollisionObject(colObj);
-	_allocatedCollisionObjects.push_back(colObj);
+	addStaticBody(fenceShape, worldTransform);
 }
 
 } // namespace Donut
