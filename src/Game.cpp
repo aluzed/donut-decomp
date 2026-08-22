@@ -796,6 +796,15 @@ void Game::Run()
 				}
 			}
 
+			_lineRenderer->DrawSkeleton(_character->GetPosition(), _character->GetSkeleton());
+			_lineRenderer->DrawBox(_character->GetPosition(), _character->GetRotation(),
+				Vector3(-0.3f, 0.0f, -0.2f), Vector3(0.3f, 1.8f, 0.3f), Vector4(0.2f, 1.0f, 0.2f, 1.0f));
+		}
+
+		// Race guidance, not debug: without a marker in the world the player has no
+		// way to find the next checkpoint, so a race can never be completed.
+		if (_scriptEngine->IsMissionActive())
+		{
 			const auto& checkpoints = _scriptEngine->GetCheckpoints();
 			int currentCp = _scriptEngine->GetCurrentCheckpoint();
 			for (int i = 0; i < static_cast<int>(checkpoints.size()); ++i)
@@ -818,13 +827,6 @@ void Game::Run()
 					_lineRenderer->DrawLine(from + (to - from) * t1, from + (to - from) * t2,
 						Vector4(1.0f, 1.0f, 1.0f, 0.3f));
 				}
-			}
-
-			if (_showDebug)
-			{
-				_lineRenderer->DrawSkeleton(_character->GetPosition(), _character->GetSkeleton());
-				_lineRenderer->DrawBox(_character->GetPosition(), _character->GetRotation(),
-					Vector3(-0.3f, 0.0f, -0.2f), Vector3(0.3f, 1.8f, 0.3f), Vector4(0.2f, 1.0f, 0.2f, 1.0f));
 			}
 		}
 		_level->Update(deltaTime);
@@ -1125,6 +1127,22 @@ void Game::Run()
 
 				for (const auto& v : _scriptEngine->GetMissionVehicles())
 					hud.missionBlips.emplace_back(v->GetPosition().X, v->GetPosition().Z);
+
+				const auto& cps = _scriptEngine->GetCheckpoints();
+				for (const auto& cp : cps)
+					hud.checkpointBlips.emplace_back(cp.X, cp.Z);
+
+				const int cur = _scriptEngine->GetCurrentCheckpoint();
+				if (cur >= 0 && cur < static_cast<int>(cps.size()))
+				{
+					const Vector3 target = cps[cur];
+					const Vector3 from = _inVehicle && _activeVehicle
+					                         ? _activeVehicle->GetPosition()
+					                         : (_character ? _character->GetPosition() : Vector3::Zero);
+					hud.hasNextCheckpoint = true;
+					hud.nextCheckpointXZ = Vector2(target.X, target.Z);
+					hud.nextCheckpointDistance = (target - from).Length();
+				}
 			}
 
 			auto* chase = _scriptEngine->GetChaseManager();

@@ -176,8 +176,13 @@ void Hud::drawRadar(SpriteBatch& sprites, const Font* font, const HudState& stat
 		drawRect(sprites, p - blipSize * 0.5f, blipSize, colour);
 	};
 
+	for (const auto& blip : state.checkpointBlips) plot(blip, Vector2(5.0f, 5.0f), Vector4(1.0f, 1.0f, 1.0f, 0.5f));
 	for (const auto& blip : state.missionBlips) plot(blip, Vector2(6.0f, 6.0f), Vector4(0.2f, 1.0f, 1.0f, 1.0f));
 	for (const auto& blip : state.policeBlips) plot(blip, Vector2(6.0f, 6.0f), Vector4(1.0f, 0.2f, 0.2f, 1.0f));
+
+	// the checkpoint to head for, drawn last and larger so it reads at a glance
+	if (state.hasNextCheckpoint)
+		plot(state.nextCheckpointXZ, Vector2(10.0f, 10.0f), kGold);
 
 	// player arrow, always centred and pointing up
 	drawRect(sprites, centre - Vector2(2.0f, 6.0f), Vector2(4.0f, 12.0f), kGold);
@@ -236,6 +241,14 @@ void Hud::Draw(SpriteBatch& sprites, const Font* font, const HudState& state)
 			const float w = font != nullptr ? font->MeasureWidth(text) : 0.0f;
 			drawShadowedText(sprites, font, text, Vector2((state.viewportWidth - w) * 0.5f, topY),
 			                 Vector4(0.2f, 1.0f, 1.0f, 1.0f));
+			topY += line;
+		}
+
+		if (state.hasNextCheckpoint)
+		{
+			const std::string text = fmt::format("Next checkpoint: {:.0f}m", state.nextCheckpointDistance);
+			const float w = font != nullptr ? font->MeasureWidth(text) : 0.0f;
+			drawShadowedText(sprites, font, text, Vector2((state.viewportWidth - w) * 0.5f, topY), kGold);
 			topY += line;
 		}
 
