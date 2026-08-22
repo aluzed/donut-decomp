@@ -179,15 +179,17 @@ void Level::LoadP3D(const std::string& filename)
 		case P3D::ChunkType::Locator2:
 		{
 			auto loc = P3D::Locator2::Load(*chunk);
-			const auto& triggers = loc->GetTriggers();
-			if (!triggers.empty())
-			{
-				Matrix4x4 t = triggers[0]->GetTransform();
-				Vector3 pos(t.M[3][0], t.M[3][1], t.M[3][2]);
-				std::string name = loc->GetName();
-				_locators.insert({name, pos});
-				Log::Info("Level: locator '{}' at ({:.1f}, {:.1f}, {:.1f})", name, pos.X, pos.Y, pos.Z);
 
+			// Locator2 carries its own position; it used to be taken from the
+			// first trigger's transform, which meant every trigger-less locator
+			// was dropped outright -- and those are most of them (spawn points,
+			// car starts, race_finish...).
+			_locators.insert({loc->GetName(), loc->GetPosition()});
+			Log::Debug("Level: locator '{}' at ({:.1f}, {:.1f}, {:.1f})", loc->GetName(), loc->GetPosition().X,
+			           loc->GetPosition().Y, loc->GetPosition().Z);
+
+			const auto& triggers = loc->GetTriggers();
+			{
 				for (const auto& trigger : triggers)
 				{
 					Trigger tvol;

@@ -1630,6 +1630,10 @@ Locator2::Locator2(const P3DChunk& chunk)
 	_name = stream.ReadLPString();
 	_type = stream.Read<uint32_t>();
 	_dataSize = stream.Read<uint32_t>();
+	_data.resize(_dataSize);
+	stream.ReadBytes(reinterpret_cast<uint8_t*>(_data.data()), _data.size() * sizeof(uint32_t));
+	_position = stream.Read<Vector3>();
+	_numTriggers = stream.Read<uint32_t>();
 
 	for (auto const& child : chunk.GetChildren())
 	{
