@@ -5,6 +5,7 @@
 #include <fmt/format.h>
 #include <fmt/printf.h>
 
+#include <cstdio>
 #include <string>
 
 namespace Donut
@@ -25,12 +26,17 @@ enum class Level
 void SetLevel(Level level);
 Level GetLevel();
 
+// stdout is fully buffered when it is not a terminal, so redirecting the game's
+// output to a file or a pipe lost everything still sitting in the buffer if the
+// process was killed -- exactly when the log matters most. Flush each line;
+// stderr (Warn/Error) is unbuffered already.
 template <typename... Args>
 inline void Debug(std::string_view fmt, const Args&... args)
 {
 	if (GetLevel() > Level::Debug) return;
 	fmt::print(fmt, args...);
 	fmt::print("\n");
+	std::fflush(stdout);
 }
 
 template <typename... Args>
@@ -39,6 +45,7 @@ inline void Info(std::string_view fmt, const Args&... args)
 	if (GetLevel() > Level::Info) return;
 	fmt::print(fmt, args...);
 	fmt::print("\n");
+	std::fflush(stdout);
 }
 
 template <typename... Args>
