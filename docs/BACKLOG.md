@@ -54,11 +54,11 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 |---|---|---|---|
 | **REGR-001** | ✅ | **Boucle gameplay désactivée réactivée.** La cause du crash n'était pas dans le bloc : `db9c8db` l'a commenté pour isoler un crash que `9860a4f` a corrigé le même jour (`Character::_rotation` non initialisé + bugs `stepUp`/`stepDown`/`onGround`) ; le désactivage a survécu 22 commits. Vérifié 2026-08-22 : 91 882 exécutions, 0 crash, triggers ✅, collectibles ✅, piétons ✅ | `Game.cpp:813` + `Game.cpp:643` |
 | **CHARCTRL-FALL** | ✅ | **Le personnage traversait le sol dès qu'il avançait.** Cause : aucun `btGhostPairCallback` installé sur le broadphase, donc le ghost object du personnage n'accumulait aucune paire — ni dépénétration, ni collision horizontale. 56 chutes → **0** sur le même parcours de 60 s | `WorldPhysics.cpp` (constructeur) |
-| **UI-SPLASH** | ⬜ | **Bloqué sur Splash, aucun texte 2D dessiné.** Entrée puis clic « New Game » ne changent rien ; ni titre, ni boutons, ni HUD ne s'affichent (la police se charge pourtant correctement). Force `InGame` à l'init contourne le problème | `Game.cpp:232`, `Game.cpp:~726`, `SpriteBatch` |
+| **UI-SPLASH** | ✅ | **Aucun texte 2D ni ligne de debug dessinés.** Les shaders inline de `SpriteBatch` et `LineRenderer` (`#version 150 core`, sans `layout(location)`) laissaient l'éditeur de liens GL choisir les emplacements d'attributs — sur AMD `position=2, texcoord=0, color=1` au lieu de 0/1/2 — donc le shader lisait la position dans les octets de couleur. L'état n'était pas bloqué : le menu était invisible | `SpriteBatch.cpp`, `LineRenderer.cpp` |
 
-> ⚠️ **UI-SPLASH** est le dernier verrou : le gameplay s'exécute (REGR-001) et la marche
-> est saine (CHARCTRL-FALL), mais tant qu'on ne peut pas quitter le Splash et qu'aucun texte
-> 2D ne se dessine, rien ne se **valide visuellement** (UI-HUD, UI-MENU, GAME-010, LEVEL-TRIG).
+> ✅ Plus de bloquant P0. La boucle complète est jouable et **observable** :
+> Splash → Entrée → menu → « New Game » → en jeu, avec HUD, piétons, collectibles, triggers,
+> véhicule, et le debug draw Bullet de nouveau visible.
 
 ### CORE — nettoyage (P3)
 | ID | Statut | Sujet | Pointeur |
@@ -145,7 +145,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 ### UI / HUD
 | ID | Statut | Pri | Sujet | Note |
 |---|---|---|---|---|
-| UI-MENU | 🟡 | P1 | **Rendre** main menu + pause (résume/restart/quit) | hit-test corrigé 2026-08-22 (`GameMenu::SetButtonRect` + `Font::MeasureWidth`) ; le rendu du texte reste muet → bloqué par UI-SPLASH |
+| UI-MENU | 🟡 | P1 | Main menu + pause : **fonctionnels** depuis 2026-08-22 (hit-test corrigé + UI-SPLASH). Reste : la mise en page est inversée (les boutons montent quand l'index croît, le titre s'affiche sous eux — écrite pour un Y vers le haut alors que l'ortho est Y vers le bas), et le menu pause n'est pas retesté | `Game.cpp` (blocs MainMenu/Paused) |
 | UI-TEXT | 🟡 | P1 | MultiText + text bible (localisation) via TextureFont | SpriteBatch dispo ; MultiText lu non rendu |
 | UI-HUD | 🟡 | P1 | HUD complet (PV, jauge H&R, speedo, coins, cards, timer, objectifs, radar, nitro) | HUD minimal actuel |
 | UI-LANG | ⬜ | P2 | Bibles de langue | dépend P3D-005 |
@@ -223,7 +223,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 
 ## D. Chemins d'attaque conseillés
 
-0. **Débloquer d'abord** : **UI-SPLASH** — le gameplay tourne (REGR-001) et la marche est saine (CHARCTRL-FALL), mais aucune des pistes ci-dessous ne se valide à l'écran tant que le Splash bloque et que le texte 2D reste invisible.
+0. ~~Débloquer les P0~~ — fait (REGR-001, CHARCTRL-FALL, UI-SPLASH). Tout ce qui suit se valide désormais à l'écran.
 1. **Jouabilité visible** : UI-HUD → UI-MENU → GAME-010 (collectibles) → SCRIPT-E/H. Donne une boucle de jeu lisible.
 2. **Fidélité monde** : LEVEL-STREAM → LEVEL-TRIG → PHYS-011 → PHYS-004. Le monde réagit.
 3. **Contenu missions** : SCRIPT-A → SCRIPT-B → AI-RACE → SCRIPT-D. Les vraies missions tournent.
