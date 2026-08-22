@@ -74,7 +74,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 | P3D-013 | ✅ | P3 | `GetShaderTexture()` — **faux bug** : 0 occurrence dans `src/` (ni déclaration ni appel). Ticket = confirmer et clore. Rétrogradé de P0 |
 | P3D-001 | ⬜ | P1 | Particle System (8 chunks) — fumée/feu/nitro |
 | P3D-006 | ⬜ | P1 | Entity variants (`AnimDynamicPhysicsWrapper`, `AnimCollision`…) |
-| P3D-008 | ⬜ | P1 | Spline / LocatorMatrix / SurfaceTypeList |
+| P3D-008 | ⬜ | P1 | Spline / LocatorMatrix / SurfaceTypeList — **prérequis d'AI-RACE** : c'est probablement là que se trouve le nom des chemins, sans lequel `AddStageWaypoint` ne peut rien résoudre |
 | P3D-009 | ⬜ | P1 | CollisionWallVolume / CollisionEffect / Atc |
 | P3D-002 | ⬜ | P2 | Light chunks (headlights, lumières dynamiques) |
 | P3D-004 | ⬜ | P2 | Animation controllers (channels float/vector) |
@@ -122,7 +122,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 ### AI
 | ID | Statut | Pri | Sujet | Note |
 |---|---|---|---|---|
-| AI-RACE | 🟡 | P2 | Adversaire de course + rubber-banding | `RaceOpponent` pilote un vrai `Vehicle` via `ApplyInput`, rubber-banding borné OK. **Se coince** avant de boucler un tour. Deux causes écartées (tracé rééchantillonné à 12 m, accélérateur piloté par l'angle et non par la distance) ; reste un blocage reproductible sur la géométrie à (109, 2, -559) |
+| AI-RACE | 🟡 | P2 | Adversaire de course + rubber-banding | `RaceOpponent` pilote un vrai `Vehicle` via `ApplyInput`, rubber-banding borné OK. **Se coince** avant de boucler un tour. Deux causes écartées (tracé rééchantillonné à 12 m, accélérateur piloté par l'angle et non par la distance) ; reste un blocage reproductible à (109, 2, -559). **Constat de fond** : le niveau n'expose que 110 petites boucles de circulation fermées, aucun circuit de course, et `AddStageWaypoint("m1_AI_path1")` est irrésolvable car le chunk P3D `Path` ne porte pas de nom |
 | AI-PATH | ✅ | P2 | Contrôleur path-following réutilisable | extrait dans `src/AI/PathFollower.*` (`Steering::Seek`, `Steering::ArrivalSpeed`, suivi de boucle de waypoints) |
 
 ### GAME / flow
