@@ -53,15 +53,48 @@ d'une exécution à l'autre, vitesse 0, accélérateur au plancher `0,55 × 0,85
 plus un problème de commande mais de **collision** : la voiture est coincée contre la
 géométrie à cet endroit précis.
 
-Pistes pour la suite :
+## Le vrai blocage : il n'y a pas de circuit dans les données
 
-- Inspecter la géométrie autour de `(109, 2, -559)` : le waypoint 2 du tracé rééchantillonné
-  passe-t-il à travers un bâtiment ou un trottoir infranchissable ?
+Recensement des chemins de `L1_TERRA` (instrumenté, 2026-08-22) :
+
+```
+110 paths in level
+  path 0:  9 pts, len=116m, first=(348,3.4,-168) last=(348,3.4,-168)
+  path 1: 11 pts, len=142m, first=(289,4.4,-168) last=(289,4.4,-168)
+  path 2:  7 pts, len=164m, first=(216,3.4,-167) last=(216,3.4,-167)
+  ...
+```
+
+**110 chemins, chacun une petite boucle fermée** (premier point = dernier, 5 à 11 points,
+56 à 164 m). Ce sont des boucles de circulation autour de pâtés de maisons — le réseau que
+`TrafficManager` exploite. **Aucun n'est un circuit de course.**
+
+Or `AddObjective("race")` choisit « le chemin le plus long du niveau » (19 points) et le
+baptise circuit. C'est arbitraire : on obtient une boucle de quartier au hasard, pas le tracé
+que la mission décrit.
+
+Et le tracé que la mission décrit, `AddStageWaypoint("m1_AI_path1")`, **n'est pas
+résolvable** : le chunk P3D `Path` ne porte que `GetNumPoints()` et `GetPoints()` — **pas de
+nom** (`src/P3D/P3D.generated.h:2110`). Rien dans le moteur ne peut associer la chaîne
+`"m1_AI_path1"` à un chemin. Ce n'est pas non plus un locator (aucun `m1_AI_path*` dans la
+liste des locators du niveau).
+
+C'est donc là que se situe le vrai travail, et il précède toute amélioration du pilotage :
+
+1. Trouver comment le format nomme les chemins — probablement un chunk voisin (`Intersection`,
+   `LocatorMatrix`, `Spline`, cf. `P3D-008`) ou un `Locator2` de type chemin, à reverser.
+2. Faire porter un nom à `Level::Path` et permettre `AddStageWaypoint` de le résoudre.
+3. Seulement ensuite : évitement d'obstacle et manœuvre de dégagement.
+
+Observation complémentaire : téléporté à côté de la voiture bloquée, on la voit **sur la
+route et à moitié enfoncée dedans**, pas coincée contre un bâtiment. À creuser avec le point
+1 — un tracé de circulation posé plus bas que la surface roulante expliquerait les deux.
+
+## Pistes secondaires
+
 - Aucune détection d'obstacle : la voiture vise le waypoint en ligne droite.
 - La manœuvre de dégagement est naïve (marche arrière + braquage inversé) et ne réessaie pas
   d'angle différent ; elle se déclenche bien mais ne libère pas la voiture.
-- `AddStageWaypoint("m1_AI_path1")` nomme un chemin dédié à l'IA, toujours inexploité : il
-  est probablement mieux tracé que le chemin le plus long du niveau, choisi par défaut.
 
 ## Critères d'acceptation
 - [x] Un `RaceOpponent` suit le circuit en pilotant un `Vehicle` via `ApplyInput`.
