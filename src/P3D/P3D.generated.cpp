@@ -2237,4 +2237,34 @@ CompositeDrawableEffectList::CompositeDrawableEffectList(const P3DChunk& chunk)
 	MemoryStream stream(chunk.GetData());
 	_numEffects = stream.Read<uint32_t>();
 }
+
+Spline::Spline(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::Spline));
+
+	MemoryStream stream(chunk.GetData());
+	_name = stream.ReadLPString();
+	_numPoints = stream.Read<uint32_t>();
+	_points.resize(_numPoints);
+	stream.ReadBytes(reinterpret_cast<uint8_t*>(_points.data()), _points.size() * sizeof(Vector3));
+}
+
+LocatorMatrix::LocatorMatrix(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::LocatorMatrix));
+
+	MemoryStream stream(chunk.GetData());
+	_transform = stream.Read<Matrix4x4>();
+}
+
+SurfaceTypeList::SurfaceTypeList(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::SurfaceTypeList));
+
+	MemoryStream stream(chunk.GetData());
+	_version = stream.Read<uint32_t>();
+	_numSurfaces = stream.Read<uint32_t>();
+	_surfaces.resize(_numSurfaces);
+	stream.ReadBytes(_surfaces.data(), _surfaces.size());
+}
 } // namespace Donut::P3D

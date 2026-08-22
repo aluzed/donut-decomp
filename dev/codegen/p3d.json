@@ -836,6 +836,7 @@
   },
 
   "Spline": {
+    "name": "string",
     "numPoints": "u32",
     "points": "buffer<vec3[numPoints]>"
   },
@@ -845,8 +846,9 @@
   },
 
   "SurfaceTypeList": {
+    "version": "u32",
     "numSurfaces": "u32",
-    "surfaces": "buffer<u32[numSurfaces]>"
+    "surfaces": "buffer<u8[numSurfaces]>"
   },
 
   "Mesh": {

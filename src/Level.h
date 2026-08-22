@@ -15,6 +15,11 @@
 namespace Donut
 {
 
+namespace P3D
+{
+class P3DChunk;
+}
+
 namespace GL
 {
 class ShaderProgram;
@@ -57,9 +62,14 @@ public:
 
 	Vector3 GetLocatorPosition(const std::string& name) const;
 	const std::vector<Path>& GetPaths() const { return _paths; }
+
+	// Named camera/animation splines. Spline chunks are nested inside the level
+	// graph rather than sitting at the root, so they are gathered recursively.
+	const std::map<std::string, std::vector<Vector3>>& GetSplines() const { return _splines; }
 	bool CheckTrigger(const Vector3& pos, const std::string& name) const;
 
 private:
+	void collectSplines(const P3D::P3DChunk& chunk);
 	void loadRegion(const std::string& filename);
 	void unloadRegion(const std::string& filename);
 
@@ -74,6 +84,7 @@ private:
 	std::vector<std::unique_ptr<CompositeModel>> _compositeModels;
 
 	std::vector<Path> _paths;
+	std::map<std::string, std::vector<Vector3>> _splines;
 	std::vector<Trigger> _triggers;
 	std::set<std::string> _loadedRegions;
 	std::set<std::string> _loadedP3Ds;
