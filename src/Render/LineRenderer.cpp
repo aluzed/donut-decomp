@@ -13,10 +13,12 @@
 namespace Donut
 {
 std::string VertSrc = R"glsl(
-	#version 150 core
+	#version 330 core
 
-	in vec3 position;
-	in vec4 color;
+	// Locations must match the ArrayElement layout in the constructor; see the
+	// note in SpriteBatch.cpp for what happens when the linker picks them.
+	layout(location = 0) in vec3 position;
+	layout(location = 1) in vec4 color;
 
 	out vec4 vertColor;
 
@@ -30,7 +32,7 @@ std::string VertSrc = R"glsl(
 )glsl";
 
 std::string FragSrc = R"glsl(
-	#version 150 core
+	#version 330 core
 
 	in vec4 vertColor;
 

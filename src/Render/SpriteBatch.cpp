@@ -14,11 +14,15 @@
 namespace Donut
 {
 std::string SpriteBatchVertSrc = R"glsl(
-		#version 150 core
+		#version 330 core
 
-		in vec2 vert_position;
-		in vec2 vert_texcoord;
-		in vec4 vert_color;
+		// The locations must match the ArrayElement layout in the constructor. Without
+		// them the linker assigns attributes in an implementation-defined order (AMD
+		// hands out texcoord=0, color=1, position=2), so the shader reads positions out
+		// of the colour floats and every quad collapses to a sub-pixel dot off-screen.
+		layout(location = 0) in vec2 vert_position;
+		layout(location = 1) in vec2 vert_texcoord;
+		layout(location = 2) in vec4 vert_color;
 
 		out vec2 frag_texcoord;
 		out vec4 frag_color;
@@ -34,9 +38,9 @@ std::string SpriteBatchVertSrc = R"glsl(
 	)glsl";
 
 std::string SpriteBatchFragSrc = R"glsl(
-		#version 150 core
+		#version 330 core
 
-		uniform sampler2D texture;
+		uniform sampler2D spriteTexture;
 
 		in vec2 frag_texcoord;
 		in vec4 frag_color;
@@ -45,7 +49,7 @@ std::string SpriteBatchFragSrc = R"glsl(
 
 		void main()
 		{
-			outColor = texture2D(texture, frag_texcoord) * frag_color;
+			outColor = texture(spriteTexture, frag_texcoord) * frag_color;
 		}
 	)glsl";
 
