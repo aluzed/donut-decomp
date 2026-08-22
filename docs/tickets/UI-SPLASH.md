@@ -1,11 +1,11 @@
-# UI-SPLASH — Le jeu reste bloqué sur Splash : aucun texte 2D, menu inatteignable
+# UI-SPLASH — Aucun texte 2D ni ligne de debug dessinés, menu invisible donc inatteignable
 
-- **Status:** TODO
+- **Status:** DONE (2026-08-22)
 - **Priority:** P0 (bloquant : impossible d'atteindre `InGame` par les commandes normales)
 - **Module:** Game / UI
 - **Depends on:** —
 - **Blocks:** UI-MENU, UI-HUD, UI-TEXT, GAME-003, et toute validation manuelle du gameplay
-- **Files:** `src/Game.cpp:232` (état initial), `src/Game.cpp:~726` (sortie de Splash), `src/Game.cpp:1303+` (rendu MainMenu), `src/Render/SpriteBatch.cpp`
+- **Files:** `src/Render/SpriteBatch.cpp`, `src/Render/LineRenderer.cpp` (shaders inline)
 
 ## Contexte
 
@@ -35,6 +35,43 @@ Donc `_resourceManager->GetFont("boulder_16")` ne renvoie **pas** `nullptr`, et 
 Forcer `_gameState = GameState::InGame` à l'init contourne entièrement le problème : le jeu
 se déroule alors normalement (physique, piétons, collectibles, triggers, véhicule). Le
 blocage est donc dans la transition d'état ou dans le rendu 2D, pas dans le gameplay.
+
+## Cause racine (résolue)
+
+**Les deux shaders *inline* ne fixaient pas leurs emplacements d'attributs.**
+
+`SpriteBatch` et `LineRenderer` déclarent leur GLSL dans le `.cpp`, en `#version 150 core`,
+avec de simples `in vec2 vert_position; …`. Sans `layout(location = N)`, l'éditeur de liens
+GL attribue les emplacements dans un ordre **défini par l'implémentation**. Mesuré sur ce
+poste (Radeon RX 7900 XTX) :
+
+```
+prog=8 vert_position=2 vert_texcoord=0 vert_color=1
+```
+
+…alors que le tableau `ArrayElement` du constructeur code en dur `0 = position`,
+`1 = texcoord`, `2 = couleur`. Le vertex shader lisait donc la position dans les **flottants
+de couleur** : chaque quad s'effondrait en un point sous-pixel hors écran. Aucune erreur GL,
+aucun avertissement — juste rien à l'écran.
+
+Tous les shaders de `assets/shaders/` sont en `#version 330` avec des `layout(location = N)`
+explicites : c'est pourquoi la scène 3D s'affichait correctement et que seuls ces deux
+renderers étaient touchés. Ça a dû fonctionner sur l'ancienne machine Linux, dont le
+compilateur GLSL assignait les emplacements dans l'ordre de déclaration.
+
+Correctif : passer les deux shaders inline en `#version 330 core` avec des
+`layout(location = N)` explicites alignés sur le layout C++ (et renommer l'uniform
+`texture` en `spriteTexture`, `texture2D()` ayant disparu du profil core).
+
+## Vérification
+
+- Menu principal : titre « donut » et libellés « New Game » / « Quit » visibles.
+- Clic sur « New Game » → passage en `InGame` (HUD « Coins: 1/10 », barre d'aide).
+- HUD en jeu visible (fps, HP, pièces).
+- Debug draw Bullet et `LineRenderer` : squelette, axes et volumes désormais tracés.
+
+L'état **n'était pas bloqué** sur Splash : la transition fonctionnait, le menu était
+simplement invisible.
 
 ## Pistes écartées (2026-08-22)
 
@@ -72,7 +109,7 @@ le menu utilisable tant que ce ticket est ouvert.
 
 ## Critères d'acceptation
 
-- [ ] Appuyer sur Entrée depuis Splash fait passer en MainMenu de façon observable.
-- [ ] Le titre et les libellés de boutons s'affichent réellement à l'écran.
-- [ ] Cliquer « New Game » démarre la partie (`InGame`).
-- [ ] Le HUD (texte `SpriteBatch`) est visible en jeu.
+- [x] Appuyer sur Entrée depuis Splash fait passer en MainMenu de façon observable.
+- [x] Le titre et les libellés de boutons s'affichent réellement à l'écran.
+- [x] Cliquer « New Game » démarre la partie (`InGame`).
+- [x] Le HUD (texte `SpriteBatch`) est visible en jeu.
