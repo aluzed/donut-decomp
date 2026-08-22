@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <utility>
 
 namespace Donut
 {
@@ -41,6 +42,22 @@ Texture::Texture(const P3D::Texture& texture)
 
 	// generate mipmaps :)
 	glGenerateMipmap(GL_TEXTURE_2D);
+}
+
+Texture::Texture(const uint8_t* rgba, std::size_t width, std::size_t height, std::string name)
+    : _name(std::move(name)), _width(width), _height(height), _glTexture(0)
+{
+	glGenTextures(1, &_glTexture);
+	glBindTexture(GL_TEXTURE_2D, _glTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)_width, (GLsizei)_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+
+	// no mipmaps: these are UI-sized textures drawn 1:1 or stretched, and a
+	// mip-requesting sampler would make them incomplete
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 }
 
 Texture::Texture(const P3D::Sprite& sprite)

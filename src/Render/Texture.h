@@ -3,6 +3,7 @@
 #include "Core/Math/Vector2Int.h"
 #include "OpenGL/glad/glad.h"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 
@@ -21,6 +22,9 @@ class Texture
 public:
 	Texture(const P3D::Texture&);
 	Texture(const P3D::Sprite&);
+	// Wraps raw 8-bit RGBA pixels; lets UI code build the small solid-colour
+	// textures it needs without a P3D asset behind them.
+	Texture(const uint8_t* rgba, std::size_t width, std::size_t height, std::string name);
 	~Texture();
 
 	void Bind() const;
