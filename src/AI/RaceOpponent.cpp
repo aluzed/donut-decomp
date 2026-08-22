@@ -32,6 +32,12 @@ RaceOpponent::RaceOpponent(Vehicle& vehicle, std::vector<Vector3> circuit)
 	Log::Info("RaceOpponent: driving '{}' around {} waypoints", _vehicle.GetName(), _path.Count());
 }
 
+void RaceOpponent::SetCircuit(std::vector<Vector3> circuit)
+{
+	Log::Info("RaceOpponent: circuit replaced, {} waypoints", circuit.size());
+	_path.SetWaypoints(std::move(circuit));
+}
+
 void RaceOpponent::Update(double dt, float playerProgress)
 {
 	if (_path.Empty())

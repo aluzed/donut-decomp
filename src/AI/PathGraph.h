@@ -26,6 +26,11 @@ public:
 
 	Vector3 GetRandomNode() const;
 	int GetNextNode(int current, int target) const;
+
+	// Shortest route between the nodes nearest `from` and `to`, as world
+	// positions. GetNextNode above is greedy best-first and gets trapped in local
+	// minima; this is an A* over the whole graph. Empty when no route exists.
+	std::vector<Vector3> FindRoute(const Vector3& from, const Vector3& to) const;
 	int FindNearestNode(const Vector3& position) const;
 
 private:

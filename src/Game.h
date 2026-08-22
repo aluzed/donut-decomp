@@ -74,6 +74,7 @@ public:
 	WorldPhysics& GetWorldPhysics() { return *_worldPhysics; }
 	LineRenderer& GetLineRenderer() { return *_lineRenderer; }
 	Level& GetLevel() { return *_level; }
+	const PathGraph& GetPathGraph() const { return *_pathGraph; }
 
 	ScriptEngine& GetScriptEngine() { return *_scriptEngine; }
 

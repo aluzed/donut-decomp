@@ -24,6 +24,10 @@ public:
 	// the same circuit; pass a negative value to disable rubber-banding.
 	void Update(double dt, float playerProgress);
 
+	// The mission's own route is only known once the .con has finished declaring
+	// its waypoints, which happens after the vehicle is created.
+	void SetCircuit(std::vector<Vector3> circuit);
+
 	float Progress() const { return _path.Progress(); }
 	int Laps() const { return _path.Laps(); }
 	const Vehicle& GetVehicle() const { return _vehicle; }

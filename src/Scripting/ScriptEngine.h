@@ -34,6 +34,7 @@ public:
 	void AddStage(int index);
 	void CloseStage();
 	void CloseMission();
+	void buildRaceCircuit();
 	void SetStageTime(float seconds);
 	void Update(double dt);
 	void CleanupMission();
@@ -116,6 +117,8 @@ private:
 	float _aiSpeed = 12.0f;
 	// Dense road-following waypoints for the AI, resampled from the level path;
 	// _checkpoints stays the sparse set the player has to drive through.
+	// Route nodes named by AddStageWaypoint, in declaration order.
+	std::vector<Vector3> _stageWaypoints;
 	std::vector<Vector3> _racePath;
 	std::unique_ptr<RaceOpponent> _raceOpponent;
 	std::unique_ptr<ChaseManager> _chaseManager;
