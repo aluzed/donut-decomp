@@ -113,6 +113,7 @@ void ScriptEngine::CloseMission()
 void ScriptEngine::CleanupMission()
 {
 	_raceOpponent.reset();
+	_racePath.clear();
 
 	for (auto& v : _missionVehicles)
 		v->DestroyPhysics(_game.GetWorldPhysics());
@@ -224,9 +225,9 @@ void ScriptEngine::AddStageVehicle(const std::string& car, const std::string& lo
 		// A race car dumped beside the player starts wedged against whatever the
 		// player is standing next to, and full steering lock cannot free it. Put
 		// it on its own circuit instead; anything else starts the race broken.
-		if (behaviour == "race" && !_checkpoints.empty())
+		if (behaviour == "race" && !_racePath.empty())
 		{
-			pos = _checkpoints.front();
+			pos = _racePath.front();
 			Log::Warn("ScriptEngine: locator '{}' not found, starting race car '{}' on the circuit", locator, car);
 		}
 		else
@@ -249,8 +250,8 @@ void ScriptEngine::AddStageVehicle(const std::string& car, const std::string& lo
 
 	// A "race" stage vehicle is the opponent's; give it a driver following the
 	// same circuit the player's checkpoints come from.
-	if (behaviour == "race" && !_checkpoints.empty())
-		_raceOpponent = std::make_unique<RaceOpponent>(*vehicle, _checkpoints);
+	if (behaviour == "race" && !_racePath.empty())
+		_raceOpponent = std::make_unique<RaceOpponent>(*vehicle, _racePath);
 
 	_missionVehicles.push_back(std::move(vehicle));
 }
@@ -282,6 +283,7 @@ void ScriptEngine::AddObjective(const std::string& type)
 	_currentCheckpoint = 0;
 	_currentLap = 0;
 	_checkpoints.clear();
+	_racePath.clear();
 	_aiCheckpoint = 0;
 
 	if (type == "race")
@@ -299,14 +301,34 @@ void ScriptEngine::AddObjective(const std::string& type)
 		for (int i = 0; i < numCheckpoints; ++i)
 			_checkpoints.push_back(bestPath->points[i * step]);
 
+		// The AI follows the road, not the player's checkpoints: six points spread
+		// over the whole circuit describe no drivable line at all, and an opponent
+		// aiming straight at the next one drives into buildings. Resample the path
+		// itself so consecutive waypoints are never more than kRaceWaypointSpacing
+		// apart.
+		constexpr float kRaceWaypointSpacing = 12.0f;
+		_racePath.clear();
+		const auto& pts = bestPath->points;
+		for (size_t i = 0; i < pts.size(); ++i)
+		{
+			const Vector3& from = pts[i];
+			const Vector3& to = pts[(i + 1) % pts.size()];
+			_racePath.push_back(from);
+
+			const float span = (to - from).Length();
+			const int extra = static_cast<int>(span / kRaceWaypointSpacing);
+			for (int k = 1; k < extra; ++k)
+				_racePath.push_back(from + (to - from) * (static_cast<float>(k) / extra));
+		}
+
 		if (!_checkpoints.empty())
 		{
 			_aiPosition = _checkpoints[0] + Vector3(10.0f, 0, 0);
 			_aiRotation = Quaternion::Identity;
 		}
 
-		Log::Info("ScriptEngine: race circuit with {} checkpoints on path with {} points",
-		          _checkpoints.size(), bestPath->points.size());
+		Log::Info("ScriptEngine: race circuit with {} checkpoints and {} AI waypoints on a path of {} points",
+		          _checkpoints.size(), _racePath.size(), bestPath->points.size());
 	}
 	else
 	{

@@ -11,15 +11,17 @@ namespace
 {
 // Waypoint capture radius. Wider than the player's 5m checkpoint test: the
 // opponent only needs to pass near the racing line, not through a trigger.
-constexpr float kWaypointRadius = 12.0f;
+constexpr float kWaypointRadius = 8.0f;
 
 // Rubber-banding bounds. Behind the player the opponent presses on, ahead it
 // eases off, and it never leaves this band so it can neither vanish nor stall.
-constexpr float kBoostMin = 0.7f;
+constexpr float kBoostMin = 0.85f;
 constexpr float kBoostMax = 1.6f;
 constexpr float kProgressToBoost = 0.15f; // per waypoint of deficit
 
 // If the car has not moved for this long it is wedged; back up to free it.
+constexpr float kThrottleMin = 0.55f;
+
 constexpr double kStuckSeconds = 2.0;
 constexpr float kStuckSpeedKmh = 2.0f;
 } // namespace
@@ -54,8 +56,14 @@ void RaceOpponent::Update(double dt, float playerProgress)
 		_boost = 1.0f;
 	}
 
-	// Ease off into corners so the car does not understeer past the waypoint.
-	const float targetSpeed = Steering::ArrivalSpeed(position, target, 1.0f, 15.0f);
+	// Throttle from how hard we are turning, not from distance to the waypoint.
+	// Steering::ArrivalSpeed eases to zero on approach, which is right for a
+	// destination and wrong for a circuit: the opponent slowed to a stop at every
+	// waypoint it passed through. Never drop below kThrottleMin or the car cannot
+	// overcome its own friction and simply stalls on the spot.
+	const float turn = steer < 0.0f ? -steer : steer;
+	float throttle = 1.0f - turn * 0.4f;
+	if (throttle < kThrottleMin) throttle = kThrottleMin;
 
 	Vector3 travelled = position - _lastPosition;
 	travelled.Y = 0.0f;
@@ -75,7 +83,7 @@ void RaceOpponent::Update(double dt, float playerProgress)
 		return;
 	}
 
-	_vehicle.ApplyInput(targetSpeed, steer, 0.0f, _boost);
+	_vehicle.ApplyInput(throttle, steer, 0.0f, _boost);
 }
 
 } // namespace Donut
