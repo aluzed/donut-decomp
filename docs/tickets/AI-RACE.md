@@ -31,25 +31,40 @@ Aucune IA d'adversaire de course n'existe dans le codebase (seuls `TrafficManage
 - Un véhicule `"race"` dont le locator est introuvable démarre **sur son circuit** et non à
   côté du joueur : lâché près du joueur il naissait coincé contre un bâtiment.
 
-## Ce qui ne marche pas encore
+## Deuxième passe (même journée) : deux causes écartées
 
-L'adversaire **se coince**. Mesuré sur 75 s : il capture le waypoint 0, roule jusqu'à
-`(110, 2, -557)` en visant le waypoint 1, puis reste bloqué à 1 km/h braquage à fond.
-La détection d'enlisement se déclenche (le nombre d'échantillons chute) mais la marche
-arrière ne le libère pas.
+**Circuit trop grossier — corrigé.** L'adversaire suivait les 6 checkpoints du joueur,
+répartis sur tout le tour : aucune trajectoire routière là-dedans. `ScriptEngine` construit
+désormais un `_racePath` distinct en rééchantillonnant le tracé du niveau à **12 m**
+d'intervalle — 23 waypoints pour un chemin de 19 points sur `L1_TERRA`. Les checkpoints du
+joueur restent inchangés.
+
+**Accélérateur mal piloté — corrigé.** J'utilisais `Steering::ArrivalSpeed`, qui ramène la
+vitesse à zéro à l'approche de la cible. C'est juste pour une destination et faux pour un
+circuit : l'adversaire s'arrêtait à *chaque* waypoint qu'il devait simplement traverser.
+L'accélérateur dépend maintenant de l'angle de braquage, avec un plancher (`kThrottleMin`)
+sans lequel la voiture n'a pas assez de couple pour vaincre sa propre friction.
+
+## Ce qui ne marche toujours pas
+
+**L'adversaire reste bloqué au même endroit, pleins gaz.** Après les deux correctifs ci-dessus
+il atteint le waypoint 2 puis s'immobilise à **(109, 2, -559)** — position reproductible
+d'une exécution à l'autre, vitesse 0, accélérateur au plancher `0,55 × 0,85`. Ce n'est donc
+plus un problème de commande mais de **collision** : la voiture est coincée contre la
+géométrie à cet endroit précis.
 
 Pistes pour la suite :
 
-- Le circuit ne fait que **6 waypoints** issus des checkpoints du joueur — beaucoup trop
-  espacés pour définir une trajectoire routière. Il faudrait suivre le `PathGraph` complet
-  (`AddStageWaypoint("m1_AI_path1")` nomme un chemin qui n'est pas encore exploité).
-- Aucune détection d'obstacle : la voiture vise le waypoint en ligne droite, bâtiments
-  compris.
-- La manœuvre de dégagement est naïve (marche arrière, braquage inversé) et ne réessaie pas
-  d'angle différent.
+- Inspecter la géométrie autour de `(109, 2, -559)` : le waypoint 2 du tracé rééchantillonné
+  passe-t-il à travers un bâtiment ou un trottoir infranchissable ?
+- Aucune détection d'obstacle : la voiture vise le waypoint en ligne droite.
+- La manœuvre de dégagement est naïve (marche arrière + braquage inversé) et ne réessaie pas
+  d'angle différent ; elle se déclenche bien mais ne libère pas la voiture.
+- `AddStageWaypoint("m1_AI_path1")` nomme un chemin dédié à l'IA, toujours inexploité : il
+  est probablement mieux tracé que le chemin le plus long du niveau, choisi par défaut.
 
 ## Critères d'acceptation
 - [x] Un `RaceOpponent` suit le circuit en pilotant un `Vehicle` via `ApplyInput`.
 - [x] Le rubber-banding accélère l'adversaire distancé et le ralentit quand il est en tête, dans une plage bornée (observé à 0,85 en tête).
-- [ ] L'adversaire termine un tour complet sans rester bloqué — **échoue**, cf. ci-dessus.
+- [ ] L'adversaire termine un tour complet sans rester bloqué — **échoue** : bloqué de façon reproductible à (109, 2, -559), cf. ci-dessus.
 - [ ] SCRIPT-D peut instancier, démarrer et arrêter l'adversaire — `ScriptEngine` le crée et le détruit, mais les commandes `SCRIPT-D` elles-mêmes restent des stubs.

@@ -114,6 +114,9 @@ private:
 	Quaternion _aiRotation;
 	int _aiCheckpoint = 0;
 	float _aiSpeed = 12.0f;
+	// Dense road-following waypoints for the AI, resampled from the level path;
+	// _checkpoints stays the sparse set the player has to drive through.
+	std::vector<Vector3> _racePath;
 	std::unique_ptr<RaceOpponent> _raceOpponent;
 	std::unique_ptr<ChaseManager> _chaseManager;
 };
