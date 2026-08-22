@@ -66,6 +66,16 @@ public:
 	// Named camera/animation splines. Spline chunks are nested inside the level
 	// graph rather than sitting at the root, so they are gathered recursively.
 	const std::map<std::string, std::vector<Vector3>>& GetSplines() const { return _splines; }
+
+	// The real road network: Intersection nodes joined by Road links, which name
+	// their two endpoints. Unlike the Path loops, this graph is connected.
+	struct RoadLink
+	{
+		std::string start;
+		std::string end;
+	};
+	const std::map<std::string, Vector3>& GetIntersections() const { return _intersections; }
+	const std::vector<RoadLink>& GetRoads() const { return _roads; }
 	bool CheckTrigger(const Vector3& pos, const std::string& name) const;
 
 private:
@@ -85,6 +95,8 @@ private:
 
 	std::vector<Path> _paths;
 	std::map<std::string, std::vector<Vector3>> _splines;
+	std::map<std::string, Vector3> _intersections;
+	std::vector<RoadLink> _roads;
 	std::vector<Trigger> _triggers;
 	std::set<std::string> _loadedRegions;
 	std::set<std::string> _loadedP3Ds;
