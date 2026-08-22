@@ -80,15 +80,21 @@ void ScriptEngine::AddStage(int index)
 
 void ScriptEngine::CloseStage()
 {
-	Log::Info("ScriptEngine: stage {} end", _currentStage);
+	// Ends the stage *declaration* in the .con file, not the stage itself. The
+	// script is a description of the mission; the stage it just described is the
+	// one the player is about to attempt.
+	Log::Info("ScriptEngine: stage {} declared", _currentStage);
 }
 
 void ScriptEngine::CloseMission()
 {
-	_missionActive = false;
-	_currentStage = -1;
-	Log::Info("ScriptEngine: mission {} completed", _missionId);
-	_game.SetState(GameState::MissionComplete);
+	// Likewise: this closes the mission definition block, so the mission is now
+	// set up and running. It used to set GameState::MissionComplete here, which
+	// meant every .con finished its own mission the instant it finished parsing:
+	// the race announced "STAGE COMPLETE! Time: 0.0s", the 5s retry timer fired,
+	// the script re-ran, and it looped forever with no vehicle ever reachable.
+	// Completion belongs to gameplay -- see AdvanceCheckpoint/ShowStageComplete.
+	Log::Info("ScriptEngine: mission '{}' loaded, stage {} active", _missionId, _currentStage);
 }
 
 void ScriptEngine::CleanupMission()
@@ -102,6 +108,13 @@ void ScriptEngine::CleanupMission()
 	_objectiveTarget.clear();
 	_stageTimeRemaining = -1.0f;
 	_goTimer = 1.5f;
+
+	// Tearing the mission down is what clears the active flag; CloseMission used
+	// to do it as a side effect of wrongly completing the mission, and without
+	// this SelectMission's `if (_missionActive) return` would refuse to reload.
+	_missionActive = false;
+	_currentStage = -1;
+
 	Log::Info("ScriptEngine: mission cleaned up");
 }
 
