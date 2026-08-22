@@ -55,6 +55,12 @@ géométrie à cet endroit précis.
 
 ## Le vrai blocage : il n'y a pas de circuit dans les données
 
+> **Mise à jour (même journée)** : `m1_AI_path1` a été retrouvé. Ce n'est pas un chunk `Path`
+> mais un `Locator2` du P3D de la mission, que rien ne chargeait — voir
+> [LEVEL-MISSIONP3D](LEVEL-MISSIONP3D.md). Les nœuds `m1_AI_path1`, `m1_AI_path1b`,
+> `m1_AI_path4` et `race_finish` sont désormais résolus. Ce sont **trois points isolés**, pas
+> une polyligne : il reste à les relier en trajectoire via le réseau de `Path` du niveau.
+
 Recensement des chemins de `L1_TERRA` (instrumenté, 2026-08-22) :
 
 ```

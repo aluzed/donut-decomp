@@ -1758,12 +1758,18 @@ public:
 	const std::string& GetName() const { return _name; }
 	const uint32_t& GetType() const { return _type; }
 	const uint32_t& GetDataSize() const { return _dataSize; }
+	const std::vector<uint32_t>& GetData() const { return _data; }
+	const Vector3& GetPosition() const { return _position; }
+	const uint32_t& GetNumTriggers() const { return _numTriggers; }
 	const std::vector<std::unique_ptr<TriggerVolume>>& GetTriggers() const { return _triggers; }
 
 private:
 	std::string _name;
 	uint32_t _type;
 	uint32_t _dataSize;
+	std::vector<uint32_t> _data;
+	Vector3 _position;
+	uint32_t _numTriggers;
 	std::vector<std::unique_ptr<TriggerVolume>> _triggers;
 };
 

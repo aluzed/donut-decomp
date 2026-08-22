@@ -28,6 +28,16 @@ void ScriptEngine::SelectMission(const std::string& id)
 
 	_missionActive = true;
 	_missionId = id;
+
+	// Mission locators (spawn points, car starts, AI path nodes, race_finish...)
+	// live in the mission's own P3D files, which nothing loaded: level.p3d holds
+	// the level-wide ones, <id>.p3d the mission's own. Every "locator not found"
+	// warning in the log came from here, and AddStageWaypoint could never resolve
+	// its argument.
+	// TODO: level01 is hard-coded because the engine only loads level 1 so far.
+	_game.GetLevel().LoadP3D("missions/level01/level.p3d");
+	_game.GetLevel().LoadP3D("missions/level01/" + id + ".p3d");
+
 	_currentStage = -1;
 	_zones.clear();
 

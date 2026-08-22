@@ -588,6 +588,9 @@
     "name": "string",
     "type": "u32",
     "dataSize": "u32",
+    "data": "buffer<u32[dataSize]>",
+    "position": "vec3",
+    "numTriggers": "u32",
 
     "triggers": "children TriggerVolume"
   },
