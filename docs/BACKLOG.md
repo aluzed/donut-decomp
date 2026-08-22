@@ -54,6 +54,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 |---|---|---|---|
 | **REGR-001** | ✅ | **Boucle gameplay désactivée réactivée.** La cause du crash n'était pas dans le bloc : `db9c8db` l'a commenté pour isoler un crash que `9860a4f` a corrigé le même jour (`Character::_rotation` non initialisé + bugs `stepUp`/`stepDown`/`onGround`) ; le désactivage a survécu 22 commits. Vérifié 2026-08-22 : 91 882 exécutions, 0 crash, triggers ✅, collectibles ✅, piétons ✅ | `Game.cpp:813` + `Game.cpp:643` |
 | **CHARCTRL-FALL** | ✅ | **Le personnage traversait le sol dès qu'il avançait.** Cause : aucun `btGhostPairCallback` installé sur le broadphase, donc le ghost object du personnage n'accumulait aucune paire — ni dépénétration, ni collision horizontale. 56 chutes → **0** sur le même parcours de 60 s | `WorldPhysics.cpp` (constructeur) |
+| **SCRIPT-PARSE** | ✅ | **`find_first_of("//")` tronquait toute commande `.con` ayant un `/` dans un argument** (il cherche un `/` isolé, pas la séquence). `AddStageVehicle(..., "Missions/level01/M1race.con", ...)` et `SetPresentationBitmap("art/...")` étaient rejetées sans message — d'où l'absence de véhicule de mission. Corrigé aussi : `stdout` bufferisé qui perdait les journaux, téléport debug hors de portée, `E` qui faisait entrer puis sortir | `Commands.h`, `Core/Log.h`, `Game.cpp` |
 | **MISSION-LOOP** | ✅ | **Chaque `.con` terminait sa propre mission à la fin du parsing.** `CloseMission()` (marqueur de fin de bloc) déclenchait `GameState::MissionComplete`, d'où « STAGE COMPLETE! Time: 0.0s » en boucle et aucun véhicule atteignable. La complétion revient au gameplay | `ScriptEngine.cpp`, `Game.cpp` |
 | **UI-SPLASH** | ✅ | **Aucun texte 2D ni ligne de debug dessinés.** Les shaders inline de `SpriteBatch` et `LineRenderer` (`#version 150 core`, sans `layout(location)`) laissaient l'éditeur de liens GL choisir les emplacements d'attributs — sur AMD `position=2, texcoord=0, color=1` au lieu de 0/1/2 — donc le shader lisait la position dans les octets de couleur. L'état n'était pas bloqué : le menu était invisible | `SpriteBatch.cpp`, `LineRenderer.cpp` |
 
@@ -228,8 +229,9 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 1. **Jouabilité visible** : ~~UI-MENU~~ ✅ → ~~UI-HUD~~ ✅ → **GAME-010** (collectibles : cartes/gags, l'état persistant) → SCRIPT-E/H. Donne une boucle de jeu lisible.
 2. **Fidélité monde** : LEVEL-STREAM → LEVEL-TRIG → PHYS-011 → PHYS-004. Le monde réagit.
 3. **Contenu missions** : SCRIPT-A → SCRIPT-B → AI-RACE → SCRIPT-D. Les vraies missions tournent.
-   La boucle « STAGE COMPLETE! Time: 0.0s » est corrigée (cf. MISSION-LOOP) ; il reste à rendre
-   le véhicule de mission accessible au joueur avant que quoi que ce soit se teste en voiture.
+   Débloqué : la course tourne (MISSION-LOOP) et le véhicule de mission est créé puis
+   embarquable (SCRIPT-PARSE). Reste que le véhicule traverse le terrain une fois embarqué —
+   les corps de véhicule ont leur propre problème de collision, distinct de CHARCTRL-FALL.
 4. **Dette/qualité** (parallélisable) : GAME-001a→e, P3D-013, AUDIO-009.
 
 ---

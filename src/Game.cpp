@@ -512,6 +512,10 @@ void Game::Run()
 							_activeVehicle = v.get();
 							Log::Info("Game: entered vehicle '{}'", v->GetName());
 							_audioManager->PlayRaw(SoundGenerator::Beep(800, 0.15f), 22050, 1, 16);
+							// Consume the press: the exit check below is guarded on
+							// _inVehicle, which was just set, so the same intent would
+							// enter and immediately leave again within one frame.
+							intent.interact = false;
 							// getting in the car starts the race; finishing it is the
 							// checkpoint loop's job (this used to complete the stage here)
 							break;
@@ -526,7 +530,11 @@ void Game::Run()
 			{
 				for (auto& v : _scriptEngine->GetMissionVehicles())
 				{
-					SetPlayerPosition(v->GetPosition() + Vector3(0, 2.0f, 5.0f));
+					// Land beside the car, inside the boarding radius below. The old
+					// offset (0, 2, 5) put the player 5.39 units away -- just outside
+					// the < 5 check -- so the debug teleport could never be followed
+					// by "interact" to actually get in.
+					SetPlayerPosition(v->GetPosition() + Vector3(2.5f, 1.0f, 0.0f));
 					break;
 				}
 			}

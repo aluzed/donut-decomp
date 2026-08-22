@@ -129,11 +129,27 @@ public:
 		if (line[0] == '/')
 			return false;
 
-		std::size_t commentPos = line.find_first_of("//");
-		if (commentPos != std::string::npos)
+		// Strip a trailing line comment, but only one starting outside a quoted
+		// string. This used to be find_first_of("//"), which matches any single
+		// '/' -- so a path argument truncated the line, rfind(");") then failed,
+		// and the whole command was silently dropped. AddStageVehicle(...,
+		// "Missions/level01/M1race.con", ...) and SetPresentationBitmap("art/...")
+		// never ran, which is why no mission vehicle ever spawned.
+		bool inQuote = false;
+		for (std::size_t i = 0; i + 1 < line.size(); ++i)
 		{
-			line = line.substr(0, commentPos);
-			trim(line);
+			if (line[i] == '"')
+			{
+				inQuote = !inQuote;
+				continue;
+			}
+
+			if (!inQuote && line[i] == '/' && line[i + 1] == '/')
+			{
+				line = line.substr(0, i);
+				trim(line);
+				break;
+			}
 		}
 
 		std::size_t end = line.rfind(");");
