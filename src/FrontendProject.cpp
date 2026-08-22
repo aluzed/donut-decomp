@@ -104,7 +104,7 @@ void FrontendProject::AddGroup(const P3D::FrontendGroup& group, int32_t resX, in
 	for (const auto& group : group.GetChildren()) { AddGroup(*group, resX, resY); }
 }
 
-void FrontendProject::LoadP3D(const std::string& filename)
+void FrontendProject::LoadP3D(const std::string& filename, const std::string& pageName)
 {
 	if (!FileSystem::exists(filename))
 	{
@@ -115,6 +115,7 @@ void FrontendProject::LoadP3D(const std::string& filename)
 	Log::Info("Loading Frontend Project: {}", filename);
 
 	const auto p3d = P3D::P3DFile(filename);
+	int pagesLoaded = 0;
 	const auto& root = p3d.GetRoot();
 	for (const auto& chunk : root.GetChildren())
 	{
@@ -128,13 +129,21 @@ void FrontendProject::LoadP3D(const std::string& filename)
 
 			for (const auto& page : project->GetPages())
 			{
+				if (!pageName.empty() && page->GetName() != pageName)
+					continue;
+
 				for (const auto& layer : page->GetLayers())
 				{
 					for (const auto& group : layer->GetGroups()) { AddGroup(*group, resX, resY); }
 
 					for (const auto& multiSprite : layer->GetMultiSprites()) { AddMultiSprite(*multiSprite, resX, resY); }
 				}
+
+				++pagesLoaded;
 			}
+
+			if (!pageName.empty() && pagesLoaded == 0)
+				Log::Warn("Frontend: no page named '{}' in {}", pageName, filename);
 			break;
 		}
 		case P3D::ChunkType::Sprite:

@@ -145,7 +145,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 ### UI / HUD
 | ID | Statut | Pri | Sujet | Note |
 |---|---|---|---|---|
-| UI-MENU | 🟡 | P1 | Main menu + pause : **fonctionnels** depuis 2026-08-22 (hit-test corrigé + UI-SPLASH). Reste : la mise en page est inversée (les boutons montent quand l'index croît, le titre s'affiche sous eux — écrite pour un Y vers le haut alors que l'ortho est Y vers le bas), et le menu pause n'est pas retesté | `Game.cpp` (blocs MainMenu/Paused) |
+| UI-MENU | ✅ | P1 | Menus principal et pause opérationnels : hit-test aligné sur le rendu, empilement Y vers le bas centré, pause qui **gèle réellement** la simulation (elle tournait derrière l'overlay), `LoadP3D(fichier, page)` filtrable | `Game.cpp`, `GameMenu.h`, `FrontendProject.cpp` |
 | UI-TEXT | 🟡 | P1 | MultiText + text bible (localisation) via TextureFont | SpriteBatch dispo ; MultiText lu non rendu |
 | UI-HUD | 🟡 | P1 | HUD complet (PV, jauge H&R, speedo, coins, cards, timer, objectifs, radar, nitro) | HUD minimal actuel |
 | UI-LANG | ⬜ | P2 | Bibles de langue | dépend P3D-005 |
@@ -224,7 +224,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 ## D. Chemins d'attaque conseillés
 
 0. ~~Débloquer les P0~~ — fait (REGR-001, CHARCTRL-FALL, UI-SPLASH). Tout ce qui suit se valide désormais à l'écran.
-1. **Jouabilité visible** : UI-HUD → UI-MENU → GAME-010 (collectibles) → SCRIPT-E/H. Donne une boucle de jeu lisible.
+1. **Jouabilité visible** : ~~UI-MENU~~ ✅ → **UI-HUD** → GAME-010 (collectibles) → SCRIPT-E/H. Donne une boucle de jeu lisible.
 2. **Fidélité monde** : LEVEL-STREAM → LEVEL-TRIG → PHYS-011 → PHYS-004. Le monde réagit.
 3. **Contenu missions** : SCRIPT-A → SCRIPT-B → AI-RACE → SCRIPT-D. Les vraies missions tournent.
 4. **Dette/qualité** (parallélisable) : GAME-001a→e, P3D-013, AUDIO-009.
