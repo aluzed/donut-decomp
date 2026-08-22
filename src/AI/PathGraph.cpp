@@ -4,6 +4,10 @@
 #include "Core/Log.h"
 #include "Level.h"
 
+#include <algorithm>
+#include <limits>
+#include <queue>
+
 namespace Donut
 {
 
@@ -105,6 +109,56 @@ int PathGraph::GetNextNode(int current, int target) const
 	}
 
 	return best;
+}
+
+std::vector<Vector3> PathGraph::FindRoute(const Vector3& from, const Vector3& to) const
+{
+	const int start = FindNearestNode(from);
+	const int goal = FindNearestNode(to);
+	if (start < 0 || goal < 0)
+		return {};
+	if (start == goal)
+		return {_nodes[goal].position};
+
+	const auto heuristic = [&](int n) { return (_nodes[n].position - _nodes[goal].position).Length(); };
+
+	std::vector<float> best(_nodes.size(), std::numeric_limits<float>::infinity());
+	std::vector<int> cameFrom(_nodes.size(), -1);
+	using Entry = std::pair<float, int>; // f-score, node
+	std::priority_queue<Entry, std::vector<Entry>, std::greater<Entry>> open;
+
+	best[start] = 0.0f;
+	open.emplace(heuristic(start), start);
+
+	while (!open.empty())
+	{
+		const int current = open.top().second;
+		open.pop();
+
+		if (current == goal)
+			break;
+
+		for (int n : _nodes[current].neighbors)
+		{
+			const float step = (_nodes[current].position - _nodes[n].position).Length();
+			const float candidate = best[current] + step;
+			if (candidate >= best[n])
+				continue;
+
+			best[n] = candidate;
+			cameFrom[n] = current;
+			open.emplace(candidate + heuristic(n), n);
+		}
+	}
+
+	if (cameFrom[goal] < 0)
+		return {};
+
+	std::vector<Vector3> route;
+	for (int n = goal; n >= 0; n = cameFrom[n])
+		route.push_back(_nodes[n].position);
+	std::reverse(route.begin(), route.end());
+	return route;
 }
 
 } // namespace Donut

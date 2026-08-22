@@ -124,7 +124,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 | ID | Statut | Pri | Sujet | Note |
 |---|---|---|---|---|
 | AI-RACE | 🟡 | P2 | Adversaire de course + rubber-banding | `RaceOpponent` pilote un vrai `Vehicle` via `ApplyInput`, rubber-banding borné OK. **Se coince** avant de boucler un tour. Deux causes écartées (tracé rééchantillonné à 12 m, accélérateur piloté par l'angle et non par la distance) ; reste un blocage reproductible à (109, 2, -559). **Débloqué depuis** : `m1_AI_path1/1b/4` et `race_finish` sont des `Locator2` du P3D de mission, désormais chargés (cf. LEVEL-MISSIONP3D). Reste à relier ces trois points isolés en trajectoire via le réseau de `Path` |
-| AI-PATH | ✅ | P2 | Contrôleur path-following réutilisable | extrait dans `src/AI/PathFollower.*` (`Steering::Seek`, `Steering::ArrivalSpeed`, suivi de boucle de waypoints) |
+| AI-PATH | 🟡 | P2 | Contrôleur path-following réutilisable | extrait dans `src/AI/PathFollower.*` et réutilisé par `RaceOpponent` ; `PathGraph::FindRoute` ajoute un A\*. `TrafficManager` garde ses copies. **Constat** : le graphe routier est disjoint en 110 composantes (une par boucle), donc aucun itinéraire inter-quartiers n'est possible |
 
 ### GAME / flow
 | ID | Statut | Pri | Sujet | Note |

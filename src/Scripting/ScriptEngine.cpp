@@ -2,6 +2,7 @@
 
 #include "ScriptEngine.h"
 #include "AI/ChaseManager.h"
+#include "AI/PathGraph.h"
 #include "AI/RaceOpponent.h"
 #include "Audio/AudioManager.h"
 #include "Audio/SoundGenerator.h"
@@ -46,6 +47,7 @@ void ScriptEngine::SelectMission(const std::string& id)
 	// behind in the physics world, dangling: the first run left a car falling
 	// forever, reaching Y = -440.
 	_raceOpponent.reset();
+	_stageWaypoints.clear();
 	for (auto& v : _missionVehicles)
 		v->DestroyPhysics(_game.GetWorldPhysics());
 	_missionVehicles.clear();
@@ -117,6 +119,8 @@ void ScriptEngine::CloseMission()
 	// the race announced "STAGE COMPLETE! Time: 0.0s", the 5s retry timer fired,
 	// the script re-ran, and it looped forever with no vehicle ever reachable.
 	// Completion belongs to gameplay -- see AdvanceCheckpoint/ShowStageComplete.
+	buildRaceCircuit();
+
 	Log::Info("ScriptEngine: mission '{}' loaded, stage {} active", _missionId, _currentStage);
 }
 
@@ -124,6 +128,7 @@ void ScriptEngine::CleanupMission()
 {
 	_raceOpponent.reset();
 	_racePath.clear();
+	_stageWaypoints.clear();
 
 	for (auto& v : _missionVehicles)
 		v->DestroyPhysics(_game.GetWorldPhysics());
@@ -272,9 +277,73 @@ void ScriptEngine::SetTopSpeedKmh(float speed) { if (_activeVehicle) _activeVehi
 void ScriptEngine::SetTireGrip(float grip) { if (_activeVehicle) _activeVehicle->SetTireGrip(grip); }
 void ScriptEngine::SetSuspensionLimit(float limit) { if (_activeVehicle) _activeVehicle->SetSuspensionLimit(limit); }
 
-void ScriptEngine::AddStageWaypoint(const std::string& path)
+void ScriptEngine::AddStageWaypoint(const std::string& name)
 {
-	Log::Info("ScriptEngine: stage waypoint = '{}'", path);
+	// These name Locator2 entries in the mission's own P3D (LEVEL-MISSIONP3D),
+	// not Path chunks: isolated nodes the route has to be threaded through.
+	const Vector3 pos = _game.GetLevel().GetLocatorPosition(name);
+	if (pos == Vector3::Zero)
+	{
+		Log::Warn("ScriptEngine: stage waypoint '{}' not found", name);
+		return;
+	}
+
+	Log::Info("ScriptEngine: stage waypoint '{}' at ({:.1f}, {:.1f}, {:.1f})", name, pos.X, pos.Y, pos.Z);
+	_stageWaypoints.push_back(pos);
+}
+
+void ScriptEngine::buildRaceCircuit()
+{
+	// M1race.con declares a single AddStageWaypoint, so a stage waypoint is a
+	// destination rather than one vertex of a polyline. Compose the route from
+	// what the mission actually gives us: where the opponent starts, the
+	// waypoints it must reach, and the finish line if the mission names one.
+	std::vector<Vector3> nodes;
+	if (_raceOpponent)
+		nodes.push_back(_raceOpponent->GetVehicle().GetPosition());
+	nodes.insert(nodes.end(), _stageWaypoints.begin(), _stageWaypoints.end());
+
+	const Vector3 finish = _game.GetLevel().GetLocatorPosition("race_finish");
+	if (finish != Vector3::Zero)
+		nodes.push_back(finish);
+
+	if (nodes.size() < 2)
+		return;
+
+	// Thread them through the level's road network: on their own they are points
+	// hundreds of metres apart, and driving straight at them goes through
+	// buildings.
+	const auto& graph = _game.GetPathGraph();
+	std::vector<Vector3> circuit;
+
+	for (size_t i = 0; i < nodes.size(); ++i)
+	{
+		const Vector3& from = nodes[i];
+		const Vector3& to = nodes[(i + 1) % nodes.size()];
+
+		circuit.push_back(from);
+
+		const auto leg = graph.FindRoute(from, to);
+		if (leg.empty())
+		{
+			Log::Warn("ScriptEngine: no road route between race nodes {} and {}", i, (i + 1) % nodes.size());
+			continue;
+		}
+
+		// skip the leg's own endpoints, they duplicate the waypoints
+		for (size_t k = 1; k + 1 < leg.size(); ++k)
+			circuit.push_back(leg[k]);
+	}
+
+	if (circuit.size() < 2)
+		return;
+
+	_racePath = std::move(circuit);
+	Log::Info("ScriptEngine: race circuit routed through {} points from {} race nodes", _racePath.size(),
+	          nodes.size());
+
+	if (_raceOpponent)
+		_raceOpponent->SetCircuit(_racePath);
 }
 
 void ScriptEngine::UsePedGroup(int group)

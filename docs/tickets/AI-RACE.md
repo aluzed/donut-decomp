@@ -60,6 +60,14 @@ géométrie à cet endroit précis.
 > [LEVEL-MISSIONP3D](LEVEL-MISSIONP3D.md). Les nœuds `m1_AI_path1`, `m1_AI_path1b`,
 > `m1_AI_path4` et `race_finish` sont désormais résolus. Ce sont **trois points isolés**, pas
 > une polyligne : il reste à les relier en trajectoire via le réseau de `Path` du niveau.
+>
+> **Suite (même journée)** : le routage est implémenté — `AddStageWaypoint` résout son
+> locator, et `CloseMission` compose un itinéraire départ → waypoints → `race_finish` en le
+> faisant passer par `PathGraph::FindRoute` (A\*). Mais **le graphe routier est disjoint**
+> en 110 composantes, une par boucle de circulation (cf. [AI-PATH](AI-PATH.md)) : aucun
+> itinéraire inter-quartiers n'existe, et le circuit retombe donc à ses seuls points
+> d'extrémité. Relier les boucles — vraisemblablement via les chunks `Intersection` — est le
+> prérequis suivant.
 
 Recensement des chemins de `L1_TERRA` (instrumenté, 2026-08-22) :
 
