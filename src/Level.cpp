@@ -66,6 +66,8 @@ void Level::LoadP3D(const std::string& filename)
 	auto& rm = Game::GetInstance().GetResourceManager();
 	const auto& root = p3d.GetRoot();
 
+	collectSplines(root);
+
 	for (const auto& chunk : root.GetChildren())
 	{
 		switch (chunk->GetType())
@@ -297,6 +299,24 @@ bool Level::CheckTrigger(const Vector3& pos, const std::string& name) const
 		}
 	}
 	return false;
+}
+
+void Level::collectSplines(const P3D::P3DChunk& chunk)
+{
+	// Spline chunks are not level-graph roots: they hang off the scene graph
+	// (camera rails inside interiors, for instance), so the top-level switch in
+	// LoadP3D never sees them. Walk the tree and key them by their own name.
+	for (const auto& child : chunk.GetChildren())
+	{
+		if (child->IsType(P3D::ChunkType::Spline))
+		{
+			const auto spline = P3D::Spline::Load(*child);
+			_splines[spline->GetName()] = spline->GetPoints();
+			Log::Debug("Level: spline '{}' with {} points", spline->GetName(), spline->GetPoints().size());
+		}
+
+		collectSplines(*child);
+	}
 }
 
 void Level::loadRegion(const std::string& filename)

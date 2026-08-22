@@ -138,6 +138,9 @@ class PhysicsVector;
 class PhysicsInertiaMatrix;
 class CompositeDrawableSkinList;
 class CompositeDrawableEffectList;
+class Spline;
+class LocatorMatrix;
+class SurfaceTypeList;
 
 class Animation
 {
@@ -2445,5 +2448,55 @@ public:
 
 private:
 	uint32_t _numEffects;
+};
+
+class Spline
+{
+public:
+	Spline(const P3DChunk&);
+
+	static std::unique_ptr<Spline> Load(const P3DChunk& chunk) { return std::make_unique<Spline>(chunk); }
+
+	const std::string& GetName() const { return _name; }
+	const uint32_t& GetNumPoints() const { return _numPoints; }
+	const std::vector<Vector3>& GetPoints() const { return _points; }
+
+private:
+	std::string _name;
+	uint32_t _numPoints;
+	std::vector<Vector3> _points;
+};
+
+class LocatorMatrix
+{
+public:
+	LocatorMatrix(const P3DChunk&);
+
+	static std::unique_ptr<LocatorMatrix> Load(const P3DChunk& chunk) { return std::make_unique<LocatorMatrix>(chunk); }
+
+	const Matrix4x4& GetTransform() const { return _transform; }
+
+private:
+	Matrix4x4 _transform;
+};
+
+class SurfaceTypeList
+{
+public:
+	SurfaceTypeList(const P3DChunk&);
+
+	static std::unique_ptr<SurfaceTypeList> Load(const P3DChunk& chunk)
+	{
+		return std::make_unique<SurfaceTypeList>(chunk);
+	}
+
+	const uint32_t& GetVersion() const { return _version; }
+	const uint32_t& GetNumSurfaces() const { return _numSurfaces; }
+	const std::vector<uint8_t>& GetSurfaces() const { return _surfaces; }
+
+private:
+	uint32_t _version;
+	uint32_t _numSurfaces;
+	std::vector<uint8_t> _surfaces;
 };
 } // namespace Donut::P3D

@@ -74,7 +74,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 | P3D-013 | ✅ | P3 | `GetShaderTexture()` — **faux bug** : 0 occurrence dans `src/` (ni déclaration ni appel). Ticket = confirmer et clore. Rétrogradé de P0 |
 | P3D-001 | ⬜ | P1 | Particle System (8 chunks) — fumée/feu/nitro |
 | P3D-006 | ⬜ | P1 | Entity variants (`AnimDynamicPhysicsWrapper`, `AnimCollision`…) |
-| P3D-008 | ⬜ | P1 | Spline / LocatorMatrix / SurfaceTypeList — **prérequis d'AI-RACE** : c'est probablement là que se trouve le nom des chemins, sans lequel `AddStageWaypoint` ne peut rien résoudre |
+| P3D-008 | 🟡 | P1 | Spline / LocatorMatrix / SurfaceTypeList : classes ajoutées, layouts **reversés et vérifiés sur 7892 occurrences** (2 définitions de `p3d.json` sur 3 étaient fausses). Splines exposées par nom (13 rails de caméra). Reste `SurfaceTypeList` côté physique → `PHYS-008` |
 | P3D-009 | ⬜ | P1 | CollisionWallVolume / CollisionEffect / Atc |
 | P3D-002 | ⬜ | P2 | Light chunks (headlights, lumières dynamiques) |
 | P3D-004 | ⬜ | P2 | Animation controllers (channels float/vector) |
