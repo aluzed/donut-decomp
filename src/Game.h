@@ -83,6 +83,9 @@ public:
 	void LockMouse(bool lockMouse);
 	void SetPlayerPosition(const Vector3& pos);
 	Vector3 GetPlayerPosition() const;
+	// The vehicle the player is currently driving, or nullptr on foot. Lets the
+	// AI skip a car the player has taken over instead of fighting it for control.
+	const Vehicle* GetPlayerVehicle() const { return _inVehicle ? _activeVehicle : nullptr; }
 	void AddShake(float amount) { _shakeAmount = std::max(_shakeAmount, amount); }
 
 	static Game& GetInstance() { return *instance; }

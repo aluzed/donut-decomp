@@ -6,7 +6,9 @@
 #include "Vehicle.h"
 
 #include "AI/ChaseManager.h"
+#include "AI/RaceOpponent.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -22,6 +24,7 @@ class ScriptEngine
 {
 public:
 	ScriptEngine(Game& game): _game(game) {}
+	~ScriptEngine();
 
 	void SelectMission(const std::string& id);
 	void SetMissionResetPlayerInCar(const std::string& locator);
@@ -111,6 +114,7 @@ private:
 	Quaternion _aiRotation;
 	int _aiCheckpoint = 0;
 	float _aiSpeed = 12.0f;
+	std::unique_ptr<RaceOpponent> _raceOpponent;
 	std::unique_ptr<ChaseManager> _chaseManager;
 };
 

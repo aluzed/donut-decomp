@@ -2,6 +2,7 @@
 
 #include "ScriptEngine.h"
 #include "AI/ChaseManager.h"
+#include "AI/RaceOpponent.h"
 #include "Audio/AudioManager.h"
 #include "Audio/SoundGenerator.h"
 #include "Core/FileSystem.h"
@@ -15,6 +16,10 @@
 
 namespace Donut
 {
+
+// Out of line so RaceOpponent only needs to be complete here, not in every
+// translation unit that destroys a ScriptEngine.
+ScriptEngine::~ScriptEngine() = default;
 
 void ScriptEngine::SelectMission(const std::string& id)
 {
@@ -30,6 +35,7 @@ void ScriptEngine::SelectMission(const std::string& id)
 	// that). Dropping the unique_ptrs would leave its rigid body and action
 	// behind in the physics world, dangling: the first run left a car falling
 	// forever, reaching Y = -440.
+	_raceOpponent.reset();
 	for (auto& v : _missionVehicles)
 		v->DestroyPhysics(_game.GetWorldPhysics());
 	_missionVehicles.clear();
@@ -106,6 +112,8 @@ void ScriptEngine::CloseMission()
 
 void ScriptEngine::CleanupMission()
 {
+	_raceOpponent.reset();
+
 	for (auto& v : _missionVehicles)
 		v->DestroyPhysics(_game.GetWorldPhysics());
 	_missionVehicles.clear();
@@ -202,6 +210,7 @@ void ScriptEngine::InitLevelPlayerVehicle(const std::string& car, const std::str
 	vehicle->LoadModel(modelPath);
 	vehicle->CreatePhysicsBody(_game.GetWorldPhysics(), pos);
 	_activeVehicle = vehicle.get();
+
 	_missionVehicles.push_back(std::move(vehicle));
 }
 
@@ -212,8 +221,19 @@ void ScriptEngine::AddStageVehicle(const std::string& car, const std::string& lo
 	Vector3 pos = _game.GetLevel().GetLocatorPosition(locator);
 	if (pos == Vector3::Zero)
 	{
-		Log::Warn("ScriptEngine: locator '{}' not found, spawning '{}' near player", locator, car);
-		pos = _game.GetPlayerPosition() + Vector3(5.0f, 0, 0);
+		// A race car dumped beside the player starts wedged against whatever the
+		// player is standing next to, and full steering lock cannot free it. Put
+		// it on its own circuit instead; anything else starts the race broken.
+		if (behaviour == "race" && !_checkpoints.empty())
+		{
+			pos = _checkpoints.front();
+			Log::Warn("ScriptEngine: locator '{}' not found, starting race car '{}' on the circuit", locator, car);
+		}
+		else
+		{
+			Log::Warn("ScriptEngine: locator '{}' not found, spawning '{}' near player", locator, car);
+			pos = _game.GetPlayerPosition() + Vector3(5.0f, 0, 0);
+		}
 	}
 
 	Log::Info("ScriptEngine: add stage vehicle '{}' at '{}' ({:.1f}, {:.1f}, {:.1f}) behaviour='{}' ai='{}' driver='{}'",
@@ -226,6 +246,12 @@ void ScriptEngine::AddStageVehicle(const std::string& car, const std::string& lo
 	vehicle->LoadModel(modelPath);
 	vehicle->CreatePhysicsBody(_game.GetWorldPhysics(), pos);
 	_activeVehicle = vehicle.get();
+
+	// A "race" stage vehicle is the opponent's; give it a driver following the
+	// same circuit the player's checkpoints come from.
+	if (behaviour == "race" && !_checkpoints.empty())
+		_raceOpponent = std::make_unique<RaceOpponent>(*vehicle, _checkpoints);
+
 	_missionVehicles.push_back(std::move(vehicle));
 }
 
@@ -290,33 +316,20 @@ void ScriptEngine::AddObjective(const std::string& type)
 
 void ScriptEngine::UpdateAI(double dt)
 {
-	if (_checkpoints.empty() || _aiCheckpoint >= static_cast<int>(_checkpoints.size()))
+	if (!_raceOpponent)
 		return;
 
-	const auto& target = _checkpoints[_aiCheckpoint];
-	Vector3 dir = target - _aiPosition;
-	float dist = dir.Length();
-
-	if (dist < 3.0f)
-	{
-		_aiCheckpoint++;
-		if (_aiCheckpoint >= static_cast<int>(_checkpoints.size()))
-			_aiCheckpoint = 0;
+	// If the player has taken the opponent's car, stop driving it: two inputs on
+	// one vehicle in the same frame just fight each other.
+	if (_game.GetPlayerVehicle() == &_raceOpponent->GetVehicle())
 		return;
-	}
 
-	float aiSpeed = _aiSpeed;
-	if (_currentCheckpoint > _aiCheckpoint)
-		aiSpeed += 3.0f;
-	else if (_currentCheckpoint < _aiCheckpoint)
-		aiSpeed -= 2.0f;
-	if (aiSpeed < 6.0f) aiSpeed = 6.0f;
-	if (aiSpeed > 20.0f) aiSpeed = 20.0f;
+	_raceOpponent->Update(dt, static_cast<float>(_currentLap * static_cast<int>(_checkpoints.size()) + _currentCheckpoint));
 
-	dir.Normalize();
-	_aiPosition += dir * aiSpeed * static_cast<float>(dt);
-	float yaw = atan2f(dir.X, dir.Z);
-	_aiRotation = Quaternion::MakeFromEuler(Vector3(0, yaw, 0));
+	// Keep the legacy readouts pointing at the real car so anything still asking
+	// for the AI transform (debug draw, HUD) follows the opponent.
+	_aiPosition = _raceOpponent->GetVehicle().GetPosition();
+	_aiRotation = _raceOpponent->GetVehicle().GetRotation();
 }
 
 void ScriptEngine::ResetBestTime()

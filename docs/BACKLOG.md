@@ -122,8 +122,8 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 ### AI
 | ID | Statut | Pri | Sujet | Note |
 |---|---|---|---|---|
-| AI-RACE | ⬜ | P2 | Adversaire de course + rubber-banding | **absent** du code |
-| AI-PATH | 🟡 | P2 | Contrôleur path-following réutilisable | logique présente dans TrafficManager, à extraire ; `PathGraph.h` impl à clarifier |
+| AI-RACE | 🟡 | P2 | Adversaire de course + rubber-banding | `RaceOpponent` pilote un vrai `Vehicle` via `ApplyInput`, rubber-banding borné OK. **Se coince** avant de boucler un tour : circuit à 6 waypoints trop espacés, aucune détection d'obstacle |
+| AI-PATH | ✅ | P2 | Contrôleur path-following réutilisable | extrait dans `src/AI/PathFollower.*` (`Steering::Seek`, `Steering::ArrivalSpeed`, suivi de boucle de waypoints) |
 
 ### GAME / flow
 | ID | Statut | Pri | Sujet | Note |
