@@ -40,6 +40,7 @@ class PedestrianManager;
 class CollectibleManager;
 class FrontendProject;
 class SimpleMesh;
+class Hud;
 class GameMenu;
 class GameInput;
 
@@ -118,6 +119,7 @@ private:
 	std::unique_ptr<SimpleMesh> _carMesh;
 	std::unique_ptr<GameMenu> _mainMenu;
 	std::unique_ptr<GameMenu> _pauseMenu;
+	std::unique_ptr<Hud> _hud;
 	std::unique_ptr<GL::ShaderProgram> _postProcessShader;
 	std::unique_ptr<GL::FrameBuffer> _sceneFBO;
 	std::shared_ptr<GL::VertexBuffer> _fullscreenQuadVB;

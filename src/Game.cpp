@@ -36,6 +36,7 @@
 #include "Render/SkinModel.h"
 #include "Render/SpriteBatch.h"
 #include "UI/GameMenu.h"
+#include "UI/Hud.h"
 #include "Render/imgui/imgui.h"
 #include "Render/imgui/imgui_impl_opengl3.h"
 #include "Render/imgui/imgui_impl_sdl.h"
@@ -256,6 +257,8 @@ Game::Game(int argc, char** argv)
 		quitEvent.type = SDL_QUIT;
 		SDL_PushEvent(&quitEvent);
 	});
+
+	_hud = std::make_unique<Hud>();
 
 	_pauseMenu = std::make_unique<GameMenu>();
 	_pauseMenu->AddButton("Resume", 0, 0, 200, 40, [this]() {
@@ -1075,170 +1078,106 @@ void Game::Run()
 
 		if (_textureFontP3D != nullptr)
 		{
-			std::string fps = fmt::format("{0} fps", timer.GetFps());
 			auto font = _resourceManager->GetFont("boulder_16");
-			sprites.DrawText(font, fps, Vector2(32 + 3, 32 + 3), Vector4(0.0f, 0.0f, 0.0f, 1.0f));
-			sprites.DrawText(font, fps, Vector2(32, 32), Vector4(1.0f, 1.0f, 0.0f, 1.0f));
+			const bool pad = intent.gamepadConnected;
+
+			HudState hud;
+			hud.viewportWidth = static_cast<float>(viewportWidth);
+			hud.viewportHeight = static_cast<float>(viewportHeight);
+			hud.fps = static_cast<int>(timer.GetFps());
+			hud.health = _health;
+			hud.inVehicle = _inVehicle;
+			hud.boost = intent.boostHeld ? 0.0f : 1.0f; // placeholder, see UI-HUD
+
+			if (_inVehicle && _activeVehicle)
+				hud.speedKmh = _activeVehicle->GetSpeedKmh();
 
 			if (_collectibleManager)
 			{
-				std::string coins = fmt::format("Coins: {}/{}",
-					_collectibleManager->GetCollected(), _collectibleManager->GetTotalAvailable());
-				sprites.DrawText(font, coins,
-					Vector2(32 + 3, 142 + 3), Vector4(0.0f, 0.0f, 0.0f, 1.0f));
-				sprites.DrawText(font, coins,
-					Vector2(32, 142), Vector4(1.0f, 0.84f, 0.0f, 1.0f));
+				hud.coins = _collectibleManager->GetCollected();
+				hud.coinsTotal = _collectibleManager->GetTotalAvailable();
 			}
-
-			if (_character)
-			{
-				std::string pos = fmt::format("Pos: {:.1f} {:.1f} {:.1f}",
-					_character->GetPosition().X, _character->GetPosition().Y, _character->GetPosition().Z);
-				sprites.DrawText(font, pos, Vector2(32, 52), Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-
-				std::string hp = fmt::format("HP: {:.0f}", _health);
-				Vector4 hpCol = _health > 50 ? Vector4(0.0f, 1.0f, 0.0f, 1.0f) :
-				                _health > 25 ? Vector4(1.0f, 1.0f, 0.0f, 1.0f) :
-				                               Vector4(1.0f, 0.0f, 0.0f, 1.0f);
-				sprites.DrawText(font, hp, Vector2(viewportWidth - 100.0f, 72), hpCol);
-			}
+			hud.cardsTotal = 7; // collection itself is GAME-010
 
 			if (_scriptEngine->IsMissionActive())
 			{
-				float goTimer = _scriptEngine->GetGoTimer();
-				if (goTimer > 0.0f)
-				{
-					sprites.DrawText(font, "GO!",
-						Vector2((viewportWidth / 2.0f) - 20, viewportHeight / 2.0f),
-						Vector4(0.0f, 1.0f, 0.0f, 1.0f));
-				}
-				else
-				{
-					sprites.DrawText(font, "MISSION ACTIVE", Vector2(32, 72), Vector4(0.0f, 1.0f, 0.0f, 1.0f));
-				}
+				hud.missionActive = true;
+				hud.showGo = _scriptEngine->GetGoTimer() > 0.0f;
+				hud.objective = _scriptEngine->GetObjectiveType();
+				hud.timeRemaining = _scriptEngine->GetStageTimeRemaining();
+				hud.lap = _scriptEngine->GetCurrentLap();
+				hud.totalLaps = _scriptEngine->GetTotalLaps();
+				hud.checkpoint = _scriptEngine->GetCurrentCheckpoint();
+				hud.totalCheckpoints = static_cast<int>(_scriptEngine->GetCheckpoints().size());
 
-				const auto& objType = _scriptEngine->GetObjectiveType();
-				if (!objType.empty())
-				{
-					std::string objText = fmt::format("Objective: {}", objType);
-					sprites.DrawText(font, objText,
-						Vector2((viewportWidth / 2.0f) - 100, 32),
-						Vector4(1.0f, 0.84f, 0.0f, 1.0f));
-				}
-
-				float timeLeft = _scriptEngine->GetStageTimeRemaining();
-				if (timeLeft > 0.0f)
-				{
-					std::string timerText = fmt::format("Time: {:.0f}s", timeLeft);
-					sprites.DrawText(font, timerText,
-						Vector2(viewportWidth - 130.0f, 32),
-						timeLeft < 30.0f ? Vector4(1.0f, 0.3f, 0.3f, 1.0f) : Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-				}
-
-				if (_scriptEngine->GetTotalLaps() > 1)
-				{
-					size_t totalCp = _scriptEngine->GetCheckpoints().size();
-					std::string lapText = fmt::format("Lap {}/{}  CP {}/{}",
-						_scriptEngine->GetCurrentLap() + 1, _scriptEngine->GetTotalLaps(),
-						_scriptEngine->GetCurrentCheckpoint(), totalCp);
-					sprites.DrawText(font, lapText,
-						Vector2((viewportWidth / 2.0f) - 80, 72),
-						Vector4(0.0f, 1.0f, 1.0f, 1.0f));
-				}
-
-				if (_gameState == GameState::Splash)
-				{
-					sprites.DrawText(font, "PRESS ENTER TO START",
-						Vector2((viewportWidth / 2.0f) - 100, viewportHeight - 80.0f),
-						Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-				}
+				for (const auto& v : _scriptEngine->GetMissionVehicles())
+					hud.missionBlips.emplace_back(v->GetPosition().X, v->GetPosition().Z);
 			}
+
+			auto* chase = _scriptEngine->GetChaseManager();
+			if (chase != nullptr && chase->IsActive())
+			{
+				hud.chaseActive = true;
+				hud.heat = chase->GetHeat();
+				hud.busted = chase->IsBusted();
+				if (hud.busted)
+					hud.banner = "BUSTED!";
+				for (const auto& cop : chase->GetCopCars())
+					hud.policeBlips.emplace_back(cop->GetPosition().X, cop->GetPosition().Z);
+			}
+
+			const Vector3 playerPos = _inVehicle && _activeVehicle
+			                              ? _activeVehicle->GetPosition()
+			                              : (_character ? _character->GetPosition() : Vector3::Zero);
+			hud.playerXZ = Vector2(playerPos.X, playerPos.Z);
+			hud.playerHeading = _camYaw;
 
 			if (_inVehicle)
 			{
-				const bool pad = intent.gamepadConnected;
-				std::string ctrlText = fmt::format("{}: Drive | {}: Boost | {}: Horn | {}: Exit",
+				hud.hintColour = Vector4(0.5f, 0.8f, 1.0f, 1.0f);
+				hud.hints.push_back(fmt::format("{}: Drive | {}: Boost | {}: Horn | {}: Exit",
 					ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Boost, pad),
-					ControlLabel(GameAction::Honk, pad), ControlLabel(GameAction::Interact, pad));
-				sprites.DrawText(font, ctrlText,
-					Vector2(32, 92), Vector4(0.5f, 0.8f, 1.0f, 1.0f));
-				if (_activeVehicle)
-				{
-					float spd = _activeVehicle->GetSpeedKmh();
-					std::string speedText = fmt::format("{:.0f} km/h", spd);
-					Vector4 spdCol = spd > 100 ? Vector4(1.0f, 0.3f, 0.3f, 1.0f) :
-					                 spd > 50  ? Vector4(1.0f, 1.0f, 0.3f, 1.0f) :
-					                             Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-					sprites.DrawText(font, speedText,
-						Vector2(viewportWidth - 130.0f, viewportHeight - 50.0f), spdCol);
-
-					float dmgRatio = 1.0f - (_health / 100.0f);
-					std::string carHp = fmt::format("Car: {:.0f}%", _health);
-					Vector4 dmgCol(dmgRatio, 1.0f - dmgRatio, 0.0f, 1.0f);
-					if (_health <= 25.0f)
-						dmgCol = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
-					sprites.DrawText(font, carHp,
-						Vector2(viewportWidth - 130.0f, viewportHeight - 30.0f), dmgCol);
-				}
+					ControlLabel(GameAction::Honk, pad), ControlLabel(GameAction::Interact, pad)));
 			}
 			else if (_gameState == GameState::InGame)
 			{
-				const bool pad = intent.gamepadConnected;
-				std::string ctrlText = fmt::format("{}: Move | {}: Action | {}: Restart | {}: Pause",
+				hud.hints.push_back(fmt::format("{}: Move | {}: Action | {}: Restart | {}: Pause",
 					ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Interact, pad),
-					ControlLabel(GameAction::RestartMission, pad), ControlLabel(GameAction::PauseToggle, pad));
-				sprites.DrawText(font, ctrlText,
-					Vector2(32, 92), Vector4(0.5f, 0.5f, 0.5f, 1.0f));
+					ControlLabel(GameAction::RestartMission, pad), ControlLabel(GameAction::PauseToggle, pad)));
 
 				if (_showHelp)
 				{
-					const std::string lines[] = {
-						"=== CONTROLS ===",
-						fmt::format("{}: Move/Drive", ControlLabel(GameAction::MoveForward, pad)),
-						fmt::format("{}: Action | {}: Boost", ControlLabel(GameAction::Interact, pad), ControlLabel(GameAction::Boost, pad)),
-						fmt::format("{}: Horn | {}: Restart | {}: Reset", ControlLabel(GameAction::Honk, pad), ControlLabel(GameAction::RestartMission, pad), ControlLabel(GameAction::ResetBestTime, pad)),
-						fmt::format("{}: Jump | {}: Debug | {}: Help", ControlLabel(GameAction::VehicleJump, pad), ControlLabel(GameAction::ToggleDebugDraw, pad), ControlLabel(GameAction::ToggleHelp, pad)),
-						fmt::format("{}: Pause | {}: Fly", ControlLabel(GameAction::PauseToggle, pad), ControlLabel(GameAction::CameraLook, pad)),
-					};
-					for (int i = 0; i < 6; ++i)
-						sprites.DrawText(font, lines[i],
-							Vector2(32, 112.0f + i * 18), Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+					hud.hints.push_back("=== CONTROLS ===");
+					hud.hints.push_back(fmt::format("{}: Move/Drive", ControlLabel(GameAction::MoveForward, pad)));
+					hud.hints.push_back(fmt::format("{}: Action | {}: Boost",
+						ControlLabel(GameAction::Interact, pad), ControlLabel(GameAction::Boost, pad)));
+					hud.hints.push_back(fmt::format("{}: Horn | {}: Restart | {}: Reset",
+						ControlLabel(GameAction::Honk, pad), ControlLabel(GameAction::RestartMission, pad),
+						ControlLabel(GameAction::ResetBestTime, pad)));
+					hud.hints.push_back(fmt::format("{}: Jump | {}: Debug | {}: Help",
+						ControlLabel(GameAction::VehicleJump, pad), ControlLabel(GameAction::ToggleDebugDraw, pad),
+						ControlLabel(GameAction::ToggleHelp, pad)));
+					hud.hints.push_back(fmt::format("{}: Pause | {}: Fly",
+						ControlLabel(GameAction::PauseToggle, pad), ControlLabel(GameAction::CameraLook, pad)));
 				}
 
 				if (_character && _scriptEngine->IsMissionActive())
 				{
-					for (auto& v : _scriptEngine->GetMissionVehicles())
+					for (const auto& v : _scriptEngine->GetMissionVehicles())
 					{
-						float dist = (v->GetPosition() - _character->GetPosition()).Length();
-						if (dist < 5.0f)
-						{
-							sprites.DrawText(font, "Press E to enter vehicle!",
-								Vector2(32, 112), Vector4(0.0f, 1.0f, 1.0f, 1.0f));
-						}
-						std::string distText = fmt::format("Vehicle: {:.0f}m", dist);
-						sprites.DrawText(font, distText, Vector2(32, 72), Vector4(0.8f, 0.8f, 0.8f, 1.0f));
+						const float dist = (v->GetPosition() - _character->GetPosition()).Length();
+						hud.hints.push_back(dist < 5.0f ? "Press E to enter vehicle!"
+						                                : fmt::format("Vehicle: {:.0f}m", dist));
 						break;
 					}
 				}
 			}
 
-			auto* chase = _scriptEngine->GetChaseManager();
-			if (chase && chase->IsActive())
-			{
-				float heat = chase->GetHeat();
-				std::string heatText = fmt::format("HEAT: {:.0f}/10", heat);
-				Vector4 heatCol = heat > 7 ? Vector4(1.0f, 0.0f, 0.0f, 1.0f) :
-				                  heat > 3 ? Vector4(1.0f, 0.5f, 0.0f, 1.0f) :
-				                             Vector4(1.0f, 1.0f, 0.0f, 1.0f);
-				sprites.DrawText(font, heatText, Vector2(32, 72), heatCol);
+			if (_gameState == GameState::Splash)
+				hud.banner = "PRESS ENTER TO START";
 
-				if (chase->IsBusted())
-				{
-					sprites.DrawText(font, "BUSTED!",
-						Vector2((viewportWidth / 2.0f) - 40, viewportHeight / 2.0f - 40),
-						Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-				}
-			}
+			_hud->Draw(sprites, font, hud);
+
 
 			if (_gameState == GameState::Paused)
 			{
