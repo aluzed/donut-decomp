@@ -25,7 +25,9 @@ public:
 	FrontendProject();
 	~FrontendProject();
 
-	void LoadP3D(const std::string&);
+	// Loads every page in the project, or only the one named `pageName` when given
+	// (page names are the .pag entries inside the frontend P3D).
+	void LoadP3D(const std::string& filename, const std::string& pageName = "");
 	void Draw(const Matrix4x4& proj);
 
 private:

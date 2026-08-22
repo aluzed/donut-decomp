@@ -76,6 +76,14 @@ namespace
 // Human label for the input bound to `action`, preferring a gamepad binding
 // when a pad is connected (so the HUD matches the device in use). Reads the
 // live keymap so it stays correct after in-game rebinding.
+// The 2D projection is MakeOrtho(0, w, h, 0), so text is positioned from its
+// top-left corner with y growing downward. Centre a label horizontally.
+float centredTextX(const Font* font, const std::string& text, float viewportWidth)
+{
+	const float width = font != nullptr ? font->MeasureWidth(text) : 0.0f;
+	return (viewportWidth - width) * 0.5f;
+}
+
 std::string ControlLabel(GameAction action, bool preferGamepad)
 {
 	const Keymap& km = Input::GetKeymap();
@@ -637,7 +645,12 @@ void Game::Run()
 		}
 		//_camera->SetPosition(cameraTransform.Translation());
 
-		_worldPhysics->Update(static_cast<float>(deltaTime));
+		// Pause has to stop the world, not just hide it: this used to keep running
+		// every frame while paused, so physics and scripts ticked behind the overlay.
+		const bool simulate = _gameState != GameState::Paused;
+
+		if (simulate)
+			_worldPhysics->Update(static_cast<float>(deltaTime));
 
 		_audioManager->Update();
 		if (_inVehicle && _activeVehicle)
@@ -808,7 +821,8 @@ void Game::Run()
 		{
 			_trafficManager->Update(deltaTime);
 		}
-		_scriptEngine->Update(deltaTime);
+		if (simulate)
+			_scriptEngine->Update(deltaTime);
 
 		// Re-enabled (REGR-001): db9c8db commented this out to isolate a crash on "press
 		// up"; 9860a4f fixed that same day (uninitialised Character::_rotation feeding the
@@ -840,7 +854,8 @@ void Game::Run()
 					_collectibleManager->Update(_character->GetPosition(), 3.0f);
 			}
 		}
-		_scriptEngine->UpdateAI(deltaTime);
+		if (simulate)
+			_scriptEngine->UpdateAI(deltaTime);
 
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplSDL2_NewFrame(static_cast<SDL_Window*>(*_window));
@@ -906,14 +921,6 @@ void Game::Run()
 		if (intent.toggleHelp)
 		{
 			_showHelp = !_showHelp;
-		}
-
-		if (_gameState == GameState::Paused)
-		{
-			ImGui::Render();
-			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-			_window->Swap();
-			continue;
 		}
 
 		ImGuiIO& io = ImGui::GetIO();
@@ -1235,17 +1242,20 @@ void Game::Run()
 
 			if (_gameState == GameState::Paused)
 			{
-				sprites.DrawText(font, "PAUSED",
-					Vector2((viewportWidth / 2.0f) - 40, viewportHeight / 2.0f + 40),
-					Vector4(1.0f, 1.0f, 0.0f, 1.0f));
 				const float pauseLineHeight = font != nullptr ? font->GetHeight() : 16.0f;
+				const float pauseSpacing = pauseLineHeight + 14.0f;
+				const float pauseTop = viewportHeight / 2.0f - 40.0f;
+
+				sprites.DrawText(font, "PAUSED",
+					Vector2(centredTextX(font, "PAUSED", viewportWidth), pauseTop - pauseSpacing * 1.5f),
+					Vector4(1.0f, 1.0f, 0.0f, 1.0f));
+
 				for (size_t i = 0; i < _pauseMenu->GetButtons().size(); ++i)
 				{
 					const auto& btn = _pauseMenu->GetButtons()[i];
-					const float bx = viewportWidth / 2.0f - 50.0f;
-					const float by = viewportHeight / 2.0f + 20.0f - i * 30.0f;
 					const float bw = font != nullptr ? font->MeasureWidth(btn.label) : btn.width;
-					_pauseMenu->SetButtonRect(i, bx, by, bw, pauseLineHeight);
+					_pauseMenu->SetButtonRect(i, centredTextX(font, btn.label, viewportWidth),
+					                          pauseTop + i * pauseSpacing, bw, pauseLineHeight);
 				}
 				_pauseMenu->Update(intent.mouseX, intent.mouseY);
 				for (const auto& btn : _pauseMenu->GetButtons())
@@ -1313,19 +1323,22 @@ void Game::Run()
 		{
 			auto font = _resourceManager->GetFont("boulder_16");
 			SpriteBatch menuSprites;
+			const float menuLineHeight = font != nullptr ? font->GetHeight() : 16.0f;
+			const float menuSpacing = menuLineHeight + 14.0f;
+			const float menuTop = viewportHeight / 2.0f - 40.0f;
+
 			menuSprites.DrawText(font, "donut",
-				Vector2((viewportWidth / 2.0f) - 30, viewportHeight / 2.0f + 80),
+				Vector2(centredTextX(font, "donut", viewportWidth), menuTop - menuSpacing * 1.5f),
 				Vector4(1.0f, 0.84f, 0.0f, 1.0f));
+
 			// lay out first, then hit-test: hover and click must use the rects the
 			// labels are actually drawn at, not the placeholder passed to AddButton
-			const float menuLineHeight = font != nullptr ? font->GetHeight() : 16.0f;
 			for (size_t i = 0; i < _mainMenu->GetButtons().size(); ++i)
 			{
 				const auto& btn = _mainMenu->GetButtons()[i];
-				const float bx = viewportWidth / 2.0f - 50.0f;
-				const float by = viewportHeight / 2.0f + 40.0f - i * 30.0f;
 				const float bw = font != nullptr ? font->MeasureWidth(btn.label) : btn.width;
-				_mainMenu->SetButtonRect(i, bx, by, bw, menuLineHeight);
+				_mainMenu->SetButtonRect(i, centredTextX(font, btn.label, viewportWidth),
+				                         menuTop + i * menuSpacing, bw, menuLineHeight);
 			}
 			_mainMenu->Update(intent.mouseX, intent.mouseY);
 			for (const auto& btn : _mainMenu->GetButtons())
