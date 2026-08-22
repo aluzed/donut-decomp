@@ -512,8 +512,8 @@ void Game::Run()
 							_activeVehicle = v.get();
 							Log::Info("Game: entered vehicle '{}'", v->GetName());
 							_audioManager->PlayRaw(SoundGenerator::Beep(800, 0.15f), 22050, 1, 16);
-							_scriptEngine->CloseObjective();
-							_scriptEngine->ShowStageComplete();
+							// getting in the car starts the race; finishing it is the
+							// checkpoint loop's job (this used to complete the stage here)
 							break;
 						}
 					}
