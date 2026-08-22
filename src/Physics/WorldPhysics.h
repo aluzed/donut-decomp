@@ -53,6 +53,10 @@ public:
 	void AddP3DCylinder(const P3D::CollisionCylinder&);
 	void AddP3DFence(const P3D::Fence&);
 
+	// Adds `shape` as static (zero-mass) rigid body geometry; see the note in the
+	// implementation for why a bare btCollisionObject is not enough.
+	class btCollisionObject* addStaticBody(class btCollisionShape* shape, const class btTransform& transform);
+
 	btDiscreteDynamicsWorld* GetDynamicsWorld() const { return _dynamicsWorld; }
 
 	void SetDebugDrawMode(PhysicsDebugDrawMode mode) const { _debugDraw->setDebugMode((int)mode); }

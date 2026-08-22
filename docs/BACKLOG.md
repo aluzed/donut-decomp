@@ -103,6 +103,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 ### PHYS
 | ID | Statut | Pri | Sujet | Note |
 |---|---|---|---|---|
+| VEH-SINK | ⬜ | P1 | **Le véhicule s'enfonce sous le terrain une fois embarqué.** Une cause corrigée (le décor était en `btCollisionObject` nu, que le raycaster de roue de Bullet ignore ; désormais des `btRigidBody` de masse nulle) mais le symptôme persiste | `Vehicle.cpp`, `WorldPhysics.cpp` |
 | PHYS-004 | ⬜ | P1 | Callbacks collision (damage / pickup / sound) | seules les vérifs manifold/pénétration existent |
 | PHYS-011 | ⬜ | P1 | Corps rigides dynamiques pour `AnimDynamicPhysics` | `Level.cpp:149-169` — instancié visuellement, **pas de body** |
 | PHYS-005 | ✅ | P2 | Utiliser `BulletFenceShape` au lieu de `btBoxShape` | `AddP3DFence` |
@@ -230,8 +231,8 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 2. **Fidélité monde** : LEVEL-STREAM → LEVEL-TRIG → PHYS-011 → PHYS-004. Le monde réagit.
 3. **Contenu missions** : SCRIPT-A → SCRIPT-B → AI-RACE → SCRIPT-D. Les vraies missions tournent.
    Débloqué : la course tourne (MISSION-LOOP) et le véhicule de mission est créé puis
-   embarquable (SCRIPT-PARSE). Reste que le véhicule traverse le terrain une fois embarqué —
-   les corps de véhicule ont leur propre problème de collision, distinct de CHARCTRL-FALL.
+   embarquable (SCRIPT-PARSE). Verrou restant : **VEH-SINK** — le véhicule passe sous le
+   terrain une fois embarqué, donc aucune course ne se joue encore de bout en bout.
 4. **Dette/qualité** (parallélisable) : GAME-001a→e, P3D-013, AUDIO-009.
 
 ---
