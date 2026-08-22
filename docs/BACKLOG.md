@@ -103,7 +103,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 ### PHYS
 | ID | Statut | Pri | Sujet | Note |
 |---|---|---|---|---|
-| VEH-SINK | ⬜ | P1 | **Le véhicule s'enfonce sous le terrain une fois embarqué.** Une cause corrigée (le décor était en `btCollisionObject` nu, que le raycaster de roue de Bullet ignore ; désormais des `btRigidBody` de masse nulle) mais le symptôme persiste | `Vehicle.cpp`, `WorldPhysics.cpp` |
+| VEH-SINK | ✅ | P1 | **La voiture ne roulait pas** (le châssis s'endormait et `applyEngineForce` n'active pas un corps endormi) et **la caméra passait sous le décor** (offset pivoté par le tangage du châssis). Le décor statique est aussi passé en `btRigidBody` de masse nulle, sans quoi les roues ne trouvaient pas le sol. 58 km/h, 55 s de conduite sans chute | `Vehicle.cpp`, `Game.cpp`, `WorldPhysics.cpp` |
 | PHYS-004 | ⬜ | P1 | Callbacks collision (damage / pickup / sound) | seules les vérifs manifold/pénétration existent |
 | PHYS-011 | ⬜ | P1 | Corps rigides dynamiques pour `AnimDynamicPhysics` | `Level.cpp:149-169` — instancié visuellement, **pas de body** |
 | PHYS-005 | ✅ | P2 | Utiliser `BulletFenceShape` au lieu de `btBoxShape` | `AddP3DFence` |
@@ -230,9 +230,9 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 1. **Jouabilité visible** : ~~UI-MENU~~ ✅ → ~~UI-HUD~~ ✅ → **GAME-010** (collectibles : cartes/gags, l'état persistant) → SCRIPT-E/H. Donne une boucle de jeu lisible.
 2. **Fidélité monde** : LEVEL-STREAM → LEVEL-TRIG → PHYS-011 → PHYS-004. Le monde réagit.
 3. **Contenu missions** : SCRIPT-A → SCRIPT-B → AI-RACE → SCRIPT-D. Les vraies missions tournent.
-   Débloqué : la course tourne (MISSION-LOOP) et le véhicule de mission est créé puis
-   embarquable (SCRIPT-PARSE). Verrou restant : **VEH-SINK** — le véhicule passe sous le
-   terrain une fois embarqué, donc aucune course ne se joue encore de bout en bout.
+   Débloqué de bout en bout : la course tourne (MISSION-LOOP), le véhicule est créé et
+   embarquable (SCRIPT-PARSE), et il roule (VEH-SINK). Prochaine marche : **AI-RACE** et
+   **SCRIPT-D**, pour que les checkpoints soient repérables et que l'adversaire existe.
 4. **Dette/qualité** (parallélisable) : GAME-001a→e, P3D-013, AUDIO-009.
 
 ---

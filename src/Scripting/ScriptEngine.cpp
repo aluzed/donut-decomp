@@ -25,6 +25,13 @@ void ScriptEngine::SelectMission(const std::string& id)
 	_missionId = id;
 	_currentStage = -1;
 	_zones.clear();
+
+	// Any vehicle still here was never torn down (CleanupMission is what does
+	// that). Dropping the unique_ptrs would leave its rigid body and action
+	// behind in the physics world, dangling: the first run left a car falling
+	// forever, reaching Y = -440.
+	for (auto& v : _missionVehicles)
+		v->DestroyPhysics(_game.GetWorldPhysics());
 	_missionVehicles.clear();
 	_goTimer = 1.5f;
 	_stageTimeRemaining = -1.0f;
