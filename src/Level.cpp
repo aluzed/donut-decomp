@@ -216,6 +216,20 @@ void Level::LoadP3D(const std::string& filename)
 
 			break;
 		}
+		case P3D::ChunkType::Intersection:
+		{
+			auto inter = P3D::Intersection::Load(*chunk);
+			_intersections.insert({inter->GetName(), inter->GetPosition()});
+
+			break;
+		}
+		case P3D::ChunkType::Road:
+		{
+			auto road = P3D::Road::Load(*chunk);
+			_roads.push_back(RoadLink {road->GetStartIntersection(), road->GetEndIntersection()});
+
+			break;
+		}
 		case P3D::ChunkType::Path:
 		{
 			auto path = P3D::Path::Load(*chunk);

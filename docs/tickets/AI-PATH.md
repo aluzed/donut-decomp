@@ -44,10 +44,39 @@ Conséquence : `FindRoute` fonctionne, mais ne peut jamais router entre deux qua
 circuit de course composé pour `AI-RACE` retombe à ses seuls points d'extrémité. C'est aussi
 pourquoi les voitures du trafic ne font que tourner autour de leur propre bloc.
 
-Ce qu'il faut ensuite : trouver ce qui joint les boucles. Le niveau contient des chunks
-`Intersection` (0x3000004 — décrits dans `p3d.json` comme `name, position, radius,
-trafficBehaviour`) ainsi que `Road` et `RoadSegment`, qui sont les candidats évidents. Sans
-ce chaînage, aucune IA ne peut traverser Springfield.
+## Résolu : le vrai réseau routier était ailleurs
+
+Les boucles `Path` ne sont pas le réseau routier. Le niveau en contient un second, distinct,
+que rien n'exploitait :
+
+- **60 chunks `Intersection`** — layout conforme à `p3d.json` (`name, position, radius,
+  trafficBehaviour`), vérifié : 0 octet résiduel sur les 60 ;
+- **99 chunks `Road`** — layout également conforme (`name, u32, startIntersection,
+  endIntersection, maxCars, 4×u8`), et **les 99 résolvent leurs deux extrémités** vers une
+  intersection connue.
+
+Pris seul, le graphe des intersections forme **une seule composante connexe**.
+
+`Level` collecte désormais les deux, et `PathGraph` les intègre : un nœud par intersection,
+une arête par `Road`, puis chaque nœud de boucle raccroché à la jonction la plus proche
+(`kJunctionSnapDistance`).
+
+| | composantes | plus grande |
+|---|---|---|
+| Avant | 110 | 4 % des nœuds |
+| Après (accrochage 40 m) | 29 | 80 % |
+| Après (accrochage 70 m) | **15** | **91 %** |
+
+`PathGraph` journalise maintenant cette connexité au démarrage : c'est le chiffre qui décide
+si une IA peut traverser la ville, et il était jusqu'ici invisible.
+
+## Reste
+
+Le circuit de course composé par `ScriptEngine::buildRaceCircuit` ne fait toujours que
+4 points malgré un graphe à 91 % connexe : `FindRoute` renvoie des itinéraires très courts
+entre les nœuds de course. À diagnostiquer — soit `FindNearestNode` accroche les extrémités
+sur une petite composante résiduelle, soit l'A\* s'arrête trop tôt. Journaliser la taille de
+chaque tronçon est le prochain pas.
 
 ## Critères d'acceptation
 - [x] Un `PathFollower` autonome existe et ne dépend que de `PathGraph` + état d'agent.
