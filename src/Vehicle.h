@@ -36,6 +36,10 @@ public:
 	void Jump();
 	void DestroyPhysics(WorldPhysics& physics);
 
+	// The world this car was created in, so an agent driving it can ask what is
+	// in front of it. Null until CreatePhysicsBody has run.
+	class WorldPhysics* GetPhysics() const { return _physicsWorld; }
+
 	void SetMass(float mass) { _mass = mass; }
 	void SetGasScale(float scale) { _gasScale = scale; }
 	void SetTopSpeedKmh(float speed) { _topSpeedKmh = speed; }

@@ -52,7 +52,9 @@
 #include <array>
 #include <cstdint>
 #include <sstream>
+#include <cstdlib>
 #include <string>
+#include <string_view>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -121,6 +123,20 @@ void GLAPIENTRY MessageCallback(GLenum source, GLenum type, GLuint id, GLenum se
 Game::Game(int argc, char** argv)
 {
 	instance = this; // global static :D
+
+	// Unattended-run switches. Measuring whether the race opponent gets round the
+	// circuit means watching a 120s mission, and every run had to be nursed by
+	// hand through the splash screen and then killed. These make a run repeatable:
+	//   --autostart          drop straight into the mission, no splash, no menu
+	//   --quit-after <secs>  close the window after that much wall time
+	for (int i = 1; i < argc; ++i)
+	{
+		const std::string_view arg = argv[i];
+		if (arg == "--autostart")
+			_autoStart = true;
+		else if (arg == "--quit-after" && i + 1 < argc)
+			_quitAfterSeconds = std::atof(argv[++i]);
+	}
 
 	Commands::RunLine("HelloWorld();");
 	// for (const auto& entry : FileSystem::recursive_directory_iterator("scripts"))
@@ -244,7 +260,7 @@ Game::Game(int argc, char** argv)
 	_camera = std::make_unique<FreeCamera>();
 	_camera->SetPosition(Vector3(228.0f, 5.0f, -174.0f));
 	_camera->SetFOV(70.0f);
-	_gameState = GameState::Splash;
+	_gameState = _autoStart ? GameState::InGame : GameState::Splash;
 	_missionCompleteTimer = 0.0;
 
 	_frontend = std::make_unique<FrontendProject>();
@@ -290,7 +306,18 @@ Game::~Game()
 	ImGui_ImplSDL2_Shutdown();
 	ImGui::DestroyContext();
 
-	// todo: might need to reset our unique_ptrs here in a certain order...
+	// Order matters here, and it was not being kept: members are destroyed in
+	// reverse declaration order, which put _worldPhysics before _character, so
+	// ~CharacterController reached through a freed world to unregister itself and
+	// the process died on every clean exit. Nothing noticed, because a crash on
+	// the way out looks like a normal quit -- until the log it was still writing
+	// came back truncated.
+	//
+	// Everything holding a physics reference goes first, the world last.
+	_scriptEngine.reset(); // mission vehicles and the race opponent
+	_character.reset();    // its CharacterController unregisters an action
+	_level.reset();        // static level geometry
+	_worldPhysics.reset();
 
 	_window.reset();
 
@@ -483,6 +510,18 @@ void Game::Run()
 		GameIntent intent = _gameInput->Poll(static_cast<SDL_Window*>(*_window));
 		if (intent.requestQuit)
 			running = false;
+
+		// A frame that takes seconds is not a slow frame, it is a hang, and it is
+		// invisible from the outside: the window simply stops. Say so.
+		if (deltaTime > 1.0)
+			Log::Warn("Game: frame took {:.1f}s at t={:.0f}s", deltaTime, _elapsedSeconds);
+
+		_elapsedSeconds += deltaTime;
+		if (_quitAfterSeconds > 0.0 && _elapsedSeconds >= _quitAfterSeconds)
+		{
+			Log::Info("Game: --quit-after {:.0f}s reached, closing", _quitAfterSeconds);
+			running = false;
+		}
 
 		// Third-person camera: capture the mouse during on-foot gameplay so its
 		// motion orbits the camera around the character. The camera no longer

@@ -54,6 +54,34 @@ float ArrivalSpeed(const Vector3& position, const Vector3& target, float maxSpee
 
 } // namespace Steering
 
+Vector3 PathFollower::PointAhead(const Vector3& from, float distance) const
+{
+	if (_waypoints.empty())
+		return from;
+
+	Vector3 previous = from;
+	float remaining = distance;
+
+	// Walk the route from where the agent is, spending `distance` metres of it.
+	for (std::size_t step = 0; step < _waypoints.size(); ++step)
+	{
+		const Vector3& waypoint = _waypoints[(_index + step) % _waypoints.size()];
+
+		Vector3 leg = waypoint - previous;
+		leg.Y = 0.0f;
+		const float length = leg.Length();
+
+		if (length >= remaining && length > 0.001f)
+			return previous + leg * (remaining / length);
+
+		remaining -= length;
+		previous = waypoint;
+	}
+
+	// The whole loop is shorter than the look-ahead: aim at the far end of it.
+	return previous;
+}
+
 void PathFollower::SetWaypoints(std::vector<Vector3> waypoints)
 {
 	_waypoints = std::move(waypoints);
@@ -128,6 +156,19 @@ void PathFollower::SnapToNearestAhead(const Vector3& position, std::size_t windo
 	if (_index + bestStep >= _waypoints.size())
 		++_laps;
 	_index = (_index + bestStep) % _waypoints.size();
+}
+
+void PathFollower::Skip()
+{
+	if (_waypoints.empty())
+		return;
+
+	++_index;
+	if (_index >= _waypoints.size())
+	{
+		_index = 0;
+		++_laps;
+	}
 }
 
 void PathFollower::Reset()

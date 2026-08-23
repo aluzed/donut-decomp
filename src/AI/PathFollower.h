@@ -40,6 +40,24 @@ public:
 	const Vector3& Target() const { return _waypoints[_index]; }
 	// The waypoint `ahead` places further along the loop, wrapping around.
 	const Vector3& Peek(std::size_t ahead) const { return _waypoints[(_index + ahead) % _waypoints.size()]; }
+	// The same for a signed offset, so a corner's radius can be measured from the
+	// waypoint before it as well as the one after.
+	const Vector3& PeekSigned(std::ptrdiff_t offset) const
+	{
+		const std::ptrdiff_t n = static_cast<std::ptrdiff_t>(_waypoints.size());
+		std::ptrdiff_t i = (static_cast<std::ptrdiff_t>(_index) + offset) % n;
+		if (i < 0) i += n;
+		return _waypoints[static_cast<std::size_t>(i)];
+	}
+
+	// The point `distance` metres along the route, measured from `from` through
+	// the current waypoint and on around the loop. This is the aim point for pure
+	// pursuit: steering at the next waypoint instead makes the agent swing wide,
+	// snap back and saw at the wheel, because the waypoint jumps sideways the
+	// instant it is captured. An aim point that slides along the route is
+	// continuous, and it cuts the corner to the apex on its own -- the chord of a
+	// bend lies inside it.
+	Vector3 PointAhead(const Vector3& from, float distance) const;
 	std::size_t Index() const { return _index; }
 	int Laps() const { return _laps; }
 
@@ -65,6 +83,10 @@ public:
 	// corner is the one it came from, and re-targeting it undoes the progress the
 	// pass-the-plane test in Advance had just made, forever.
 	void SnapToNearestAhead(const Vector3& position, std::size_t window);
+
+	// Steps to the next waypoint unconditionally, counting a lap on wrap. Used to
+	// walk past a stretch of circuit the agent has proved it cannot drive.
+	void Skip();
 
 	// Progress along the loop as a monotonic float (laps * count + index), for
 	// comparing two agents' positions in the race.

@@ -87,6 +87,23 @@ bool WorldPhysics::FindGroundHeight(const Vector3& position, float searchUp, flo
 	return true;
 }
 
+bool WorldPhysics::CastRay(const Vector3& from, const Vector3& direction, float range, Vector3& outPoint,
+                           Vector3& outNormal) const
+{
+	const btVector3 start(from.X, from.Y, from.Z);
+	const btVector3 end(from.X + direction.X * range, from.Y + direction.Y * range, from.Z + direction.Z * range);
+
+	btCollisionWorld::ClosestRayResultCallback callback(start, end);
+	_dynamicsWorld->rayTest(start, end, callback);
+	if (!callback.hasHit())
+		return false;
+
+	outPoint = Vector3(callback.m_hitPointWorld.getX(), callback.m_hitPointWorld.getY(), callback.m_hitPointWorld.getZ());
+	outNormal =
+	    Vector3(callback.m_hitNormalWorld.getX(), callback.m_hitNormalWorld.getY(), callback.m_hitNormalWorld.getZ());
+	return true;
+}
+
 btCollisionObject* WorldPhysics::addStaticBody(btCollisionShape* shape, const btTransform& transform)
 {
 	// Static geometry has to be a zero-mass btRigidBody, not a bare
