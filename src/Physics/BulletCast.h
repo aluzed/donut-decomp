@@ -34,7 +34,13 @@ inline btVector3 BulletCast(const glm::ivec3& v)
 template <>
 inline Quaternion BulletCast(const btQuaternion& q)
 {
-	return Quaternion(q.w(), q.x(), q.y(), q.z());
+	// Quaternion's constructor is (x, y, z, w), the same order as btQuaternion's
+	// accessors. Passing w first shifted every component along by one, so every
+	// rotation read back out of Bullet was a different rotation than the physics
+	// had: the race car's steering was computed against a heading that had
+	// nothing to do with where the car pointed, and the round trip through
+	// BulletCast<btQuaternion> (which is in the right order) did not undo it.
+	return Quaternion(q.x(), q.y(), q.z(), q.w());
 }
 
 template <>

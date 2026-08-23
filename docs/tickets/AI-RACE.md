@@ -1,6 +1,6 @@
 # AI-RACE — IA d'adversaire de course avec rubber-banding
 
-- **Status:** PARTIAL (2026-08-22) — l'adversaire pilote un vrai véhicule, mais se coince avant de boucler un tour
+- **Status:** PARTIAL (2026-08-23) — l'adversaire suit le tracé, se dégage seul et ne sort plus du monde ; il ne boucle toujours pas un tour
 - **Priority:** P2
 - **Module:** AI
 - **Depends on:** AI-PATH (couvert : `src/AI/PathFollower.*`)
@@ -104,14 +104,88 @@ Observation complémentaire : téléporté à côté de la voiture bloquée, on 
 route et à moitié enfoncée dedans**, pas coincée contre un bâtiment. À creuser avec le point
 1 — un tracé de circulation posé plus bas que la surface roulante expliquerait les deux.
 
+## Ce qui bloquait réellement (2026-08-23)
+
+Le blocage à (109, 2, -559) n'avait pas une cause mais cinq, empilées. Chacune masquait la
+suivante.
+
+### 1. `BulletCast<Quaternion>` décalait toutes les composantes
+
+```cpp
+return Quaternion(q.w(), q.x(), q.y(), q.z());   // ctor = (x, y, z, w)
+```
+
+Toute rotation relue de Bullet était donc une autre rotation. Le sens inverse
+(`BulletCast<btQuaternion>`) était correct, donc rien ne se compensait. `Steering::Seek`
+calculait le braquage contre un cap sans rapport avec l'orientation réelle de la voiture :
+placée face à son waypoint, elle partait à braquage plein dans la direction opposée. La
+caméra de suivi et le modèle du véhicule lisaient la même valeur.
+
+### 2. La voiture naissait dans une barrière
+
+`m1_snake_carstart` n'existe pas dans les assets extraits, et le repli la posait sur
+`_racePath.front()` — un point qui tombe dans `DONUTFENCE` (96..128, -569..-535). Elle
+poussait dans la clôture à 0 km/h pendant toute la course.
+
+Sonde décisive : `m_wheelsSuspensionForce` par roue. Elle valait ~11 900 N au total pour
+1 200 kg, donc les roues *touchaient* — la voiture avait de l'adhérence et n'avançait pas,
+ce qui a désigné un contact de châssis, pas un problème de suspension.
+
+> Piège : `m_raycastInfo.m_isInContact` ne peut pas être lu de l'extérieur.
+> `btRaycastVehicle::updateWheelTransformsWS` le remet à `false`, et `Vehicle::Update`
+> l'appelle à chaque frame — il lit donc toujours 0 roue au sol. C'est la force de
+> suspension qui survit au tick.
+
+Le circuit est maintenant ancré sur les seuls locators que la mission fournit réellement
+(`m1_AI_path1`, `race_finish`) quand le carstart manque, et la voiture est posée sur le
+premier point du tracé, face au second. `Vehicle::CreatePhysicsBody` cherche aussi le sol
+par raycast au lieu de partir d'un `+1.5 m` aveugle.
+
+### 3. Le waypoint n'était validé qu'au rayon
+
+Rayon de 8 m, et la voiture est passée à 14 m du waypoint 1 : jamais capturé, donc elle a
+continué tout droit jusqu'à sortir de la carte. `PathFollower::Advance` valide désormais
+aussi le franchissement du plan passant par le waypoint, perpendiculaire au tronçon d'arrivée
+— dépasser coûte une trajectoire large, plus la course entière.
+
+### 4. Aucune récupération
+
+Trois filets, dans cet ordre :
+
+- **hors-tracé** : au-delà de 40 m du waypoint visé, on se raccroche au point le plus proche
+  du circuit, au lieu de traverser les jardins en ligne droite ;
+- **chute** : 25 m sous son propre waypoint = la voiture est passée sous le monde
+  (elle atteignait Y = -45 000) → remise sur le circuit ;
+- **coincée** : moins de 4 m parcourus en 3 s → marche arrière 1,5 s, et au bout de
+  3 tentatives, remise sur le circuit.
+
+L'ancien test de blocage (vitesse < 2 km/h **et** pas < 2 cm sur la frame) ne se déclenchait
+pratiquement jamais : une voiture qui rabote un mur à 1-3 km/h le réarmait sans cesse.
+
+### 5. Pas de contrôle de vitesse
+
+Le gaz était piloté par l'angle de braquage, ce qui ne réagit qu'une fois *dans* le virage.
+`cornerSpeedKmh()` regarde 35 m de tracé en avant, additionne les changements de cap et vise
+entre 60 km/h en ligne droite et 22 km/h en épingle, freins compris.
+
+### État observé
+
+150 s d'exécution, deux missions : **0 chute hors du monde**, 0 remise en dernier recours,
+15 dégagements en marche arrière. L'adversaire suit le tracé et survit, mais **ne boucle
+toujours pas un tour** : il se coince de façon reproductible vers (26.5, 4.0, -222), là où le
+circuit fait un aller-retour (point 1 à (29.4, -227.3), point 2 à (38.4, -227.5)). C'est la
+qualité du tracé qui est en cause, pas le pilotage — la suite est sur **AI-PATH** (105 liens
+de plus de 25 m subsistent).
+
 ## Pistes secondaires
 
 - Aucune détection d'obstacle : la voiture vise le waypoint en ligne droite.
-- La manœuvre de dégagement est naïve (marche arrière + braquage inversé) et ne réessaie pas
-  d'angle différent ; elle se déclenche bien mais ne libère pas la voiture.
+- `Vehicle::ApplyInput` ignore `_topSpeedKmh` : la force moteur est la même à toute vitesse,
+  seule la traînée limite. À brancher avec SCRIPT-B.
 
 ## Critères d'acceptation
 - [x] Un `RaceOpponent` suit le circuit en pilotant un `Vehicle` via `ApplyInput`.
 - [x] Le rubber-banding accélère l'adversaire distancé et le ralentit quand il est en tête, dans une plage bornée (observé à 0,85 en tête).
-- [ ] L'adversaire termine un tour complet sans rester bloqué — **échoue** : bloqué de façon reproductible à (109, 2, -559), cf. ci-dessus.
+- [ ] L'adversaire termine un tour complet sans rester bloqué — **échoue toujours**, mais plus au même endroit ni pour la même raison : il suit désormais le tracé et se dégage seul, et se coince vers (26.5, 4.0, -222) sur un aller-retour du circuit (→ AI-PATH).
+- [x] L'adversaire ne sort plus du monde et ne reste plus bloqué indéfiniment (hors-tracé, chute et blocage sont tous rattrapés).
 - [ ] SCRIPT-D peut instancier, démarrer et arrêter l'adversaire — `ScriptEngine` le crée et le détruit, mais les commandes `SCRIPT-D` elles-mêmes restent des stubs.

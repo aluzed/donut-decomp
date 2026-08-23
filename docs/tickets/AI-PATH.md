@@ -1,6 +1,6 @@
 # AI-PATH — Contrôleur de suivi de chemin réutilisable
 
-- **Status:** PARTIAL (2026-08-22) — contrôleur extrait et réutilisé ; `TrafficManager` garde ses copies, et le graphe routier est disjoint (voir ci-dessous)
+- **Status:** PARTIAL (2026-08-23) — contrôleur extrait et réutilisé ; le graphe est connexe et suit les routes ; `TrafficManager` garde ses copies et 105 liens restent trop longs (voir ci-dessous)
 - **Priority:** P2
 - **Module:** AI
 - **Depends on:** —
@@ -70,16 +70,73 @@ une arête par `Road`, puis chaque nœud de boucle raccroché à la jonction la 
 `PathGraph` journalise maintenant cette connexité au démarrage : c'est le chiffre qui décide
 si une IA peut traverser la ville, et il était jusqu'ici invisible.
 
+## Diagnostic du circuit à 4 points (2026-08-23)
+
+Journalisation par tronçon, comme prévu. Le verdict était immédiat :
+
+```
+race node 0 (107.6, 1.1, -558.5) -> noeud 641  ( 0.0 m, composante 0)
+race node 1 ( 38.1, 3.3, -211.3) -> noeud 504  ( 9.6 m, composante 6)   <-- îlot
+race node 2 ( 10.5, 0.5, -623.8) -> noeud 1052 (10.0 m, composante 0)
+leg 0->1 : 354 m à vol d'oiseau, 0 nœud     leg 1->2 : 414 m, 0 nœud
+```
+
+Ni `FindNearestNode` ni l'A\* n'étaient en cause : le nœud 504 tombait dans l'une des
+14 composantes résiduelles. Aucune des deux hypothèses notées ici n'était la bonne — c'était
+la connexité elle-même, à 91 % et non 100 %.
+
+### Le graphe est désormais connexe à 100 %
+
+`bridgeComponents()` (Boruvka : chaque composante se relie à la plus proche, paire la plus
+courte d'abord, jusqu'à n'en garder qu'une). 4 ponts suffisent, dont 3 de moins de 27 m —
+les trous que le niveau laisse réellement entre deux pâtés. `GetComponent(node)` expose
+l'étiquette pour que le prochain échec de route dise *pourquoi*.
+
+### Les `Road` ne sont pas des segments droits
+
+Relier les 44 intersections deux à deux donnait des tronçons de 118 m tirés au cordeau — la
+voiture de course a pris le premier et l'a fini dans le mur d'un immeuble. La vraie
+géométrie était sous les `Road`, inexploitée :
+
+- **966 chunks `RoadSegment`**, enfants des `Road` : `name, data, mat4, mat4`. La
+  translation de `transform` donne la position monde du tronçon. Layout vérifié
+  exactement : 17 (LP string, longueur incluant le nul) + 17 + 128 = **162 octets**,
+  la taille observée sur tous.
+- **937 chunks `RoadDataSegment`** (`name, u32, lanes, u32, 3× vec3`) : 17 + 12 + 36 =
+  **65 octets**, également exact. Non exploités pour l'instant — géométrie de voie locale.
+
+`Level` collecte la chaîne de chaque `Road`, `PathGraph` la déroule
+`jonction → tronçon → … → jonction`. Les 99 `Road` en portent toutes.
+
+| | nœuds | composantes | plus grande | pas moyen du circuit |
+|---|---|---|---|---|
+| Avant | 1086 | 15 | 91 % | 51 m |
+| Après | 2052 | **1** | **100 %** | **15 m** |
+
+### L'ordre des chunks n'est pas l'ordre de la route
+
+Les `RoadSegment` ne sont pas rangés le long de la route : les prendre dans l'ordre du
+fichier donnait **288 liens de plus de 25 m, dont un de 239 m**, et un circuit qui
+zigzaguait d'un trottoir à l'autre. `PathGraph` les enchaîne maintenant au plus proche
+depuis la jonction de départ — l'ordre dans lequel une voiture les parcourt.
+
 ## Reste
 
-Le circuit de course composé par `ScriptEngine::buildRaceCircuit` ne fait toujours que
-4 points malgré un graphe à 91 % connexe : `FindRoute` renvoie des itinéraires très courts
-entre les nœuds de course. À diagnostiquer — soit `FindNearestNode` accroche les extrémités
-sur une petite composante résiduelle, soit l'A\* s'arrête trop tôt. Journaliser la taille de
-chaque tronçon est le prochain pas.
+**105 liens dépassent encore 25 m, le plus long 152 m**, et le circuit garde un
+aller-retour au départ (point 1 à (29.4, -227.3), point 2 à (38.4, -227.5)). Deux pistes,
+dans l'ordre :
+
+1. Une `Road` porte vraisemblablement les tronçons de **plusieurs voies** ; l'enchaînement
+   au plus proche saute alors d'une voie à l'autre. `RoadDataSegment.lanes` et ses trois
+   positions devraient permettre de les séparer.
+2. Les nœuds de boucle `Path` raccrochés au réseau (1010 d'entre eux) offrent à l'A\* des
+   raccourcis parallèles à la route. Les réserver au trafic, ou leur donner un coût
+   supérieur, éviterait qu'un itinéraire les emprunte.
 
 ## Critères d'acceptation
 - [x] Un `PathFollower` autonome existe et ne dépend que de `PathGraph` + état d'agent.
 - [ ] `TrafficManager` délègue son pilotage à `PathFollower` — **non fait** : ses `seekSteer`/`arrivalSpeed` file-static sont intacts, pour ne pas toucher au comportement du trafic sans pouvoir le vérifier.
 - [ ] `seekSteer`/`arrivalSpeed` ne sont plus dupliqués dans `TrafficManager.cpp` — dépend du point précédent.
 - [x] Le contrôleur est réutilisable par un autre agent — `RaceOpponent` l'utilise (AI-RACE).
+- [x] Le graphe est connexe (1 composante, 100 % des nœuds) et suit la forme des routes
+      (pas moyen 15 m contre 51 m).

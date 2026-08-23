@@ -15,6 +15,15 @@
 namespace Donut
 {
 
+namespace
+{
+// Chassis centre height above the road at spawn. The wheels hang
+// suspensionRestLength + wheelRadius = 0.6m below the centre, so anything less
+// than that leaves them buried; the extra clears the box and lets the car settle
+// onto its own suspension.
+constexpr float kSpawnRideHeight = 0.9f;
+} // namespace
+
 Vehicle::Vehicle(const std::string& name): _name(name), _position(Vector3::Zero), _rotation(Quaternion::Identity) {}
 
 Vehicle::~Vehicle() = default;
@@ -33,7 +42,26 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 {
 	SetPosition(position);
 
-	btVector3 pos = BulletCast<btVector3>(position + Vector3(0, 1.5f, 0));
+	// A locator or path node names a spot on the map, not the height of the road
+	// there: spawning at position + 1.5m dropped the race car into the terrain at
+	// (108, 1.1, -559), where it came to rest with its chassis box wedged in the
+	// ground and *no wheel touching it*. applyEngineForce only reaches the road
+	// through the suspension rays, so the opponent sat at 0 km/h being pushed out
+	// of the geometry a centimetre at a time. Find the ground and sit the wheels
+	// on it instead.
+	float spawnY = position.Y + kSpawnRideHeight;
+	float groundY = 0.0f;
+	if (physics.FindGroundHeight(position, 50.0f, 50.0f, groundY))
+	{
+		spawnY = groundY + kSpawnRideHeight;
+	}
+	else
+	{
+		Log::Warn("Vehicle: no ground under '{}' spawn ({:.1f}, {:.1f}, {:.1f}), dropping it from the given height",
+		          _name, position.X, position.Y, position.Z);
+	}
+
+	btVector3 pos(position.X, spawnY, position.Z);
 
 	btCollisionShape* chassisShape = new btBoxShape(btVector3(0.9f, 0.4f, 2.2f));
 	btDefaultMotionState* motionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), pos));
@@ -74,9 +102,40 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 
 	physics.GetDynamicsWorld()->addRigidBody(chassis);
 	physics.GetDynamicsWorld()->addAction(_rayVehicle.get());
+	_physicsWorld = &physics;
 
-	Log::Info("Vehicle: physics body created for '{}' at ({:.1f}, {:.1f}, {:.1f})",
-	          _name, position.X, position.Y, position.Z);
+	Log::Info("Vehicle: physics body created for '{}' at ({:.1f}, {:.1f}, {:.1f}), ground {:.1f}", _name, position.X,
+	          spawnY, position.Z, groundY);
+}
+
+void Vehicle::Teleport(const Vector3& position, const Quaternion& rotation)
+{
+	SetPosition(position);
+	SetRotation(rotation);
+
+	if (!_rayVehicle)
+		return;
+
+	float spawnY = position.Y + kSpawnRideHeight;
+	float groundY = 0.0f;
+	if (_physicsWorld && _physicsWorld->FindGroundHeight(position, 50.0f, 50.0f, groundY))
+		spawnY = groundY + kSpawnRideHeight;
+
+	btTransform transform;
+	transform.setIdentity();
+	transform.setOrigin(btVector3(position.X, spawnY, position.Z));
+	transform.setRotation(btQuaternion(rotation.X, rotation.Y, rotation.Z, rotation.W));
+
+	btRigidBody* chassis = _rayVehicle->getRigidBody();
+	chassis->setWorldTransform(transform);
+	if (chassis->getMotionState())
+		chassis->getMotionState()->setWorldTransform(transform);
+	chassis->setLinearVelocity(btVector3(0, 0, 0));
+	chassis->setAngularVelocity(btVector3(0, 0, 0));
+	chassis->clearForces();
+	_rayVehicle->resetSuspension();
+
+	Log::Info("Vehicle: '{}' teleported to ({:.1f}, {:.1f}, {:.1f})", _name, position.X, spawnY, position.Z);
 }
 
 void Vehicle::SetPosition(const Vector3& pos)
