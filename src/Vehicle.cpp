@@ -12,6 +12,8 @@
 #include <BulletDynamics/Vehicle/btRaycastVehicle.h>
 #include <LinearMath/btDefaultMotionState.h>
 
+#include <cmath>
+
 namespace Donut
 {
 
@@ -28,11 +30,23 @@ constexpr float kSpawnRideHeight = 0.9f;
 //
 // 0.83 m/s^2 is feeble -- it is what the old flat 1000N came to against the
 // 1200kg chassis, and it caps every car, the player's included, at about
-// 56 km/h however long the straight. It is kept because raising it is not free:
-// at 3.0 the race opponent reaches corners faster than it can shed speed and
-// gets 18 waypoints round the circuit instead of 70, wedging itself 13 times.
-// Cornering has to improve before the engine does.
+// 56 km/h however long the straight.
+//
+// It stays at 0.83 because raising it still does not pay, though no longer for
+// the old reason. With the speed profile and the tapered steering lock below,
+// 3.0 no longer wrecks the race opponent -- it was 18 waypoints of 126, it is
+// now 116 -- but 0.83 gets 122 and a completed lap, because what is left in the
+// way is geometry the circuit runs through, and arriving at it faster only means
+// hitting it harder. Raise this once the circuit is drivable, not before, and
+// measure the player's car when you do.
 constexpr float kEngineAcceleration = 0.83f;
+
+// Steering lock, tapered with speed. The wheels turn kMaxSteerStill radians when
+// the car is stopped and kMaxSteerFast once it is doing kSteerTaperKmh, which is
+// what keeps a fast car pointing where it is going.
+constexpr float kMaxSteerStill = 0.5f;
+constexpr float kMaxSteerFast = 0.12f;
+constexpr float kSteerTaperKmh = 90.0f;
 } // namespace
 
 Vehicle::Vehicle(const std::string& name): _name(name), _position(Vector3::Zero), _rotation(Quaternion::Identity) {}
@@ -221,7 +235,19 @@ void Vehicle::ApplyInput(float throttle, float steer, float brake, float boost)
 
 	const float force = throttle * _gasScale * mass * kEngineAcceleration * boost;
 	SetEngineForce(force);
-	SetSteeringValue(steer * 0.5f);
+
+	// Speed-sensitive steering. Half a radian of lock is right at walking pace and
+	// spins the car at 90 km/h: the front wheels ask for a corner far tighter than
+	// the chassis will hold, it snaps round, and the AI was then found stationary
+	// at full throttle with the steering hard over -- facing back the way it came.
+	// Tapering the lock with speed is what every car does, and it is what lets the
+	// engine be worth anything: without it, more power only meant spinning sooner.
+	const float speedKmh = std::fabs(GetSpeedKmh());
+	float t = speedKmh / kSteerTaperKmh;
+	if (t > 1.0f) t = 1.0f;
+	const float maxSteer = kMaxSteerStill + (kMaxSteerFast - kMaxSteerStill) * t;
+
+	SetSteeringValue(steer * maxSteer);
 	SetBrake(brake * 100.0f + 10.0f);
 }
 
