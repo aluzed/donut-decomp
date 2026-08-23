@@ -110,6 +110,21 @@ cmake --build build -j$(nproc)
 ./build/bin/donut
 ```
 
+## Command Line
+
+| Flag | Effect |
+|------|--------|
+| `--log-level <debug\|info\|warn\|error>`, `-l` | Log verbosity (or the `DONUT_LOG_LEVEL` env var) |
+| `--autostart` | Skip the splash and main menu, straight into the mission |
+| `--quit-after <secs>` | Close the window after that much wall time |
+
+The last two make a run repeatable without a keyboard, which is how the race AI is measured
+over a whole 120-second mission:
+
+```bash
+./build/bin/donut --log-level debug --autostart --quit-after 140 > run.log
+```
+
 ## Asset Extraction
 
 ```bash

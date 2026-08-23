@@ -1,6 +1,6 @@
 # AI-PATH — Contrôleur de suivi de chemin réutilisable
 
-- **Status:** PARTIAL (2026-08-23) — contrôleur extrait et réutilisé ; le graphe est connexe et suit les routes ; `TrafficManager` garde ses copies et 95 liens restent trop longs (voir ci-dessous)
+- **Status:** PARTIAL (2026-08-23) — contrôleur extrait et réutilisé ; le graphe est connexe et suit les routes ; `TrafficManager` garde ses copies, 95 liens restent trop longs, et **trois endroits de l'itinéraire ne sont pas roulables** (voir ci-dessous)
 - **Priority:** P2
 - **Module:** AI
 - **Depends on:** —
@@ -189,6 +189,36 @@ passage obligatoire suffirait.
 Au-delà, la perte de temps de l'adversaire ne vient plus principalement du tracé
 (cf. AI-RACE : c'est la puissance moteur et la tenue de virage).
 
+## L'itinéraire produit traverse la géométrie (2026-08-23)
+
+Le graphe est connexe et le circuit composé fait 1621 m d'un pas moyen de 13 m, mais **une
+voiture ne peut pas le suivre de bout en bout**. Instrumenté depuis `RaceOpponent`, qui tire
+un rayon depuis son pare-chocs quand il se déclare bloqué (`WorldPhysics::CastRay`, ajouté
+pour cela) et journalise le point touché *et sa normale* :
+
+| endroit | waypoints | normale | lecture |
+|---|---|---|---|
+| (231, 4.2, -336) | 18-19 | **(0,00, -0,98, 0,19)** | elle pointe **vers le bas** : l'itinéraire passe **sous le tablier** de la route. La voiture roule à Y 4,2 et bute contre le dessous à Y 4,5 |
+| (~63, 3.2, -601) → (48, 1.6, -622) | 57-70 | (0,72, 0,00, 0,70) | mur franc, vertical |
+| autour du waypoint 5 | 5 | — | aucun obstacle : la voiture **tombe hors du monde** (y = -22) |
+
+Le premier est le plus instructif : un nœud de dalle dont le Y place la ligne médiane sous la
+surface roulante. C'est très probablement le même défaut que celui déjà soupçonné dans
+AI-RACE (« sur la route et à moitié enfoncée dedans »), et il touche le placement des
+`RoadSegment`, pas le routage.
+
+Deux pistes, dans cet ordre :
+
+1. **Valider chaque tronçon du circuit contre le sol au moment où il est composé** — un
+   raycast vers le bas à chaque point, et un raycast horizontal à hauteur de pare-chocs entre
+   deux points consécutifs. Cela transforme « l'IA se coince quelque part » en une liste de
+   points fautifs, ce qui est le diagnostic dont la suite a besoin.
+2. **Recaler le Y des nœuds de dalle sur la surface roulante** plutôt que sur le centroïde du
+   quadrilatère, qui n'est la bonne hauteur que si la dalle est plate et à l'endroit.
+
+`RaceOpponent` sait contourner ces trois endroits (voir AI-RACE), ce qui permet de mesurer le
+reste, mais un tour « bouclé » l'est donc avec des tronçons sautés.
+
 ## Critères d'acceptation
 - [x] Un `PathFollower` autonome existe et ne dépend que de `PathGraph` + état d'agent.
 - [ ] `TrafficManager` délègue son pilotage à `PathFollower` — **non fait** : ses `seekSteer`/`arrivalSpeed` file-static sont intacts, pour ne pas toucher au comportement du trafic sans pouvoir le vérifier.
@@ -196,4 +226,6 @@ Au-delà, la perte de temps de l'adversaire ne vient plus principalement du trac
 - [x] Le contrôleur est réutilisable par un autre agent — `RaceOpponent` l'utilise (AI-RACE).
 - [x] Le graphe est connexe (1 composante, 100 % des nœuds) et suit la forme des routes
       (pas moyen 13 m contre 51 m), et le réseau routier l'est aussi à lui seul.
+- [ ] Un itinéraire composé est roulable de bout en bout — **non** : trois endroits
+      traversent la géométrie ou le vide (voir ci-dessus).
 - [ ] Aucun lien du réseau routier ne dépasse la largeur d'une rue — **95 dépassent 25 m**.
