@@ -42,6 +42,10 @@ public:
 	void SetTireGrip(float grip) { _tireGrip = grip; }
 	void SetSuspensionLimit(float limit) { _suspensionLimit = limit; }
 
+	// Moves the car bodily: resets the chassis transform, clears its momentum and
+	// lets the suspension settle again. SetPosition only moves the model.
+	void Teleport(const Vector3& position, const Quaternion& rotation);
+
 	void SetPosition(const Vector3& pos);
 	void SetRotation(const Quaternion& rot);
 	const Vector3& GetPosition() const { return _position; }
@@ -50,11 +54,13 @@ public:
 	bool HasModel() const { return _model != nullptr; }
 	float GetSpeedKmh() const;
 
+
 private:
 	std::string _name;
 	Vector3 _position;
 	Quaternion _rotation;
 
+	class WorldPhysics* _physicsWorld = nullptr;
 	float _mass = 1500.0f;
 	float _gasScale = 1.0f;
 	float _topSpeedKmh = 180.0f;

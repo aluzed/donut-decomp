@@ -38,6 +38,8 @@ public:
 	std::size_t Count() const { return _waypoints.size(); }
 
 	const Vector3& Target() const { return _waypoints[_index]; }
+	// The waypoint `ahead` places further along the loop, wrapping around.
+	const Vector3& Peek(std::size_t ahead) const { return _waypoints[(_index + ahead) % _waypoints.size()]; }
 	std::size_t Index() const { return _index; }
 	int Laps() const { return _laps; }
 
@@ -45,9 +47,25 @@ public:
 	// current one, wrapping around and counting a lap. Returns true on advance.
 	bool Advance(const Vector3& position, float radius);
 
+	// Starts from the waypoint nearest `position` instead of index 0. An agent
+	// placed part-way along the loop otherwise aims at waypoint 0 behind it and
+	// drives away from the circuit at full lock.
+	void SnapToNearest(const Vector3& position);
+
 	// Progress along the loop as a monotonic float (laps * count + index), for
 	// comparing two agents' positions in the race.
 	float Progress() const { return static_cast<float>(_laps) * static_cast<float>(_waypoints.size()) + _index; }
+
+	// The same thing in laps, so it can be compared with an agent running a
+	// different number of waypoints -- the opponent's circuit has 30 points where
+	// the player's has 6 checkpoints, and comparing the raw counts made the
+	// opponent permanently "ahead" by a factor of five.
+	float ProgressLaps() const
+	{
+		if (_waypoints.empty())
+			return static_cast<float>(_laps);
+		return static_cast<float>(_laps) + static_cast<float>(_index) / static_cast<float>(_waypoints.size());
+	}
 
 	void Reset();
 

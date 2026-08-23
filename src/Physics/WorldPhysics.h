@@ -59,6 +59,11 @@ public:
 
 	btDiscreteDynamicsWorld* GetDynamicsWorld() const { return _dynamicsWorld; }
 
+	// Height of the ground under `position`, searched from `searchUp` metres above
+	// it down to `searchDown` below. False when the ray finds nothing, which means
+	// there is no collision geometry there at all.
+	bool FindGroundHeight(const Vector3& position, float searchUp, float searchDown, float& outHeight) const;
+
 	void SetDebugDrawMode(PhysicsDebugDrawMode mode) const { _debugDraw->setDebugMode((int)mode); }
 	PhysicsDebugDrawMode GetDebugDrawMode() const { return (PhysicsDebugDrawMode)_debugDraw->getDebugMode(); }
 

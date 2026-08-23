@@ -10,9 +10,11 @@
 #include "Core/Log.h"
 #include "Game.h"
 #include "Level.h"
+#include "Physics/WorldPhysics.h"
 #include "Scripting/Commands.h"
 #include "Vehicle.h"
 
+#include <cmath>
 #include <fstream>
 
 namespace Donut
@@ -235,6 +237,7 @@ void ScriptEngine::AddStageVehicle(const std::string& car, const std::string& lo
                                    const std::string& driver)
 {
 	Vector3 pos = _game.GetLevel().GetLocatorPosition(locator);
+	_raceCarNeedsPlacement = false;
 	if (pos == Vector3::Zero)
 	{
 		// A race car dumped beside the player starts wedged against whatever the
@@ -243,6 +246,12 @@ void ScriptEngine::AddStageVehicle(const std::string& car, const std::string& lo
 		if (behaviour == "race" && !_racePath.empty())
 		{
 			pos = _racePath.front();
+			// This is still only the AI waypoint path, not the routed circuit, and
+			// its first point turned out to sit hard against a fence: snake_v spawned
+			// with its nose in DONUTFENCE (96..128, -569..-535) and spent the whole
+			// race pushing into it at 0 km/h. buildRaceCircuit puts it on the road
+			// once the route through the road network is known.
+			_raceCarNeedsPlacement = true;
 			Log::Warn("ScriptEngine: locator '{}' not found, starting race car '{}' on the circuit", locator, car);
 		}
 		else
@@ -299,7 +308,11 @@ void ScriptEngine::buildRaceCircuit()
 	// what the mission actually gives us: where the opponent starts, the
 	// waypoints it must reach, and the finish line if the mission names one.
 	std::vector<Vector3> nodes;
-	if (_raceOpponent)
+	// Only when the car is where the mission put it. If its start locator was
+	// missing it is sitting on a fallback guess, and anchoring the circuit there
+	// bakes that guess in as a corner of the route -- it left a 97m leg running
+	// back into the fence the fallback had parked against.
+	if (_raceOpponent && !_raceCarNeedsPlacement)
 		nodes.push_back(_raceOpponent->GetVehicle().GetPosition());
 	nodes.insert(nodes.end(), _stageWaypoints.begin(), _stageWaypoints.end());
 
@@ -316,6 +329,19 @@ void ScriptEngine::buildRaceCircuit()
 	const auto& graph = _game.GetPathGraph();
 	std::vector<Vector3> circuit;
 
+	// Each race node is a locator, not a graph node: it is routed from whatever
+	// road node happens to be nearest. Report that anchor -- its index, how far
+	// off it sits and which component it lands in -- because a leg that collapses
+	// does so either because the two anchors are in different components or
+	// because they are the same node.
+	for (size_t i = 0; i < nodes.size(); ++i)
+	{
+		const int anchor = graph.FindNearestNode(nodes[i]);
+		const float offset = anchor < 0 ? -1.0f : (graph.GetNodes()[anchor].position - nodes[i]).Length();
+		Log::Info("ScriptEngine: race node {} at ({:.1f}, {:.1f}, {:.1f}) -> graph node {} ({:.1f}m away, component {})",
+		          i, nodes[i].X, nodes[i].Y, nodes[i].Z, anchor, offset, graph.GetComponent(anchor));
+	}
+
 	for (size_t i = 0; i < nodes.size(); ++i)
 	{
 		const Vector3& from = nodes[i];
@@ -324,6 +350,8 @@ void ScriptEngine::buildRaceCircuit()
 		circuit.push_back(from);
 
 		const auto leg = graph.FindRoute(from, to);
+		Log::Info("ScriptEngine: leg {}->{} spans {:.1f}m as the crow flies, routed through {} nodes", i,
+		          (i + 1) % nodes.size(), (to - from).Length(), leg.size());
 		if (leg.empty())
 		{
 			Log::Warn("ScriptEngine: no road route between race nodes {} and {}", i, (i + 1) % nodes.size());
@@ -342,8 +370,70 @@ void ScriptEngine::buildRaceCircuit()
 	Log::Info("ScriptEngine: race circuit routed through {} points from {} race nodes", _racePath.size(),
 	          nodes.size());
 
+	// The gaps matter more than the count: the opponent drives straight at the
+	// next point, so a long hop is a straight line through whatever stands
+	// between them.
+	float total = 0.0f, longest = 0.0f;
+	std::size_t longestAt = 0;
+	for (std::size_t i = 0; i < _racePath.size(); ++i)
+	{
+		const float gap = (_racePath[(i + 1) % _racePath.size()] - _racePath[i]).Length();
+		total += gap;
+		if (gap > longest)
+		{
+			longest = gap;
+			longestAt = i;
+		}
+	}
+	Log::Info("ScriptEngine: circuit is {:.0f}m round, mean gap {:.0f}m, longest {:.0f}m at point {}", total,
+	          total / static_cast<float>(_racePath.size()), longest, longestAt);
+
+	// A route is only drivable where there is collision geometry under it. Sample
+	// the whole circuit once so a hole shows up here rather than as an opponent
+	// falling out of the world.
+	int holes = 0;
+	for (std::size_t i = 0; i < _racePath.size(); ++i)
+	{
+		float groundY = 0.0f;
+		if (_game.GetWorldPhysics().FindGroundHeight(_racePath[i], 50.0f, 50.0f, groundY))
+			continue;
+
+		++holes;
+		Log::Warn("ScriptEngine: no ground under circuit point {} ({:.1f}, {:.1f}, {:.1f})", i, _racePath[i].X,
+		          _racePath[i].Y, _racePath[i].Z);
+	}
+	if (holes > 0)
+		Log::Warn("ScriptEngine: {} of {} circuit points have no collision under them", holes, _racePath.size());
+
+	// Place first: SetCircuit picks the opponent's starting waypoint from where the
+	// car actually is, and it is about to move.
+	placeRaceCarOnCircuit();
+
 	if (_raceOpponent)
 		_raceOpponent->SetCircuit(_racePath);
+}
+
+void ScriptEngine::placeRaceCarOnCircuit()
+{
+	// Only when the mission's own car-start locator was missing: when the level
+	// names one, that is where the car belongs.
+	if (!_raceCarNeedsPlacement || !_activeVehicle || _racePath.size() < 3)
+		return;
+
+	// Every point of the circuit now comes out of the road graph, so start on the
+	// first one, facing the second: a car dropped at full steering lock cannot
+	// turn, because it has to be moving first.
+	const Vector3& here = _racePath[0];
+	const Vector3& next = _racePath[1];
+
+	Vector3 forward = next - here;
+	forward.Y = 0.0f;
+	Quaternion rotation = Quaternion::Identity;
+	if (forward.LengthSquared() > 0.01f)
+		rotation = Quaternion(Vector3(0.0f, 1.0f, 0.0f), std::atan2(forward.X, forward.Z));
+
+	_activeVehicle->Teleport(here, rotation);
+	_raceCarNeedsPlacement = false;
 }
 
 void ScriptEngine::UsePedGroup(int group)
@@ -425,7 +515,13 @@ void ScriptEngine::UpdateAI(double dt)
 	if (_game.GetPlayerVehicle() == &_raceOpponent->GetVehicle())
 		return;
 
-	_raceOpponent->Update(dt, static_cast<float>(_currentLap * static_cast<int>(_checkpoints.size()) + _currentCheckpoint));
+	// In laps, so it is comparable with the opponent's own progress around a
+	// circuit that has a different number of points than the checkpoint list.
+	const float playerLaps =
+	    _checkpoints.empty()
+	        ? static_cast<float>(_currentLap)
+	        : static_cast<float>(_currentLap) + static_cast<float>(_currentCheckpoint) / static_cast<float>(_checkpoints.size());
+	_raceOpponent->Update(dt, playerLaps);
 
 	// Keep the legacy readouts pointing at the real car so anything still asking
 	// for the AI transform (debug draw, HUD) follows the opponent.

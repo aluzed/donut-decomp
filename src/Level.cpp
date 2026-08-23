@@ -226,7 +226,21 @@ void Level::LoadP3D(const std::string& filename)
 		case P3D::ChunkType::Road:
 		{
 			auto road = P3D::Road::Load(*chunk);
-			_roads.push_back(RoadLink {road->GetStartIntersection(), road->GetEndIntersection()});
+
+			// The RoadSegment children come in order along the road, and each one's
+			// transform translation is where that piece of tarmac sits in the world.
+			std::vector<Vector3> points;
+			for (const auto& child : chunk->GetChildren())
+			{
+				if (!child->IsType(P3D::ChunkType::RoadSegment))
+					continue;
+
+				const auto seg = P3D::RoadSegment::Load(*child);
+				const Matrix4x4& t = seg->GetTransform();
+				points.emplace_back(t[3][0], t[3][1], t[3][2]);
+			}
+
+			_roads.push_back(RoadLink {road->GetStartIntersection(), road->GetEndIntersection(), std::move(points)});
 
 			break;
 		}

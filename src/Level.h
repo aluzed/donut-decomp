@@ -69,10 +69,16 @@ public:
 
 	// The real road network: Intersection nodes joined by Road links, which name
 	// their two endpoints. Unlike the Path loops, this graph is connected.
+	//
+	// A Road is not a straight line between its endpoints -- it carries an ordered
+	// chain of RoadSegment children, one every ~8m, whose transforms trace the
+	// road's actual shape. Without them a route between two junctions 118m apart
+	// is a straight line through whatever buildings stand in the way.
 	struct RoadLink
 	{
 		std::string start;
 		std::string end;
+		std::vector<Vector3> points;
 	};
 	const std::map<std::string, Vector3>& GetIntersections() const { return _intersections; }
 	const std::vector<RoadLink>& GetRoads() const { return _roads; }

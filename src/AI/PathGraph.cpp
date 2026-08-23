@@ -13,8 +13,10 @@ namespace Donut
 {
 namespace
 {
-// How close a path-loop node has to be to a junction to be linked to it.
-constexpr float kJunctionSnapDistance = 70.0f;
+// How close a path-loop node has to be to a road node to be linked to it. The
+// road chain has a node every ~8m, so a loop that runs beside a road has one
+// within a few metres; 30m only bridges the gap where a loop leaves the road.
+constexpr float kRoadSnapDistance = 30.0f;
 } // namespace
 
 
@@ -68,8 +70,9 @@ PathGraph::PathGraph(const Level& level)
 	// The Path loops above are one closed loop per city block, and nothing joins
 	// two of them: on their own they form 110 disconnected components, so no
 	// route between neighbourhoods exists. The level's real road network does
-	// connect -- 60 Intersection nodes joined by 99 Road links that name their
-	// endpoints -- so splice it in and hang each loop off its nearest junction.
+	// connect -- Intersection nodes joined by Road links that name their
+	// endpoints -- so splice it in and hang each loop off it.
+	const size_t firstRoadNode = _nodes.size();
 	const auto& intersections = level.GetIntersections();
 	std::map<std::string, int> intersectionNodes;
 
@@ -81,7 +84,23 @@ PathGraph::PathGraph(const Level& level)
 		_nodes.push_back(node);
 	}
 
-	int roadEdges = 0;
+	// Each Road is a chain of RoadSegments, not a straight line: walk it junction
+	// -> segment -> segment -> ... -> junction so a route follows the road's shape.
+	// Linking the junctions directly gave hops of up to 118m, and the race car
+	// drove the first one straight into the side of a building.
+	int roadEdges = 0, segmentNodes = 0, bareRoads = 0, longLinks = 0;
+	float longestLink = 0.0f;
+	const auto link = [&](int a, int b) {
+		_nodes[a].neighbors.push_back(b);
+		_nodes[b].neighbors.push_back(a);
+
+		const float length = (_nodes[a].position - _nodes[b].position).Length();
+		if (length > longestLink)
+			longestLink = length;
+		if (length > 25.0f)
+			++longLinks;
+	};
+
 	for (const auto& road : level.GetRoads())
 	{
 		const auto a = intersectionNodes.find(road.start);
@@ -89,21 +108,65 @@ PathGraph::PathGraph(const Level& level)
 		if (a == intersectionNodes.end() || b == intersectionNodes.end())
 			continue;
 
-		_nodes[a->second].neighbors.push_back(b->second);
-		_nodes[b->second].neighbors.push_back(a->second);
+		if (road.points.empty())
+			++bareRoads;
+
+		// The RoadSegment children are not stored in order along the road -- taking
+		// them as they come gave 288 links over 25m and one of 239m, and the race
+		// route zig-zagged back and forth across the street. Walk them
+		// nearest-first from the start junction instead, which is the order a car
+		// drives them in.
+		std::vector<Vector3> ordered;
+		ordered.reserve(road.points.size());
+		std::vector<bool> used(road.points.size(), false);
+		Vector3 from = _nodes[a->second].position;
+		for (std::size_t n = 0; n < road.points.size(); ++n)
+		{
+			int nearest = -1;
+			float nearestDist = std::numeric_limits<float>::infinity();
+			for (std::size_t k = 0; k < road.points.size(); ++k)
+			{
+				if (used[k])
+					continue;
+				const float d = (road.points[k] - from).LengthSquared();
+				if (d < nearestDist)
+				{
+					nearestDist = d;
+					nearest = static_cast<int>(k);
+				}
+			}
+
+			used[nearest] = true;
+			from = road.points[nearest];
+			ordered.push_back(from);
+		}
+
+		int previous = a->second;
+		for (const auto& point : ordered)
+		{
+			Node node;
+			node.position = point;
+			const int index = static_cast<int>(_nodes.size());
+			_nodes.push_back(node);
+			++segmentNodes;
+
+			link(previous, index);
+			previous = index;
+		}
+
+		link(previous, b->second);
 		++roadEdges;
 	}
 
-	// Attach every path node to the junction it sits closest to, so the loops
+	// Attach every path node to the road node it sits closest to, so the loops
 	// become reachable from the road network rather than floating beside it.
 	int stitched = 0;
-	const size_t firstIntersection = _nodes.size() - intersections.size();
-	for (size_t i = 0; i < firstIntersection; ++i)
+	for (size_t i = 0; i < firstRoadNode; ++i)
 	{
 		int nearest = -1;
-		float nearestDist = kJunctionSnapDistance * kJunctionSnapDistance;
+		float nearestDist = kRoadSnapDistance * kRoadSnapDistance;
 
-		for (size_t j = firstIntersection; j < _nodes.size(); ++j)
+		for (size_t j = firstRoadNode; j < _nodes.size(); ++j)
 		{
 			const float d = (_nodes[i].position - _nodes[j].position).LengthSquared();
 			if (d < nearestDist)
@@ -116,45 +179,128 @@ PathGraph::PathGraph(const Level& level)
 		if (nearest < 0)
 			continue;
 
-		_nodes[i].neighbors.push_back(nearest);
-		_nodes[nearest].neighbors.push_back(static_cast<int>(i));
+		link(static_cast<int>(i), nearest);
 		++stitched;
 	}
 
-	Log::Info("PathGraph: built graph with {} nodes ({} junctions, {} road links, {} path nodes stitched in)",
-	          _nodes.size(), intersections.size(), roadEdges, stitched);
+	Log::Info("PathGraph: built graph with {} nodes ({} junctions, {} roads, {} road segments, {} path nodes stitched in)",
+	          _nodes.size(), intersections.size(), roadEdges, segmentNodes, stitched);
+	Log::Info("PathGraph: {} road links longer than 25m, longest {:.0f}m", longLinks, longestLink);
+	if (bareRoads > 0)
+		Log::Warn("PathGraph: {} of {} roads carry no RoadSegment children, so they are straight junction-to-junction "
+		          "edges that cut across whatever lies between",
+		          bareRoads, roadEdges);
 
-	// Connectivity is the thing that decides whether any agent can cross town, and
-	// it is invisible otherwise: report it so a regression here is obvious.
-	std::vector<bool> seen(_nodes.size(), false);
-	std::size_t components = 0, largest = 0;
+	// Snapping to junctions still leaves islands -- blocks whose loops sit further
+	// than the snap distance from any of the 44 junctions -- and an island is
+	// unroutable, silently: FindRoute just returns nothing. Join what is left.
+	bridgeComponents();
+
+	computeComponents();
+	std::vector<std::size_t> sizes(_componentCount, 0);
+	for (int c : _component)
+		++sizes[c];
+	const std::size_t largest = sizes.empty() ? 0 : *std::max_element(sizes.begin(), sizes.end());
+
+	// Connectivity decides whether any agent can cross town, and it is invisible
+	// otherwise: report it so a regression here is obvious.
+	Log::Info("PathGraph: {} connected components, largest holds {} nodes ({}%)", _componentCount, largest,
+	          _nodes.empty() ? 0 : (largest * 100 / _nodes.size()));
+}
+
+void PathGraph::computeComponents()
+{
+	_component.assign(_nodes.size(), -1);
+	_componentCount = 0;
+
 	for (std::size_t i = 0; i < _nodes.size(); ++i)
 	{
-		if (seen[i])
+		if (_component[i] >= 0)
 			continue;
 
-		++components;
-		std::size_t size = 0;
+		const int id = _componentCount++;
 		std::vector<int> stack {static_cast<int>(i)};
-		seen[i] = true;
+		_component[i] = id;
 		while (!stack.empty())
 		{
 			const int n = stack.back();
 			stack.pop_back();
-			++size;
 			for (int m : _nodes[n].neighbors)
 			{
-				if (seen[m])
+				if (_component[m] >= 0)
 					continue;
-				seen[m] = true;
+				_component[m] = id;
 				stack.push_back(m);
 			}
 		}
-		largest = std::max(largest, size);
 	}
+}
 
-	Log::Info("PathGraph: {} connected components, largest holds {} nodes ({}%)", components, largest,
-	          _nodes.empty() ? 0 : (largest * 100 / _nodes.size()));
+void PathGraph::bridgeComponents()
+{
+	// Boruvka-style: every round, each component finds the nearest node in any
+	// other component and links to it, which at least halves the component count.
+	// Closest pair first means the bridges follow the gaps the level actually
+	// leaves between blocks rather than cutting across town.
+	for (int round = 0; round < 32; ++round)
+	{
+		computeComponents();
+		if (_componentCount <= 1)
+			break;
+
+		struct Bridge
+		{
+			float dist = std::numeric_limits<float>::infinity();
+			int from = -1, to = -1;
+		};
+		std::vector<Bridge> best(_componentCount);
+
+		for (std::size_t i = 0; i < _nodes.size(); ++i)
+		{
+			for (std::size_t j = i + 1; j < _nodes.size(); ++j)
+			{
+				const int ci = _component[i], cj = _component[j];
+				if (ci == cj)
+					continue;
+
+				const float d = (_nodes[i].position - _nodes[j].position).LengthSquared();
+				if (d < best[ci].dist)
+					best[ci] = {d, static_cast<int>(i), static_cast<int>(j)};
+				if (d < best[cj].dist)
+					best[cj] = {d, static_cast<int>(j), static_cast<int>(i)};
+			}
+		}
+
+		int added = 0;
+		for (const auto& bridge : best)
+		{
+			if (bridge.from < 0)
+				continue;
+
+			auto& neighbors = _nodes[bridge.from].neighbors;
+			if (std::find(neighbors.begin(), neighbors.end(), bridge.to) != neighbors.end())
+				continue;
+
+			neighbors.push_back(bridge.to);
+			_nodes[bridge.to].neighbors.push_back(bridge.from);
+			++added;
+
+			// A long bridge is a straight line drawn across whatever is in the way,
+			// so it is worth seeing: an agent routed over one will drive through it.
+			Log::Debug("PathGraph: bridged components over {:.1f}m, nodes {} -> {}", std::sqrt(bridge.dist),
+			           bridge.from, bridge.to);
+		}
+
+		if (added == 0)
+			break;
+	}
+}
+
+int PathGraph::GetComponent(int node) const
+{
+	if (node < 0 || node >= static_cast<int>(_component.size()))
+		return -1;
+	return _component[node];
 }
 
 Vector3 PathGraph::GetRandomNode() const

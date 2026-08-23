@@ -52,6 +52,26 @@ void PathFollower::SetWaypoints(std::vector<Vector3> waypoints)
 	Reset();
 }
 
+void PathFollower::SnapToNearest(const Vector3& position)
+{
+	if (_waypoints.empty())
+		return;
+
+	std::size_t best = 0;
+	float bestDist = (_waypoints[0] - position).LengthSquared();
+	for (std::size_t i = 1; i < _waypoints.size(); ++i)
+	{
+		const float d = (_waypoints[i] - position).LengthSquared();
+		if (d < bestDist)
+		{
+			bestDist = d;
+			best = i;
+		}
+	}
+
+	_index = best;
+}
+
 void PathFollower::Reset()
 {
 	_index = 0;
@@ -65,7 +85,24 @@ bool PathFollower::Advance(const Vector3& position, float radius)
 
 	Vector3 delta = _waypoints[_index] - position;
 	delta.Y = 0.0f; // waypoints sit on the road surface, the agent above it
-	if (delta.LengthSquared() > radius * radius)
+
+	bool reached = delta.LengthSquared() <= radius * radius;
+
+	// A car that takes a corner wide misses the radius entirely: the race
+	// opponent came within 14m of waypoint 1, never captured it, and drove on in
+	// a straight line until it left the map. Also count the waypoint as reached
+	// once the agent is past it -- past the plane through it, square to the leg it
+	// arrived on -- so overshooting costs a wide line, not the whole race.
+	if (!reached)
+	{
+		const std::size_t previous = (_index + _waypoints.size() - 1) % _waypoints.size();
+		Vector3 leg = _waypoints[_index] - _waypoints[previous];
+		leg.Y = 0.0f;
+		if (leg.LengthSquared() > 0.01f && (delta.X * leg.X + delta.Z * leg.Z) < 0.0f)
+			reached = true;
+	}
+
+	if (!reached)
 		return false;
 
 	++_index;
