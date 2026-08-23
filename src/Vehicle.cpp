@@ -22,6 +22,17 @@ namespace
 // than that leaves them buried; the extra clears the box and lets the car settle
 // onto its own suspension.
 constexpr float kSpawnRideHeight = 0.9f;
+
+// Acceleration a car makes at full throttle, before drag. Engine force is this
+// times the chassis mass, so a heavier car needs more of it to move the same.
+//
+// 0.83 m/s^2 is feeble -- it is what the old flat 1000N came to against the
+// 1200kg chassis, and it caps every car, the player's included, at about
+// 56 km/h however long the straight. It is kept because raising it is not free:
+// at 3.0 the race opponent reaches corners faster than it can shed speed and
+// gets 18 waypoints round the circuit instead of 70, wedging itself 13 times.
+// Cornering has to improve before the engine does.
+constexpr float kEngineAcceleration = 0.83f;
 } // namespace
 
 Vehicle::Vehicle(const std::string& name): _name(name), _position(Vector3::Zero), _rotation(Quaternion::Identity) {}
@@ -195,7 +206,20 @@ void Vehicle::ApplyInput(float throttle, float steer, float brake, float boost)
 	// to reverse before -- the AI's "back out of the wall" manoeuvre passed
 	// throttle 0 and brake 1, which just stops a car that is already stopped, so
 	// nothing wedged against anything ever got free.
-	const float force = throttle * _gasScale * 1000.0f * boost;
+
+	// Engine force from the mass it has to move, rather than a flat 1000N. That
+	// constant gave a 1200kg chassis 0.83 m/s^2, so every car in the game -- the
+	// player's included -- ran out of acceleration against its own drag at about
+	// 56 km/h no matter how long the straight was, and _topSpeedKmh was never
+	// reached, or even consulted.
+	if (GetSpeedKmh() >= _topSpeedKmh * boost)
+		throttle = throttle > 0.0f ? 0.0f : throttle;
+
+	const float mass = _rayVehicle && _rayVehicle->getRigidBody()->getInvMass() > 0.0f
+	                       ? 1.0f / _rayVehicle->getRigidBody()->getInvMass()
+	                       : _mass;
+
+	const float force = throttle * _gasScale * mass * kEngineAcceleration * boost;
 	SetEngineForce(force);
 	SetSteeringValue(steer * 0.5f);
 	SetBrake(brake * 100.0f + 10.0f);

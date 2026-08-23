@@ -1,4 +1,4 @@
-// Copyright 2019-2020 the donut authors. See AUTHORS.md
+﻿// Copyright 2019-2020 the donut authors. See AUTHORS.md
 
 #include "AI/RaceOpponent.h"
 
@@ -42,9 +42,17 @@ constexpr float kThrottleMin = 0.55f;
 // and the opponent used to arrive at them doing 57km/h, miss by 14m and drive
 // on into open country. Look this far along the route, add up how much it
 // bends, and aim for a speed between the two below.
-constexpr float kLookaheadMetres = 35.0f;
-constexpr std::size_t kLookaheadWaypoints = 8;
-constexpr float kStraightSpeedKmh = 60.0f;
+// Look-ahead is a time, not a distance: the faster the car goes the sooner it
+// has to know about the corner. A fixed 35m was two seconds' warning at 60km/h
+// and barely one at 100.
+constexpr float kLookaheadSeconds = 3.0f;
+constexpr float kLookaheadMinMetres = 25.0f;
+constexpr float kLookaheadMaxMetres = 80.0f;
+constexpr std::size_t kLookaheadWaypoints = 12;
+// Above what the car can actually do (about 56 km/h, see kEngineAcceleration),
+// and deliberately: the throttle is proportional to the shortfall, so a target
+// the car can nearly reach leaves it cruising at the 0.55 floor on a straight.
+constexpr float kStraightSpeedKmh = 80.0f;
 constexpr float kCornerSpeedKmh = 22.0f;
 // Total bend over the lookahead, in radians, that calls for kCornerSpeedKmh.
 constexpr float kFullBendRadians = 1.6f;
@@ -213,9 +221,13 @@ float RaceOpponent::cornerSpeedKmh() const
 		return kStraightSpeedKmh;
 	heading.Normalize();
 
+	float lookahead = _vehicle.GetSpeedKmh() / 3.6f * kLookaheadSeconds;
+	if (lookahead < kLookaheadMinMetres) lookahead = kLookaheadMinMetres;
+	if (lookahead > kLookaheadMaxMetres) lookahead = kLookaheadMaxMetres;
+
 	Vector3 from = _path.Target();
 	float distance = 0.0f, bend = 0.0f;
-	for (std::size_t i = 1; i <= kLookaheadWaypoints && distance < kLookaheadMetres; ++i)
+	for (std::size_t i = 1; i <= kLookaheadWaypoints && distance < lookahead; ++i)
 	{
 		Vector3 leg = _path.Peek(i) - from;
 		leg.Y = 0.0f;

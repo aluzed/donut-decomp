@@ -89,9 +89,9 @@ PathGraph::PathGraph(const Level& level)
 	// -> segment -> segment -> ... -> junction so a route follows the road's shape.
 	// Linking the junctions directly gave hops of up to 118m, and the race car
 	// drove the first one straight into the side of a building.
-	int roadEdges = 0, segmentNodes = 0, bareRoads = 0, longLinks = 0;
+	int roadEdges = 0, segmentNodes = 0, bareRoads = 0, longLinks = 0, longEndLinks = 0;
 	float longestLink = 0.0f;
-	const auto link = [&](int a, int b) {
+	const auto link = [&](int a, int b, bool junctionEnd) {
 		_nodes[a].neighbors.push_back(b);
 		_nodes[b].neighbors.push_back(a);
 
@@ -99,7 +99,11 @@ PathGraph::PathGraph(const Level& level)
 		if (length > longestLink)
 			longestLink = length;
 		if (length > 25.0f)
+		{
 			++longLinks;
+			if (junctionEnd)
+				++longEndLinks;
+		}
 	};
 
 	for (const auto& road : level.GetRoads())
@@ -151,11 +155,11 @@ PathGraph::PathGraph(const Level& level)
 			_nodes.push_back(node);
 			++segmentNodes;
 
-			link(previous, index);
+			link(previous, index, previous == a->second);
 			previous = index;
 		}
 
-		link(previous, b->second);
+		link(previous, b->second, true);
 		++roadEdges;
 	}
 
@@ -180,13 +184,17 @@ PathGraph::PathGraph(const Level& level)
 		if (nearest < 0)
 			continue;
 
-		link(static_cast<int>(i), nearest);
+		link(static_cast<int>(i), nearest, true);
 		++stitched;
 	}
 
 	Log::Info("PathGraph: built graph with {} nodes ({} junctions, {} roads, {} road segments, {} path nodes stitched in)",
 	          _nodes.size(), intersections.size(), roadEdges, segmentNodes, stitched);
-	Log::Info("PathGraph: {} road links longer than 25m, longest {:.0f}m", longLinks, longestLink);
+	// Most of these are honest: a straight street is tiled with a few long slabs
+	// rather than many short ones, so consecutive slab centres are far apart and
+	// the line between them still runs down the road.
+	Log::Info("PathGraph: {} links longer than 25m ({} of them onto a junction or a stitched path node), longest {:.0f}m",
+	          longLinks, longEndLinks, longestLink);
 	if (level.GetUnresolvedRoadTiles() > 0)
 		Log::Warn("PathGraph: {} road segments name a RoadDataSegment that never loaded", level.GetUnresolvedRoadTiles());
 	if (bareRoads > 0)

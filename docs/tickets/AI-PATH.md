@@ -151,23 +151,43 @@ est appelé d'abord sur les seuls nœuds de route, puis sur le graphe entier.
 | + chaîne `RoadSegment` ordonnée | 2052 | 1 | 105 (max 152 m) | 15 m | 82 m |
 | + centre de dalle, route seule | 2052 | **1** | **95 (max 90 m)** | **13 m** | **46 m** |
 
-## Reste
+## Les 95 liens longs sont en grande partie légitimes
 
-**95 liens dépassent encore 25 m, le plus long 90 m**, et le tracé de course garde des
-tronçons allant jusqu'à 46 m — assez pour qu'une ligne droite entre deux points traverse un
-angle de bâtiment, ce qui est maintenant la principale perte de temps de l'adversaire
-(cf. AI-RACE).
+Hypothèse précédente — « une `Road` porte les dalles de plusieurs voies » — **infirmée**.
+Ce que montre le relevé par catégorie :
 
-Piste principale : une `Road` porte les dalles de **plusieurs voies** — 237 des 937
-`RoadDataSegment` déclarent `lanes = 2`. L'enchaînement au plus proche remonte alors une voie
-et doit sauter à l'autre bout pour redescendre l'autre, d'où un lien long par route
-multi-voies. `RoadDataSegment.lanes` et ses trois coins devraient permettre de séparer les
-voies, ou d'en fusionner les dalles deux à deux par leur milieu commun.
+- **53 sont des liens dalle-à-dalle**, et presque tous sur une ligne droite : une rue droite
+  est pavée de quelques longues dalles plutôt que d'une multitude de petites. Trois dalles
+  successives à x ≈ -121 sont espacées de 62 m, alignées ; la droite qui les relie reste au
+  milieu de la chaussée. Rien à corriger.
+- **42 aboutissent sur une jonction ou sur un nœud de boucle raccroché.** Les raccrochages ne
+  servent plus au routage (`FindRoute` ne passe que par la route), donc seuls comptent les
+  liens jonction↔dalle, quand le centre d'un carrefour est loin de la première dalle.
+
+Ce que `lanes` désigne : la **largeur** de la rue, pas deux rangées de dalles dans le même
+chunk. Chaque rue est en fait décrite par **deux chunks `Road`, un par sens** — `z1RoadNode4`
+va de `r1IntersectionLocatorNode` à `r1IntersectionLocatorNode4` et `z1RoadNode3` fait
+exactement l'inverse. Le graphe contient donc deux chaînes parallèles par rue, distantes
+d'une largeur de voie.
+
+L'ordre des dalles dans le chunk est régulier, simplement pas monotone : il part du milieu
+de la rue vers une extrémité, puis repart du milieu vers l'autre (`z1RoadNode1` : Z = -107,
+-116, … -147, puis -99, -88, … -60). L'enchaînement au plus proche depuis la jonction de
+départ le remet d'aplomb correctement.
 
 Notes de reverse au passage : `RoadDataSegment.todo1` vaut 1 sur les 937 occurrences (donc
-constante, pas un champ utile), et `todo0` prend des valeurs de 0 à ~106 qui ressemblent à un
-index le long de la route — à confirmer, ce serait un ordre exact plutôt qu'un
-enchaînement au plus proche.
+constante, pas un champ utile), et `todo0` prend des valeurs de 0 à ~106, mais **ce n'est pas
+un index par route** — seules 12 dalles portent `todo0 = 0` alors qu'il y a 99 routes.
+
+## Reste
+
+Les liens jonction↔dalle trop longs (au plus 90 m) sont le seul reste identifié côté graphe.
+Mesurer leur longueur séparément des raccrochages de boucle est le prochain pas : si un
+carrefour est loin de ses dalles, insérer la première dalle de chaque sens comme point de
+passage obligatoire suffirait.
+
+Au-delà, la perte de temps de l'adversaire ne vient plus principalement du tracé
+(cf. AI-RACE : c'est la puissance moteur et la tenue de virage).
 
 ## Critères d'acceptation
 - [x] Un `PathFollower` autonome existe et ne dépend que de `PathGraph` + état d'agent.
