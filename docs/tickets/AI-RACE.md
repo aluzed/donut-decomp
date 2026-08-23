@@ -218,16 +218,39 @@ L'adversaire part de (38, -211), traverse la ville et finit à (21.7, -625) — 
 1621 m du circuit. **La mission s'arrête sur l'expiration du chrono de 120 s, plus parce que
 la voiture est bloquée.**
 
-Il ne boucle donc toujours pas un tour, mais pour une raison différente : il est trop lent
-pour 1621 m en 120 s, et il perd du temps aux endroits où le tracé passe trop près du décor.
-La suite est sur **AI-PATH** (95 liens de plus de 25 m, tracé jusqu'à 46 m entre deux
-points).
+Il ne boucle donc toujours pas un tour, mais pour une raison différente : **il est trop lent
+pour 1621 m en 120 s**, et aucune IA ne le serait.
+
+### Pourquoi il est trop lent : la force moteur est un nombre magique
+
+`ApplyInput` calculait `throttle * gasScale * 1000 * boost`. Mille newtons pour un châssis de
+1200 kg font **0,83 m/s²** : contre sa propre traînée, la voiture plafonne à ~56 km/h quelle
+que soit la longueur de la ligne droite, et `_topSpeedKmh` (180 par défaut) n'était jamais
+atteint — ni même consulté. Cela vaut pour **toutes** les voitures, celle du joueur comprise,
+ce qui explique les « 58 km/h » relevés sur VEH-SINK.
+
+La force dérive maintenant de la masse du châssis (`masse × kEngineAcceleration`), et
+`_topSpeedKmh` plafonne le gaz. Mais `kEngineAcceleration` reste à **0,83**, c'est-à-dire
+exactement l'ancien comportement, parce que l'augmenter n'est pas gratuit — mesuré :
+
+| `kEngineAcceleration` | waypoint atteint | dégagements |
+|---|---|---|
+| 0,83 (= ancien 1000 N) | 66-70 / 126 | 4-6 |
+| 3,0 | **18** / 126 | 13 |
+| 3,0 + anticipation proportionnelle à la vitesse | **18** / 126 | 13 |
+
+Avec plus de couple, l'adversaire arrive dans les virages plus vite qu'il ne peut ralentir et
+s'encastre. Il faut donc traiter la tenue de virage **avant** le moteur : freinage plus tôt,
+trajectoire de corde, et détection d'obstacle. L'anticipation est désormais un temps (3 s) et
+non une distance fixe, ce qui est correct mais n'a pas suffi à lui seul.
+
+Reste aussi, côté tracé, les liens jonction↔dalle longs — cf. **AI-PATH**.
 
 ## Pistes secondaires
 
 - Aucune détection d'obstacle : la voiture vise le waypoint en ligne droite.
-- `Vehicle::ApplyInput` ignore `_topSpeedKmh` : la force moteur est la même à toute vitesse,
-  seule la traînée limite. À brancher avec SCRIPT-B.
+- `SetMass` n'écrit que le membre `_mass` ; le châssis Bullet reste à 1200 kg, donc la force
+  moteur dérivée de la masse ne bouge pas. À brancher avec SCRIPT-B, avec `setMassProps`.
 
 ## Critères d'acceptation
 - [x] Un `RaceOpponent` suit le circuit en pilotant un `Vehicle` via `ApplyInput`.
