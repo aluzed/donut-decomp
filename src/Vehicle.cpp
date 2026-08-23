@@ -191,7 +191,11 @@ void Vehicle::SetBrake(float brake)
 
 void Vehicle::ApplyInput(float throttle, float steer, float brake, float boost)
 {
-	float force = throttle * _gasScale * 1000.0f * boost;
+	// throttle runs -1..1: negative drives the wheels backwards. There was no way
+	// to reverse before -- the AI's "back out of the wall" manoeuvre passed
+	// throttle 0 and brake 1, which just stops a car that is already stopped, so
+	// nothing wedged against anything ever got free.
+	const float force = throttle * _gasScale * 1000.0f * boost;
 	SetEngineForce(force);
 	SetSteeringValue(steer * 0.5f);
 	SetBrake(brake * 100.0f + 10.0f);

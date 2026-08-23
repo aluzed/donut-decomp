@@ -73,6 +73,7 @@ PathGraph::PathGraph(const Level& level)
 	// connect -- Intersection nodes joined by Road links that name their
 	// endpoints -- so splice it in and hang each loop off it.
 	const size_t firstRoadNode = _nodes.size();
+	_firstRoadNode = static_cast<int>(firstRoadNode);
 	const auto& intersections = level.GetIntersections();
 	std::map<std::string, int> intersectionNodes;
 
@@ -186,17 +187,26 @@ PathGraph::PathGraph(const Level& level)
 	Log::Info("PathGraph: built graph with {} nodes ({} junctions, {} roads, {} road segments, {} path nodes stitched in)",
 	          _nodes.size(), intersections.size(), roadEdges, segmentNodes, stitched);
 	Log::Info("PathGraph: {} road links longer than 25m, longest {:.0f}m", longLinks, longestLink);
+	if (level.GetUnresolvedRoadTiles() > 0)
+		Log::Warn("PathGraph: {} road segments name a RoadDataSegment that never loaded", level.GetUnresolvedRoadTiles());
 	if (bareRoads > 0)
 		Log::Warn("PathGraph: {} of {} roads carry no RoadSegment children, so they are straight junction-to-junction "
 		          "edges that cut across whatever lies between",
 		          bareRoads, roadEdges);
 
-	// Snapping to junctions still leaves islands -- blocks whose loops sit further
-	// than the snap distance from any of the 44 junctions -- and an island is
-	// unroutable, silently: FindRoute just returns nothing. Join what is left.
-	bridgeComponents();
+	// FindRoute only travels road nodes, so the road network has to be connected
+	// on its own before anything else: bridge it first, among road nodes only, so
+	// no route is ever completed through somebody's front garden.
+	bridgeComponents(_firstRoadNode);
+	computeComponents(_firstRoadNode);
+	Log::Info("PathGraph: road network is {} connected component(s)", _componentCount);
 
-	computeComponents();
+	// Then the graph as a whole. Snapping to the road still leaves islands --
+	// loops further than the snap distance from any road -- and an island is
+	// unroutable, silently: GetNextNode just circles it forever.
+	bridgeComponents(0);
+
+	computeComponents(0);
 	std::vector<std::size_t> sizes(_componentCount, 0);
 	for (int c : _component)
 		++sizes[c];
@@ -208,12 +218,12 @@ PathGraph::PathGraph(const Level& level)
 	          _nodes.empty() ? 0 : (largest * 100 / _nodes.size()));
 }
 
-void PathGraph::computeComponents()
+void PathGraph::computeComponents(int firstNode)
 {
 	_component.assign(_nodes.size(), -1);
 	_componentCount = 0;
 
-	for (std::size_t i = 0; i < _nodes.size(); ++i)
+	for (std::size_t i = firstNode; i < _nodes.size(); ++i)
 	{
 		if (_component[i] >= 0)
 			continue;
@@ -227,7 +237,7 @@ void PathGraph::computeComponents()
 			stack.pop_back();
 			for (int m : _nodes[n].neighbors)
 			{
-				if (_component[m] >= 0)
+				if (m < firstNode || _component[m] >= 0)
 					continue;
 				_component[m] = id;
 				stack.push_back(m);
@@ -236,7 +246,7 @@ void PathGraph::computeComponents()
 	}
 }
 
-void PathGraph::bridgeComponents()
+void PathGraph::bridgeComponents(int firstNode)
 {
 	// Boruvka-style: every round, each component finds the nearest node in any
 	// other component and links to it, which at least halves the component count.
@@ -244,7 +254,7 @@ void PathGraph::bridgeComponents()
 	// leaves between blocks rather than cutting across town.
 	for (int round = 0; round < 32; ++round)
 	{
-		computeComponents();
+		computeComponents(firstNode);
 		if (_componentCount <= 1)
 			break;
 
@@ -255,7 +265,7 @@ void PathGraph::bridgeComponents()
 		};
 		std::vector<Bridge> best(_componentCount);
 
-		for (std::size_t i = 0; i < _nodes.size(); ++i)
+		for (std::size_t i = firstNode; i < _nodes.size(); ++i)
 		{
 			for (std::size_t j = i + 1; j < _nodes.size(); ++j)
 			{
@@ -325,6 +335,22 @@ int PathGraph::FindNearestNode(const Vector3& position) const
 	return best;
 }
 
+int PathGraph::FindNearestRoadNode(const Vector3& position) const
+{
+	int best = -1;
+	float bestDist = 1e10f;
+	for (size_t i = _firstRoadNode; i < _nodes.size(); ++i)
+	{
+		const float d = (_nodes[i].position - position).LengthSquared();
+		if (d < bestDist)
+		{
+			bestDist = d;
+			best = static_cast<int>(i);
+		}
+	}
+	return best;
+}
+
 int PathGraph::GetNextNode(int current, int target) const
 {
 	if (current < 0 || current >= static_cast<int>(_nodes.size()))
@@ -355,8 +381,8 @@ int PathGraph::GetNextNode(int current, int target) const
 
 std::vector<Vector3> PathGraph::FindRoute(const Vector3& from, const Vector3& to) const
 {
-	const int start = FindNearestNode(from);
-	const int goal = FindNearestNode(to);
+	const int start = FindNearestRoadNode(from);
+	const int goal = FindNearestRoadNode(to);
 	if (start < 0 || goal < 0)
 		return {};
 	if (start == goal)
@@ -382,6 +408,9 @@ std::vector<Vector3> PathGraph::FindRoute(const Vector3& from, const Vector3& to
 
 		for (int n : _nodes[current].neighbors)
 		{
+			if (!IsRoadNode(n))
+				continue;
+
 			const float step = (_nodes[current].position - _nodes[n].position).Length();
 			const float candidate = best[current] + step;
 			if (candidate >= best[n])

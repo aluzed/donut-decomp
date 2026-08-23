@@ -1,6 +1,6 @@
 # AI-RACE — IA d'adversaire de course avec rubber-banding
 
-- **Status:** PARTIAL (2026-08-23) — l'adversaire suit le tracé, se dégage seul et ne sort plus du monde ; il ne boucle toujours pas un tour
+- **Status:** PARTIAL (2026-08-23) — l'adversaire court : 67 waypoints sur 126 en 120 s, 0 chute ; il n'a pas le temps de boucler les 1621 m du circuit
 - **Priority:** P2
 - **Module:** AI
 - **Depends on:** AI-PATH (couvert : `src/AI/PathFollower.*`)
@@ -168,14 +168,60 @@ Le gaz était piloté par l'angle de braquage, ce qui ne réagit qu'une fois *da
 `cornerSpeedKmh()` regarde 35 m de tracé en avant, additionne les changements de cap et vise
 entre 60 km/h en ligne droite et 22 km/h en épingle, freins compris.
 
+### 6. Le braquage partait du mauvais côté
+
+`Steering::Seek` calculait
+
+```cpp
+const float cross = forward.X * desired.Z - forward.Z * desired.X;
+```
+
+soit **l'inverse** de ce qu'attend `btRaycastVehicle::setSteeringValue`, qui fait tourner les
+roues avant autour de +Y : `forward` (0,0,1) part vers `(sin, 0, cos)`, donc un braquage
+positif va vers +X. L'adversaire braquait donc *à l'opposé* de chaque waypoint : l'erreur de
+cap s'amplifiait au lieu de se refermer, et la voiture partait en spirale hors de la route
+jusqu'à la première clôture. Le bug de quaternion (§1) rendait le cap aléatoire et masquait
+complètement celui-ci ; il n'est devenu visible qu'une fois §1 corrigé.
+
+### 7. Aucun véhicule ne pouvait faire marche arrière
+
+`ApplyInput(0.0f, -steer, 1.0f, 1.0f)` — le « dégagement » — passe un gaz nul et un frein
+plein. C'est un freinage, pas une marche arrière : une voiture déjà à l'arrêt ne bouge pas
+d'un centimètre. `Vehicle::ApplyInput` n'avait tout simplement pas de marche arrière, le gaz
+étant supposé positif. Il accepte désormais un gaz négatif, et **le joueur en profite
+aussi** : « reculer » freinait tant que la voiture roulait, puis ne faisait plus rien. Il
+freine maintenant tant qu'elle avance et recule une fois arrêtée.
+
+### 8. Le rattrapage hors-tracé revenait en arrière
+
+Le waypoint le plus proche d'une voiture qui vient de couper un virage est **celui qu'elle
+vient de dépasser**. `SnapToNearest` le reprenait, le test de franchissement de plan la
+faisait ré-avancer à la frame suivante, et le cycle repartait — des centaines de
+« rejoining at 4 » d'affilée sans jamais rien changer. Le rattrapage ne regarde plus que
+vers l'avant (`SnapToNearestAhead`, fenêtre de 12 waypoints), et son seuil est la distance
+*au tronçon* et non au waypoint : à 40 m il se déclenchait au début de chaque tronçon long,
+puisque le plus long du circuit fait 46 m.
+
 ### État observé
 
-150 s d'exécution, deux missions : **0 chute hors du monde**, 0 remise en dernier recours,
-15 dégagements en marche arrière. L'adversaire suit le tracé et survit, mais **ne boucle
-toujours pas un tour** : il se coince de façon reproductible vers (26.5, 4.0, -222), là où le
-circuit fait un aller-retour (point 1 à (29.4, -227.3), point 2 à (38.4, -227.5)). C'est la
-qualité du tracé qui est en cause, pas le pilotage — la suite est sur **AI-PATH** (105 liens
-de plus de 25 m subsistent).
+Un tour de mission complet (120 s), traces toutes les 5 s :
+
+| | avant | après |
+|---|---|---|
+| waypoint le plus loin | 2 / 112 | **67 / 126** |
+| chutes hors du monde | permanentes | **0** |
+| remises d'office sur le circuit | — | **0** |
+| dégagements en marche arrière | 15 | 4 |
+| vitesse | 0-6 km/h | 25-53 km/h |
+
+L'adversaire part de (38, -211), traverse la ville et finit à (21.7, -625) — la moitié des
+1621 m du circuit. **La mission s'arrête sur l'expiration du chrono de 120 s, plus parce que
+la voiture est bloquée.**
+
+Il ne boucle donc toujours pas un tour, mais pour une raison différente : il est trop lent
+pour 1621 m en 120 s, et il perd du temps aux endroits où le tracé passe trop près du décor.
+La suite est sur **AI-PATH** (95 liens de plus de 25 m, tracé jusqu'à 46 m entre deux
+points).
 
 ## Pistes secondaires
 
@@ -186,6 +232,7 @@ de plus de 25 m subsistent).
 ## Critères d'acceptation
 - [x] Un `RaceOpponent` suit le circuit en pilotant un `Vehicle` via `ApplyInput`.
 - [x] Le rubber-banding accélère l'adversaire distancé et le ralentit quand il est en tête, dans une plage bornée (observé à 0,85 en tête).
-- [ ] L'adversaire termine un tour complet sans rester bloqué — **échoue toujours**, mais plus au même endroit ni pour la même raison : il suit désormais le tracé et se dégage seul, et se coince vers (26.5, 4.0, -222) sur un aller-retour du circuit (→ AI-PATH).
-- [x] L'adversaire ne sort plus du monde et ne reste plus bloqué indéfiniment (hors-tracé, chute et blocage sont tous rattrapés).
+- [ ] L'adversaire termine un tour complet sans rester bloqué — **pas encore** : 67 waypoints sur 126 dans les 120 s du chrono, la mission s'arrêtant sur le temps et non sur un blocage.
+- [x] L'adversaire ne sort plus du monde et ne reste plus bloqué indéfiniment (hors-tracé, chute et blocage sont tous rattrapés ; 0 chute et 0 remise d'office sur un tour complet).
+- [x] L'adversaire roule à une vitesse crédible (25-53 km/h) en freinant pour les virages.
 - [ ] SCRIPT-D peut instancier, démarrer et arrêter l'adversaire — `ScriptEngine` le crée et le détruit, mais les commandes `SCRIPT-D` elles-mêmes restent des stubs.
