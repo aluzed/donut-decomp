@@ -82,6 +82,9 @@ public:
 	};
 	const std::map<std::string, Vector3>& GetIntersections() const { return _intersections; }
 	const std::vector<RoadLink>& GetRoads() const { return _roads; }
+	// RoadSegments whose named RoadDataSegment was never loaded; their node sits on
+	// the tile corner rather than its middle. Should be zero.
+	int GetUnresolvedRoadTiles() const { return _unresolvedRoadTiles; }
 	bool CheckTrigger(const Vector3& pos, const std::string& name) const;
 
 private:
@@ -103,6 +106,9 @@ private:
 	std::map<std::string, std::vector<Vector3>> _splines;
 	std::map<std::string, Vector3> _intersections;
 	std::vector<RoadLink> _roads;
+	// Tile-local centre of each RoadDataSegment, by name; RoadSegment names one.
+	std::map<std::string, Vector3> _roadTileCentres;
+	int _unresolvedRoadTiles = 0;
 	std::vector<Trigger> _triggers;
 	std::set<std::string> _loadedRegions;
 	std::set<std::string> _loadedP3Ds;

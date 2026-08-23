@@ -1,6 +1,6 @@
 # AI-PATH — Contrôleur de suivi de chemin réutilisable
 
-- **Status:** PARTIAL (2026-08-23) — contrôleur extrait et réutilisé ; le graphe est connexe et suit les routes ; `TrafficManager` garde ses copies et 105 liens restent trop longs (voir ci-dessous)
+- **Status:** PARTIAL (2026-08-23) — contrôleur extrait et réutilisé ; le graphe est connexe et suit les routes ; `TrafficManager` garde ses copies et 95 liens restent trop longs (voir ci-dessous)
 - **Priority:** P2
 - **Module:** AI
 - **Depends on:** —
@@ -120,18 +120,54 @@ fichier donnait **288 liens de plus de 25 m, dont un de 239 m**, et un circuit q
 zigzaguait d'un trottoir à l'autre. `PathGraph` les enchaîne maintenant au plus proche
 depuis la jonction de départ — l'ordre dans lequel une voiture les parcourt.
 
+### Un `RoadSegment` se place par son coin, pas par son centre
+
+`RoadDataSegment` donne trois coins d'une **dalle de bitume**, le quatrième étant à l'origine
+locale. La translation du `transform` d'un `RoadSegment` est donc un **coin** de la dalle :
+la prendre pour position de nœud posait la ligne médiane le long d'un caniveau et faisait
+zigzaguer les dalles successives. Le nœud est maintenant au centroïde du quadrilatère,
+`(p0 + p1 + p2) / 4` — le centroïde et non `p1/2`, car seules 495 des 937 dalles sont des
+parallélogrammes ; les 442 autres sont les trapèzes qui composent les virages.
+
+> Attention : ces matrices P3D portent leur translation sur la **dernière ligne**
+> (cf. `Matrix4x4::Translation()`), alors que `Matrix4x4::operator*(Vector3)` la lit sur la
+> dernière colonne. La transformation est écrite à la main dans `Level.cpp`.
+
+### Les boucles `Path` ne servent plus à router
+
+`FindRoute` ne traverse plus que les nœuds de route (jonctions + dalles). Les 1012 nœuds de
+boucle `Path` sont des voies de circulation autour d'un pâté : ils coupent par les avant-cours
+et les accotements, et l'A\* les prenait comme raccourcis parce qu'ils sont plus rapprochés
+que les dalles — ce qui mettait la trajectoire de course dans un mur. Le trafic continue de
+s'en servir via `GetNextNode`.
+
+Le réseau routier seul est connexe (1 composante), donc rien n'est perdu : `bridgeComponents`
+est appelé d'abord sur les seuls nœuds de route, puis sur le graphe entier.
+
+| | nœuds | composantes | liens > 25 m | pas moyen | plus long tronçon |
+|---|---|---|---|---|---|
+| Boucles `Path` seules | 1086 | 110 → 15 | — | 51 m | — |
+| + `Road` droites | 1086 | 15 | 288 (max 239 m) | 51 m | 118 m |
+| + chaîne `RoadSegment` ordonnée | 2052 | 1 | 105 (max 152 m) | 15 m | 82 m |
+| + centre de dalle, route seule | 2052 | **1** | **95 (max 90 m)** | **13 m** | **46 m** |
+
 ## Reste
 
-**105 liens dépassent encore 25 m, le plus long 152 m**, et le circuit garde un
-aller-retour au départ (point 1 à (29.4, -227.3), point 2 à (38.4, -227.5)). Deux pistes,
-dans l'ordre :
+**95 liens dépassent encore 25 m, le plus long 90 m**, et le tracé de course garde des
+tronçons allant jusqu'à 46 m — assez pour qu'une ligne droite entre deux points traverse un
+angle de bâtiment, ce qui est maintenant la principale perte de temps de l'adversaire
+(cf. AI-RACE).
 
-1. Une `Road` porte vraisemblablement les tronçons de **plusieurs voies** ; l'enchaînement
-   au plus proche saute alors d'une voie à l'autre. `RoadDataSegment.lanes` et ses trois
-   positions devraient permettre de les séparer.
-2. Les nœuds de boucle `Path` raccrochés au réseau (1010 d'entre eux) offrent à l'A\* des
-   raccourcis parallèles à la route. Les réserver au trafic, ou leur donner un coût
-   supérieur, éviterait qu'un itinéraire les emprunte.
+Piste principale : une `Road` porte les dalles de **plusieurs voies** — 237 des 937
+`RoadDataSegment` déclarent `lanes = 2`. L'enchaînement au plus proche remonte alors une voie
+et doit sauter à l'autre bout pour redescendre l'autre, d'où un lien long par route
+multi-voies. `RoadDataSegment.lanes` et ses trois coins devraient permettre de séparer les
+voies, ou d'en fusionner les dalles deux à deux par leur milieu commun.
+
+Notes de reverse au passage : `RoadDataSegment.todo1` vaut 1 sur les 937 occurrences (donc
+constante, pas un champ utile), et `todo0` prend des valeurs de 0 à ~106 qui ressemblent à un
+index le long de la route — à confirmer, ce serait un ordre exact plutôt qu'un
+enchaînement au plus proche.
 
 ## Critères d'acceptation
 - [x] Un `PathFollower` autonome existe et ne dépend que de `PathGraph` + état d'agent.
@@ -139,4 +175,5 @@ dans l'ordre :
 - [ ] `seekSteer`/`arrivalSpeed` ne sont plus dupliqués dans `TrafficManager.cpp` — dépend du point précédent.
 - [x] Le contrôleur est réutilisable par un autre agent — `RaceOpponent` l'utilise (AI-RACE).
 - [x] Le graphe est connexe (1 composante, 100 % des nœuds) et suit la forme des routes
-      (pas moyen 15 m contre 51 m).
+      (pas moyen 13 m contre 51 m), et le réseau routier l'est aussi à lui seul.
+- [ ] Aucun lien du réseau routier ne dépasse la largeur d'une rue — **95 dépassent 25 m**.

@@ -227,8 +227,10 @@ void Level::LoadP3D(const std::string& filename)
 		{
 			auto road = P3D::Road::Load(*chunk);
 
-			// The RoadSegment children come in order along the road, and each one's
-			// transform translation is where that piece of tarmac sits in the world.
+			// Each RoadSegment child places one tile of tarmac. Its transform's
+			// translation is the tile's local origin, which is a *corner*: using it
+			// puts the road's centre line along one kerb and makes consecutive tiles
+			// zig-zag. Place the node at the tile's middle instead.
 			std::vector<Vector3> points;
 			for (const auto& child : chunk->GetChildren())
 			{
@@ -237,10 +239,34 @@ void Level::LoadP3D(const std::string& filename)
 
 				const auto seg = P3D::RoadSegment::Load(*child);
 				const Matrix4x4& t = seg->GetTransform();
-				points.emplace_back(t[3][0], t[3][1], t[3][2]);
+
+				Vector3 centre = Vector3::Zero;
+				const auto tile = _roadTileCentres.find(seg->GetData());
+				if (tile != _roadTileCentres.end())
+					centre = tile->second;
+				else
+					++_unresolvedRoadTiles;
+
+				// Not Matrix4x4::operator*: these P3D matrices carry their
+				// translation in the last row (see Translation()), and that operator
+				// reads it from the last column.
+				points.emplace_back(centre.X * t[0][0] + centre.Y * t[1][0] + centre.Z * t[2][0] + t[3][0],
+				                    centre.X * t[0][1] + centre.Y * t[1][1] + centre.Z * t[2][1] + t[3][1],
+				                    centre.X * t[0][2] + centre.Y * t[1][2] + centre.Z * t[2][2] + t[3][2]);
 			}
 
 			_roads.push_back(RoadLink {road->GetStartIntersection(), road->GetEndIntersection(), std::move(points)});
+
+			break;
+		}
+		case P3D::ChunkType::RoadDataSegment:
+		{
+			// A RoadDataSegment is one tile of tarmac, given as three corners with
+			// the fourth at the local origin. Only 495 of the level's 937 are
+			// parallelograms -- the rest are trapezoids, the tiles that make up a
+			// curve -- so the tile's middle is the quad centroid, not p1/2.
+			const auto seg = P3D::RoadDataSegment::Load(*chunk);
+			_roadTileCentres[seg->GetName()] = (seg->GetPosition0() + seg->GetPosition1() + seg->GetPosition2()) * 0.25f;
 
 			break;
 		}

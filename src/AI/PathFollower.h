@@ -47,10 +47,24 @@ public:
 	// current one, wrapping around and counting a lap. Returns true on advance.
 	bool Advance(const Vector3& position, float radius);
 
+	// Distance from `position` to the leg being driven -- the segment from the
+	// previous waypoint to the current one. Distance to the waypoint itself is no
+	// use as an off-route test: it is legitimately large at the start of a long
+	// leg, and a threshold under the longest leg makes the agent rejoin the route
+	// it is already on, over and over.
+	float CrossTrackDistance(const Vector3& position) const;
+
 	// Starts from the waypoint nearest `position` instead of index 0. An agent
 	// placed part-way along the loop otherwise aims at waypoint 0 behind it and
 	// drives away from the circuit at full lock.
 	void SnapToNearest(const Vector3& position);
+
+	// The same, but never picks a waypoint already behind: it searches the next
+	// `window` waypoints only, counting a lap if it wraps. Rejoining a route must
+	// not go backwards -- the nearest waypoint to a car that has just overshot a
+	// corner is the one it came from, and re-targeting it undoes the progress the
+	// pass-the-plane test in Advance had just made, forever.
+	void SnapToNearestAhead(const Vector3& position, std::size_t window);
 
 	// Progress along the loop as a monotonic float (laps * count + index), for
 	// comparing two agents' positions in the race.

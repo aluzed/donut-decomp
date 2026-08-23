@@ -105,6 +105,12 @@ std::string ControlLabel(GameAction action, bool preferGamepad)
 }
 } // namespace
 
+namespace
+{
+// Below this speed, holding "back" reverses instead of braking.
+constexpr float kReverseThresholdKmh = 2.0f;
+} // namespace
+
 void GLAPIENTRY MessageCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message,
                                 const void* userParam)
 {
@@ -611,8 +617,18 @@ void Game::Run()
 				// keyboard gives full deflection, sticks/triggers scale analogically
 				float throttle = intent.moveForward;
 				float brake = intent.moveBackward;
-				float steer = intent.moveRight - intent.moveLeft;
-				float boost = intent.boostHeld ? 3.0f : 1.0f;
+				const float steer = intent.moveRight - intent.moveLeft;
+				const float boost = intent.boostHeld ? 3.0f : 1.0f;
+
+				// Back brakes while the car is still rolling forwards and reverses
+				// once it has stopped. Previously it only ever braked, so a car
+				// nosed into a wall stayed there.
+				if (brake > 0.0f && _activeVehicle->GetSpeedKmh() < kReverseThresholdKmh)
+				{
+					throttle = -brake;
+					brake = 0.0f;
+				}
+
 				_activeVehicle->ApplyInput(throttle, steer, brake, boost);
 			}
 		}

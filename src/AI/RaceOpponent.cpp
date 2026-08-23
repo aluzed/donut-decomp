@@ -31,6 +31,7 @@ constexpr float kStuckTravelMetres = 4.0f;
 // How long to reverse out for, and how many failed attempts before we give up
 // and put the car back on the circuit.
 constexpr double kReverseSeconds = 1.5;
+constexpr float kReverseThrottle = -0.8f;
 constexpr int kReverseAttempts = 3;
 
 // Throttle floor: below this the car cannot overcome its own friction and simply
@@ -52,12 +53,15 @@ constexpr float kFullBendRadians = 1.6f;
 constexpr float kBrakeMarginKmh = 6.0f;
 constexpr float kSpeedBandKmh = 12.0f;
 
-// How far off its target the car may drift before it is treated as having lost
-// the route. Overshooting a corner leaves the next waypoint behind and to the
-// side, and seeking it in a straight line drives across gardens and eventually
-// off the map -- the opponent reached waypoint 11 and then drove 100m into open
-// country. Past this, rejoin the circuit at whatever point is nearest.
-constexpr float kStrayDistance = 40.0f;
+// How far to the side of the leg it is driving the car may drift before it is
+// treated as having lost the route. Overshooting a corner leaves the next
+// waypoint behind and to the side, and seeking it in a straight line drives
+// across gardens and eventually off the map -- the opponent reached waypoint 11
+// and then drove 100m into open country. Past this, rejoin at the nearest point.
+constexpr float kStrayDistance = 30.0f;
+// How far ahead the rejoin looks. Wide enough to skip a corner it has cut,
+// narrow enough that it cannot jump most of a lap.
+constexpr std::size_t kRejoinWindow = 12;
 
 // How far below its own waypoint the car has to be before we call it lost. The
 // circuit runs over bridges and dips, so this has to clear the level's own
@@ -98,15 +102,14 @@ void RaceOpponent::Update(double dt, float playerProgress)
 
 	_path.Advance(position, kWaypointRadius);
 
-	Vector3 offRoute = _path.Target() - position;
-	offRoute.Y = 0.0f;
-	if (offRoute.LengthSquared() > kStrayDistance * kStrayDistance)
+	const float offRoute = _path.CrossTrackDistance(position);
+	if (offRoute > kStrayDistance)
 	{
 		const std::size_t was = _path.Index();
-		_path.SnapToNearest(position);
+		_path.SnapToNearestAhead(position, kRejoinWindow);
 		if (_path.Index() != was)
-			Log::Debug("RaceOpponent: '{}' was {:.0f}m off waypoint {}, rejoining at {}", _vehicle.GetName(),
-			           offRoute.Length(), was, _path.Index());
+			Log::Debug("RaceOpponent: '{}' was {:.0f}m to the side of leg {}, rejoining at {}", _vehicle.GetName(),
+			           offRoute, was, _path.Index());
 	}
 
 	const Vector3 target = _path.Target();
@@ -153,7 +156,7 @@ void RaceOpponent::Update(double dt, float playerProgress)
 	{
 		// Back out with opposite lock; the next frames re-seek the waypoint.
 		_reverseTimer -= dt;
-		_vehicle.ApplyInput(0.0f, -steer, 1.0f, 1.0f);
+		_vehicle.ApplyInput(kReverseThrottle, -steer, 0.0f, 1.0f);
 		return;
 	}
 
@@ -173,8 +176,8 @@ void RaceOpponent::Update(double dt, float playerProgress)
 				return;
 			}
 
-			Log::Debug("RaceOpponent: '{}' moved {:.1f}m in {:.0f}s, backing out", _vehicle.GetName(), _stuckTravel,
-			           kStuckWindowSeconds);
+			Log::Debug("RaceOpponent: '{}' moved {:.1f}m in {:.0f}s at ({:.1f}, {:.1f}, {:.1f}), backing out",
+			           _vehicle.GetName(), _stuckTravel, kStuckWindowSeconds, position.X, position.Y, position.Z);
 			_reverseTimer = kReverseSeconds;
 		}
 		else
@@ -195,10 +198,10 @@ void RaceOpponent::Update(double dt, float playerProgress)
 	if (_logTimer >= 5.0)
 	{
 		_logTimer = 0.0;
-		Log::Debug("RaceOpponent: lap {} waypoint {}/{} at ({:.1f}, {:.1f}, {:.1f}), {:.0f} of {:.0f} km/h, {:.1f}m to "
-		           "target, throttle {:.2f} brake {:.2f} steer {:.2f} boost {:.2f}",
+		Log::Debug("RaceOpponent: lap {} waypoint {}/{} at ({:.1f}, {:.1f}, {:.1f}), {:.0f} of {:.0f} km/h, target "
+		           "({:.1f}, {:.1f}, {:.1f}) {:.1f}m away, throttle {:.2f} brake {:.2f} steer {:.2f} boost {:.2f}",
 		           _path.Laps(), _path.Index(), _path.Count(), position.X, position.Y, position.Z, speed, targetSpeed,
-		           (target - position).Length(), throttle, brake, steer, _boost);
+		           target.X, target.Y, target.Z, (target - position).Length(), throttle, brake, steer, _boost);
 	}
 }
 

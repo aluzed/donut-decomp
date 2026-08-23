@@ -18,7 +18,15 @@ float Seek(const Vector3& position, const Vector3& target, const Quaternion& rot
 
 	const Vector3 forward = rotation * Vector3::Forward;
 	const float dot = forward.X * desired.X + forward.Z * desired.Z;
-	const float cross = forward.X * desired.Z - forward.Z * desired.X;
+
+	// Sign convention: positive steering must turn the car toward +X in its own
+	// frame, because that is what btRaycastVehicle::setSteeringValue does -- it
+	// rotates the front wheels about +Y, taking forward (0,0,1) to (sin, 0, cos).
+	// This cross product was the other way round, so the opponent steered away
+	// from every waypoint: the error grew instead of closing and it spiralled off
+	// the road into the nearest fence. Wrong only in the sign, which is why it
+	// still looked like it was trying.
+	const float cross = forward.Z * desired.X - forward.X * desired.Z;
 
 	// Proportional near the heading, saturated beyond it, and full lock when the
 	// target is behind us so the agent commits to a turn instead of dithering.
@@ -52,6 +60,32 @@ void PathFollower::SetWaypoints(std::vector<Vector3> waypoints)
 	Reset();
 }
 
+float PathFollower::CrossTrackDistance(const Vector3& position) const
+{
+	if (_waypoints.empty())
+		return 0.0f;
+
+	const Vector3& target = _waypoints[_index];
+	const Vector3& previous = _waypoints[(_index + _waypoints.size() - 1) % _waypoints.size()];
+
+	Vector3 leg = target - previous;
+	leg.Y = 0.0f;
+	Vector3 offset = position - previous;
+	offset.Y = 0.0f;
+
+	const float legLengthSq = leg.LengthSquared();
+	if (legLengthSq < 0.01f)
+		return offset.Length();
+
+	// Where along the leg we are, clamped to its ends so the distance is to the
+	// segment and not to the infinite line through it.
+	float t = (offset.X * leg.X + offset.Z * leg.Z) / legLengthSq;
+	if (t < 0.0f) t = 0.0f;
+	if (t > 1.0f) t = 1.0f;
+
+	return (offset - leg * t).Length();
+}
+
 void PathFollower::SnapToNearest(const Vector3& position)
 {
 	if (_waypoints.empty())
@@ -70,6 +104,30 @@ void PathFollower::SnapToNearest(const Vector3& position)
 	}
 
 	_index = best;
+}
+
+void PathFollower::SnapToNearestAhead(const Vector3& position, std::size_t window)
+{
+	if (_waypoints.empty())
+		return;
+
+	const std::size_t span = window < _waypoints.size() ? window : _waypoints.size();
+	std::size_t bestStep = 0;
+	float bestDist = (_waypoints[_index] - position).LengthSquared();
+	for (std::size_t step = 1; step < span; ++step)
+	{
+		const std::size_t i = (_index + step) % _waypoints.size();
+		const float d = (_waypoints[i] - position).LengthSquared();
+		if (d < bestDist)
+		{
+			bestDist = d;
+			bestStep = step;
+		}
+	}
+
+	if (_index + bestStep >= _waypoints.size())
+		++_laps;
+	_index = (_index + bestStep) % _waypoints.size();
 }
 
 void PathFollower::Reset()
