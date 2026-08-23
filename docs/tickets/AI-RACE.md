@@ -1,6 +1,6 @@
 # AI-RACE — IA d'adversaire de course avec rubber-banding
 
-- **Status:** PARTIAL (2026-08-23) — l'adversaire court : 67 waypoints sur 126 en 120 s, 0 chute ; il n'a pas le temps de boucler les 1621 m du circuit
+- **Status:** PARTIAL (2026-08-23) — l'adversaire **boucle un tour** : 122 waypoints sur 126 puis passage au tour 1, 39 km/h de moyenne. Reste : trois endroits du circuit ne sont pas roulables et sont contournés d'office
 - **Priority:** P2
 - **Module:** AI
 - **Depends on:** AI-PATH (couvert : `src/AI/PathFollower.*`)
@@ -252,10 +252,120 @@ Reste aussi, côté tracé, les liens jonction↔dalle longs — cf. **AI-PATH**
 - `SetMass` n'écrit que le membre `_mass` ; le châssis Bullet reste à 1200 kg, donc la force
   moteur dérivée de la masse ne bouge pas. À brancher avec SCRIPT-B, avec `setMassProps`.
 
+
+## Le tour est bouclé (2026-08-23, deuxième session)
+
+| | avant | après |
+|---|---|---|
+| waypoint le plus loin | 66 / 126 | **122 / 126, puis tour 1** |
+| vitesse moyenne | 23 km/h | **39 km/h** |
+| dégagements en marche arrière | 6 | **3** |
+| sortie du processus | segfault | **code 0** |
+
+Reproduit à l'identique sur trois exécutions consécutives : 122/126, tour 1, 3 dégagements.
+
+### Ce qui bloquait la mesure, et non l'IA
+
+Deux défauts rendaient tout chiffre faux, et il fallait les traiter d'abord.
+
+**`Game::~Game` détruisait le monde physique avant le personnage.** Les membres sont détruits
+dans l'ordre inverse de leur déclaration, ce qui plaçait `_worldPhysics` avant `_character` :
+`~CharacterController` appelait `removeAction(this)` à travers un monde déjà libéré et le
+processus mourait **à chaque sortie propre**. Personne ne l'avait vu, parce qu'un plantage à
+la sortie ressemble à une fermeture normale.
+
+**Et il emportait la fin du journal.** Redirigé vers un fichier, `stdout` est bufferisé par
+blocs : le segfault perdait tout ce qui n'avait pas encore été écrit. Des exécutions entières
+revenaient tronquées — une course où l'adversaire atteignait le waypoint 122 se lisait
+« bloqué au waypoint 5 après cinq secondes ». Les mesures prises avant ce correctif sont à
+relire avec cette réserve, y compris le « 18 waypoints à 3,0 m/s² » de la session précédente.
+`stdout` et `stderr` sont désormais en tampon de ligne, et l'ordre de destruction est
+explicite.
+
+### Harnais de mesure
+
+`--autostart` (pas de splash, entrée directe en mission) et `--quit-after <s>` (fermeture au
+bout de N secondes de boucle). Une mission de 120 s se mesure donc sans personne devant le
+clavier :
+
+```
+build/bin/donut.exe --log-level debug --autostart --quit-after 140 > run.log
+```
+
+### Les quatre corrections de pilotage
+
+1. **Profil de vitesse en deux temps** — remplace la somme des angles sur 35 m, qui ne disait
+   rien du *moment* où freiner : la voiture arrivait au virage en ayant déjà besoin d'être
+   lente. Chaque virage a maintenant la vitesse que son rayon et l'adhérence permettent,
+   `v = sqrt(a_lat · r)` (rayon = cercle circonscrit à trois waypoints), et chacune est
+   ramenée jusqu'à la voiture par la distance de freinage,
+   `v = sqrt(v_virage² + 2 · a_frein · s)`. La plus basse sur les 100 m d'anticipation
+   l'emporte. Le freinage démarre donc exactement aussi tôt que le virage l'exige — et plus
+   tôt de lui-même quand la voiture va plus vite, ce qui est la propriété qui manquait.
+
+2. **Poursuite pure** — la cible n'est plus le waypoint suivant, qui saute latéralement dès
+   qu'il est capturé (la voiture sciait le volant), mais un point qui **glisse le long du
+   tracé**, une seconde en avant. Il coupe le virage à la corde de lui-même. La distance de
+   visée est plafonnée à `sqrt(8 · R · couloir)` — la corde dont la flèche reste dans une
+   demi-largeur de rue — sans quoi la trajectoire coupe par le trottoir.
+
+3. **Braquage dégressif avec la vitesse** (`Vehicle::ApplyInput`, donc **le joueur aussi**).
+   Une demi-radian de braquage est juste au pas et fait partir la voiture en tête-à-queue à
+   90 km/h : on retrouvait l'adversaire à l'arrêt, plein gaz, volant à fond, **face à
+   l'envers**. C'est ce qui interdisait toute augmentation de la puissance moteur.
+
+4. **Zone morte de l'accélérateur** — le gaz était remonté à son plancher de 0,55 même
+   au-dessus de la vitesse visée. Entre « trop vite pour accélérer » et « assez vite pour
+   freiner », la voiture gardait donc le pied dedans et emportait l'excédent dans le virage.
+   Gaz coupé et freins relâchés est désormais un état possible.
+
+### Le test de blocage mesurait la mauvaise chose
+
+Il demandait si la voiture avait *parcouru du chemin*, pas si elle *avançait dans la course*.
+Une voiture qui rebondit sur un mur recule et repart dedans toutes les trois secondes : huit
+mètres au compteur, indiscernable de quelqu'un qui roule. L'adversaire a passé les vingt
+dernières secondes de la course à faire exactement cela sans jamais être déclaré bloqué.
+
+Le progrès, c'est atteindre des waypoints. Douze secondes sans en valider un et la voiture est
+déplacée — **au-delà** de l'obstacle (30 m de dégagement) et non dessus, sans quoi elle
+retombe dans le même trou. Les blocages se comptent aussi **par endroit** (deux blocages à
+moins de 15 m l'un de l'autre sont le même) et non par fenêtres consécutives : chaque
+dégagement réussi remettait le compteur à zéro, si bien que l'abandon n'arrivait jamais —
+14 dégagements dans une course et pas une seule remise sur le circuit.
+
+### Ce qui reste : le circuit n'est pas roulable partout
+
+La sonde d'obstacle ajoutée ici (`WorldPhysics::CastRay`, tirée depuis le pare-chocs quand la
+voiture se déclare bloquée) donne le point touché **et sa normale**, ce qui distingue enfin un
+mur d'une pente — et d'un plafond. Trois défauts, tous de tracé ou de géométrie, aucun d'IA :
+
+| endroit | waypoints | ce que dit la sonde |
+|---|---|---|
+| (231, 4.2, -336) | 18-19 | normale **(0,00, -0,98, 0,19)** : elle pointe **vers le bas**. La voiture est sous le tablier de la route, coincée contre son dessous à Y 4,5 alors qu'elle roule à Y 4,2. C'est l'explication de l'observation « sur la route et à moitié enfoncée dedans » notée plus haut |
+| (~63, 3.2, -601) → (48, 1.6, -622) | 57-70 | mur franc, normale horizontale (0,72, 0,00, 0,70) |
+| autour du waypoint 5 | 5 | pas d'obstacle : la voiture **tombe hors du monde** (y = -22), trois fois par tour |
+
+L'adversaire les contourne — 2 sauts de waypoints par tour, plus les remises après chute — et
+c'est ce qui permet enfin de mesurer le reste. Mais tant qu'ils sont là, le tour est bouclé
+avec des tronçons sautés, et **la vraie correction est côté tracé** : voir AI-PATH.
+
+### La force moteur n'est plus bloquée par l'IA, mais reste à 0,83
+
+| `kEngineAcceleration` | waypoint atteint | tour bouclé |
+|---|---|---|
+| 0,83 | **122 / 126** | **oui** |
+| 3,0 | 116 / 126 | non |
+
+La raison invoquée jusqu'ici pour la garder basse (« à 3,0 l'IA tombe à 18 waypoints ») ne
+tient plus : c'était le braquage constant qui envoyait la voiture en tête-à-queue. Mais 0,83
+gagne toujours, parce que ce qui reste en travers est de la **géométrie**, et qu'y arriver plus
+vite ne fait que taper plus fort. À relever une fois le circuit roulable — et en mesurant alors
+la voiture du joueur, qui plafonne elle aussi à ~56 km/h.
+
 ## Critères d'acceptation
 - [x] Un `RaceOpponent` suit le circuit en pilotant un `Vehicle` via `ApplyInput`.
 - [x] Le rubber-banding accélère l'adversaire distancé et le ralentit quand il est en tête, dans une plage bornée (observé à 0,85 en tête).
-- [ ] L'adversaire termine un tour complet sans rester bloqué — **pas encore** : 67 waypoints sur 126 dans les 120 s du chrono, la mission s'arrêtant sur le temps et non sur un blocage.
+- [x] L'adversaire termine un tour complet sans rester bloqué — **oui** : 122 waypoints sur 126 puis passage au tour 1, reproduit trois fois. Réserve : deux tronçons non roulables sont sautés d'office et trois chutes hors du monde sont rattrapées.
 - [x] L'adversaire ne sort plus du monde et ne reste plus bloqué indéfiniment (hors-tracé, chute et blocage sont tous rattrapés ; 0 chute et 0 remise d'office sur un tour complet).
-- [x] L'adversaire roule à une vitesse crédible (25-53 km/h) en freinant pour les virages.
+- [x] L'adversaire roule à une vitesse crédible (39 km/h de moyenne, jusqu'à 76) en freinant pour les virages, sur un profil de vitesse et non sur l'angle de braquage.
 - [ ] SCRIPT-D peut instancier, démarrer et arrêter l'adversaire — `ScriptEngine` le crée et le détruit, mais les commandes `SCRIPT-D` elles-mêmes restent des stubs.
