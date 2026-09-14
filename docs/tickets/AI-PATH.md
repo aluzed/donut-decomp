@@ -219,11 +219,25 @@ Les paires de points sont le même endroit parcouru dans les deux sens (le circu
 aller-retour de 64 nœuds), soit **deux** défauts de tracé et **un** mur, pas six.
 
 **Le troisième défaut supposé n'existe pas.** Le circuit n'a aucun trou : ni sous ses 126
-points, ni sur les ~800 échantillons intermédiaires. La chute à y = -22 est donc réelle mais
-ne vient pas du tracé — la voiture est créée à (107,6, 1,1, -558,5), une position de repli
-prise parce que le locator `m1_snake_carstart` est absent, et elle tombe avant que
-`placeRaceCarOnCircuit` ne la remette sur le circuit. C'est le placement initial qu'il faut
-regarder, pas le routage.
+points, ni sur les ~800 échantillons intermédiaires. La chute à y = -22 est réelle mais ne
+vient pas du tracé.
+
+Le placement initial est sain, contrairement à ce qui avait d'abord été écrit ici : le
+locator `m1_snake_carstart` est bien absent et la voiture naît sur une position de repli,
+mais `placeRaceCarOnCircuit` la remet ensuite sur le circuit (`snake_v teleported to
+(38,1, 4,2, -211,3)`) et elle roule plusieurs secondes avant de tomber. La chute survient
+**en course**, en approche du waypoint 5.
+
+Sondé au moment de la chute — un rayon vers le bas depuis la hauteur de route, à l'aplomb du
+point de décrochage : à (24,0, -278,7) **il y a du sol, à y = -20,9**. Ni trou ni vide, donc,
+mais un **remblai de 24 m** dont la voiture est sortie. Elle allait à 53 km/h pour une cible
+de 96, visait un point de poursuite à 16 m et se trouvait déjà à 55 m de son waypoint : elle
+avait quitté la route avant de tomber.
+
+C'est donc un défaut de conduite (AI-RACE), pas de tracé. Le profil de vitesse ne modélise
+que la courbure de la ligne médiane — ni la largeur de la chaussée, ni le bord du remblai —
+et une poursuite pure qui vise 16 m devant coupe les virages. Remise en piste, la même
+voiture atteint ensuite le waypoint 116 sur 126.
 
 
 Le premier est le plus instructif : un nœud de dalle dont le Y place la ligne médiane sous la

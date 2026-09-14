@@ -162,8 +162,30 @@ void RaceOpponent::Update(double dt, float playerProgress)
 	// Put it back on the circuit and let it carry on.
 	if (position.Y < _path.Target().Y - kFallenBelowTarget)
 	{
-		Log::Warn("RaceOpponent: '{}' fell to y={:.0f}, putting it back on the circuit at waypoint {}",
-		          _vehicle.GetName(), position.Y, _path.Index());
+		// Where it left the road matters more than how far it has dropped: the
+		// circuit validates as having ground under every point, so a fall means it
+		// went over an edge beside the route, not through a hole in it.
+		const Vector3 target = _path.Target();
+
+		// Was there ever a floor where it went over? Sample straight down from road
+		// height above the spot it dropped through. "No" means it left the road and
+		// the world simply stops beside the route -- a driving fault, not a hole in
+		// the circuit, which validateCircuit has already proven solid.
+		std::string floor = "";
+		if (WorldPhysics* physics = _vehicle.GetPhysics())
+		{
+			Vector3 point, normal;
+			const Vector3 above(position.X, target.Y + 5.0f, position.Z);
+			if (physics->CastRay(above, Vector3(0.0f, -1.0f, 0.0f), 60.0f, point, normal))
+				floor = fmt::format(", ground there is at y={:.1f}", point.Y);
+			else
+				floor = ", no ground there at all -- it drove off the edge";
+		}
+
+		Log::Warn("RaceOpponent: '{}' fell to ({:.1f}, {:.1f}, {:.1f}) heading for waypoint {} at ({:.1f}, {:.1f}, "
+		          "{:.1f}), {:.1f}m away{} -- putting it back on the circuit",
+		          _vehicle.GetName(), position.X, position.Y, position.Z, _path.Index(), target.X, target.Y, target.Z,
+		          (target - position).Length(), floor);
 		respawnOnCircuit(0.0f);
 		return;
 	}
