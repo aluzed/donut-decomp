@@ -17,11 +17,10 @@
 /shaders/
 /audio/
 
-# runtime assets extracted from the original CDs (see docs/ASSETS.md)
-/art/audio/
-/art/frontend/
-/art/missions/
-/art/chars/*.cho
+# The whole art tree comes off the original CDs and is not ours to ship: the
+# README asks every user for their own copy of the game, so the repository
+# must not hand them one. Extract it locally, see docs/ASSETS.md.
+/art/
 
 # save data
 donut_save.dat

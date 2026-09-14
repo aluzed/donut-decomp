@@ -5,31 +5,32 @@ donut requires the original game files from *The Simpsons: Hit & Run* (PC).
 ## Directory structure
 
 The engine reads `art/` at the project root (`audio` and `shaders` are
-symlinks into it). CD-extracted directories are gitignored; the `.p3d` models
-are already tracked:
+symlinks into it). **Nothing under `art/` ships with the repository** -- it all
+comes off your own CDs and the whole tree is gitignored. Only the shaders, in
+`assets/shaders/`, are ours:
 
 ```
 art/
 ├── chars/
-│   ├── *_m.p3d              # Character models          (tracked)
-│   ├── *_a.p3d              # Character animations      (tracked)
-│   ├── *.cho                # Character collision       (from CD)
-│   └── global.p3d           # Global textures           (tracked)
+│   ├── *_m.p3d              # Character models
+│   ├── *_a.p3d              # Character animations
+│   ├── *.cho                # Character collision
+│   └── global.p3d           # Global textures
 ├── cars/
-│   └── *.p3d                # Vehicle models            (tracked)
-├── L1_TERRA.p3d             # Level 1 terrain           (tracked)
-├── l1z1.p3d, l1r1.p3d, ...  # Level 1 zones and roads   (tracked)
-├── frontend/                # Menus and HUD             (from CD)
+│   └── *.p3d                # Vehicle models
+├── L1_TERRA.p3d             # Level 1 terrain
+├── l1z1.p3d, l1r1.p3d, ...  # Level 1 zones and roads
+├── frontend/                # Menus and HUD
 │   └── scrooby2/resource/{fonts,images}/
-├── missions/                # Mission props and cameras (from CD)
+├── missions/                # Mission props and cameras
 │   └── level01/ ... level08/
-└── audio/                   # Scanned recursively for .rcf (from CD)
+└── audio/                   # Scanned recursively for .rcf
     ├── dialog/DIALOGF.RCF   # extracted from the CD1 root
     ├── music/*.rcf
     └── ambience.rcf, soundfx.rcf, carsound.rcf, nis.rcf, scripts.rcf
 
-scripts/Missions/level01/*.con   # Mission scripts       (tracked)
-assets/shaders/                  # Shaders, via the `shaders` symlink (tracked)
+scripts/Missions/level01/*.con   # Mission scripts       (in the repo)
+assets/shaders/                  # Shaders, via the `shaders` symlink (in the repo)
 ```
 
 ## Extraction from original CDs
@@ -65,14 +66,13 @@ isoinfo -i "$(iso 3)" -x "/DATA4.CAB;1" > files/cabs/DATA4.CAB
 # One command extracts all four volumes
 unshield -d files/extracted x files/cabs/DATA1.CAB
 
-# Place what the engine reads (the .p3d models are already in the repo)
-cp -a files/extracted/Sound/*.rcf            art/audio/
-cp -a files/extracted/Sound/sound            art/audio/
+# Place what the engine reads. The whole art/ tree is gitignored, so this
+# copies the models, the menus and the missions in one go.
 mkdir -p art/audio/music
+cp -a files/extracted/Art/.              art/
+cp -a files/extracted/Sound/*.rcf        art/audio/
+cp -a files/extracted/Sound/sound        art/audio/
 cp -a files/extracted/Music1/*.rcf files/extracted/Music2/*.rcf art/audio/music/
-cp -a files/extracted/Art/frontend           art/
-cp -a files/extracted/Art/missions           art/
-cp -a files/extracted/Art/chars/*.cho        art/chars/
 
 # DIALOGF.RCF sits in the clear on CD1, outside the cabinets
 mkdir -p art/audio/dialog
