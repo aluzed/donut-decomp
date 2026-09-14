@@ -202,6 +202,30 @@ pour cela) et journalise le point touché *et sa normale* :
 | (~63, 3.2, -601) → (48, 1.6, -622) | 57-70 | (0,72, 0,00, 0,70) | mur franc, vertical |
 | autour du waypoint 5 | 5 | — | aucun obstacle : la voiture **tombe hors du monde** (y = -22) |
 
+### Mesuré statiquement (2026-09-14)
+
+`ScriptEngine::validateCircuit` sonde désormais le circuit composé contre la géométrie, avant
+que la voiture ne roule : un rayon vers le bas à chaque point, un autre tous les 2 m le long
+de chaque tronçon, et un rayon horizontal à hauteur de pare-chocs entre points consécutifs.
+Le circuit de M1race (126 points, 1621 m) donne :
+
+| défaut | points | position | mesure |
+|---|---|---|---|
+| sous le tablier | 17 et 109 | (230,6, 3,4, -318,5) | la route est **1,7 m sous** la surface, qui est à 5,2 |
+| sous le tablier | 56 et 70 | (75,9, 0,8, -603,7) | **1,0 m sous** la surface, qui est à 1,8 |
+| mur | legs 56→57 et 69→70 | (54,4, 1,5, -623,2) | normale (0,71, 0,00, 0,71), donc vertical |
+
+Les paires de points sont le même endroit parcouru dans les deux sens (le circuit est un
+aller-retour de 64 nœuds), soit **deux** défauts de tracé et **un** mur, pas six.
+
+**Le troisième défaut supposé n'existe pas.** Le circuit n'a aucun trou : ni sous ses 126
+points, ni sur les ~800 échantillons intermédiaires. La chute à y = -22 est donc réelle mais
+ne vient pas du tracé — la voiture est créée à (107,6, 1,1, -558,5), une position de repli
+prise parce que le locator `m1_snake_carstart` est absent, et elle tombe avant que
+`placeRaceCarOnCircuit` ne la remette sur le circuit. C'est le placement initial qu'il faut
+regarder, pas le routage.
+
+
 Le premier est le plus instructif : un nœud de dalle dont le Y place la ligne médiane sous la
 surface roulante. C'est très probablement le même défaut que celui déjà soupçonné dans
 AI-RACE (« sur la route et à moitié enfoncée dedans »), et il touche le placement des

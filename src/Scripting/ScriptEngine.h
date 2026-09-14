@@ -35,6 +35,9 @@ public:
 	void CloseStage();
 	void CloseMission();
 	void buildRaceCircuit();
+	// Raycasts the routed circuit against the level and reports every point a car
+	// could not drive through. Call once, after _racePath is composed.
+	void validateCircuit() const;
 	// Moves a race car that had no start locator onto the routed circuit.
 	void placeRaceCarOnCircuit();
 	void SetStageTime(float seconds);

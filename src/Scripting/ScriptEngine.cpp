@@ -388,22 +388,7 @@ void ScriptEngine::buildRaceCircuit()
 	Log::Info("ScriptEngine: circuit is {:.0f}m round, mean gap {:.0f}m, longest {:.0f}m at point {}", total,
 	          total / static_cast<float>(_racePath.size()), longest, longestAt);
 
-	// A route is only drivable where there is collision geometry under it. Sample
-	// the whole circuit once so a hole shows up here rather than as an opponent
-	// falling out of the world.
-	int holes = 0;
-	for (std::size_t i = 0; i < _racePath.size(); ++i)
-	{
-		float groundY = 0.0f;
-		if (_game.GetWorldPhysics().FindGroundHeight(_racePath[i], 50.0f, 50.0f, groundY))
-			continue;
-
-		++holes;
-		Log::Warn("ScriptEngine: no ground under circuit point {} ({:.1f}, {:.1f}, {:.1f})", i, _racePath[i].X,
-		          _racePath[i].Y, _racePath[i].Z);
-	}
-	if (holes > 0)
-		Log::Warn("ScriptEngine: {} of {} circuit points have no collision under them", holes, _racePath.size());
+	validateCircuit();
 
 	// Place first: SetCircuit picks the opponent's starting waypoint from where the
 	// car actually is, and it is about to move.
@@ -411,6 +396,126 @@ void ScriptEngine::buildRaceCircuit()
 
 	if (_raceOpponent)
 		_raceOpponent->SetCircuit(_racePath);
+}
+
+// A routed circuit is a list of road-graph positions, and nothing so far asked
+// whether a car can get from one to the next. Three ways it cannot, each needing
+// its own probe:
+//
+//   hole     nothing under the point at all -- the opponent drives off the world
+//   buried   there is a surface, but *above* the point: the route runs under the
+//            road deck it is meant to sit on and the car noses into the
+//            underside. A downward ray alone misses this, because it reports a
+//            hit either way -- the sign of the gap is the tell.
+//   wall     both points are fine and the straight line between them is not.
+//
+// Reporting them here, once, turns "the AI gets stuck somewhere" into a list of
+// coordinates, which is the diagnosis the route fix needs (AI-PATH).
+void ScriptEngine::validateCircuit() const
+{
+	if (_racePath.size() < 2)
+		return;
+
+	const WorldPhysics& physics = _game.GetWorldPhysics();
+
+	// A point this far below the surface is under it, not on it. Road tiles are not
+	// perfectly flat and the node sits at the tile centre, so a few centimetres of
+	// slack is normal; half a metre is not.
+	constexpr float buriedBy = 0.5f;
+	// Above this, the point hangs in the air rather than resting on a road.
+	constexpr float floatingBy = 2.0f;
+	// Where a bumper sweeps: clear of the road surface and a kerb, low enough that
+	// a car meets whatever it hits.
+	constexpr float bumperHeight = 0.5f;
+	// A hit whose normal is this flat is a wall rather than the road's own slope.
+	// A horizontal ray always meets the road on a gradient, so the normal is what
+	// separates "steep hill" from "side of a building".
+	constexpr float wallNormalY = 0.5f;
+
+	int holes = 0, buried = 0, floating = 0, walls = 0, gaps = 0;
+
+	for (std::size_t i = 0; i < _racePath.size(); ++i)
+	{
+		const Vector3& here = _racePath[i];
+
+		float groundY = 0.0f;
+		if (!physics.FindGroundHeight(here, 50.0f, 50.0f, groundY))
+		{
+			++holes;
+			Log::Warn("ScriptEngine: circuit point {} ({:.1f}, {:.1f}, {:.1f}) has no ground under it", i, here.X,
+			          here.Y, here.Z);
+			continue;
+		}
+
+		const float gap = groundY - here.Y;
+		if (gap > buriedBy)
+		{
+			++buried;
+			Log::Warn("ScriptEngine: circuit point {} ({:.1f}, {:.1f}, {:.1f}) sits {:.1f}m under the surface at "
+			          "{:.1f} -- the route runs below the deck here",
+			          i, here.X, here.Y, here.Z, gap, groundY);
+		}
+		else if (gap < -floatingBy)
+		{
+			++floating;
+			Log::Warn("ScriptEngine: circuit point {} ({:.1f}, {:.1f}, {:.1f}) floats {:.1f}m above the surface at "
+			          "{:.1f}",
+			          i, here.X, here.Y, here.Z, -gap, groundY);
+		}
+	}
+
+	// Between consecutive points, at bumper height -- and along the way, because
+	// the points average 13m apart and a car drives the gap, not the ends. The
+	// first run of this check reported no holes at all while the opponent still
+	// fell to y=-22: the floor it fell through was between two sampled points,
+	// never under one.
+	for (std::size_t i = 0; i < _racePath.size(); ++i)
+	{
+		const Vector3& here = _racePath[i];
+		const Vector3& next = _racePath[(i + 1) % _racePath.size()];
+
+		Vector3 along = next - here;
+		const float span = along.Length();
+		if (span < 0.01f)
+			continue;
+		along = along / span;
+
+		// Shorter than a car, so nothing car-sized hides between two samples.
+		constexpr float strideMetres = 2.0f;
+		const int strides = static_cast<int>(span / strideMetres);
+		for (int step = 1; step < strides; ++step)
+		{
+			const Vector3 at = here + along * (static_cast<float>(step) * strideMetres);
+			float midY = 0.0f;
+			if (physics.FindGroundHeight(at, 50.0f, 50.0f, midY))
+				continue;
+			++gaps;
+			Log::Warn("ScriptEngine: circuit leg {}->{} crosses a hole at ({:.1f}, {:.1f}, {:.1f}), {:.0f}m along", i,
+			          (i + 1) % _racePath.size(), at.X, at.Y, at.Z, static_cast<float>(step) * strideMetres);
+			break; // one report per leg is enough to locate it
+		}
+
+		Vector3 hit, normal;
+		const Vector3 from(here.X, here.Y + bumperHeight, here.Z);
+		if (!physics.CastRay(from, along, span, hit, normal))
+			continue;
+		if (std::abs(normal.Y) > wallNormalY)
+			continue;
+
+		++walls;
+		Log::Warn("ScriptEngine: circuit leg {}->{} is blocked at ({:.1f}, {:.1f}, {:.1f}), {:.1f}m along, normal "
+		          "({:.2f}, {:.2f}, {:.2f})",
+		          i, (i + 1) % _racePath.size(), hit.X, hit.Y, hit.Z, (hit - from).Length(), normal.X, normal.Y,
+		          normal.Z);
+	}
+
+	if (holes || buried || floating || walls || gaps)
+		Log::Warn("ScriptEngine: circuit is not drivable end to end -- {} hole(s) at points, {} leg(s) crossing a "
+		          "hole, {} under the deck, {} floating, {} blocked leg(s), of {} points",
+		          holes, gaps, buried, floating, walls, _racePath.size());
+	else
+		Log::Info("ScriptEngine: circuit validates -- {} points, each on a surface with a clear leg to the next",
+		          _racePath.size());
 }
 
 void ScriptEngine::placeRaceCarOnCircuit()
