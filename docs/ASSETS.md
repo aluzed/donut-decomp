@@ -33,6 +33,10 @@ scripts/Missions/level01/*.con   # Mission scripts       (in the repo)
 assets/shaders/                  # Shaders, via the `shaders` symlink (in the repo)
 ```
 
+In a fresh clone `art/` does not exist yet, so the `audio` symlink dangles
+until you extract. That is harmless -- the engine logs `directory 'audio' not
+found, skipping scan` and runs on without sound.
+
 ## Extraction from original CDs
 
 The PC version ships on 3 CDs with InstallShield CAB archives.
