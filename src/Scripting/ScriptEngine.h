@@ -35,6 +35,8 @@ public:
 	void CloseStage();
 	void CloseMission();
 	void buildRaceCircuit();
+	// Moves a race car that had no start locator onto the routed circuit.
+	void placeRaceCarOnCircuit();
 	void SetStageTime(float seconds);
 	void Update(double dt);
 	void CleanupMission();
@@ -119,6 +121,7 @@ private:
 	// _checkpoints stays the sparse set the player has to drive through.
 	// Route nodes named by AddStageWaypoint, in declaration order.
 	std::vector<Vector3> _stageWaypoints;
+	bool _raceCarNeedsPlacement = false;
 	std::vector<Vector3> _racePath;
 	std::unique_ptr<RaceOpponent> _raceOpponent;
 	std::unique_ptr<ChaseManager> _chaseManager;

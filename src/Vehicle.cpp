@@ -12,8 +12,42 @@
 #include <BulletDynamics/Vehicle/btRaycastVehicle.h>
 #include <LinearMath/btDefaultMotionState.h>
 
+#include <cmath>
+
 namespace Donut
 {
+
+namespace
+{
+// Chassis centre height above the road at spawn. The wheels hang
+// suspensionRestLength + wheelRadius = 0.6m below the centre, so anything less
+// than that leaves them buried; the extra clears the box and lets the car settle
+// onto its own suspension.
+constexpr float kSpawnRideHeight = 0.9f;
+
+// Acceleration a car makes at full throttle, before drag. Engine force is this
+// times the chassis mass, so a heavier car needs more of it to move the same.
+//
+// 0.83 m/s^2 is feeble -- it is what the old flat 1000N came to against the
+// 1200kg chassis, and it caps every car, the player's included, at about
+// 56 km/h however long the straight.
+//
+// It stays at 0.83 because raising it still does not pay, though no longer for
+// the old reason. With the speed profile and the tapered steering lock below,
+// 3.0 no longer wrecks the race opponent -- it was 18 waypoints of 126, it is
+// now 116 -- but 0.83 gets 122 and a completed lap, because what is left in the
+// way is geometry the circuit runs through, and arriving at it faster only means
+// hitting it harder. Raise this once the circuit is drivable, not before, and
+// measure the player's car when you do.
+constexpr float kEngineAcceleration = 0.83f;
+
+// Steering lock, tapered with speed. The wheels turn kMaxSteerStill radians when
+// the car is stopped and kMaxSteerFast once it is doing kSteerTaperKmh, which is
+// what keeps a fast car pointing where it is going.
+constexpr float kMaxSteerStill = 0.5f;
+constexpr float kMaxSteerFast = 0.12f;
+constexpr float kSteerTaperKmh = 90.0f;
+} // namespace
 
 Vehicle::Vehicle(const std::string& name): _name(name), _position(Vector3::Zero), _rotation(Quaternion::Identity) {}
 
@@ -33,7 +67,26 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 {
 	SetPosition(position);
 
-	btVector3 pos = BulletCast<btVector3>(position + Vector3(0, 1.5f, 0));
+	// A locator or path node names a spot on the map, not the height of the road
+	// there: spawning at position + 1.5m dropped the race car into the terrain at
+	// (108, 1.1, -559), where it came to rest with its chassis box wedged in the
+	// ground and *no wheel touching it*. applyEngineForce only reaches the road
+	// through the suspension rays, so the opponent sat at 0 km/h being pushed out
+	// of the geometry a centimetre at a time. Find the ground and sit the wheels
+	// on it instead.
+	float spawnY = position.Y + kSpawnRideHeight;
+	float groundY = 0.0f;
+	if (physics.FindGroundHeight(position, 50.0f, 50.0f, groundY))
+	{
+		spawnY = groundY + kSpawnRideHeight;
+	}
+	else
+	{
+		Log::Warn("Vehicle: no ground under '{}' spawn ({:.1f}, {:.1f}, {:.1f}), dropping it from the given height",
+		          _name, position.X, position.Y, position.Z);
+	}
+
+	btVector3 pos(position.X, spawnY, position.Z);
 
 	btCollisionShape* chassisShape = new btBoxShape(btVector3(0.9f, 0.4f, 2.2f));
 	btDefaultMotionState* motionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), pos));
@@ -74,9 +127,40 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 
 	physics.GetDynamicsWorld()->addRigidBody(chassis);
 	physics.GetDynamicsWorld()->addAction(_rayVehicle.get());
+	_physicsWorld = &physics;
 
-	Log::Info("Vehicle: physics body created for '{}' at ({:.1f}, {:.1f}, {:.1f})",
-	          _name, position.X, position.Y, position.Z);
+	Log::Info("Vehicle: physics body created for '{}' at ({:.1f}, {:.1f}, {:.1f}), ground {:.1f}", _name, position.X,
+	          spawnY, position.Z, groundY);
+}
+
+void Vehicle::Teleport(const Vector3& position, const Quaternion& rotation)
+{
+	SetPosition(position);
+	SetRotation(rotation);
+
+	if (!_rayVehicle)
+		return;
+
+	float spawnY = position.Y + kSpawnRideHeight;
+	float groundY = 0.0f;
+	if (_physicsWorld && _physicsWorld->FindGroundHeight(position, 50.0f, 50.0f, groundY))
+		spawnY = groundY + kSpawnRideHeight;
+
+	btTransform transform;
+	transform.setIdentity();
+	transform.setOrigin(btVector3(position.X, spawnY, position.Z));
+	transform.setRotation(btQuaternion(rotation.X, rotation.Y, rotation.Z, rotation.W));
+
+	btRigidBody* chassis = _rayVehicle->getRigidBody();
+	chassis->setWorldTransform(transform);
+	if (chassis->getMotionState())
+		chassis->getMotionState()->setWorldTransform(transform);
+	chassis->setLinearVelocity(btVector3(0, 0, 0));
+	chassis->setAngularVelocity(btVector3(0, 0, 0));
+	chassis->clearForces();
+	_rayVehicle->resetSuspension();
+
+	Log::Info("Vehicle: '{}' teleported to ({:.1f}, {:.1f}, {:.1f})", _name, position.X, spawnY, position.Z);
 }
 
 void Vehicle::SetPosition(const Vector3& pos)
@@ -132,9 +216,38 @@ void Vehicle::SetBrake(float brake)
 
 void Vehicle::ApplyInput(float throttle, float steer, float brake, float boost)
 {
-	float force = throttle * _gasScale * 1000.0f * boost;
+	// throttle runs -1..1: negative drives the wheels backwards. There was no way
+	// to reverse before -- the AI's "back out of the wall" manoeuvre passed
+	// throttle 0 and brake 1, which just stops a car that is already stopped, so
+	// nothing wedged against anything ever got free.
+
+	// Engine force from the mass it has to move, rather than a flat 1000N. That
+	// constant gave a 1200kg chassis 0.83 m/s^2, so every car in the game -- the
+	// player's included -- ran out of acceleration against its own drag at about
+	// 56 km/h no matter how long the straight was, and _topSpeedKmh was never
+	// reached, or even consulted.
+	if (GetSpeedKmh() >= _topSpeedKmh * boost)
+		throttle = throttle > 0.0f ? 0.0f : throttle;
+
+	const float mass = _rayVehicle && _rayVehicle->getRigidBody()->getInvMass() > 0.0f
+	                       ? 1.0f / _rayVehicle->getRigidBody()->getInvMass()
+	                       : _mass;
+
+	const float force = throttle * _gasScale * mass * kEngineAcceleration * boost;
 	SetEngineForce(force);
-	SetSteeringValue(steer * 0.5f);
+
+	// Speed-sensitive steering. Half a radian of lock is right at walking pace and
+	// spins the car at 90 km/h: the front wheels ask for a corner far tighter than
+	// the chassis will hold, it snaps round, and the AI was then found stationary
+	// at full throttle with the steering hard over -- facing back the way it came.
+	// Tapering the lock with speed is what every car does, and it is what lets the
+	// engine be worth anything: without it, more power only meant spinning sooner.
+	const float speedKmh = std::fabs(GetSpeedKmh());
+	float t = speedKmh / kSteerTaperKmh;
+	if (t > 1.0f) t = 1.0f;
+	const float maxSteer = kMaxSteerStill + (kMaxSteerFast - kMaxSteerStill) * t;
+
+	SetSteeringValue(steer * maxSteer);
 	SetBrake(brake * 100.0f + 10.0f);
 }
 

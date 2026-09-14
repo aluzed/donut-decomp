@@ -1,5 +1,6 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
+#include <cstdio>
 #include "Game.h"
 #include "Core/Log.h"
 
@@ -24,6 +25,14 @@ static Donut::Log::Level ParseLogLevel(std::string_view name)
 
 int main(int argc, char** argv)
 {
+	// Line-buffer the log. Redirected to a file, stdout is block-buffered, so a
+	// crash on the way out loses however much of the last block had not been
+	// written -- which is exactly the part that says what went wrong. Whole runs
+	// looked as though the AI had stopped after five seconds when in fact only the
+	// log had.
+	std::setvbuf(stdout, nullptr, _IOLBF, 0);
+	std::setvbuf(stderr, nullptr, _IOLBF, 0);
+
 	// Log level: env DONUT_LOG_LEVEL (debug/info/warn/error) or --log-level <lvl>.
 	Donut::Log::Level level = Donut::Log::Level::Debug;
 	if (const char* env = std::getenv("DONUT_LOG_LEVEL"))

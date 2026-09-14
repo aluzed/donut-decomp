@@ -147,6 +147,13 @@ private:
 	float _hornCooldown = 0.0f;
 
 	GameState _gameState = GameState::InGame;
+
+	// Unattended-run switches (--autostart / --quit-after), for measuring the AI
+	// over a whole mission without a human holding ENTER down for two minutes.
+	bool _autoStart = false;
+	double _quitAfterSeconds = 0.0; // 0 = run until the window is closed
+	double _elapsedSeconds = 0.0;
+
 	bool _inVehicle = false;
 	Vehicle* _activeVehicle = nullptr;
 	double _missionCompleteTimer = 0.0;

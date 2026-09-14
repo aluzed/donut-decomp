@@ -1,6 +1,6 @@
 # AI-PATH — Contrôleur de suivi de chemin réutilisable
 
-- **Status:** PARTIAL (2026-08-22) — contrôleur extrait et réutilisé ; `TrafficManager` garde ses copies, et le graphe routier est disjoint (voir ci-dessous)
+- **Status:** PARTIAL (2026-08-23) — contrôleur extrait et réutilisé ; le graphe est connexe et suit les routes ; `TrafficManager` garde ses copies, 95 liens restent trop longs, et **trois endroits de l'itinéraire ne sont pas roulables** (voir ci-dessous)
 - **Priority:** P2
 - **Module:** AI
 - **Depends on:** —
@@ -70,16 +70,162 @@ une arête par `Road`, puis chaque nœud de boucle raccroché à la jonction la 
 `PathGraph` journalise maintenant cette connexité au démarrage : c'est le chiffre qui décide
 si une IA peut traverser la ville, et il était jusqu'ici invisible.
 
+## Diagnostic du circuit à 4 points (2026-08-23)
+
+Journalisation par tronçon, comme prévu. Le verdict était immédiat :
+
+```
+race node 0 (107.6, 1.1, -558.5) -> noeud 641  ( 0.0 m, composante 0)
+race node 1 ( 38.1, 3.3, -211.3) -> noeud 504  ( 9.6 m, composante 6)   <-- îlot
+race node 2 ( 10.5, 0.5, -623.8) -> noeud 1052 (10.0 m, composante 0)
+leg 0->1 : 354 m à vol d'oiseau, 0 nœud     leg 1->2 : 414 m, 0 nœud
+```
+
+Ni `FindNearestNode` ni l'A\* n'étaient en cause : le nœud 504 tombait dans l'une des
+14 composantes résiduelles. Aucune des deux hypothèses notées ici n'était la bonne — c'était
+la connexité elle-même, à 91 % et non 100 %.
+
+### Le graphe est désormais connexe à 100 %
+
+`bridgeComponents()` (Boruvka : chaque composante se relie à la plus proche, paire la plus
+courte d'abord, jusqu'à n'en garder qu'une). 4 ponts suffisent, dont 3 de moins de 27 m —
+les trous que le niveau laisse réellement entre deux pâtés. `GetComponent(node)` expose
+l'étiquette pour que le prochain échec de route dise *pourquoi*.
+
+### Les `Road` ne sont pas des segments droits
+
+Relier les 44 intersections deux à deux donnait des tronçons de 118 m tirés au cordeau — la
+voiture de course a pris le premier et l'a fini dans le mur d'un immeuble. La vraie
+géométrie était sous les `Road`, inexploitée :
+
+- **966 chunks `RoadSegment`**, enfants des `Road` : `name, data, mat4, mat4`. La
+  translation de `transform` donne la position monde du tronçon. Layout vérifié
+  exactement : 17 (LP string, longueur incluant le nul) + 17 + 128 = **162 octets**,
+  la taille observée sur tous.
+- **937 chunks `RoadDataSegment`** (`name, u32, lanes, u32, 3× vec3`) : 17 + 12 + 36 =
+  **65 octets**, également exact. Non exploités pour l'instant — géométrie de voie locale.
+
+`Level` collecte la chaîne de chaque `Road`, `PathGraph` la déroule
+`jonction → tronçon → … → jonction`. Les 99 `Road` en portent toutes.
+
+| | nœuds | composantes | plus grande | pas moyen du circuit |
+|---|---|---|---|---|
+| Avant | 1086 | 15 | 91 % | 51 m |
+| Après | 2052 | **1** | **100 %** | **15 m** |
+
+### L'ordre des chunks n'est pas l'ordre de la route
+
+Les `RoadSegment` ne sont pas rangés le long de la route : les prendre dans l'ordre du
+fichier donnait **288 liens de plus de 25 m, dont un de 239 m**, et un circuit qui
+zigzaguait d'un trottoir à l'autre. `PathGraph` les enchaîne maintenant au plus proche
+depuis la jonction de départ — l'ordre dans lequel une voiture les parcourt.
+
+### Un `RoadSegment` se place par son coin, pas par son centre
+
+`RoadDataSegment` donne trois coins d'une **dalle de bitume**, le quatrième étant à l'origine
+locale. La translation du `transform` d'un `RoadSegment` est donc un **coin** de la dalle :
+la prendre pour position de nœud posait la ligne médiane le long d'un caniveau et faisait
+zigzaguer les dalles successives. Le nœud est maintenant au centroïde du quadrilatère,
+`(p0 + p1 + p2) / 4` — le centroïde et non `p1/2`, car seules 495 des 937 dalles sont des
+parallélogrammes ; les 442 autres sont les trapèzes qui composent les virages.
+
+> Attention : ces matrices P3D portent leur translation sur la **dernière ligne**
+> (cf. `Matrix4x4::Translation()`), alors que `Matrix4x4::operator*(Vector3)` la lit sur la
+> dernière colonne. La transformation est écrite à la main dans `Level.cpp`.
+
+### Les boucles `Path` ne servent plus à router
+
+`FindRoute` ne traverse plus que les nœuds de route (jonctions + dalles). Les 1012 nœuds de
+boucle `Path` sont des voies de circulation autour d'un pâté : ils coupent par les avant-cours
+et les accotements, et l'A\* les prenait comme raccourcis parce qu'ils sont plus rapprochés
+que les dalles — ce qui mettait la trajectoire de course dans un mur. Le trafic continue de
+s'en servir via `GetNextNode`.
+
+Le réseau routier seul est connexe (1 composante), donc rien n'est perdu : `bridgeComponents`
+est appelé d'abord sur les seuls nœuds de route, puis sur le graphe entier.
+
+| | nœuds | composantes | liens > 25 m | pas moyen | plus long tronçon |
+|---|---|---|---|---|---|
+| Boucles `Path` seules | 1086 | 110 → 15 | — | 51 m | — |
+| + `Road` droites | 1086 | 15 | 288 (max 239 m) | 51 m | 118 m |
+| + chaîne `RoadSegment` ordonnée | 2052 | 1 | 105 (max 152 m) | 15 m | 82 m |
+| + centre de dalle, route seule | 2052 | **1** | **95 (max 90 m)** | **13 m** | **46 m** |
+
+## Les 95 liens longs sont en grande partie légitimes
+
+Hypothèse précédente — « une `Road` porte les dalles de plusieurs voies » — **infirmée**.
+Ce que montre le relevé par catégorie :
+
+- **53 sont des liens dalle-à-dalle**, et presque tous sur une ligne droite : une rue droite
+  est pavée de quelques longues dalles plutôt que d'une multitude de petites. Trois dalles
+  successives à x ≈ -121 sont espacées de 62 m, alignées ; la droite qui les relie reste au
+  milieu de la chaussée. Rien à corriger.
+- **42 aboutissent sur une jonction ou sur un nœud de boucle raccroché.** Les raccrochages ne
+  servent plus au routage (`FindRoute` ne passe que par la route), donc seuls comptent les
+  liens jonction↔dalle, quand le centre d'un carrefour est loin de la première dalle.
+
+Ce que `lanes` désigne : la **largeur** de la rue, pas deux rangées de dalles dans le même
+chunk. Chaque rue est en fait décrite par **deux chunks `Road`, un par sens** — `z1RoadNode4`
+va de `r1IntersectionLocatorNode` à `r1IntersectionLocatorNode4` et `z1RoadNode3` fait
+exactement l'inverse. Le graphe contient donc deux chaînes parallèles par rue, distantes
+d'une largeur de voie.
+
+L'ordre des dalles dans le chunk est régulier, simplement pas monotone : il part du milieu
+de la rue vers une extrémité, puis repart du milieu vers l'autre (`z1RoadNode1` : Z = -107,
+-116, … -147, puis -99, -88, … -60). L'enchaînement au plus proche depuis la jonction de
+départ le remet d'aplomb correctement.
+
+Notes de reverse au passage : `RoadDataSegment.todo1` vaut 1 sur les 937 occurrences (donc
+constante, pas un champ utile), et `todo0` prend des valeurs de 0 à ~106, mais **ce n'est pas
+un index par route** — seules 12 dalles portent `todo0 = 0` alors qu'il y a 99 routes.
+
 ## Reste
 
-Le circuit de course composé par `ScriptEngine::buildRaceCircuit` ne fait toujours que
-4 points malgré un graphe à 91 % connexe : `FindRoute` renvoie des itinéraires très courts
-entre les nœuds de course. À diagnostiquer — soit `FindNearestNode` accroche les extrémités
-sur une petite composante résiduelle, soit l'A\* s'arrête trop tôt. Journaliser la taille de
-chaque tronçon est le prochain pas.
+Les liens jonction↔dalle trop longs (au plus 90 m) sont le seul reste identifié côté graphe.
+Mesurer leur longueur séparément des raccrochages de boucle est le prochain pas : si un
+carrefour est loin de ses dalles, insérer la première dalle de chaque sens comme point de
+passage obligatoire suffirait.
+
+Au-delà, la perte de temps de l'adversaire ne vient plus principalement du tracé
+(cf. AI-RACE : c'est la puissance moteur et la tenue de virage).
+
+## L'itinéraire produit traverse la géométrie (2026-08-23)
+
+Le graphe est connexe et le circuit composé fait 1621 m d'un pas moyen de 13 m, mais **une
+voiture ne peut pas le suivre de bout en bout**. Instrumenté depuis `RaceOpponent`, qui tire
+un rayon depuis son pare-chocs quand il se déclare bloqué (`WorldPhysics::CastRay`, ajouté
+pour cela) et journalise le point touché *et sa normale* :
+
+| endroit | waypoints | normale | lecture |
+|---|---|---|---|
+| (231, 4.2, -336) | 18-19 | **(0,00, -0,98, 0,19)** | elle pointe **vers le bas** : l'itinéraire passe **sous le tablier** de la route. La voiture roule à Y 4,2 et bute contre le dessous à Y 4,5 |
+| (~63, 3.2, -601) → (48, 1.6, -622) | 57-70 | (0,72, 0,00, 0,70) | mur franc, vertical |
+| autour du waypoint 5 | 5 | — | aucun obstacle : la voiture **tombe hors du monde** (y = -22) |
+
+Le premier est le plus instructif : un nœud de dalle dont le Y place la ligne médiane sous la
+surface roulante. C'est très probablement le même défaut que celui déjà soupçonné dans
+AI-RACE (« sur la route et à moitié enfoncée dedans »), et il touche le placement des
+`RoadSegment`, pas le routage.
+
+Deux pistes, dans cet ordre :
+
+1. **Valider chaque tronçon du circuit contre le sol au moment où il est composé** — un
+   raycast vers le bas à chaque point, et un raycast horizontal à hauteur de pare-chocs entre
+   deux points consécutifs. Cela transforme « l'IA se coince quelque part » en une liste de
+   points fautifs, ce qui est le diagnostic dont la suite a besoin.
+2. **Recaler le Y des nœuds de dalle sur la surface roulante** plutôt que sur le centroïde du
+   quadrilatère, qui n'est la bonne hauteur que si la dalle est plate et à l'endroit.
+
+`RaceOpponent` sait contourner ces trois endroits (voir AI-RACE), ce qui permet de mesurer le
+reste, mais un tour « bouclé » l'est donc avec des tronçons sautés.
 
 ## Critères d'acceptation
 - [x] Un `PathFollower` autonome existe et ne dépend que de `PathGraph` + état d'agent.
 - [ ] `TrafficManager` délègue son pilotage à `PathFollower` — **non fait** : ses `seekSteer`/`arrivalSpeed` file-static sont intacts, pour ne pas toucher au comportement du trafic sans pouvoir le vérifier.
 - [ ] `seekSteer`/`arrivalSpeed` ne sont plus dupliqués dans `TrafficManager.cpp` — dépend du point précédent.
 - [x] Le contrôleur est réutilisable par un autre agent — `RaceOpponent` l'utilise (AI-RACE).
+- [x] Le graphe est connexe (1 composante, 100 % des nœuds) et suit la forme des routes
+      (pas moyen 13 m contre 51 m), et le réseau routier l'est aussi à lui seul.
+- [ ] Un itinéraire composé est roulable de bout en bout — **non** : trois endroits
+      traversent la géométrie ou le vide (voir ci-dessus).
+- [ ] Aucun lien du réseau routier ne dépasse la largeur d'une rue — **95 dépassent 25 m**.
