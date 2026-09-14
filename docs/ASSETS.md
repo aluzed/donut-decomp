@@ -4,39 +4,32 @@ donut requires the original game files from *The Simpsons: Hit & Run* (PC).
 
 ## Directory structure
 
-Place extracted game files in `assets/` at the project root:
+The engine reads `art/` at the project root (`audio` and `shaders` are
+symlinks into it). CD-extracted directories are gitignored; the `.p3d` models
+are already tracked:
 
 ```
-assets/
-├── art/
-│   ├── chars/
-│   │   ├── *_m.p3d          # Character models
-│   │   ├── *__a.p3d         # Character animations
-│   │   └── global.p3d       # Global textures
-│   ├── cars/
-│   │   └── *.p3d            # Vehicle models
-│   ├── frontend/
-│   │   └── scrooby2/
-│   │       └── resource/
-│   │           ├── fonts/   # Font P3D files
-│   │           └── images/  # Frontend images
-│   └── level/
-│       ├── L1_TERRA.p3d     # Level 1 terrain
-│       ├── l1z1.p3d         # Zone 1
-│       └── ...
-├── audio/
-│   ├── dialog/
-│   │   └── *.rcf            # Dialogue archives
-│   ├── music/
-│   │   └── *.rcf            # Music archives
-│   ├── ambience/
-│   ├── soundfx/
-│   ├── nis/
-│   ├── scripts/
-│   └── carsound/
-├── movies/
-│   └── *.rmv                # FMV videos (not yet supported)
-└── shaders/                 # Included in repo
+art/
+├── chars/
+│   ├── *_m.p3d              # Character models          (tracked)
+│   ├── *_a.p3d              # Character animations      (tracked)
+│   ├── *.cho                # Character collision       (from CD)
+│   └── global.p3d           # Global textures           (tracked)
+├── cars/
+│   └── *.p3d                # Vehicle models            (tracked)
+├── L1_TERRA.p3d             # Level 1 terrain           (tracked)
+├── l1z1.p3d, l1r1.p3d, ...  # Level 1 zones and roads   (tracked)
+├── frontend/                # Menus and HUD             (from CD)
+│   └── scrooby2/resource/{fonts,images}/
+├── missions/                # Mission props and cameras (from CD)
+│   └── level01/ ... level08/
+└── audio/                   # Scanned recursively for .rcf (from CD)
+    ├── dialog/DIALOGF.RCF   # extracted from the CD1 root
+    ├── music/*.rcf
+    └── ambience.rcf, soundfx.rcf, carsound.rcf, nis.rcf, scripts.rcf
+
+scripts/Missions/level01/*.con   # Mission scripts       (tracked)
+assets/shaders/                  # Shaders, via the `shaders` symlink (tracked)
 ```
 
 ## Extraction from original CDs
@@ -45,25 +38,45 @@ The PC version ships on 3 CDs with InstallShield CAB archives.
 
 ### Linux
 
+The three cabinets are **InstallShield** archives, not Microsoft CAB: cabextract
+refuses them and unshield is the tool that reads them. The whole set is driven by
+DATA1.HDR, so every DATA*.CAB has to sit in one directory next to it before
+extracting -- unshield follows the volumes itself.
+
 ```bash
 # Install tools
-sudo apt install cabextract p7zip-full
+sudo apt install unshield p7zip-full genisoimage
 
-# Extract each CD ISO
-7z x files/CD1.7z -o/tmp/cd1
-7z x files/CD2.7z -o/tmp/cd2
-7z x files/CD3.7z -o/tmp/cd3
+# Each .7z holds a CD image, not the files themselves
+7z x jeu-*cd1-pcwin.7z -ofiles/
+7z x jeu-*cd2-pcwin.7z -ofiles/
+7z x jeu-*cd3-pcwin.7z -ofiles/
 
-# Extract game data from CABs
-cabextract /tmp/cd1/DATA1.CAB -d assets/
-cabextract /tmp/cd2/DATA1.CAB -d assets/
-cabextract /tmp/cd3/DATA1.CAB -d assets/
+# Pull the cabinets out of the ISOs into a single directory.
+# CD1 carries DATA1.CAB + DATA1.HDR + DATA2.CAB, CD2 DATA3.CAB, CD3 DATA4.CAB.
+mkdir -p files/cabs
+iso() { echo files/*cd$1-pcwin/"Hit & Run $1.iso"; }
+for f in DATA1.CAB DATA1.HDR DATA2.CAB; do
+  isoinfo -i "$(iso 1)" -x "/$f;1" > "files/cabs/$f"
+done
+isoinfo -i "$(iso 2)" -x "/DATA3.CAB;1" > files/cabs/DATA3.CAB
+isoinfo -i "$(iso 3)" -x "/DATA4.CAB;1" > files/cabs/DATA4.CAB
 
-# Copy RCF audio files from CD root
-cp /tmp/cd1/DIALOGF.RCF assets/audio/dialog/
+# One command extracts all four volumes
+unshield -d files/extracted x files/cabs/DATA1.CAB
 
-# Copy movies
-cp /tmp/cd1/MOVIES/*.RMV assets/movies/
+# Place what the engine reads (the .p3d models are already in the repo)
+cp -a files/extracted/Sound/*.rcf            art/audio/
+cp -a files/extracted/Sound/sound            art/audio/
+mkdir -p art/audio/music
+cp -a files/extracted/Music1/*.rcf files/extracted/Music2/*.rcf art/audio/music/
+cp -a files/extracted/Art/frontend           art/
+cp -a files/extracted/Art/missions           art/
+cp -a files/extracted/Art/chars/*.cho        art/chars/
+
+# DIALOGF.RCF sits in the clear on CD1, outside the cabinets
+mkdir -p art/audio/dialog
+isoinfo -i "$(iso 1)" -x "/DIALOGF.RCF;1" > art/audio/dialog/DIALOGF.RCF
 ```
 
 ### Windows
