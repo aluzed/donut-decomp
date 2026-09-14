@@ -31,3 +31,7 @@ keymap.conf
 
 # runtime-generated shader binary cache
 /cache/
+
+# original CD archives (see docs/ASSETS.md) - never commit these
+*.7z
+*.iso
