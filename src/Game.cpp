@@ -1259,9 +1259,14 @@ void Game::Run()
 				}
 			}
 
-			_lineRenderer->DrawSkeleton(_character->GetPosition(), _character->GetSkeleton());
-			_lineRenderer->DrawBox(_character->GetPosition(), _character->GetRotation(),
-				Vector3(-0.3f, 0.0f, -0.2f), Vector3(0.3f, 1.8f, 0.3f), Vector4(0.2f, 1.0f, 0.2f, 1.0f));
+			// The character's debug frame, where it is drawn: not over the car
+			// it is sitting in.
+			if (!_inVehicle)
+			{
+				_lineRenderer->DrawSkeleton(_character->GetPosition(), _character->GetSkeleton());
+				_lineRenderer->DrawBox(_character->GetPosition(), _character->GetRotation(),
+					Vector3(-0.3f, 0.0f, -0.2f), Vector3(0.3f, 1.8f, 0.3f), Vector4(0.2f, 1.0f, 0.2f, 1.0f));
+			}
 		}
 
 		// Race guidance, not debug: without a marker in the world the player has no
