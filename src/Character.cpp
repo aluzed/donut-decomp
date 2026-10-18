@@ -48,46 +48,17 @@ void Character::LoadModel(const std::string& name)
 		// character directly from its PolySkin + Skeleton and load its
 		// animations from the separate <name>_a.p3d, so these are intentionally
 		// ignored here (acknowledged to keep the loader output clean).
-		case P3D::ChunkType::Animation: loadTextureAnimation(*chunk); break;
+		// The eyes' blink; the pose animations are in <name>_a.p3d.
+		case P3D::ChunkType::Animation:
+			if (auto blink = TextureAnimation::FromChunk(*chunk))
+				_blink = std::move(blink);
+			break;
 		case P3D::ChunkType::CompositeDrawable:
 		case P3D::ChunkType::MultiController:
 		case P3D::ChunkType::FrameController: break;
 		default: Log::Warn("unhandled chunk {:#x} in character {}", static_cast<uint32_t>(chunk->GetType()), name); break;
 		}
 	}
-}
-
-void Character::loadTextureAnimation(const P3D::P3DChunk& chunk)
-{
-	// version, name, type, frame count, rate; one group, one entity channel
-	// ("TEX"): version, param, key count, key frames (u16), then each key's
-	// texture name. "TEX_eyeball_m" blinks: eyeball.bmp.0 to .3 and back, over
-	// nine frames. Its shader is the animation's name less "TEX_".
-	MemoryStream stream(chunk.GetData());
-	stream.Read<uint32_t>();
-	const std::string name = stream.ReadLPString();
-	if (stream.ReadString(4).rfind("TEX", 0) != 0 || name.rfind("TEX_", 0) != 0)
-		return;
-	stream.Read<float>();
-	_blinkRate = stream.Read<float>();
-	for (const auto& groups : chunk.GetChildren())
-		for (const auto& group : groups->GetChildren())
-			for (const auto& channel : group->GetChildren())
-			{
-				if (channel->GetType() != P3D::ChunkType::EntityChannel)
-					continue;
-				MemoryStream values(channel->GetData());
-				values.Read<uint32_t>();
-				values.ReadString(4);
-				const uint32_t count = values.Read<uint32_t>();
-				std::vector<uint16_t> frames(count);
-				for (auto& frame : frames)
-					frame = values.Read<uint16_t>();
-				_blinkKeys.clear();
-				for (const uint16_t frame : frames)
-					_blinkKeys.emplace_back(static_cast<float>(frame), values.ReadLPString());
-				_blinkShader = name.substr(4);
-			}
 }
 
 bool Character::HasMesh() const
@@ -133,16 +104,9 @@ void Character::Draw(const Matrix4x4& viewProjection, GL::ShaderProgram& shaderP
 
 	// Mid-blink, the eyes' shader draws the key's texture instead of its own.
 	Texture* eyes = nullptr;
-	if (_blinkTime >= 0.0)
-	{
-		const float frame = static_cast<float>(_blinkTime * _blinkRate);
-		std::string texture = _blinkKeys.front().second;
-		for (const auto& [at, name] : _blinkKeys)
-			if (at <= frame)
-				texture = name;
-		eyes = rm.GetTexture(texture);
-	}
-	_skinModel->Draw(_blinkShader, eyes);
+	if (_blink && _blinkTime >= 0.0)
+		eyes = rm.GetTexture(_blink->TextureAt(static_cast<float>(_blinkTime * _blink->frameRate)));
+	_skinModel->Draw(_blink ? _blink->shader : std::string(), eyes);
 }
 
 bool Character::IsAnimationFinished() const
@@ -174,12 +138,12 @@ void Character::SetAnimation(const std::string& animationName, bool loop)
 void Character::Update(double deltatime)
 {
 	// A blink every few seconds.
-	if (!_blinkKeys.empty())
+	if (_blink)
 	{
 		_blinkAt -= deltatime;
 		if (_blinkTime >= 0.0)
 			_blinkTime += deltatime;
-		if (_blinkTime * _blinkRate > _blinkKeys.back().first)
+		if (_blinkTime * _blink->frameRate > _blink->keys.back().first)
 			_blinkTime = -1.0;
 		if (_blinkAt <= 0.0)
 		{

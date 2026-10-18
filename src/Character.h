@@ -5,9 +5,11 @@
 #include "Core/Math/Matrix4x4.h"
 #include "Core/Math/Quaternion.h"
 #include "Core/Math/Vector3.h"
+#include "Render/TextureAnimation.h"
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -116,10 +118,7 @@ private:
 
 	// The eyes' texture animation (TEX_eyeball_m): the shader it retextures,
 	// the texture at each key frame, its rate; and when the next blink is due.
-	void loadTextureAnimation(const P3D::P3DChunk& animation);
-	std::string _blinkShader;
-	std::vector<std::pair<float, std::string>> _blinkKeys;
-	float _blinkRate = 30.0f;
+	std::optional<TextureAnimation> _blink;
 	double _blinkAt = 0.0;
 	double _blinkTime = -1.0;
 };

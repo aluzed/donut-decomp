@@ -6,6 +6,7 @@
 #include "Core/Math/Vector3.h"
 
 #include <map>
+#include "Render/TextureAnimation.h"
 #include <memory>
 #include <set>
 #include <string>
@@ -217,6 +218,9 @@ private:
 		Vector3 position;
 	};
 	std::vector<AnimatedObject> _animatedObjects;
+	// The level's texture animations (a river's water, a pool, an arcade
+	// screen), round and round, and the texture each shows now.
+	std::vector<std::pair<TextureAnimation, std::string>> _textureAnimations;
 	double _animationTime = 0.0;
 
 	std::vector<Path> _paths;

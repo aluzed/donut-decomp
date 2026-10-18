@@ -166,6 +166,10 @@ void Level::LoadP3D(const std::string& filename)
 	{
 		switch (chunk->GetType())
 		{
+		case P3D::ChunkType::Animation:
+			if (auto animation = TextureAnimation::FromChunk(*chunk))
+				_textureAnimations.emplace_back(std::move(*animation), std::string());
+			break;
 		case P3D::ChunkType::Anim:
 		case P3D::ChunkType::AnimCollision:
 		{
@@ -720,6 +724,17 @@ void Level::Update(double deltatime)
 {
 	// The level's animated objects, round and round at their own rate.
 	_animationTime += deltatime;
+	auto& resources = Game::GetInstance().GetResourceManager();
+	for (auto& [animation, showing] : _textureAnimations)
+	{
+		const float frames = std::max(animation.frameCount, animation.keys.back().first + 1.0f);
+		const float frame = std::fmod(static_cast<float>(_animationTime) * animation.frameRate, frames);
+		const std::string& texture = animation.TextureAt(frame);
+		// Only on a change: a mesh caches its shader, so the texture set on it
+		// stays.
+		if (texture != showing && resources.ShowShaderTexture(animation.shader, texture))
+			showing = texture;
+	}
 	for (auto& object : _animatedObjects)
 	{
 		auto& model = *_compositeModels[object.index];

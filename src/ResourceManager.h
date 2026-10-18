@@ -52,6 +52,9 @@ public:
 	// Every shader whose own texture is `textureName` draws `shownAs` instead;
 	// shownAs = textureName puts it back. False when `shownAs` is not loaded.
 	bool ShowTextureAs(const std::string& textureName, const std::string& shownAs);
+	// The shader named `shader` draws the texture named `texture`. False when
+	// either is not loaded.
+	bool ShowShaderTexture(const std::string& shader, const std::string& texture);
 
 	const std::unordered_map<std::string, std::unique_ptr<Font>>& GetFonts() const { return _fonts; }
 

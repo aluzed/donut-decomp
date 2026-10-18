@@ -146,6 +146,16 @@ bool ResourceManager::ShowTextureAs(const std::string& textureName, const std::s
 	return true;
 }
 
+bool ResourceManager::ShowShaderTexture(const std::string& shader, const std::string& texture)
+{
+	const auto foundShader = _shaders.find(shader);
+	const auto foundTexture = _textures.find(texture);
+	if (foundShader == _shaders.end() || foundTexture == _textures.end())
+		return false;
+	foundShader->second->SetDiffuseTexture(foundTexture->second.get());
+	return true;
+}
+
 /*
  * Searches for the shader in the map, you should cache the result to avoid unnecessary lookups
  */
