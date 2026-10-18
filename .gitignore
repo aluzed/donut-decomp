@@ -41,3 +41,4 @@ keymap.conf
 *.iso
 donut_coins.dat
 donut_cards.dat
+/scripts/rewards.mfk

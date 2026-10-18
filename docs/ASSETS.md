@@ -89,6 +89,8 @@ cp -a files/extracted/Scripts/cars/*.con scripts/cars/
 for n in 1 2 3 4 5 6 7; do
   cp -a files/extracted/Scripts/missions/level0$n scripts/level0$n
 done
+# What every car and outfit costs, and who sells it (BindReward).
+cp -a files/extracted/Scripts/missions/rewards.mfk scripts/rewards.mfk
 
 # DIALOGF.RCF sits in the clear on CD1, outside the cabinets
 mkdir -p art/audio/dialog

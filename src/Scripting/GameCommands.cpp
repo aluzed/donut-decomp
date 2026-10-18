@@ -79,7 +79,7 @@ void GameCommands::SetStageMessageIndex(int32_t param0, const std::string& param
 void GameCommands::AddObjective(const std::string& param0, const std::string& param1 /*= ""*/,
                                 const std::string& param2 /*= ""*/)
 {
-	Game::GetInstance().GetScriptEngine().AddObjective(param0);
+	Game::GetInstance().GetScriptEngine().AddObjective(param0, param1);
 }
 void GameCommands::SetObjTargetVehicle(const std::string& param0)
 {

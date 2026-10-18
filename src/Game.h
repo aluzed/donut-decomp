@@ -6,6 +6,7 @@
 #include "UI/TextBible.h"
 
 #include <map>
+#include <set>
 
 #include "Core/Math/Fwd.h"
 #include "Core/Math/Vector3.h"
@@ -115,7 +116,15 @@ public:
 	bool IsAutopilot() const { return _autopilot; }
 	int GetLevelNumber() const { return _levelNumber; }
 	std::string GetLevelDirectory() const { return levelDirectory(); }
-	const std::string& GetPlayerCarModel() const { return _playerCarModel; }
+	// The car the player drives ("current" in the mission scripts): the level's
+	// own until another is bought.
+	const std::string& GetPlayerCarModel() const { return _currentCar.empty() ? _playerCarModel : _currentCar; }
+	// What a car costs (rewards.mfk's BindReward ... "forsale" ..., cost), 0 when
+	// it is not for sale or unknown.
+	int CarPrice(const std::string& car) const;
+	// Buys `car` if the purse holds its price, and drives it from then on. True
+	// once the player owns it (--autopilot is given it).
+	bool BuyCar(const std::string& car);
 	void AddShake(float amount) { _shakeAmount = std::max(_shakeAmount, amount); }
 
 	static Game& GetInstance() { return *instance; }
@@ -216,6 +225,8 @@ private:
 	// the Honor Roller on level 2.
 	std::string _playerCharacter = "homer";
 	float _fallOffY = -50.0f;
+	std::string _currentCar;
+	std::set<std::string> _ownedCars;
 	std::string _playerCarModel = "famil_v";
 	// The player's walk and idle, whatever the character's prefix
 	// ("hom_loco_walk", "brt_loco_walk").

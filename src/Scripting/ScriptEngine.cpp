@@ -391,9 +391,16 @@ void ScriptEngine::updateObjective(double dt)
 		if (_game.GetInterior().empty())
 			objectiveComplete();
 	}
-	else if (_objectiveType == "fmv" || _objectiveType == "buycar")
+	else if (_objectiveType == "buycar")
 	{
-		// Nothing holds the player here: no movies to sit through, no showroom.
+		// The car the next mission needs, bought with coins at the price
+		// rewards.mfk sets; owned already, nothing to buy.
+		if (_game.BuyCar(_objectiveArgument))
+			objectiveComplete();
+	}
+	else if (_objectiveType == "fmv")
+	{
+		// Nothing holds the player here: no movies to sit through.
 		objectiveComplete();
 	}
 	else if (_objectiveType == "timer")
@@ -724,6 +731,9 @@ std::string ScriptEngine::GetObjectiveText() const
 	}
 	if ((_objectiveType == "delivery" || _objectiveType == "dump") && _pickupsTotal > 0)
 		text += fmt::format(" {}/{}", _pickupsTotal - _pickups.size() - _dumpQueue.size(), _pickupsTotal);
+	if (_objectiveType == "buycar" && _game.CarPrice(_objectiveArgument) > 0)
+		text += fmt::format(" {}/{}", std::min(_game.GetCoins(), _game.CarPrice(_objectiveArgument)),
+		                    _game.CarPrice(_objectiveArgument));
 	if (_objectiveType == "coins" && _coinFee > 0)
 		text += fmt::format(" {}/{}", std::min(_game.GetCoins(), _coinFee), _coinFee);
 	if (_objectiveType == "destroy")
@@ -1399,9 +1409,10 @@ void ScriptEngine::SetHUDIcon(const std::string& icon)
 	Log::Info("ScriptEngine: HUD icon = '{}'", icon);
 }
 
-void ScriptEngine::AddObjective(const std::string& type)
+void ScriptEngine::AddObjective(const std::string& type, const std::string& argument)
 {
 	_objectiveType = type;
+	_objectiveArgument = argument;
 	_targetHealth = 100.0f;
 	_lastTargetGap = -1.0f;
 	_rammingCooldown = 0.0f;

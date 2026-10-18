@@ -73,7 +73,7 @@ public:
 	void SetSuspensionLimit(float limit);
 
 	void SetHUDIcon(const std::string& icon);
-	void AddObjective(const std::string& type);
+	void AddObjective(const std::string& type, const std::string& argument = "");
 	void UpdateAI(double dt);
 	void ResetBestTime();
 	void SaveGameState();
@@ -366,6 +366,8 @@ private:
 	// The chasing car the objective names, or the first; null when none.
 	const Vehicle* chasingTarget() const;
 	float _objectiveDistance = 0.0f;
+	// AddObjective's second argument: the car a "buycar" wants ("plowk_v").
+	std::string _objectiveArgument;
 	// The stage's conversation (SetDialogueInfo's third argument, "bladder"),
 	// and whether its lines have been queued.
 	std::string _conversation;

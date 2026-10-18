@@ -668,6 +668,42 @@ void Game::updateHitAndRun(double dt)
 	}
 }
 
+int Game::CarPrice(const std::string& car) const
+{
+	// BindReward( "plowk_v", "art\cars\plowk_v.p3d", "car", "forsale", 1, 150, "simpson" );
+	std::ifstream rewards("scripts/rewards.mfk");
+	for (std::string line; std::getline(rewards, line);)
+	{
+		const std::size_t comment = line.find("//");
+		const std::size_t at = line.find("BindReward(");
+		if (at == std::string::npos || (comment != std::string::npos && comment < at) ||
+		    line.find("\"" + car + "\"") == std::string::npos || line.find("\"forsale\"") == std::string::npos)
+			continue;
+		const std::size_t forsale = line.find("\"forsale\"");
+		int level = 0, cost = 0;
+		if (std::sscanf(line.c_str() + forsale + 9, " , %d , %d", &level, &cost) == 2)
+			return cost;
+	}
+	return 0;
+}
+
+bool Game::BuyCar(const std::string& car)
+{
+	if (car.empty() || _ownedCars.count(car))
+	{
+		if (!car.empty())
+			_currentCar = car;
+		return true;
+	}
+	const int price = CarPrice(car);
+	if (!_autopilot && price > 0 && !SpendCoins(price))
+		return false;
+	_ownedCars.insert(car);
+	_currentCar = car;
+	Log::Info("Game: bought '{}' for {} coins{}", car, _autopilot ? 0 : price, _autopilot ? " (autopilot)" : "");
+	return true;
+}
+
 bool Game::SpendCoins(int amount)
 {
 	if (amount > _coins)
@@ -892,6 +928,9 @@ void Game::loadLevel()
 	_teleports.clear();
 	_playerCharacter = "homer";
 	_playerCarModel = "famil_v";
+	// A new level, its own car: what was bought on the last one stays there.
+	_currentCar.clear();
+	_ownedCars.clear();
 	for (const std::string& id : levelScriptCalls("AddMission"))
 	{
 		// Each mission is reached through its "Sunday drive", <id>sdi.mfk: go
@@ -1026,7 +1065,17 @@ void Game::enterInterior(const Level::Trigger& door)
 	// is then known by the trigger's locator ("moe1", which level 2's scripts
 	// name as the destination) or by the place ("KwikEMart", level 1's).
 	const bool zone = door.type == Level::LocatorType::DynamicZone;
-	const std::string file = zone ? door.data.substr(0, door.data.find('@')) : _level->FindInteriorFile(door.data);
+	std::string file;
+	if (zone)
+	{
+		// The file just before the '@', after any others the trigger unloads:
+		// "l1z7.p3d:l1z2.p3d:l1i02.p3d@" is l1i02.p3d.
+		const std::size_t at = door.data.find('@');
+		const std::size_t start = door.data.find_last_of(";:", at);
+		file = door.data.substr(start == std::string::npos ? 0 : start + 1, at - (start == std::string::npos ? 0 : start + 1));
+	}
+	else
+		file = _level->FindInteriorFile(door.data);
 	if (file.empty() || !_level->GetInterior(file, _interiorLayout))
 	{
 		Log::Warn("Game: no interior loaded for door '{}' ({})", door.locator, door.data);
