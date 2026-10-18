@@ -2117,6 +2117,24 @@ void Game::Run()
 
 		if (_character != nullptr)
 			_character->Update(deltaTime);
+		// The level's people say something to a player who walks up to them,
+		// now and then: one of their recorded idle replies.
+		if (_character && !_inVehicle)
+			for (auto& [name, npc] : _ambientNpcs)
+			{
+				static std::map<std::string, double> spokeAt;
+				const Vector3 gap = _character->GetPosition() - npc->GetPosition();
+				if (gap.X * gap.X + gap.Z * gap.Z > 16.0f || std::abs(gap.Y) > 3.0f)
+					continue;
+				double& last = spokeAt.try_emplace(name, -100.0).first->second;
+				if (_elapsedSeconds - last < 20.0 || _audioManager->IsDialoguePlaying())
+					continue;
+				last = _elapsedSeconds;
+				const auto lines = _audioManager->FindSounds(name + "\\w_idlereply_");
+				if (!lines.empty())
+					_audioManager->QueueDialogue(lines[static_cast<std::size_t>(rand()) % lines.size()],
+					                             AudioManager::DialoguePriority::Gameplay);
+			}
 		for (auto* people : {&_npcs, &_ambientNpcs})
 		for (auto& [name, npc] : *people)
 		{

@@ -180,4 +180,5 @@ Each `leveli.mfk` stands people about the level: `AddAmbientCharacter("ralph",
 They are now placed with the level (9 on level 1, 6 on level 2, 4 on level 4, 6 on level
 7), idling and turning to face a player who walks up, like a mission's NPCs; one the
 mission has placed as its own is not shown twice. Seen: Ralph by the house next to the
-Simpsons'. There is still no talking to them.
+Simpsons'. Walked up to (within 4m, on foot), one says one of their recorded idle replies
+(`ralph\w_idlereply_*`, 16 of them), at most every 20s.
