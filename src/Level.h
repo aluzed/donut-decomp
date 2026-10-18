@@ -126,9 +126,17 @@ public:
 		Vector3 exit;
 		// The room's middle (InteriorOrigin), to face on coming in.
 		Vector3 origin;
+		// The short name its own locators carry, "int_<tag>_...": "kwik" for
+		// the Kwik-E-Mart, "ele" for the school, "dmv", "moe"...
+		std::string tag;
 	};
 	// By file name ("l1i01.p3d"); false when that file holds no interior.
 	bool GetInterior(const std::string& file, Interior& interior) const;
+	// The interior file a door leads into. A door's locator names the place
+	// ("KwikEMart", "SpringfieldElementary"), the interior only its tag, so the
+	// door is matched to the interior whose tag its name contains -- the
+	// longest such tag. Empty when none does.
+	std::string FindInteriorFile(const std::string& door) const;
 	// Draw only what `file` loaded (an interior, while the player is in it), or
 	// everything again when empty. Inside, the rest of the level is the town
 	// overhead, seen from underneath.

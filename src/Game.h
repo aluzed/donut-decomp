@@ -110,6 +110,9 @@ public:
 	// Takes `amount` from the purse; false, taking nothing, if it holds less.
 	bool SpendCoins(int amount);
 	bool IsAutopilot() const { return _autopilot; }
+	int GetLevelNumber() const { return _levelNumber; }
+	std::string GetLevelDirectory() const { return levelDirectory(); }
+	const std::string& GetPlayerCarModel() const { return _playerCarModel; }
 	void AddShake(float amount) { _shakeAmount = std::max(_shakeAmount, amount); }
 
 	static Game& GetInstance() { return *instance; }
@@ -191,6 +194,26 @@ private:
 	int _storyIndex = -1;
 	// --story: start on the first story mission rather than the test mission.
 	bool _startStory = false;
+	// --level: which level to play, and where its files are.
+	int _levelNumber = 1;
+	bool _missionScriptGiven = false;
+	// "level01" for level 1: the folder of its scripts and mission art.
+	std::string levelDirectory() const;
+	// The level's world files in art/: terrain, zones, roads and interiors.
+	std::vector<std::string> levelWorldFiles() const;
+	// The first argument of every `command` call in the level's level.mfk,
+	// in order: levelScriptCalls("AddMission") is the story.
+	std::vector<std::string> levelScriptCalls(const std::string& command, const std::string& script = "level.mfk") const;
+	// The level's player character and car, from leveli.mfk's AddCharacter and
+	// InitLevelPlayerVehicle: Homer and the family sedan on level 1, Bart and
+	// the Honor Roller on level 2.
+	std::string _playerCharacter = "homer";
+	std::string _playerCarModel = "famil_v";
+	// The player's walk and idle, whatever the character's prefix
+	// ("hom_loco_walk", "brt_loco_walk").
+	std::string _walkAnimation, _idleAnimation;
+	// The debug Warp menu: the level script's AddTeleportDest places.
+	std::vector<std::pair<std::string, Vector3>> _teleports;
 	// When the running mission was loaded, for its title card.
 	double _missionLoadedAt = 0.0;
 	// The game's phrase table, in the language --language picks (E by default).

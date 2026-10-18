@@ -39,9 +39,9 @@ void ScriptEngine::SelectMission(const std::string& id)
 	// the level-wide ones, <id>.p3d the mission's own. Every "locator not found"
 	// warning in the log came from here, and AddStageWaypoint could never resolve
 	// its argument.
-	// TODO: level01 is hard-coded because the engine only loads level 1 so far.
-	_game.GetLevel().LoadP3D("missions/level01/level.p3d");
-	_game.GetLevel().LoadP3D("missions/level01/" + id + ".p3d");
+	const std::string missions = "missions/" + _game.GetLevelDirectory() + "/";
+	_game.GetLevel().LoadP3D(missions + "level.p3d");
+	_game.GetLevel().LoadP3D(missions + id + ".p3d");
 
 	_currentStage = -1;
 	_noTraffic = false;
@@ -608,16 +608,20 @@ std::string ScriptEngine::GetFailureReason() const
 
 std::string ScriptEngine::GetMissionTitle(bool info) const
 {
-	// The phrase table numbers level 1's missions 0-12: the story's m0-m7, then
-	// the street races, the wager race and the bonus mission.
-	static const std::map<std::string, int> kNumbers {
-	    {"m0", 0}, {"m1", 1}, {"m2", 2}, {"m3", 3}, {"m4", 4}, {"m5", 5}, {"m6", 6},
-	    {"m7", 7}, {"sr1", 8}, {"sr2", 9}, {"sr3", 10}, {"gr1", 11}, {"bm1", 12},
-	};
-	const auto number = kNumbers.find(_missionId);
-	if (number == kNumbers.end())
+	// The phrase table numbers each level's missions the same way: the story's
+	// mN as N (level 1's tutorial is m0), then the street races 8-10, the wager
+	// race 11 and the bonus mission 12.
+	static const std::map<std::string, int> kRaces {{"sr1", 8}, {"sr2", 9}, {"sr3", 10}, {"gr1", 11}, {"bm1", 12}};
+	int number = -1;
+	if (const auto race = kRaces.find(_missionId); race != kRaces.end())
+		number = race->second;
+	else if (_missionId.size() > 1 && _missionId[0] == 'm' &&
+	         std::all_of(_missionId.begin() + 1, _missionId.end(), [](unsigned char c) { return std::isdigit(c); }))
+		number = std::atoi(_missionId.c_str() + 1);
+	if (number < 0)
 		return {};
-	return _game.GetTextBible().Get(fmt::format("MISSION_{}_L1_M{}", info ? "INFO" : "TITLE", number->second));
+	return _game.GetTextBible().Get(
+	    fmt::format("MISSION_{}_L{}_M{}", info ? "INFO" : "TITLE", _game.GetLevelNumber(), number));
 }
 
 std::string ScriptEngine::GetObjectiveText() const
@@ -800,8 +804,8 @@ void ScriptEngine::PlacePlayerCar(const std::string& car, const std::string& loc
 	}
 
 	// "current" is whatever the player drives at the time. There is no garage
-	// yet, so it is the family sedan the game starts the player in.
-	const std::string model = car == "current" ? "famil_v" : car;
+	// yet, so it is the car the level starts the player in.
+	const std::string model = car == "current" ? _game.GetPlayerCarModel() : car;
 	Log::Info("ScriptEngine: place player car '{}' ('{}') at '{}' ({:.1f}, {:.1f}, {:.1f})", car, model, locator,
 	          pos.X, pos.Y, pos.Z);
 

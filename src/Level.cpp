@@ -1,6 +1,7 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
 #include "Render/imgui/imgui.h"
+#include <algorithm>
 #include <cctype>
 #include <Core/File.h>
 #include <Core/Log.h>
@@ -120,7 +121,13 @@ void Level::LoadP3D(const std::string& filename)
 
 			for (const auto& meshTransformsPair : meshTransforms)
 			{
-				const auto& geometry = geometries.at(meshesNameIndex.at(meshTransformsPair.first));
+				const auto index = meshesNameIndex.find(meshTransformsPair.first);
+				if (index == meshesNameIndex.end())
+				{
+					Log::Warn("Level: no mesh '{}' in its physics object, skipped", meshTransformsPair.first);
+					continue;
+				}
+				const auto& geometry = geometries.at(index->second);
 				_instances.emplace_back(std::make_unique<InstancedStaticEntity>(*geometry, meshTransformsPair.second));
 			}
 
@@ -149,9 +156,17 @@ void Level::LoadP3D(const std::string& filename)
 				transforms.push_back(transform);
 			}
 
+			// Level 2's lamps name meshes their own object does not carry
+			// (l2_lampoldShape3 in l2z2.p3d); map::at threw and the load died.
 			for (const auto& meshTransformsPair : meshTransforms)
 			{
-				const auto& mesh = geometries.at(meshesNameIndex.at(meshTransformsPair.first));
+				const auto index = meshesNameIndex.find(meshTransformsPair.first);
+				if (index == meshesNameIndex.end())
+				{
+					Log::Warn("Level: no mesh '{}' in its physics object, skipped", meshTransformsPair.first);
+					continue;
+				}
+				const auto& mesh = geometries.at(index->second);
 				_instances.emplace_back(std::make_unique<InstancedStaticEntity>(*mesh, meshTransformsPair.second));
 			}
 
@@ -165,6 +180,13 @@ void Level::LoadP3D(const std::string& filename)
 			P3D::P3DUtil::GetDrawables(dynaPhys->GetInstanceList(), drawables, transforms);
 
 			const auto& animObjectWrapper = dynaPhys->GetAnimObjectWrapper();
+			// Level 2 has some without one (l2r1.p3d); building a model from
+			// nothing crashed the load.
+			if (!animObjectWrapper)
+			{
+				Log::Warn("Level: animated physics object '{}' has no model, skipped", dynaPhys->GetName());
+				break;
+			}
 
 			for (size_t i = 0; i < drawables.size(); ++i)
 			{
@@ -353,11 +375,16 @@ void Level::LoadP3D(const std::string& filename)
 		if (const auto origin = fileLocators.find("InteriorOrigin"); origin != fileLocators.end())
 			interior.origin = origin->second;
 		for (const auto& [name, position] : fileLocators)
+		{
 			if (name.size() > 5 && name.compare(name.size() - 5, 5, "_exit") == 0)
 				interior.exit = position;
+			if (const std::size_t end = name.find('_', 4);
+			    interior.tag.empty() && name.compare(0, 4, "int_") == 0 && end != std::string::npos && end > 4)
+				interior.tag = name.substr(4, end - 4);
+		}
 		_interiors[filename] = interior;
-		Log::Info("Level: interior {} -- in at ({:.1f}, {:.1f}, {:.1f}), out at ({:.1f}, {:.1f}, {:.1f})", filename,
-		          interior.entry.X, interior.entry.Y, interior.entry.Z, interior.exit.X, interior.exit.Y,
+		Log::Info("Level: interior {} ('{}') -- in at ({:.1f}, {:.1f}, {:.1f}), out at ({:.1f}, {:.1f}, {:.1f})", filename,
+		          interior.tag, interior.entry.X, interior.entry.Y, interior.entry.Z, interior.exit.X, interior.exit.Y,
 		          interior.exit.Z);
 	}
 }
@@ -369,6 +396,21 @@ bool Level::GetInterior(const std::string& file, Interior& interior) const
 		return false;
 	interior = found->second;
 	return true;
+}
+
+std::string Level::FindInteriorFile(const std::string& door) const
+{
+	std::string lowered = door;
+	std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c) { return std::tolower(c); });
+	std::string best;
+	std::size_t bestLength = 0;
+	for (const auto& [file, interior] : _interiors)
+		if (interior.tag.size() > bestLength && lowered.find(interior.tag) != std::string::npos)
+		{
+			best = file;
+			bestLength = interior.tag.size();
+		}
+	return best;
 }
 
 void Level::DynaLoadData(const std::string& dynaLoadData)

@@ -85,8 +85,10 @@ cp -a files/extracted/Music1/*.rcf files/extracted/Music2/*.rcf art/audio/music/
 mkdir -p scripts/cars
 cp -a files/extracted/Scripts/cars/*.con scripts/cars/
 
-# The game's own level 1 missions, for "New Game" and --story. Gitignored too.
-cp -a files/extracted/Scripts/missions/level01 scripts/level01
+# The game's own missions, for "New Game", --story and --level. Gitignored too.
+for n in 1 2 3 4 5 6 7; do
+  cp -a files/extracted/Scripts/missions/level0$n scripts/level0$n
+done
 
 # DIALOGF.RCF sits in the clear on CD1, outside the cabinets
 mkdir -p art/audio/dialog

@@ -133,7 +133,8 @@ Game::Game(int argc, char** argv)
 	//   --quit-after <secs>  close the window after that much wall time
 	//   --mission <script>   run that mission script instead of M1race.con
 	//   --autopilot          walk the player through each objective (testing)
-	//   --story              play level 1's story missions, in order, from m0
+	//   --story              play the level's story missions, in order
+	//   --level <n>          play level n (1 by default)
 	//   --language <E|F|G|I|S>  language of the game's own text (English)
 	for (int i = 1; i < argc; ++i)
 	{
@@ -143,11 +144,16 @@ Game::Game(int argc, char** argv)
 		else if (arg == "--quit-after" && i + 1 < argc)
 			_quitAfterSeconds = std::atof(argv[++i]);
 		else if (arg == "--mission" && i + 1 < argc)
+		{
 			_missionScript = argv[++i];
+			_missionScriptGiven = true;
+		}
 		else if (arg == "--autopilot")
 			_autopilot = true;
 		else if (arg == "--story")
 			_startStory = true;
+		else if (arg == "--level" && i + 1 < argc)
+			_levelNumber = std::max(1, std::atoi(argv[++i]));
 		else if (arg == "--language" && i + 1 < argc)
 			_language = static_cast<char>(std::toupper(static_cast<unsigned char>(argv[++i][0])));
 	}
@@ -205,27 +211,14 @@ Game::Game(int argc, char** argv)
 	}
 
 	_level = std::make_unique<Level>();
-	_level->LoadP3D("L1_TERRA.p3d");
-
-	// simpsons house
-	_level->LoadP3D("l1z1.p3d");
-	_level->LoadP3D("l1r1.p3d");
-	_level->LoadP3D("l1r7.p3d");
-	_level->LoadP3D("l1r2.p3d");
-	_level->LoadP3D("l1r3.p3d");
-	_level->LoadP3D("l1r4a.p3d");
-	_level->LoadP3D("l1r6.p3d");
-	_level->LoadP3D("l1z2.p3d");
-	_level->LoadP3D("l1z3.p3d");
-	_level->LoadP3D("l1z4.p3d");
-	_level->LoadP3D("l1z6.p3d");
-	_level->LoadP3D("l1z7.p3d");
-	// Level 1's interiors live under the map (x ~ 500, y = -20); the doors take
-	// the player down to them.
-	for (const char* interior : {"l1i00.p3d", "l1i01.p3d", "l1i02.p3d"})
-		_level->LoadP3D(interior);
+	// The level's world: its terrain, every zone and road file, and its
+	// interiors, which live under the map and are reached through doors. The
+	// game streams these in and out as the player moves; they are all loaded
+	// here. This was level 1's list, written out.
+	for (const std::string& file : levelWorldFiles())
+		_level->LoadP3D(file);
 	// The mission art shared by the whole level: the coin, among others.
-	_level->LoadP3D("missions/level01/level.p3d");
+	_level->LoadP3D(fmt::format("missions/{}/level.p3d", levelDirectory()));
 	// The collector card's model, from the shared card art. Only its geometry,
 	// shaders and textures: the rest is the pick-up effect's billboards and
 	// particles, which nothing here plays.
@@ -250,12 +243,11 @@ Game::Game(int argc, char** argv)
 		}
 	}
 
-	_level->DynaLoadData("l1z1.p3d;l1r1.p3d;l1r7.p3d;");
 	_pathGraph = std::make_unique<PathGraph>(*_level, *_worldPhysics);
 	_trafficManager = std::make_unique<TrafficManager>(*_level, *_lineRenderer, *_pathGraph);
-	_trafficManager->LoadModels("scripts/level01/leveli.mfk");
+	_trafficManager->LoadModels(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
 	_pedestrianManager = std::make_unique<PedestrianManager>(*_worldPhysics);
-	_pedestrianManager->LoadModels("scripts/level01/leveli.mfk");
+	_pedestrianManager->LoadModels(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
 	_collectibleManager = std::make_unique<CollectibleManager>(*_level, *_lineRenderer);
 	_collectibleManager->SpawnOnPath();
 	_gameInput = std::make_unique<GameInput>();
@@ -277,10 +269,45 @@ Game::Game(int argc, char** argv)
 	_playerMesh = SimpleMesh::CreateCapsule(0.3f, 1.8f, Vector4(0.2f, 1.0f, 0.2f, 1.0f), 12);
 	_carMesh = SimpleMesh::CreateBox(Vector3(0.9f, 0.5f, 2.2f), Vector4(0.2f, 0.5f, 1.0f, 1.0f));
 
+	// The game's own missions, when they have been copied off the CD. Without
+	// them "New Game" plays the test mission, as it always has.
+	// The story is the level script's AddMission list, in order.
+	for (const std::string& id : levelScriptCalls("AddMission"))
+	{
+		const std::string path = fmt::format("scripts/{}/{}i.mfk", levelDirectory(), id);
+		if (FileSystem::exists(path))
+			_story.push_back(path);
+	}
+	// The Warp menu's places, AddTeleportDest("name", x, y, z, "zones").
+	{
+		std::ifstream script(fmt::format("scripts/{}/level.mfk", levelDirectory()));
+		for (std::string line; std::getline(script, line);)
+		{
+			const std::size_t at = line.find("AddTeleportDest(");
+			const std::size_t comment = line.find("//");
+			if (at == std::string::npos || (comment != std::string::npos && comment < at))
+				continue;
+			const std::size_t open = line.find('"', at);
+			const std::size_t close = open == std::string::npos ? open : line.find('"', open + 1);
+			Vector3 place;
+			if (close != std::string::npos &&
+			    std::sscanf(line.c_str() + close + 1, " , %f , %f , %f", &place.X, &place.Y, &place.Z) == 3)
+				_teleports.emplace_back(line.substr(open + 1, close - open - 1), place);
+		}
+	}
+	if (const auto characters = levelScriptCalls("AddCharacter", "leveli.mfk"); !characters.empty())
+		_playerCharacter = characters.front();
+	if (const auto cars = levelScriptCalls("InitLevelPlayerVehicle", "leveli.mfk"); !cars.empty())
+		_playerCarModel = cars.front();
+	Log::Info("Game: level {} is played by '{}' in '{}'", _levelNumber, _playerCharacter, _playerCarModel);
+	// Away from level 1 there is no test mission: the level opens on its story.
+	if (_levelNumber != 1 && !_missionScriptGiven && !_story.empty())
+		_missionScript = _story.front();
+
 	runMissionScript();
 
 	loadGlobal();
-	LoadModel("homer", "homer");
+	LoadModel(_playerCharacter, _playerCharacter);
 
 	// The mission ran before the character existed, so its player placement went
 	// nowhere: apply it now. Only a mission that places nobody falls back to the
@@ -320,15 +347,6 @@ Game::Game(int argc, char** argv)
 
 	_camera->SetZNear(1.0f);
 	_camera->SetZFar(100000.0f);
-
-	// The game's own missions, when they have been copied off the CD. Without
-	// them "New Game" plays the test mission, as it always has.
-	for (const char* id : {"m0", "m1", "m2", "m3", "m4", "m5", "m6", "m7"})
-	{
-		const std::string path = fmt::format("scripts/level01/{}i.mfk", id);
-		if (FileSystem::exists(path))
-			_story.push_back(path);
-	}
 
 	if (_startStory && !_story.empty())
 		startStoryMission(0);
@@ -433,8 +451,21 @@ void Game::LoadModel(const std::string& name, const std::string& anim)
 	// Facing +Z, away from the camera that starts behind him: the model faces -Z.
 	_character->SetRotation(Quaternion::MakeFromEuler(Vector3(0.0f, 3.14159265f, 0.0f)));
 
-	if (anim == "homer")
-		_character->SetAnimation("hom_loco_walk");
+	_walkAnimation.clear();
+	_idleAnimation.clear();
+	for (const auto& [animation, data] : _character->GetAnimations())
+	{
+		const auto endsWith = [&](const std::string& suffix) {
+			return animation.size() > suffix.size() &&
+			       animation.compare(animation.size() - suffix.size(), suffix.size(), suffix) == 0;
+		};
+		if (endsWith("_loco_walk"))
+			_walkAnimation = animation;
+		else if (endsWith("_loco_idle_rest"))
+			_idleAnimation = animation;
+	}
+	if (!_walkAnimation.empty())
+		_character->SetAnimation(_walkAnimation);
 }
 
 void Game::LockMouse(bool lockMouse)
@@ -689,27 +720,80 @@ void Game::runAutopilot(double dt)
 		SetPlayerPosition(target + Vector3(0.0f, 1.0f, 0.0f));
 }
 
-namespace
+std::string Game::levelDirectory() const
 {
-// Which file holds which interior is not in the data: the files name their
-// locators after it (int_ele_*, int_kwik_*, int_sh_*), and that is what this
-// table follows.
-const std::map<std::string, std::string>& level1Interiors()
-{
-	static const std::map<std::string, std::string> kInteriors {
-	    {"SpringfieldElementary", "l1i00.p3d"},
-	    {"KwikEMart", "l1i01.p3d"},
-	    {"SimpsonsHouse", "l1i02.p3d"},
-	};
-	return kInteriors;
+	return fmt::format("level{:02}", _levelNumber);
 }
-} // namespace
+
+std::vector<std::string> Game::levelWorldFiles() const
+{
+	// l<n>_TERRA.p3d, then l<n>z*.p3d and l<n>r*.p3d (zones and the roads
+	// between them), then the interiors l<n>i*.p3d. Where a road comes in two
+	// versions (level 1's l1r4a and l1r4b, the same stretch before and after
+	// it changes) only the first is taken: both together overlap.
+	const std::string prefix = fmt::format("l{}", _levelNumber);
+	std::string terrain;
+	std::vector<std::string> world, interiors;
+	for (const auto& entry : FileSystem::directory_iterator("./art"))
+	{
+		const std::string name = entry.path().filename().string();
+		std::string lower = name;
+		std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return std::tolower(c); });
+		if (lower.size() < prefix.size() + 5 || lower.compare(0, prefix.size(), prefix) != 0 ||
+		    lower.compare(lower.size() - 4, 4, ".p3d") != 0)
+			continue;
+		const std::string rest = lower.substr(prefix.size(), lower.size() - prefix.size() - 4);
+		if (rest == "_terra")
+			terrain = name;
+		else if ((rest[0] == 'z' || rest[0] == 'r') && rest.size() > 1 && std::isdigit(static_cast<unsigned char>(rest[1])))
+		{
+			if (rest.back() == 'b' &&
+			    FileSystem::exists(fmt::format("./art/{}a.p3d", name.substr(0, name.size() - 5))))
+				continue;
+			world.push_back(name);
+		}
+		else if (rest[0] == 'i' && rest.size() == 3 && std::isdigit(static_cast<unsigned char>(rest[1])))
+			interiors.push_back(name);
+	}
+	std::sort(world.begin(), world.end());
+	std::sort(interiors.begin(), interiors.end());
+
+	std::vector<std::string> files;
+	if (!terrain.empty())
+		files.push_back(terrain);
+	files.insert(files.end(), world.begin(), world.end());
+	files.insert(files.end(), interiors.begin(), interiors.end());
+	Log::Info("Game: level {} is {} files", _levelNumber, files.size());
+	return files;
+}
+
+std::vector<std::string> Game::levelScriptCalls(const std::string& command, const std::string& file) const
+{
+	std::vector<std::string> arguments;
+	std::ifstream script(fmt::format("scripts/{}/{}", levelDirectory(), file));
+	for (std::string line; std::getline(script, line);)
+	{
+		const std::size_t at = line.find(command + "(");
+		const std::size_t comment = line.find("//");
+		if (at == std::string::npos || (comment != std::string::npos && comment < at))
+			continue;
+		const std::size_t open = line.find('"', at);
+		const std::size_t close = open == std::string::npos ? open : line.find('"', open + 1);
+		if (close != std::string::npos)
+			arguments.push_back(line.substr(open + 1, close - open - 1));
+	}
+	return arguments;
+}
 
 bool Game::CanEnterInterior(const std::string& name) const
 {
+	// Which file holds which interior is not in the data as such: the files
+	// name their locators after it (int_ele_*, int_kwik_*), and the door's
+	// name contains that tag (see Level::FindInteriorFile). This was a table
+	// of level 1's three.
 	Level::Interior layout;
-	const auto file = level1Interiors().find(name);
-	return file != level1Interiors().end() && _level->GetInterior(file->second, layout);
+	const std::string file = _level->FindInteriorFile(name);
+	return !file.empty() && _level->GetInterior(file, layout);
 }
 
 void Game::enterInterior(const Level::Trigger& door)
@@ -718,8 +802,8 @@ void Game::enterInterior(const Level::Trigger& door)
 	if (_inVehicle || !_interior.empty() || !_character)
 		return;
 
-	const auto file = level1Interiors().find(door.data);
-	if (file == level1Interiors().end() || !_level->GetInterior(file->second, _interiorLayout))
+	const std::string file = _level->FindInteriorFile(door.data);
+	if (file.empty() || !_level->GetInterior(file, _interiorLayout))
 	{
 		Log::Warn("Game: no interior loaded for door '{}' ({})", door.locator, door.data);
 		return;
@@ -743,7 +827,7 @@ void Game::enterInterior(const Level::Trigger& door)
 	const Vector3 inward = _interiorLayout.origin - _interiorLayout.entry;
 	if (inward.X * inward.X + inward.Z * inward.Z > 0.01f)
 		_camYaw = std::atan2(inward.X, inward.Z);
-	_level->SetDrawOnly(file->second);
+	_level->SetDrawOnly(file);
 	_scriptEngine->OnInteriorChanged(_interior);
 }
 
@@ -829,20 +913,6 @@ Vector3 Game::GetPlayerPosition() const
 		return _character->GetPosition();
 	return Vector3::Zero;
 }
-
-std::vector<std::tuple<std::string, Vector3, std::string>> locations {
-    {"Simpsons' House", Vector3(220, 3.5, -172), "l1z1.p3d;l1r1.p3d;l1r7.p3d;"},
-    {"Kwik E Mart", Vector3(209, 3.6, -285), "l1z2.p3d;l1r1.p3d;l1r2.p3d;"},
-    {"Church", Vector3(193.8, -0.9, -570), "l1r2.p3d;l1z2.p3d;l1z3.p3d;"},
-    {"Springfield Elementary", Vector3(-11, 0.7, -586), "l1z3.p3d;l1r2.p3d;l1r3.p3d;"},
-    {"Burns' Mansion", Vector3(-186, 3.5, -96), "l1z4.p3d;l1r3.p3d;l1r4a.p3d;"},
-    {"Stonecutters Tunnel", Vector3(-405, 2, 60), "l1z4.p3d;l1r3.p3d;l1r4a.p3d;"},
-    {"Power Plant Interior", Vector3(-80, 0.8, 297), "l1r4a.p3d;l1z6.p3d;l1r6.p3d;"},
-    {"Power Plant Parking Lot", Vector3(40, 0, 296), "l1z6.p3d;l1r6.p3d;"},
-    {"Tomacco", Vector3(190, -0.7, 425), "l1r6.p3d;l1z6.p3d;l1z7.p3d;"},
-    {"Trailer Park", Vector3(391, -2.2, 494), "l1z7.p3d;l1r6.p3d;l1r7.p3d;"},
-    {"Cletus' House", Vector3(333.5, -1.8, 356), "l1z7.p3d;l1r6.p3d;l1r7.p3d;"},
-    {"Graveyard", Vector3(368, 5.1, 5.4), "l1z1.p3d;l1r1.p3d;l1r7.p3d;"}};
 
 std::vector<std::pair<std::string, std::string>> models {
     {"homer", "homer"}, {"h_evil", "homer"}, {"h_fat", "homer"}, {"h_undr", "homer"},
@@ -1061,8 +1131,8 @@ void Game::Run()
 
 			// walk while moving, idle otherwise — only switch on change so the
 			// animation isn't reset to frame 0 every frame
-			const char* desiredAnim = moving ? "hom_loco_walk" : "hom_loco_idle_rest";
-			if (_character->GetAnimName() != desiredAnim)
+			const std::string& desiredAnim = moving ? _walkAnimation : _idleAnimation;
+			if (!desiredAnim.empty() && _character->GetAnimName() != desiredAnim)
 				_character->SetAnimation(desiredAnim);
 		}
 
@@ -1970,19 +2040,18 @@ void Game::imguiMenuBar()
 	if (ImGui::BeginMenu("Warp")) {
 		// if (ImGui::BeginMenu("Level 1"))
 		// {
-		for (auto const& location : locations)
+		for (auto const& location : _teleports)
 		{
-			if (ImGui::MenuItem(std::get<0>(location).c_str()))
+			if (ImGui::MenuItem(location.first.c_str()))
 			{
-				const Vector3& dest = std::get<1>(location);
+				const Vector3& dest = location.second;
 				//_worldPhysics->GetCharacterController()->SetPosition(dest);
 				_camera->SetPosition(dest);
 			}
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::BeginTooltip();
-				ImGui::TextUnformatted(std::get<1>(location).ToString().c_str());
-				ImGui::TextUnformatted(std::get<2>(location).c_str());
+				ImGui::TextUnformatted(location.second.ToString().c_str());
 				ImGui::EndTooltip();
 			}
 		}
