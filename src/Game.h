@@ -165,6 +165,15 @@ private:
 	void runAutopilot(double dt);
 	// Runs _missionScript, preceded by its load script when it has one.
 	void runMissionScript();
+	// Level 1's story missions in order, as found under scripts/level01 (copied
+	// off the CD, see docs/ASSETS.md); empty when they are not there.
+	std::vector<std::string> _story;
+	// Which of them is being played, or -1 outside the story.
+	int _storyIndex = -1;
+	// --story: start on the first story mission rather than the test mission.
+	bool _startStory = false;
+	// Tears down whatever mission is running and starts story mission `index`.
+	void startStoryMission(int index);
 	// `wanted`, or the nearest point to `subject` on the way to it that the level
 	// does not hide `subject` from.
 	Vector3 unoccludedCameraPosition(const Vector3& subject, const Vector3& wanted) const;

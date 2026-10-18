@@ -31,6 +31,7 @@ art/
 
 scripts/Missions/level01/*.con   # Mission scripts       (in the repo)
 scripts/cars/*.con               # Car tuning scripts    (off the CD, gitignored)
+scripts/level01/*.mfk            # Level 1 missions      (off the CD, gitignored)
 assets/shaders/                  # Shaders, via the `shaders` symlink (in the repo)
 ```
 
@@ -83,6 +84,9 @@ cp -a files/extracted/Music1/*.rcf files/extracted/Music2/*.rcf art/audio/music/
 # every car drives on the same defaults, and the engine warns once per car.
 mkdir -p scripts/cars
 cp -a files/extracted/Scripts/cars/*.con scripts/cars/
+
+# The game's own level 1 missions, for "New Game" and --story. Gitignored too.
+cp -a files/extracted/Scripts/missions/level01 scripts/level01
 
 # DIALOGF.RCF sits in the clear on CD1, outside the cabinets
 mkdir -p art/audio/dialog

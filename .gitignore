@@ -24,6 +24,7 @@
 
 # Car tuning scripts come off the CD too (Scripts/cars), see docs/ASSETS.md
 /scripts/cars/
+/scripts/level01/
 
 # save data
 donut_save.dat

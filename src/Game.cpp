@@ -131,6 +131,7 @@ Game::Game(int argc, char** argv)
 	//   --quit-after <secs>  close the window after that much wall time
 	//   --mission <script>   run that mission script instead of M1race.con
 	//   --autopilot          walk the player through each objective (testing)
+	//   --story              play level 1's story missions, in order, from m0
 	for (int i = 1; i < argc; ++i)
 	{
 		const std::string_view arg = argv[i];
@@ -142,6 +143,8 @@ Game::Game(int argc, char** argv)
 			_missionScript = argv[++i];
 		else if (arg == "--autopilot")
 			_autopilot = true;
+		else if (arg == "--story")
+			_startStory = true;
 	}
 
 	Commands::RunLine("HelloWorld();");
@@ -281,8 +284,22 @@ Game::Game(int argc, char** argv)
 	_camera->SetZNear(1.0f);
 	_camera->SetZFar(100000.0f);
 
+	// The game's own missions, when they have been copied off the CD. Without
+	// them "New Game" plays the test mission, as it always has.
+	for (const char* id : {"m0", "m1", "m2", "m3", "m4", "m5", "m6", "m7"})
+	{
+		const std::string path = fmt::format("scripts/level01/{}i.mfk", id);
+		if (FileSystem::exists(path))
+			_story.push_back(path);
+	}
+
+	if (_startStory && !_story.empty())
+		startStoryMission(0);
+
 	_mainMenu = std::make_unique<GameMenu>();
 	_mainMenu->AddButton("New Game", 0, 0, 200, 40, [this]() {
+		if (!_story.empty())
+			startStoryMission(0);
 		_gameState = GameState::InGame;
 	});
 	_mainMenu->AddButton("Quit", 0, 0, 200, 40, [this]() {
@@ -416,6 +433,27 @@ Vector3 Game::unoccludedCameraPosition(const Vector3& subject, const Vector3& wa
 
 	const float clear = (hit - subject).Length() - kCameraStandOff;
 	return subject + toCamera * (clear > 0.0f ? clear : 0.0f);
+}
+
+void Game::startStoryMission(int index)
+{
+	_storyIndex = index;
+	_missionScript = _story[index];
+	Log::Info("Game: story mission {}/{}: {}", index + 1, _story.size(), _missionScript);
+
+	if (_inVehicle)
+	{
+		_inVehicle = false;
+		_activeVehicle = nullptr;
+	}
+	_scriptEngine->CleanupMission();
+	if (_collectibleManager) _collectibleManager->SpawnOnPath();
+	runMissionScript();
+
+	// The mission placed the player; this runs once the character exists.
+	Vector3 start;
+	if (_scriptEngine->GetPlayerStart(start))
+		SetPlayerPosition(start);
 }
 
 void Game::runAutopilot(double dt)
@@ -899,7 +937,10 @@ void Game::Run()
 				// A failure is retried from the last RESET_TO_HERE, not from the
 				// top: losing m2's twelfth stage used to mean driving the first
 				// eleven again.
-				if (!failed || !_scriptEngine->RetryFromCheckpoint())
+				// A story mission won leads on to the next one.
+				if (!failed && _storyIndex >= 0 && _storyIndex + 1 < static_cast<int>(_story.size()))
+					startStoryMission(_storyIndex + 1);
+				else if (!failed || !_scriptEngine->RetryFromCheckpoint())
 				{
 					_scriptEngine->CleanupMission();
 					if (_collectibleManager) _collectibleManager->SpawnOnPath();

@@ -117,6 +117,13 @@ counting up or a stage with none: gr1 finished in **-8.6s**, a new best time, sa
 `donut_save.dat`. The mission's time is now measured from its first stage, and `--autopilot`
 runs set no records (teleporting through a mission is not a record).
 
+## The story, end to end
+
+With level 1's mission scripts copied to `scripts/level01` (docs/ASSETS.md), "New Game" starts
+m0, and each mission won leads on to the next, through m7. `--story` starts there without
+the menu. `--autostart --autopilot --story`: m0 to m7 in a single 200s session, no crash.
+Without the scripts, "New Game" plays the test mission as before.
+
 ## Retrying from RESET_TO_HERE
 
 `RESET_TO_HERE` marks its stage as the retry point. After a failure, `Game` asks
