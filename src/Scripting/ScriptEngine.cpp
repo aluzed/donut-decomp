@@ -91,10 +91,16 @@ void ScriptEngine::SetMissionResetPlayerInCar(const std::string& locator)
 	else
 	{
 		Log::Warn("ScriptEngine: locator '{}' not found!", locator);
+		return;
 	}
+
+	// "In car": at the wheel of their own car, there. m0 opens on getting into it
+	// and was left standing beside nothing.
+	PlacePlayerCar("current", locator);
+	PutPlayerInCar();
 }
 
-void ScriptEngine::SetMissionResetPlayerOutCar(const std::string& locator)
+void ScriptEngine::SetMissionResetPlayerOutCar(const std::string& locator, const std::string& carLocator)
 {
 	_playerLocator = locator;
 	Vector3 pos = _game.GetLevel().GetLocatorPosition(locator);
@@ -105,6 +111,11 @@ void ScriptEngine::SetMissionResetPlayerOutCar(const std::string& locator)
 		_hasPlayerStart = true;
 		Log::Info("ScriptEngine: player placed (out of car) at '{}' ({:.1f}, {:.1f}, {:.1f})", locator, pos.X, pos.Y, pos.Z);
 	}
+
+	// m0, m2, m3 and bm1 all open on "getin" the player's own car, which nothing
+	// had put in the world: they could not get past their first stage.
+	if (!carLocator.empty() && _playerCar == nullptr)
+		PlacePlayerCar("current", carLocator);
 }
 
 void ScriptEngine::SetDynaLoadData(const std::string& zones)
@@ -167,6 +178,8 @@ void ScriptEngine::beginStage(std::size_t index)
 	_noTraffic = false;
 	_announceStageComplete = false;
 	_raceDecided = false;
+	_conditions.clear();
+	_outOfVehicleSeconds = 0.0f;
 
 	for (const auto& statement : _stageScripts[index])
 		Commands::RunLine(statement);
@@ -310,6 +323,60 @@ bool ScriptEngine::GetObjectiveTarget(Vector3& position) const
 	return false;
 }
 
+void ScriptEngine::AddCondition(const std::string& type)
+{
+	_conditions.push_back({type});
+}
+
+void ScriptEngine::SetCondTime(int milliseconds)
+{
+	if (!_conditions.empty())
+		_conditions.back().seconds = static_cast<float>(milliseconds) / 1000.0f;
+}
+
+void ScriptEngine::SetCondMinHealth(float health)
+{
+	if (!_conditions.empty())
+		_conditions.back().minHealth = health;
+}
+
+void ScriptEngine::updateConditions(double dt)
+{
+	if (_game.GetState() != GameState::InGame || _raceDecided)
+		return;
+
+	const bool inCar = _game.GetPlayerVehicle() != nullptr;
+	_outOfVehicleSeconds = inCar ? 0.0f : _outOfVehicleSeconds + static_cast<float>(dt);
+
+	for (const auto& condition : _conditions)
+	{
+		// Only once the player has a car to be out of: the countdown seats them,
+		// and a stage that has not given them one cannot ask them to stay in it.
+		if (condition.type == "outofvehicle" && _playerCar != nullptr && condition.seconds > 0.0f &&
+		    _outOfVehicleSeconds > condition.seconds)
+		{
+			missionFailed(fmt::format("out of the car for more than {:.0f}s", condition.seconds));
+			return;
+		}
+		// The car's health is a 0-100 meter; the scripts give a fraction.
+		if (condition.type == "damage" && inCar && _game.GetCarHealth() <= condition.minHealth * 100.0f)
+		{
+			missionFailed("the car is wrecked");
+			return;
+		}
+	}
+}
+
+void ScriptEngine::missionFailed(const std::string& reason)
+{
+	_raceDecided = true;
+	_stageTimeRemaining = -1.0f;
+	Log::Info("ScriptEngine: mission failed - {}", reason);
+	_game.AddShake(2.0f);
+	_game.GetAudioManager().PlayRaw(SoundGenerator::Beep(150, 0.5f), 22050, 1, 16);
+	_game.SetState(GameState::MissionFailed);
+}
+
 void ScriptEngine::AnnounceStageComplete()
 {
 	_announceStageComplete = true;
@@ -368,6 +435,7 @@ void ScriptEngine::Update(double dt)
 		return;
 
 	updateObjective(dt);
+	updateConditions(dt);
 
 	if (_stageTimeRemaining <= 0.0f)
 		return;
@@ -426,6 +494,16 @@ void ScriptEngine::PlacePlayerCar(const std::string& car, const std::string& loc
 	const std::string model = car == "current" ? "famil_v" : car;
 	Log::Info("ScriptEngine: place player car '{}' ('{}') at '{}' ({:.1f}, {:.1f}, {:.1f})", car, model, locator,
 	          pos.X, pos.Y, pos.Z);
+
+	// The same car moved, not a second one built: a mission resets the player
+	// into their car, then a stage places it on the grid.
+	if (_playerCar != nullptr && _playerCar->GetName() == model)
+	{
+		float heading = 0.0f;
+		const bool faces = _game.GetLevel().GetLocatorHeading(locator, heading);
+		_playerCar->Teleport(pos, faces ? Quaternion(Vector3(0.0f, 1.0f, 0.0f), heading) : _playerCar->GetRotation());
+		return;
+	}
 	_playerCar = &spawnVehicle(model, locator, pos);
 }
 

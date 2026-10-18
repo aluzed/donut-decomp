@@ -89,6 +89,8 @@ public:
 	const Vehicle* GetPlayerVehicle() const { return _inVehicle ? _activeVehicle : nullptr; }
 	// Seats the player at the wheel of `vehicle`, as getting in by hand does.
 	void PutPlayerInVehicle(Vehicle* vehicle);
+	// The player's car damage meter, 100 when whole (the HUD's "CAR" bar).
+	float GetCarHealth() const { return _health; }
 	void AddShake(float amount) { _shakeAmount = std::max(_shakeAmount, amount); }
 
 	static Game& GetInstance() { return *instance; }

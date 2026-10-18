@@ -85,7 +85,7 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 	// on it instead.
 	float spawnY = position.Y + kSpawnRideHeight;
 	float groundY = 0.0f;
-	if (physics.FindGroundHeight(position, 50.0f, 50.0f, groundY))
+	if (physics.FindGroundHeight(position, 50.0f, 50.0f, groundY, true))
 	{
 		spawnY = groundY + kSpawnRideHeight;
 	}
@@ -156,7 +156,9 @@ void Vehicle::Teleport(const Vector3& position, const Quaternion& rotation)
 
 	float spawnY = position.Y + kSpawnRideHeight;
 	float groundY = 0.0f;
-	if (_physicsWorld && _physicsWorld->FindGroundHeight(position, 50.0f, 50.0f, groundY))
+	// The level's ground, not whatever is in the way: a car moved to where it
+	// already stands found its own roof and was dropped from 1.3m up.
+	if (_physicsWorld && _physicsWorld->FindGroundHeight(position, 50.0f, 50.0f, groundY, true))
 		spawnY = groundY + kSpawnRideHeight;
 
 	btTransform transform;

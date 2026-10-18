@@ -30,7 +30,9 @@ public:
 
 	void SelectMission(const std::string& id);
 	void SetMissionResetPlayerInCar(const std::string& locator);
-	void SetMissionResetPlayerOutCar(const std::string& locator);
+	// The player starts on foot at `locator`, with their own car parked at
+	// `carLocator` -- the car a mission's first "getin" asks them into.
+	void SetMissionResetPlayerOutCar(const std::string& locator, const std::string& carLocator = "");
 	void SetDynaLoadData(const std::string& zones);
 
 	void AddStage(int index);
@@ -129,6 +131,13 @@ public:
 	// The script's ShowStageComplete(): announce the stage when it is done. It
 	// does not complete anything itself.
 	void AnnounceStageComplete();
+	// A way to fail the stage. "outofvehicle" (out of the car longer than
+	// SetCondTime) and "damage" (the car's health down to SetCondMinHealth) are
+	// watched; "timeout" is the stage clock; "race"/"position" are the race's own
+	// result. The rest are noted and ignored.
+	void AddCondition(const std::string& type);
+	void SetCondTime(int milliseconds);
+	void SetCondMinHealth(float health);
 	// Where the current objective wants the player: the next checkpoint or
 	// destination, or whoever they are to talk to. For --autopilot.
 	bool GetObjectiveTarget(Vector3& position) const;
@@ -219,6 +228,18 @@ private:
 	float _objectiveElapsed = 0.0f;
 	float _objectiveDuration = 0.0f;
 	bool _announceStageComplete = false;
+
+	struct Condition
+	{
+		std::string type;
+		float seconds = 0.0f;
+		float minHealth = 0.0f;
+	};
+	std::vector<Condition> _conditions;
+	// How long the player has been out of their car, for "outofvehicle".
+	float _outOfVehicleSeconds = 0.0f;
+	void updateConditions(double dt);
+	void missionFailed(const std::string& reason);
 	float _bestTime = 999.0f;
 	bool _isNewRecord = false;
 	Vector3 _aiPosition;

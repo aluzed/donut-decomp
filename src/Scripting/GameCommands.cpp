@@ -110,7 +110,10 @@ void GameCommands::SetStageTime(int32_t param0)
 {
 	Game::GetInstance().GetScriptEngine().SetStageTime(static_cast<float>(param0));
 }
-void GameCommands::AddCondition(const std::string& param0, const std::string& param1 /*= ""*/) {}
+void GameCommands::AddCondition(const std::string& param0, const std::string& param1 /*= ""*/)
+{
+	Game::GetInstance().GetScriptEngine().AddCondition(param0);
+}
 void GameCommands::CloseCondition(int32_t param0 /*= 0*/) {}
 void GameCommands::ShowStageComplete(int32_t param0 /*= 0*/)
 {
@@ -250,9 +253,15 @@ void GameCommands::AddToCountdownSequence(const std::string& param0, int32_t par
 void GameCommands::UseElapsedTime(int32_t param0 /*= 0*/) {}
 void GameCommands::SetRaceEnteryFee(int32_t param0) {}
 void GameCommands::SetParTime(int32_t param0) {}
-void GameCommands::SetCondMinHealth(float param0) {}
+void GameCommands::SetCondMinHealth(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCondMinHealth(param0);
+}
 void GameCommands::SetCondTargetVehicle(const std::string& param0) {}
-void GameCommands::SetCondTime(int32_t param0) {}
+void GameCommands::SetCondTime(int32_t param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCondTime(param0);
+}
 void GameCommands::AddBonusMission(const std::string& param0) {}
 void GameCommands::AddTeleportDest(const std::string& param0, float param1, float param2, float param3,
                                    const std::string& param4)
@@ -274,7 +283,7 @@ void GameCommands::TurnGotoDialogOff(int32_t param0 /*= 0*/) {}
 void GameCommands::SetCompletionDialog(const std::string& param0, const std::string& param1 /*= ""*/) {}
 void GameCommands::SetMissionResetPlayerOutCar(const std::string& param0, const std::string& param1)
 {
-	Game::GetInstance().GetScriptEngine().SetMissionResetPlayerOutCar(param0);
+	Game::GetInstance().GetScriptEngine().SetMissionResetPlayerOutCar(param0, param1);
 }
 void GameCommands::SetMissionStartCameraName(const std::string& param0) {}
 void GameCommands::SetMissionStartMulticontName(const std::string& param0) {}

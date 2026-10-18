@@ -65,10 +65,43 @@ the latest load still wins the name.
 (goto the tomato, goto Skinner, race `skinn_v` to the school, the school's entrance, talk to
 Lisa, the dialogue), mission complete, restart. Four full cycles in 80s, no crash.
 
+## Every level 1 mission plays through (2026-10-18, later)
+
+Run unattended with `--autopilot`, 60-70s each, all level 1 missions but the demo now reach their
+end and restart. Here is the last stage met, and what was skipped on the way:
+
+| mission | stages | reaches | skipped |
+|---|---|---|---|
+| m0 | 6 | end, 5 cycles | `talkto` Apu (he is in the Kwik-E-Mart, an interior) |
+| m1 | 6 | end, 4 cycles | — |
+| m2 | 12 | end, 2 cycles | — |
+| m3 | 4 | end, 8 cycles | `destroy` |
+| m4 | 4 | end, 5 cycles | `delivery` |
+| m5 | 6 | end, 5 cycles | `follow`, `gooutside` |
+| m6 | 4 | end, 4 cycles | `dump` |
+| m7 | 3 | end, 2 cycles | — |
+| bm1 | 7 | end, 5 cycles | `delivery` |
+| sr2 | 2 | end | — |
+| gr1 | 2 | fails on its `coins` stage's clock | `coins` |
+| d1 | 1 | — | its locators are not loaded |
+
+What it took beyond the sequencer:
+
+- **The player's own car.** `SetMissionResetPlayerOutCar(player, car)` parks the family sedan
+  at `car`, and `SetMissionResetPlayerInCar(car)` puts the player at its wheel there. m0, m2,
+  m3 and bm1 all open on "getin" that car, which did not exist. `PlacePlayerCar` moves the car
+  the player already has instead of building a second one.
+- **Conditions.** `AddCondition` / `SetCondTime` / `SetCondMinHealth`: "outofvehicle" fails
+  the stage once the player has been out of their car longer than the given time, and
+  "damage" fails it once the car's health meter reaches the given fraction. "timeout" is the
+  stage clock, and "race" / "position" are the race result.
+- A car teleported onto the spot where it stands looked for the ground with a ray that hit
+  its own roof, and was dropped from 1.3m up. Vehicle ground searches now see only static
+  geometry.
+
 ## Not done
 
-- Conditions other than the stage clock (`outofvehicle`, `damage`, `followdistance`, and `race`
-  as a condition).
+- The `followdistance` condition.
 - NPCs as characters in the world (they are positions only), dialogue, interiors.
 - `delivery`, `coins`, `destroy`, `dump`, `follow`, `fmv`, `buycar` objectives are skipped.
 - Resetting to `RESET_TO_HERE` on failure: a failed mission restarts from the beginning.
