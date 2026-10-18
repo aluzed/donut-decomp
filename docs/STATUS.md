@@ -28,10 +28,14 @@ into a playable arcade racing game.
 - **Gravity**: 9.8 m/s² with velocity caps
 
 ### Audio (OpenAL)
-- **Source Pool**: 24 simultaneous sounds
-- **Spatial Audio**: 3D positioning with listener orientation
-- **Procedural Sounds**: Beep/Chirp generators (PCM in memory)
-- **RCF Loading**: Auto-detect archive files
+- **Source Pool**: 24 simultaneous sounds; the listener is the camera
+- **Music**: each level's own score, its RSD segments chained in turn
+- **Ambience**: each level's background loop outdoors, a room's indoors
+- **Cars**: the driven car's own engine loop, pitched with speed, and its own horn
+- **Voices**: mission conversations spoken line after line; the player's character on
+  crashes, jumps, people run down, cards, wins and failures; traffic drivers rammed,
+  residents at their doorbell, the level's people walked up to
+- **RCF Loading**: Auto-detect archive files (DIALOGF.RCF included)
 
 ### Script Engine
 - **Parser**: Text-based .con/.mfk script loader, multi-command lines
@@ -67,7 +71,10 @@ into a playable arcade racing game.
   kept in `donut_coins.dat`, which pays entry fees (gr1)
 - **Collector cards**: each level's seven, found for good (`donut_cards.dat`)
 - **Wrenches and phone booths**: a wrench repairs the car; a booth sends the player's car,
-  repaired
+  repaired; a doorbell rung is answered
+- **Street races and bonus missions**: offered by their characters about the level, the
+  story taken up again afterwards
+- **Buying**: cars and outfits with coins, at the game's prices
 - **People**: the level's ambient characters stand about (Ralph, the Moleman...), and
   mission NPCs and they turn to face the player
 - **Car damage**: from impacts, judged by the car's change of velocity; a mission's
