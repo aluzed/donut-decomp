@@ -302,6 +302,14 @@ void Level::LoadP3D(const std::string& filename)
 
 				auto compositeModel = std::make_unique<CompositeModel>(CompositeModel_AnimObjectWrapper(*animObjectWrapper));
 				compositeModel->SetTransform(transform);
+				if (compositeModel->IsAnimated())
+				{
+					compositeModel->Pose(0.0f, false);
+					AnimatedObject object {_compositeModels.size(), dynaPhys->GetName(), false};
+					object.breaks = true;
+					object.position = transform.Translation();
+					_animatedObjects.push_back(object);
+				}
 				_compositeModels.push_back(std::move(compositeModel));
 			}
 
@@ -695,6 +703,19 @@ int Level::PlayAnimatedObject(const std::string& name)
 	return started;
 }
 
+int Level::BreakObjectsNear(const Vector3& position, float radius)
+{
+	int broke = 0;
+	for (auto& object : _animatedObjects)
+		if (object.breaks && !object.broken && (object.position - position).Length() < radius)
+		{
+			object.broken = true;
+			object.startedAt = _animationTime;
+			++broke;
+		}
+	return broke;
+}
+
 void Level::Update(double deltatime)
 {
 	// The level's animated objects, round and round at their own rate.
@@ -706,12 +727,13 @@ void Level::Update(double deltatime)
 			model.Pose(static_cast<float>(_animationTime) * model.GetAnimationFrameRate(), true);
 		else if (object.startedAt >= 0.0)
 		{
-			// Played once through, then back to where it stood.
+			// Played once through, then back to where it stood -- or, broken,
+			// left as it ends.
 			const float frame = static_cast<float>(_animationTime - object.startedAt) * model.GetAnimationFrameRate();
 			if (frame >= model.GetAnimationFrames())
 			{
 				object.startedAt = -1.0;
-				model.Pose(0.0f, false);
+				model.Pose(object.breaks ? model.GetAnimationFrames() : 0.0f, false);
 			}
 			else
 				model.Pose(frame, false);

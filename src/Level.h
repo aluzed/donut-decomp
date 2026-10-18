@@ -42,6 +42,10 @@ public:
 	// Plays, once, the animated objects of that name that wait to be worked
 	// (a doorbell's button, its porch light switch). How many there were.
 	int PlayAnimatedObject(const std::string& name);
+	// Breaks the breakable objects within `radius` of `position` (crates,
+	// vending machines, gas pumps): each plays its animation once and stays
+	// as it ends. How many broke.
+	int BreakObjectsNear(const Vector3& position, float radius);
 	void Draw(Matrix4x4& viewProj, const Vector3& cameraPos = Vector3::Zero);
 	// The shader the level's own meshes are drawn with, uniforms as Draw left
 	// them -- what any other P3D Mesh (a car's, say) has to be drawn with too.
@@ -207,6 +211,10 @@ private:
 		std::string name;
 		bool loops;
 		double startedAt = -1.0;
+		// Played once and left as it ends: a crate run into stays broken.
+		bool breaks = false;
+		bool broken = false;
+		Vector3 position;
 	};
 	std::vector<AnimatedObject> _animatedObjects;
 	double _animationTime = 0.0;

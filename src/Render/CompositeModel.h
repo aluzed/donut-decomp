@@ -42,6 +42,10 @@ public:
 	const std::vector<std::unique_ptr<P3D::Geometry>>& GetMeshes() const override { return _animObjectWrapper.GetGeometries(); }
 	const std::vector<std::unique_ptr<P3D::Shader>>& GetShaders() const override { return _shaders; }
 	const std::vector<std::unique_ptr<P3D::Texture>>& GetTextures() const override { return _textures; }
+	const std::vector<std::unique_ptr<P3D::Animation>>& GetAnimations() const override
+	{
+		return _animObjectWrapper.GetAnimations();
+	}
 
 private:
 	const P3D::AnimObjectWrapper& _animObjectWrapper;

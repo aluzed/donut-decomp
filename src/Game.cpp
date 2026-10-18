@@ -2190,6 +2190,16 @@ void Game::Run()
 
 		if (simulate)
 		{
+			// The car smashes what it runs into: crates, vending machines, gas
+			// pumps play their breaking and stay broken. They have no body to
+			// stop it (PHYS-011).
+			if (_inVehicle && _activeVehicle && std::abs(_activeVehicle->GetSpeedKmh()) > 15.0f)
+				if (const int broke = _level->BreakObjectsNear(_activeVehicle->GetPosition(), 2.5f); broke > 0)
+				{
+					AddShake(0.3f);
+					_audioManager->PlayRaw(SoundGenerator::Chirp(220.0f, 80.0f, 0.2f, 44100), 44100, 1, 16);
+					Log::Info("Game: {} object(s) smashed", broke);
+				}
 			updateCarDamage();
 			updateCarDamageLook(deltaTime);
 			if (_gameState == GameState::InGame)
