@@ -224,6 +224,12 @@ private:
 	// The game's phrase table, in the language --language picks (E by default).
 	TextBible _textBible;
 	std::map<std::string, std::unique_ptr<Character>> _npcs;
+	// The level's own people, standing about (leveli.mfk's AddAmbientCharacter:
+	// Apu behind his counter, Ralph, the Moleman...). One a mission has placed
+	// as its own NPC is not shown twice.
+	std::map<std::string, std::unique_ptr<Character>> _ambientNpcs;
+	// A character to stand in the scene, idling; null without a model or body.
+	std::unique_ptr<Character> makeNpc(const std::string& name) const;
 
 	// Interiors. A door's trigger (a type 7 locator, carrying the interior's
 	// name) takes the player on foot inside; the interior's exit brings them

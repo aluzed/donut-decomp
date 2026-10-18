@@ -167,3 +167,12 @@ and the game crashed the moment it drew it: `npd`, `nps` and `ndr` are the gener
 drivers, a skeleton alone with no PolySkin, and a skin model without one dereferenced a
 null vertex binding. Such a character is now not placed (with a warning), and a skin model
 with nothing loaded draws nothing.
+
+## The level's own people (2026-10-18)
+
+Each `leveli.mfk` stands people about the level: `AddAmbientCharacter("ralph",
+"ambient_ralph", 1.3)`, Apu behind the Kwik-E-Mart counter, the Moleman, Patty, Willie...
+They are now placed with the level (9 on level 1, 6 on level 2, 4 on level 4, 6 on level
+7), idling and turning to face a player who walks up, like a mission's NPCs; one the
+mission has placed as its own is not shown twice. Seen: Ralph by the house next to the
+Simpsons'. There is still no talking to them.

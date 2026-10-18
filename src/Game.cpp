@@ -373,6 +373,7 @@ Game::~Game()
 	_hitAndRun.reset();    // the police car
 	_character.reset();    // its CharacterController unregisters an action
 	_npcs.clear();         // NPCs and pedestrians are Characters too
+	_ambientNpcs.clear();
 	_pedestrianManager.reset();
 	_level.reset();        // static level geometry
 	_worldPhysics.reset();
@@ -549,6 +550,7 @@ void Game::switchLevel(int level)
 	_activeVehicle = nullptr;
 	_interior.clear();
 	ClearNpcs();
+	_ambientNpcs.clear();
 	_hitAndRun.reset();
 	_pedestrianManager.reset();
 	_trafficManager.reset();
@@ -796,6 +798,38 @@ void Game::loadLevel()
 	_collectibleManager = std::make_unique<CollectibleManager>(*_level, *_lineRenderer);
 	_collectibleManager->SpawnOnPath();
 
+	// The level's ambient people: AddAmbientCharacter("ralph", "ambient_ralph", 1.3).
+	{
+		std::ifstream script(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
+		for (std::string line; std::getline(script, line);)
+		{
+			const std::size_t at = line.find("AddAmbientCharacter(");
+			const std::size_t comment = line.find("//");
+			if (at == std::string::npos || (comment != std::string::npos && comment < at))
+				continue;
+			std::vector<std::string> args;
+			for (std::size_t q = line.find('"', at); q != std::string::npos && args.size() < 2; q = line.find('"', q + 1))
+			{
+				const std::size_t end = line.find('"', q + 1);
+				if (end == std::string::npos)
+					break;
+				args.push_back(line.substr(q + 1, end - q - 1));
+				q = end;
+			}
+			if (args.size() < 2 || _ambientNpcs.count(args[0]))
+				continue;
+			const Vector3 spot = _level->GetLocatorPosition(args[1]);
+			if (spot == Vector3::Zero)
+				continue;
+			if (auto npc = makeNpc(args[0]))
+			{
+				npc->SetPosition(spot);
+				_ambientNpcs.emplace(args[0], std::move(npc));
+			}
+		}
+		Log::Info("Game: {} people about level {}", _ambientNpcs.size(), _levelNumber);
+	}
+
 	// Hit & Run: the level's police car (CreateChaseManager) and how fast the
 	// meter drains (SetHitAndRunDecay), both from leveli.mfk.
 	{
@@ -992,38 +1026,45 @@ void Game::updateInterior()
 	_scriptEngine->OnInteriorChanged(_interior);
 }
 
+std::unique_ptr<Character> Game::makeNpc(const std::string& name) const
+{
+	// Without a model they stay positions for "talkto" only.
+	if (!FileSystem::exists(fmt::format("art/chars/{}_m.p3d", name)))
+		return nullptr;
+
+	auto npc = std::make_unique<Character>(name);
+	npc->LoadModel(name);
+	// npd_m.p3d and the like are a skeleton without a body: drawing one
+	// crashed level 1 m5 the moment its "npd" joined the scene.
+	if (!npc->HasMesh())
+	{
+		Log::Warn("Game: '{}' has no body to show, not placed", name);
+		return nullptr;
+	}
+	npc->LoadAnimations(name);
+	// Like the pedestrians, a character extracted without animations borrows
+	// Apu's, whose skeleton the adult models share; Barney stood in his bind
+	// pose, arms out.
+	if (npc->GetAnimations().empty())
+		npc->LoadAnimations("apu");
+	// Standing about: the first idle in the set, if it has one.
+	for (const auto& [anim, data] : npc->GetAnimations())
+		if (anim.find("idle") != std::string::npos)
+		{
+			npc->SetAnimation(anim);
+			break;
+		}
+	return npc;
+}
+
 void Game::PlaceNpc(const std::string& name, const Vector3& position)
 {
 	auto found = _npcs.find(name);
 	if (found == _npcs.end())
 	{
-		// Most of the cast is not among the models extracted so far (Lisa,
-		// Patty, Selma...); they stay positions for "talkto" only.
-		if (!FileSystem::exists(fmt::format("art/chars/{}_m.p3d", name)))
+		auto npc = makeNpc(name);
+		if (!npc)
 			return;
-
-		auto npc = std::make_unique<Character>(name);
-		npc->LoadModel(name);
-		// npd_m.p3d and the like are a skeleton without a body: drawing one
-		// crashed level 1 m5 the moment its "npd" joined the scene.
-		if (!npc->HasMesh())
-		{
-			Log::Warn("Game: '{}' has no body to show, not placed", name);
-			return;
-		}
-		npc->LoadAnimations(name);
-		// Like the pedestrians, a character extracted without animations borrows
-		// Apu's, whose skeleton the adult models share; Barney stood in his
-		// bind pose, arms out.
-		if (npc->GetAnimations().empty())
-			npc->LoadAnimations("apu");
-		// Standing about: the first idle in the set, if it has one.
-		for (const auto& [anim, data] : npc->GetAnimations())
-			if (anim.find("idle") != std::string::npos)
-			{
-				npc->SetAnimation(anim);
-				break;
-			}
 		found = _npcs.emplace(name, std::move(npc)).first;
 		Log::Info("Game: NPC '{}' joins the scene", name);
 	}
@@ -1716,7 +1757,8 @@ void Game::Run()
 
 		if (_character != nullptr)
 			_character->Update(deltaTime);
-		for (auto& [name, npc] : _npcs)
+		for (auto* people : {&_npcs, &_ambientNpcs})
+		for (auto& [name, npc] : *people)
 		{
 			// Someone the player walks up to turns to face them. The model faces
 			// -Z, hence the half turn.
@@ -1774,14 +1816,16 @@ void Game::Run()
 			glEnable(GL_CULL_FACE);
 		}
 
-		// The mission's NPCs, double-sided for the same reason as the player.
-		if (!_npcs.empty())
-		{
-			glDisable(GL_CULL_FACE);
-			for (auto& [name, npc] : _npcs)
+		// The mission's NPCs and the level's people, double-sided for the same
+		// reason as the player; someone the mission has placed is not also
+		// standing in their usual spot.
+		glDisable(GL_CULL_FACE);
+		for (auto& [name, npc] : _npcs)
+			npc->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
+		for (auto& [name, npc] : _ambientNpcs)
+			if (_npcs.find(name) == _npcs.end())
 				npc->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
-			glEnable(GL_CULL_FACE);
-		}
+		glEnable(GL_CULL_FACE);
 
 		if (_scriptEngine->IsMissionActive())
 		{
