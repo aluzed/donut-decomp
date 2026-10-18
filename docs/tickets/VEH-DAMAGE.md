@@ -31,6 +31,7 @@ crumpled and the bumper torn, where the same frame at full health shows it smoot
 
 ## Not done
 
-- Two cars of the same model share their look: the traffic's sedan would show the player's
-  dents, were one driving about. Not checked against each level's traffic list.
+- Two cars of the same model share their look. The traffic is made of generic models
+  (`pickupA`, `compactA`...), none a player's car, so only a mission car of the player's
+  own model would show the player's dents.
 - The game also breaks parts off (doors, bumpers); nothing does here.
