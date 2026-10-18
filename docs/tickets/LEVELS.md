@@ -42,6 +42,12 @@ trigger now takes the player in too, and the interior is known by the trigger's 
 `moe1`, which is what level 2's scripts give as an `interior` objective's destination.
 The file is the one just before the `@`, after any the trigger unloads: level 1's front
 door is `l1z7.p3d:l1z2.p3d:l1i02.p3d@`.
+
+A door is gone through by a player on foot standing in it, not only on stepping in: one
+who drove up to it is inside its volume by the time they get out, and the entry has gone
+by. An `interior` objective whose interior the player is already in (gone in during the
+stage before) is met at once. Level 4 m5 waited at the Kwik-E-Mart's door for ever on both
+counts.
 Level 2 m2 (21 stages) used to wait at Moe's door for ever; it now plays through.
 
 **Level 2's files** brought out two loader crashes, both fixed: an `AnimDynamicPhysics`

@@ -1830,6 +1830,19 @@ void Game::Run()
 			// one, without saying which.
 			const Vector3 playerPos = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()
 			                                                       : _character->GetPosition();
+			// A player who came to the door at the wheel is already inside its
+			// volume when they get out, and its entry has gone by: a door is
+			// gone through by a player on foot standing in it, not only on
+			// stepping in. Level 4 m5 waited at the Kwik-E-Mart for ever.
+			if (!_inVehicle && _interior.empty() && _character)
+				for (const auto& door : _level->GetTriggers())
+					if ((door.type == Level::LocatorType::InteriorEntrance ||
+					     (door.type == Level::LocatorType::DynamicZone && door.data.find('@') != std::string::npos)) &&
+					    door.Contains(_character->GetPosition()))
+					{
+						enterInterior(door);
+						break;
+					}
 			for (const auto& event : _level->UpdateTriggers(playerPos))
 			{
 				_scriptEngine->OnTrigger(*event.trigger, event.entered);

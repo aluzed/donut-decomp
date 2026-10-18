@@ -414,6 +414,12 @@ void ScriptEngine::updateObjective(double dt)
 		if (_objectiveElapsed >= _objectiveDuration)
 			objectiveComplete();
 	}
+	else if (_objectiveType == "interior" && !_playerInterior.empty() && _playerInterior == _interiorTarget)
+	{
+		// Already inside: gone in during the stage before (level 4 m5 walks up
+		// to the Kwik-E-Mart's door and through it before this stage begins).
+		objectiveComplete();
+	}
 	else if (_objectiveType == "race" || _objectiveType == "goto" || _objectiveType == "interior")
 	{
 		// Met through the checkpoints (AdvanceCheckpoint). One with nowhere to go
