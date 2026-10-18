@@ -2287,7 +2287,19 @@ void Game::Run()
 		const bool traffic = !_scriptEngine->IsTrafficSuppressed();
 		_trafficManager->SetPresent(traffic);
 		if (traffic)
+		{
+			std::vector<Vector3> obstacles;
+			if (_activeVehicle)
+				obstacles.push_back(_activeVehicle->GetPosition());
+			if (const Vehicle* parked = _scriptEngine->GetPlayerCar(); parked && parked != _activeVehicle)
+				obstacles.push_back(parked->GetPosition());
+			for (const auto& vehicle : _scriptEngine->GetMissionVehicles())
+				obstacles.push_back(vehicle->GetPosition());
+			if (_hitAndRun && _hitAndRun->GetCop())
+				obstacles.push_back(_hitAndRun->GetCop()->GetPosition());
+			_trafficManager->SetObstacles(std::move(obstacles));
 			_trafficManager->Update(deltaTime);
+		}
 		if (traffic && _showDebug)
 			_trafficManager->Draw();
 		if (simulate)

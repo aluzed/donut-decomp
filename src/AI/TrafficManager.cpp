@@ -173,7 +173,17 @@ void TrafficManager::Update(double dt)
 			toTarget.Normalize();
 			facing = forward.X * toTarget.X + forward.Z * toTarget.Z;
 		}
-		const float speed = car.maxSpeed * std::clamp(facing, 0.35f, 1.0f);
+		float speed = car.maxSpeed * std::clamp(facing, 0.35f, 1.0f);
+		// Stopped by a car in its way: within 9m ahead, and not over 2.5m to
+		// either side.
+		for (const auto& obstacle : _obstacles)
+		{
+			const Vector3 to = obstacle - car.position;
+			const float along = to.X * forward.X + to.Z * forward.Z;
+			const float side = std::abs(to.X * forward.Z - to.Z * forward.X);
+			if (along > 0.0f && along < 9.0f && side < 2.5f && std::abs(to.Y) < 4.0f)
+				speed = 0.0f;
+		}
 		car.position += forward * speed * static_cast<float>(dt);
 		// The roads rise and fall; the car follows the height of its way.
 		car.position.Y = target.Y;

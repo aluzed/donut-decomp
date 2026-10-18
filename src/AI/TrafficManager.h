@@ -54,6 +54,11 @@ public:
 	void LoadModels(const std::string& levelScript);
 
 	const std::vector<TrafficCar>& GetCars() const { return _cars; }
+	// Where the cars that are not traffic stand this frame (the player's, a
+	// mission's). A traffic car stops short of one in its way: it is a
+	// kinematic body, of unlimited mass, and drove through them, throwing them
+	// tens of metres into the air.
+	void SetObstacles(std::vector<Vector3> obstacles) { _obstacles = std::move(obstacles); }
 
 private:
 	// The way on from `node`, coming from `from`: a neighbour other than the
@@ -65,6 +70,7 @@ private:
 	LineRenderer& _lineRenderer;
 	const PathGraph& _graph;
 	std::vector<TrafficCar> _cars;
+	std::vector<Vector3> _obstacles;
 	std::vector<std::unique_ptr<CompositeModel>> _models;
 
 	// Each car is a kinematic box in the physics world, moved with it every
