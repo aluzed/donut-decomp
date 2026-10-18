@@ -5,10 +5,17 @@
 #include "Core/Log.h"
 #include "Core/Math/Math.h"
 #include "Core/Math/Matrix4x4.h"
+#include "Game.h"
 #include "Level.h"
+#include "Physics/WorldPhysics.h"
+#include "Render/CompositeModel.h"
 #include "Render/LineRenderer.h"
 #include "Render/OpenGL/ShaderProgram.h"
 #include "Render/SimpleMesh.h"
+
+#include <algorithm>
+#include <cstdlib>
+#include <fstream>
 
 namespace Donut
 {
@@ -129,10 +136,78 @@ void TrafficManager::Draw()
 	}
 }
 
+TrafficManager::~TrafficManager() = default;
+
+void TrafficManager::LoadModels(const std::string& levelScript)
+{
+	std::ifstream file(levelScript);
+	if (!file.good())
+		return;
+
+	// Only the traffic lines: the rest of the level script sets up things --
+	// a chase manager, the player's car -- that are not wanted from here.
+	std::vector<int> pool;
+	std::string line;
+	while (std::getline(file, line))
+	{
+		const auto call = line.find("AddTrafficModel");
+		if (call == std::string::npos || line.find("//") < call)
+			continue;
+		const auto open = line.find('"', call);
+		const auto close = open == std::string::npos ? open : line.find('"', open + 1);
+		if (close == std::string::npos)
+			continue;
+		const std::string name = line.substr(open + 1, close - open - 1);
+		int weight = 1;
+		if (const auto comma = line.find(',', close); comma != std::string::npos)
+			weight = std::max(1, std::atoi(line.c_str() + comma + 1));
+
+		auto model = CompositeModel::LoadP3D("art/cars/" + name + ".p3d");
+		if (!model)
+			continue;
+		for (int i = 0; i < weight; ++i)
+			pool.push_back(static_cast<int>(_models.size()));
+		_models.push_back(std::move(model));
+		Log::Info("TrafficManager: traffic model '{}' (weight {})", name, weight);
+	}
+
+	if (pool.empty())
+		return;
+	for (std::size_t i = 0; i < _cars.size(); ++i)
+		_cars[i].model = pool[i % pool.size()];
+}
+
+void TrafficManager::DrawModels(GL::ShaderProgram& worldShader, const Matrix4x4& viewProj)
+{
+	// A car model's origin is the middle of its chassis, as for the mission cars,
+	// which ride about this high on their suspension. The traffic drives along
+	// the level's path loops, whose points lie on the ground or under it: drawn
+	// there, a pickup was half buried in the verge.
+	constexpr float kRideHeight = 0.7f;
+	const WorldPhysics& physics = Game::GetInstance().GetWorldPhysics();
+
+	std::vector<Matrix4x4> transforms(_cars.size());
+	for (std::size_t i = 0; i < _cars.size(); ++i)
+	{
+		Vector3 position = _cars[i].position;
+		float groundY = 0.0f;
+		if (physics.FindGroundHeight(position, 3.0f, 6.0f, groundY, true))
+			position.Y = groundY + kRideHeight;
+		transforms[i] = Matrix4x4::MakeTranslate(position) * Matrix4x4(_cars[i].rotation);
+	}
+
+	for (const bool opaque : {true, false})
+		for (std::size_t i = 0; i < _cars.size(); ++i)
+			if (_cars[i].model >= 0)
+				_models[_cars[i].model]->Draw(worldShader, viewProj, transforms[i], opaque);
+}
+
 void TrafficManager::DrawSolid(SimpleMesh& carMesh, GL::ShaderProgram& shader, const Matrix4x4& viewProj)
 {
 	for (const auto& car : _cars)
 	{
+		if (car.model >= 0)
+			continue;
 		Vector4 col(car.color.X, car.color.Y, car.color.Z, 1.0f);
 		carMesh.Draw(shader,
 			Matrix4x4::MakeTranslate(car.position) * Matrix4x4(car.rotation),

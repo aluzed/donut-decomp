@@ -6,6 +6,7 @@
 #include "Core/Math/Quaternion.h"
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace Donut
@@ -15,6 +16,7 @@ class Level;
 class LineRenderer;
 class PathGraph;
 class SimpleMesh;
+class CompositeModel;
 namespace GL { class ShaderProgram; }
 
 class TrafficManager
@@ -29,13 +31,23 @@ public:
 		Vector3 color;
 		int currentNode;
 		int targetNode;
+		// Index into the traffic models, or -1 to draw the placeholder box.
+		int model = -1;
 	};
 
 	TrafficManager(Level& level, LineRenderer& lineRenderer, const PathGraph& graph);
+	~TrafficManager();
 
 	void Update(double dt);
 	void Draw();
 	void DrawSolid(SimpleMesh& carMesh, GL::ShaderProgram& shader, const Matrix4x4& viewProj);
+	// The cars that have a model, drawn with it (`worldShader`, as for mission
+	// cars); DrawSolid draws the rest as boxes.
+	void DrawModels(GL::ShaderProgram& worldShader, const Matrix4x4& viewProj);
+
+	// Gives the cars the models a level script names for its traffic
+	// (AddTrafficModel("minivanA", 2) ...), shared out by those weights.
+	void LoadModels(const std::string& levelScript);
 
 	const std::vector<TrafficCar>& GetCars() const { return _cars; }
 
@@ -44,6 +56,7 @@ private:
 	LineRenderer& _lineRenderer;
 	const PathGraph& _graph;
 	std::vector<TrafficCar> _cars;
+	std::vector<std::unique_ptr<CompositeModel>> _models;
 };
 
 } // namespace Donut

@@ -228,6 +228,7 @@ Game::Game(int argc, char** argv)
 	_level->DynaLoadData("l1z1.p3d;l1r1.p3d;l1r7.p3d;");
 	_pathGraph = std::make_unique<PathGraph>(*_level, *_worldPhysics);
 	_trafficManager = std::make_unique<TrafficManager>(*_level, *_lineRenderer, *_pathGraph);
+	_trafficManager->LoadModels("scripts/level01/leveli.mfk");
 	_pedestrianManager = std::make_unique<PedestrianManager>(*_worldPhysics);
 	_collectibleManager = std::make_unique<CollectibleManager>(*_level, *_lineRenderer);
 	_collectibleManager->SpawnOnPath();
@@ -1470,8 +1471,14 @@ void Game::Run()
 			}
 		}
 
-		if (!_showDebug && !_scriptEngine->IsTrafficSuppressed())
-			_trafficManager->DrawSolid(*_carMesh, *_meshShader, viewProjection);
+		// Traffic with a model is drawn as itself in either view; the debug view
+		// (on by default) otherwise shows the traffic only as wire boxes.
+		if (!_scriptEngine->IsTrafficSuppressed())
+		{
+			_trafficManager->DrawModels(_level->GetWorldShader(), viewProjection);
+			if (!_showDebug)
+				_trafficManager->DrawSolid(*_carMesh, *_meshShader, viewProjection);
+		}
 
 		if (!_showDebug && _pedestrianManager)
 			_pedestrianManager->Draw(*_meshShader, *_playerMesh, viewProjection);
