@@ -1425,6 +1425,8 @@ void Game::Run()
 		// Post-FX debug controls (FX-002 vignette, etc.).
 		ImGui::SetNextWindowBgAlpha(0.35f);
 		ImGui::SetNextWindowSize(ImVec2(220, 0), ImGuiCond_Once);
+		// Under the minimap: ImGui's default corner sat on the HUD's coin count.
+		ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x - 240.0f, 175.0f), ImGuiCond_Once);
 		if (ImGui::Begin("Post-FX", NULL,
 		                 ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize))
 		{
