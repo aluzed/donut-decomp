@@ -316,6 +316,7 @@ private:
 	{
 		double nextAt = 0.0;
 		bool gesturing = false;
+		bool talking = false;
 	};
 	std::map<const Character*, NpcGesture> _npcGestures;
 	// The level's own people, standing about (leveli.mfk's AddAmbientCharacter:

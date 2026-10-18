@@ -1475,17 +1475,34 @@ void Game::animateNpc(Character& npc, bool talking)
 		if (const std::string rest = npcRestAnimation(npc); !rest.empty())
 			npc.SetAnimation(rest);
 	}
-	if (!talking || _elapsedSeconds < gesture.nextAt)
+	if (gesture.nextAt == 0.0)
+		gesture.nextAt = _elapsedSeconds + 12.0 + rand() % 14;
+	// A conversation starting does not wait for the next idle.
+	if (talking && !gesture.talking)
+		gesture.nextAt = _elapsedSeconds;
+	gesture.talking = talking;
+	if (_elapsedSeconds < gesture.nextAt)
 		return;
+	// Talking, a gesture; standing about, now and then one of the character's
+	// idles (Apu's yoga, Lisa's tai chi), but not those that are a pose -- and
+	// not someone else's: Ralph borrows Apu's animations, not his yoga.
+	const bool borrowed = npc.GetModelName() != "apu" && npcRestAnimation(npc).rfind("apu_", 0) == 0;
+	if (!talking && borrowed)
+	{
+		gesture.nextAt = _elapsedSeconds + 30.0;
+		return;
+	}
 	std::vector<std::string> gestures;
 	for (const auto& [anim, data] : npc.GetAnimations())
-		if (anim.find("_dialogue_") != std::string::npos)
+		if (talking ? anim.find("_dialogue_") != std::string::npos
+		            : anim.find("_idle_") != std::string::npos && anim.find("loco_idle") == std::string::npos &&
+		                  anim.find("jump_idle") == std::string::npos && anim.find("car_idle") == std::string::npos)
 			gestures.push_back(anim);
 	if (gestures.empty())
 		return;
 	npc.SetAnimation(gestures[static_cast<std::size_t>(rand()) % gestures.size()], false);
 	gesture.gesturing = true;
-	gesture.nextAt = _elapsedSeconds + 1.5 + (rand() % 20) / 10.0;
+	gesture.nextAt = _elapsedSeconds + (talking ? 1.5 + (rand() % 20) / 10.0 : 12.0 + rand() % 14);
 }
 
 void Game::PlaceNpc(const std::string& name, const Vector3& position)

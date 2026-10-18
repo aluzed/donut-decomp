@@ -51,6 +51,8 @@ void PedestrianManager::Spawn(const Vector3& nearPosition, float radius)
 		{
 			_bodyInUse[i] = true;
 			p.body = static_cast<int>(i);
+			// A body used before may have last been sent flying.
+			playOn(*_bodies[i], "_loco_walk", true);
 			break;
 		}
 	_pedestrians.push_back(p);
@@ -174,12 +176,7 @@ void PedestrianManager::LoadModels(const std::string& levelScript)
 			const bool child = name.rfind("boy", 0) == 0 || name.rfind("girl", 0) == 0;
 			body->LoadAnimations(child ? "bart" : "apu");
 		}
-		for (const auto& [anim, data] : body->GetAnimations())
-			if (anim.find("walk") != std::string::npos)
-			{
-				body->SetAnimation(anim);
-				break;
-			}
+		playOn(*body, "_loco_walk", true);
 		_bodies.push_back(std::move(body));
 	}
 	_bodyInUse.assign(_bodies.size(), false);
@@ -192,6 +189,23 @@ void PedestrianManager::DrawBodies(const Matrix4x4& viewProj, GL::ShaderProgram&
 	for (const auto& p : _pedestrians)
 		if (p.active && p.body >= 0)
 			_bodies[p.body]->Draw(viewProj, skinShader, resources);
+}
+
+bool PedestrianManager::playOn(Character& body, const std::string& suffix, bool loop)
+{
+	// By the end of its name: "apu_loco_walk", "brt_flail". Failing the walk, any
+	// walk at all.
+	std::string found;
+	for (const auto& [anim, data] : body.GetAnimations())
+		if (anim.size() > suffix.size() && anim.compare(anim.size() - suffix.size(), suffix.size(), suffix) == 0)
+			found = anim;
+		else if (found.empty() && suffix == "_loco_walk" && anim.find("walk") != std::string::npos)
+			found = anim;
+	if (found.empty())
+		return false;
+	if (body.GetAnimName() != found)
+		body.SetAnimation(found, loop);
+	return true;
 }
 
 int PedestrianManager::KnockDown(const Vector3& position, float radius, const Vector3& carVelocity)
@@ -209,6 +223,9 @@ int PedestrianManager::KnockDown(const Vector3& position, float radius, const Ve
 			// when they land.
 			pedestrian.flying = 0.0f;
 			pedestrian.velocity = Vector3(carVelocity.X * 0.8f, 6.0f, carVelocity.Z * 0.8f);
+			// Arms and legs everywhere on the way.
+			if (pedestrian.body >= 0)
+				playOn(*_bodies[pedestrian.body], "_flail", true);
 			++hit;
 		}
 	}

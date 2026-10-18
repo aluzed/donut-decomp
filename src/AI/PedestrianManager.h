@@ -30,6 +30,9 @@ struct Pedestrian
 
 class PedestrianManager
 {
+	// Plays on a body the animation whose name ends with `suffix`.
+	static bool playOn(Character& body, const std::string& suffix, bool loop);
+
 public:
 	PedestrianManager(WorldPhysics& physics);
 	~PedestrianManager();
