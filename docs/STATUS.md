@@ -11,7 +11,8 @@ into a playable arcade racing game.
 - **Linux Build**: Native GCC/Clang support with CMake
 - **Math Library**: Fixed Vector2/4 bugs, Matrix3x3 Inverse, Quaternion Euler
 - **Log System**: Multi-level logging (Debug/Info/Warn/Error) to stdout/stderr
-- **P3D Parser**: 165+/182 chunk types supported, RZ compression, flexible paths
+- **P3D Parser**: 165+/182 chunk types supported, RZ and Radical's own P3DZ compression,
+  flexible paths
 
 ### Rendering
 - **SimpleMesh**: Procedural 3D geometry (box, capsule) with lighting
@@ -36,10 +37,12 @@ into a playable arcade racing game.
 - **Parser**: Text-based .con/.mfk script loader, multi-command lines
 - **Stages**: each stage's commands are recorded and run when it begins; objectives
   complete and advance (goto, interior, race, getin, talkto, dialogue, timer, delivery,
-  dump, follow, destroy); conditions fail them (timeout, outofvehicle, damage,
+  dump, follow, destroy, losetail); conditions fail them (timeout, outofvehicle, damage,
   followdistance, race); a failure is retried from `RESET_TO_HERE` (MISSION-STAGES)
-- **The game's own missions**: level 1's m0-m7, bm1, sr1-sr3 and gr1 play through
-  with `--autopilot`; New Game plays the story in order (`scripts/level01`, docs/ASSETS.md)
+- **Every level**: `--level n` plays any of the seven, from its own files and scripts:
+  world, interiors, story, player and car. Winning a level's last mission loads the next
+  in the same session; the story ends after level 7. Every level's story plays through
+  under `--autopilot` (LEVELS). New Game starts on level 1; Continue resumes the level
 - **Car scripts**: every car's mass, engine and top speed from `scripts/cars/<car>.con`
 - **Phrase table**: objective lines in the game's own words, in five languages
 - **Locator System**: Name→position mapping from P3D data, car-start headings, trigger
@@ -47,20 +50,26 @@ into a playable arcade racing game.
 
 ### AI
 - **PathGraph**: Road network from level Path data, nearest-neighbor graph
-- **Traffic**: 12 cars with steering behaviors (seek, arrival)
+- **Traffic**: 12 cars cruising the roads, choosing their way at junctions
 - **Race Opponents**: any number, driving real vehicles over a circuit routed through
   the road network (shortcuts excluded); speed profile, hairpins and three-point turns,
   mission catch-up curves; loops or start-to-finish routes (AI-RACE, SCRIPT-D)
-- **Police Chase**: ChaseManager with heat system, pursuit, bust/evade
+- **Hit & Run**: running people down and ramming the traffic fill a meter; full, a police
+  car drives after the player; caught, busted: a 50-coin fine and the mission failed
+  (HIT-AND-RUN)
 
 ### Gameplay
 - **Vehicle System**: Enter/exit, boost (Shift), jump (Space), horn (H)
 - **Races**: the mission's own checkpoints and lap count, countdown, race position,
   losing to an opponent who finishes first, races against the clock (par time)
 - **Best Times**: one per mission ("L1:gr1 195.2"), kept in `donut_save.dat`
-- **Coins**: the level's 177 coins, in the game's coin model; a purse kept in
-  `donut_coins.dat`, which pays entry fees (gr1)
-- **Collector cards**: level 1's seven, found for good (`donut_cards.dat`)
+- **Coins**: the level's own coins (177 on level 1), in the game's coin model; a purse
+  kept in `donut_coins.dat`, which pays entry fees (gr1)
+- **Collector cards**: each level's seven, found for good (`donut_cards.dat`)
+- **Wrenches and phone booths**: a wrench repairs the car; a booth sends the player's car,
+  repaired
+- **People**: the level's ambient characters stand about (Ralph, the Moleman...), and
+  mission NPCs and they turn to face the player
 - **Car damage**: from impacts, judged by the car's change of velocity; a mission's
   "damage" condition fails it, with the game's reason and hint on the failure screen
 - **Pedestrians**: Springfield's people, walking, outdoors only
