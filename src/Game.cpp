@@ -377,6 +377,7 @@ Game::~Game()
 	// Everything holding a physics reference goes first, the world last.
 	_scriptEngine.reset(); // mission vehicles and the race opponent
 	_hitAndRun.reset();    // the police car
+	_trafficManager.reset(); // its cars' kinematic bodies
 	_character.reset();    // its CharacterController unregisters an action
 	_npcs.clear();         // NPCs and pedestrians are Characters too
 	_ambientNpcs.clear();
@@ -1808,6 +1809,7 @@ void Game::Run()
 		// A stage that asks for no traffic gets empty streets: neither moved,
 		// drawn nor run into.
 		const bool traffic = !_scriptEngine->IsTrafficSuppressed();
+		_trafficManager->SetPresent(traffic);
 		if (traffic)
 			_trafficManager->Update(deltaTime);
 		if (traffic && _showDebug)

@@ -14,6 +14,7 @@ namespace Donut
 
 class Level;
 class LineRenderer;
+class WorldPhysics;
 class PathGraph;
 class SimpleMesh;
 class CompositeModel;
@@ -34,6 +35,8 @@ public:
 		int targetNode;
 		// Index into the traffic models, or -1 to draw the placeholder box.
 		int model = -1;
+		// Where it is drawn and collides: on the ground under `position`.
+		Vector3 grounded;
 	};
 
 	TrafficManager(Level& level, LineRenderer& lineRenderer, const PathGraph& graph);
@@ -63,6 +66,19 @@ private:
 	const PathGraph& _graph;
 	std::vector<TrafficCar> _cars;
 	std::vector<std::unique_ptr<CompositeModel>> _models;
+
+	// Each car is a kinematic box in the physics world, moved with it every
+	// frame, so that the player's car hits it rather than driving through.
+	struct Body;
+	std::vector<std::unique_ptr<Body>> _bodies;
+	WorldPhysics* _physics = nullptr;
+	void updateBodies();
+	bool _present = true;
+
+public:
+	// A stage with no traffic: its cars are taken out of the physics world, or
+	// they would stand in the empty streets, unseen.
+	void SetPresent(bool present);
 };
 
 } // namespace Donut

@@ -318,3 +318,12 @@ it came from, the straighter the likelier (back only at a dead end, never onto a
 it steers for the first node at least 8m down its way, and slows only to turn, to a third
 of its speed for a point off to the side. Checked: cars cover 5-6m per half second at their
 11-12 m/s, heading the way they move, and the school bus is seen driving along its street.
+
+## Traffic that can be hit (2026-10-18)
+
+The traffic was drawn but had no body: the player drove through it, and "ramming the
+traffic" was a guess from distances. Each traffic car is now a kinematic box in the
+physics world (1.8 x 1.4 x 4.4m), moved with the car every frame on the ground under its
+path point, so the player's car hits it: a head-on in level 1 m2 cost 23 m/s, 47 health
+and 15 Hit & Run. A stage with no traffic takes the boxes out of the world. The traffic
+itself does not react: a kinematic body is not pushed, nor does it stop.

@@ -13,12 +13,24 @@
 #include "Render/OpenGL/ShaderProgram.h"
 #include "Render/SimpleMesh.h"
 
+#include <BulletCollision/CollisionShapes/btBoxShape.h>
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <LinearMath/btDefaultMotionState.h>
+
 #include <algorithm>
 #include <cstdlib>
 #include <fstream>
 
 namespace Donut
 {
+
+struct TrafficManager::Body
+{
+	btBoxShape shape {btVector3(0.9f, 0.7f, 2.2f)};
+	btDefaultMotionState motion;
+	std::unique_ptr<btRigidBody> rigid;
+};
 
 static float seekSteer(const Vector3& position, const Vector3& target, const Quaternion& rotation,
                        float speed, float maxSteer)
@@ -166,6 +178,7 @@ void TrafficManager::Update(double dt)
 		// The roads rise and fall; the car follows the height of its way.
 		car.position.Y = target.Y;
 	}
+	updateBodies();
 }
 
 void TrafficManager::Draw()
@@ -180,7 +193,13 @@ void TrafficManager::Draw()
 	}
 }
 
-TrafficManager::~TrafficManager() = default;
+TrafficManager::~TrafficManager()
+{
+	// Out of the physics world before it goes (Game tears traffic down first).
+	if (_physics && _present)
+		for (auto& body : _bodies)
+			_physics->GetDynamicsWorld()->removeRigidBody(body->rigid.get());
+}
 
 void TrafficManager::LoadModels(const std::string& levelScript)
 {
@@ -223,27 +242,68 @@ void TrafficManager::LoadModels(const std::string& levelScript)
 
 void TrafficManager::DrawModels(GL::ShaderProgram& worldShader, const Matrix4x4& viewProj)
 {
-	// A car model's origin is the middle of its chassis, as for the mission cars,
-	// which ride about this high on their suspension. The traffic drives along
-	// the level's path loops, whose points lie on the ground or under it: drawn
-	// there, a pickup was half buried in the verge.
-	constexpr float kRideHeight = 0.7f;
-	const WorldPhysics& physics = Game::GetInstance().GetWorldPhysics();
-
 	std::vector<Matrix4x4> transforms(_cars.size());
 	for (std::size_t i = 0; i < _cars.size(); ++i)
-	{
-		Vector3 position = _cars[i].position;
-		float groundY = 0.0f;
-		if (physics.FindGroundHeight(position, 3.0f, 6.0f, groundY, true))
-			position.Y = groundY + kRideHeight;
-		transforms[i] = Matrix4x4::MakeTranslate(position) * Matrix4x4(_cars[i].rotation);
-	}
+		transforms[i] = Matrix4x4::MakeTranslate(_cars[i].grounded) * Matrix4x4(_cars[i].rotation);
 
 	for (const bool opaque : {true, false})
 		for (std::size_t i = 0; i < _cars.size(); ++i)
 			if (_cars[i].model >= 0)
 				_models[_cars[i].model]->Draw(worldShader, viewProj, transforms[i], opaque);
+}
+
+void TrafficManager::SetPresent(bool present)
+{
+	if (present == _present)
+		return;
+	_present = present;
+	if (!_physics)
+		return;
+	for (auto& body : _bodies)
+		if (present)
+			_physics->GetDynamicsWorld()->addRigidBody(body->rigid.get());
+		else
+			_physics->GetDynamicsWorld()->removeRigidBody(body->rigid.get());
+}
+
+void TrafficManager::updateBodies()
+{
+	// A car model's origin is the middle of its chassis, which rides about this
+	// high on its suspension. The traffic drives along the level's path loops,
+	// whose points lie on the ground or under it: drawn there, a pickup was half
+	// buried in the verge.
+	constexpr float kRideHeight = 0.7f;
+	WorldPhysics& physics = Game::GetInstance().GetWorldPhysics();
+	if (_physics != &physics)
+	{
+		_bodies.clear();
+		_physics = &physics;
+	}
+
+	for (std::size_t i = 0; i < _cars.size(); ++i)
+	{
+		auto& car = _cars[i];
+		car.grounded = car.position;
+		float groundY = 0.0f;
+		if (physics.FindGroundHeight(car.position, 3.0f, 6.0f, groundY, true))
+			car.grounded.Y = groundY + kRideHeight;
+
+		if (i >= _bodies.size())
+		{
+			auto body = std::make_unique<Body>();
+			btRigidBody::btRigidBodyConstructionInfo info(0.0f, &body->motion, &body->shape);
+			body->rigid = std::make_unique<btRigidBody>(info);
+			body->rigid->setCollisionFlags(body->rigid->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+			body->rigid->setActivationState(DISABLE_DEACTIVATION);
+			if (_present)
+				physics.GetDynamicsWorld()->addRigidBody(body->rigid.get());
+			_bodies.push_back(std::move(body));
+		}
+		const btTransform transform(btQuaternion(car.rotation.X, car.rotation.Y, car.rotation.Z, car.rotation.W),
+		                            btVector3(car.grounded.X, car.grounded.Y, car.grounded.Z));
+		_bodies[i]->motion.setWorldTransform(transform);
+		_bodies[i]->rigid->setWorldTransform(transform);
+	}
 }
 
 void TrafficManager::DrawSolid(SimpleMesh& carMesh, GL::ShaderProgram& shader, const Matrix4x4& viewProj)
