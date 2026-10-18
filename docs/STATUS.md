@@ -58,6 +58,12 @@ into a playable arcade racing game.
 - **Races**: the mission's own checkpoints and lap count, countdown, race position,
   losing to an opponent who finishes first, races against the clock (par time)
 - **Best Times**: Persistent save/load to `donut_save.dat`
+- **Coins**: the level's 177 coins, in the game's coin model; a purse kept in
+  `donut_coins.dat`, which pays entry fees (gr1)
+- **Collector cards**: level 1's seven, found for good (`donut_cards.dat`)
+- **Car damage**: from impacts, judged by the car's change of velocity; a mission's
+  "damage" condition fails it, with the game's reason and hint on the failure screen
+- **Pedestrians**: Springfield's people, walking, outdoors only
 - **Auto-Restart**: 5-second countdown after win/lose
 - **Screen Shake**: On jump, checkpoint, mission fail
 
@@ -68,7 +74,8 @@ into a playable arcade racing game.
 - **Debug Mode**: Key 1 toggles wireframe/solid rendering
 
 ### Camera
-- **Third-Person Follow**: Smooth exponential lerp behind character/vehicle
+- **Third-Person Follow**: Smooth exponential lerp behind character/vehicle, looking at
+  its subject at any heading (the view rotation is the camera's inverse)
 - **Freecam**: Right-click for WASD fly mode
 - **Smooth Interpolation**: exp(-8.0*dt) easing
 
