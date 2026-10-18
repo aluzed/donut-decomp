@@ -150,3 +150,11 @@ A completed mission still reloads from the top.
   those whose model was extracted; one without animations borrows Apu's idle.
 - A target "getting away" in `destroy` has not been exercised:
   it goes through the same path as a `follow` target arriving, which has.
+
+## A best time per mission (2026-10-18)
+
+There was one best time for the whole game: every mission, on finishing, was measured
+against the fastest of all of them, and gr1's bogus -8.6s beat them all. `donut_save.dat`
+now holds a line per mission, `L<level>:<mission> <seconds>`; a mission is compared with
+its own, and only a positive time can set one. The old file (a bare number, then a
+position) has no keys and reads as no records at all.

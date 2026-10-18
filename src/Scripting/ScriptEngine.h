@@ -321,7 +321,12 @@ private:
 	// `hint` names the phrase-table line the failure screen offers as advice.
 	void missionFailed(const std::string& reason, const std::string& hint = "");
 	std::string _failureHint;
-	float _bestTime = 999.0f;
+	float _bestTime = 999.0f; // this mission's, 999 when it has none
+	// Every mission's best time, by "L<level>:<mission>", kept in donut_save.dat
+	// one per line. It was a single number shared by every mission.
+	std::map<std::string, float> loadBestTimes() const;
+	void saveBestTimes(const std::map<std::string, float>& times) const;
+	std::string bestTimeKey() const;
 	bool _isNewRecord = false;
 	Vector3 _aiPosition;
 	Quaternion _aiRotation;

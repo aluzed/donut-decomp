@@ -18,6 +18,7 @@
 #include <cctype>
 #include <cmath>
 #include <fstream>
+#include <sstream>
 
 namespace Donut
 {
@@ -71,13 +72,11 @@ void ScriptEngine::SelectMission(const std::string& id)
 	_countdownElapsed = 0.0f;
 	_stageTimeRemaining = -1.0f;
 
-	std::ifstream saveFile("donut_save.dat");
-	if (saveFile.good())
-	{
-		saveFile >> _bestTime;
-		saveFile.ignore(1024, '\n');
-		Log::Info("ScriptEngine: loaded best time {:.1f}s", _bestTime);
-	}
+	const auto times = loadBestTimes();
+	const auto best = times.find(bestTimeKey());
+	_bestTime = best != times.end() ? best->second : 999.0f;
+	if (best != times.end())
+		Log::Info("ScriptEngine: best time {:.1f}s", _bestTime);
 
 	Log::Info("ScriptEngine: mission {} started", id);
 }
@@ -1669,32 +1668,63 @@ void ScriptEngine::UpdateAI(double dt)
 	_aiRotation = _raceOpponents.front()->GetVehicle().GetRotation();
 }
 
+std::string ScriptEngine::bestTimeKey() const
+{
+	return fmt::format("L{}:{}", _game.GetLevelNumber(), _missionId);
+}
+
+std::map<std::string, float> ScriptEngine::loadBestTimes() const
+{
+	// Lines of "<key> <seconds>". The old file -- one bare number, the best of
+	// all missions together, then a position -- has no keys and reads as none.
+	std::map<std::string, float> times;
+	std::ifstream file("donut_save.dat");
+	for (std::string line; std::getline(file, line);)
+	{
+		std::istringstream fields(line);
+		std::string key;
+		float seconds = 0.0f;
+		if (fields >> key >> seconds && key.size() > 1 && key[0] == 'L' && key.find(':') != std::string::npos &&
+		    seconds > 0.0f)
+			times[key] = seconds;
+	}
+	return times;
+}
+
+void ScriptEngine::saveBestTimes(const std::map<std::string, float>& times) const
+{
+	std::ofstream file("donut_save.dat");
+	for (const auto& [key, seconds] : times)
+		file << key << " " << seconds << "\n";
+}
+
 void ScriptEngine::ResetBestTime()
 {
+	// This mission's record only; the others are kept.
+	auto times = loadBestTimes();
+	times.erase(bestTimeKey());
+	saveBestTimes(times);
 	_bestTime = 999.0f;
-	std::remove("donut_save.dat");
-	Log::Info("ScriptEngine: best time reset to default");
+	Log::Info("ScriptEngine: best time for {} reset", bestTimeKey());
 }
 
 void ScriptEngine::SaveGameState()
 {
-	auto& game = Game::GetInstance();
-	std::ofstream saveFile("donut_save.dat");
-	if (!saveFile.good()) return;
-
-	saveFile << _bestTime << "\n";
-	Vector3 pos = game.GetPlayerPosition();
-	saveFile << pos.X << " " << pos.Y << " " << pos.Z << "\n";
+	if (!_missionId.empty() && _bestTime < 999.0f)
+	{
+		auto times = loadBestTimes();
+		times[bestTimeKey()] = _bestTime;
+		saveBestTimes(times);
+	}
 	Log::Info("ScriptEngine: game saved");
 }
 
 void ScriptEngine::LoadGameState()
 {
-	std::ifstream saveFile("donut_save.dat");
-	if (!saveFile.good()) return;
-
-	saveFile >> _bestTime;
-	Log::Info("ScriptEngine: loaded best time {:.1f}s", _bestTime);
+	const auto times = loadBestTimes();
+	const auto best = times.find(bestTimeKey());
+	_bestTime = best != times.end() ? best->second : 999.0f;
+	Log::Info("ScriptEngine: loaded {} best times", times.size());
 }
 
 void ScriptEngine::AdvanceCheckpoint()
@@ -1758,22 +1788,18 @@ void ScriptEngine::missionComplete()
 	// the old "initial minus remaining" came out at -8.6s -- a new record, saved.
 	const float elapsed = _missionElapsed;
 	_isNewRecord = false;
-	if (_recordsEnabled && elapsed < _bestTime)
+	if (_recordsEnabled && elapsed > 0.0f && elapsed < _bestTime)
 	{
 		_bestTime = elapsed;
 		_isNewRecord = true;
-		std::ofstream saveFile("donut_save.dat");
-		if (saveFile.good())
-		{
-			saveFile << _bestTime << "\n";
-			Vector3 pos = _game.GetPlayerPosition();
-			saveFile << pos.X << " " << pos.Y << " " << pos.Z << "\n";
-		}
+		auto times = loadBestTimes();
+		times[bestTimeKey()] = _bestTime;
+		saveBestTimes(times);
 		_game.GetAudioManager().PlayRaw(SoundGenerator::Chirp(600, 1200, 0.5f), 22050, 1, 16);
 	}
 
-	Log::Info("ScriptEngine: stage complete! Time: {:.1f}s (Best: {:.1f}s){}",
-	          elapsed, _bestTime, _isNewRecord ? " NEW RECORD!" : "");
+	Log::Info("ScriptEngine: stage complete! Time: {:.1f}s (best: {}){}", elapsed,
+	          _bestTime < 999.0f ? fmt::format("{:.1f}s", _bestTime) : "none", _isNewRecord ? " NEW RECORD!" : "");
 	_stageTimeRemaining = -1.0f;
 	_game.SetState(GameState::MissionComplete);
 }
