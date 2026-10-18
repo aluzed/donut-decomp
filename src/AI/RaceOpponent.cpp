@@ -153,8 +153,19 @@ constexpr float kObstacleRayHeight = 0.3f;
 constexpr float kObstacleRayRange = 6.0f;
 } // namespace
 
+namespace
+{
+float loopLength(const std::vector<Vector3>& points)
+{
+	float total = 0.0f;
+	for (std::size_t i = 0; i < points.size(); ++i)
+		total += (points[(i + 1) % points.size()] - points[i]).Length();
+	return total;
+}
+} // namespace
+
 RaceOpponent::RaceOpponent(Vehicle& vehicle, std::vector<Vector3> circuit)
-    : _vehicle(vehicle), _path(std::move(circuit)), _lastPosition(vehicle.GetPosition())
+    : _vehicle(vehicle), _path(circuit), _circuitMetres(loopLength(circuit)), _lastPosition(vehicle.GetPosition())
 {
 	Log::Info("RaceOpponent: driving '{}' around {} waypoints", _vehicle.GetName(), _path.Count());
 }
@@ -162,6 +173,7 @@ RaceOpponent::RaceOpponent(Vehicle& vehicle, std::vector<Vector3> circuit)
 void RaceOpponent::SetCircuit(std::vector<Vector3> circuit)
 {
 	Log::Info("RaceOpponent: circuit replaced, {} waypoints", circuit.size());
+	_circuitMetres = loopLength(circuit);
 	_path.SetWaypoints(std::move(circuit));
 	_path.SnapToNearest(_vehicle.GetPosition());
 	_lapTimer = 0.0;
@@ -263,7 +275,17 @@ void RaceOpponent::Update(double dt, float playerProgress)
 	// Rubber-banding: scale the throttle by how far behind the player we are.
 	// Both sides are in laps; the opponent's circuit and the player's checkpoint
 	// list have different lengths, so raw indices are not comparable.
-	if (playerProgress >= 0.0f)
+	if (playerProgress >= 0.0f && _hasCatchup && _circuitMetres > 0.0f && _catchup.distanceMetres > 0.0f)
+	{
+		// The mission's own catch-up curve, over a distance rather than a
+		// fraction of a lap: 80m means the same on a short circuit as a long one.
+		float t = (playerProgress - _path.ProgressLaps()) * _circuitMetres / _catchup.distanceMetres;
+		if (t > 1.0f) t = 1.0f;
+		if (t < -1.0f) t = -1.0f;
+		_boost = t >= 0.0f ? _catchup.level + (_catchup.behind - _catchup.level) * t
+		                   : _catchup.level + (_catchup.level - _catchup.ahead) * t;
+	}
+	else if (playerProgress >= 0.0f)
 	{
 		const float deficit = playerProgress - _path.ProgressLaps();
 		_boost = 1.0f + deficit * kProgressToBoost;
@@ -396,6 +418,14 @@ void RaceOpponent::Update(double dt, float playerProgress)
 		           _path.Laps(), _path.Index(), _path.Count(), position.X, position.Y, position.Z, speed, targetSpeed,
 		           aim.X, aim.Y, aim.Z, pursuit, throttle, brake, steer, _boost);
 	}
+}
+
+void RaceOpponent::SetCatchup(const Catchup& catchup)
+{
+	_catchup = catchup;
+	_hasCatchup = true;
+	Log::Info("RaceOpponent: '{}' catch-up over {:.0f}m: x{:.2f} ahead, x{:.2f} level, x{:.2f} behind",
+	          _vehicle.GetName(), catchup.distanceMetres, catchup.ahead, catchup.level, catchup.behind);
 }
 
 float RaceOpponent::cornerRadius(std::ptrdiff_t offset) const

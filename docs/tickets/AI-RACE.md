@@ -454,4 +454,4 @@ la voiture du joueur, qui plafonne elle aussi à ~56 km/h.
 - [x] L'adversaire termine un tour complet sans rester bloqué — **yes, clean (2026-10-18)**: 186 of 186 waypoints and on into lap 1, no skipped legs and no recovered falls (see above).
 - [x] L'adversaire ne sort plus du monde et ne reste plus bloqué indéfiniment (hors-tracé, chute et blocage sont tous rattrapés ; 0 chute et 0 remise d'office sur un tour complet).
 - [x] L'adversaire roule à une vitesse crédible (53 km/h de moyenne, jusqu'à 80, as of 2026-10-18) en freinant pour les virages, sur un profil de vitesse et non sur l'angle de braquage.
-- [ ] SCRIPT-D peut instancier, démarrer et arrêter l'adversaire — `ScriptEngine` le crée et le détruit, mais les commandes `SCRIPT-D` elles-mêmes restent des stubs.
+- [x] SCRIPT-D peut instancier, démarrer et arrêter l'adversaire — `ScriptEngine` creates and destroys it. As of 2026-10-18, `SetRaceLaps` and `SetStageAIRaceCatchupParams` drive it, and its finishing first loses the race (see SCRIPT-D).

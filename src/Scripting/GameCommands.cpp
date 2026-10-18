@@ -140,7 +140,10 @@ void GameCommands::AddStageWaypoint(const std::string& param0)
 {
 	Game::GetInstance().GetScriptEngine().AddStageWaypoint(param0);
 }
-void GameCommands::SetRaceLaps(int32_t param0) {}
+void GameCommands::SetRaceLaps(int32_t param0)
+{
+	Game::GetInstance().GetScriptEngine().SetRaceLaps(param0);
+}
 void GameCommands::SetDemoLoopTime(int64_t param0) {}
 void GameCommands::AddStageMusicChange(int32_t param0 /*= 0*/) {}
 void GameCommands::LoadDisposableCar(const std::string& param0, const std::string& param1, const std::string& param2) {}
@@ -283,6 +286,8 @@ void GameCommands::StreetRacePropsUnload(const std::string& param0) {}
 void GameCommands::SetStageAIRaceCatchupParams(const std::string& param0, int32_t param1, float param2, float param3,
                                                float param4)
 {
+	Game::GetInstance().GetScriptEngine().SetStageAIRaceCatchupParams(param0, static_cast<float>(param1), param2,
+	                                                                    param3, param4);
 }
 void GameCommands::DisableHitAndRun(int32_t param0 /*= 0*/) {}
 void GameCommands::NoTrafficForStage(int32_t param0 /*= 0*/) {}

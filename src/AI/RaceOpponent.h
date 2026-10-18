@@ -38,6 +38,19 @@ public:
 	// Last throttle scale applied, for HUD/debug readouts.
 	float BoostScale() const { return _boost; }
 
+	// A mission's rubber-banding, from SetStageAIRaceCatchupParams. The car's
+	// boost runs from `ahead` (player `distanceMetres` or more behind it) through
+	// `level` (side by side) to `behind` (player that far ahead of it). Until a
+	// mission sets these the opponent uses the built-in per-lap rubber band.
+	struct Catchup
+	{
+		float distanceMetres;
+		float ahead;
+		float level;
+		float behind;
+	};
+	void SetCatchup(const Catchup& catchup);
+
 private:
 	// Speed the route ahead can be taken at. Every corner within the look-ahead
 	// gets a grip limit from its radius, and each of those is carried back to here
@@ -71,6 +84,10 @@ private:
 	int _wedgeRepeats = 0;
 	Vector3 _lastWedgePosition = Vector3(1.0e6f, 0.0f, 1.0e6f);
 	double _logTimer = 0.0;
+	bool _hasCatchup = false;
+	Catchup _catchup {};
+	// Length of the circuit once round, to turn a deficit in laps into metres.
+	float _circuitMetres = 0.0f;
 	// Time since the current lap began, and the lap it is timing.
 	double _lapTimer = 0.0;
 	int _timedLap = 0;

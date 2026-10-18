@@ -198,7 +198,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 | SCRIPT-A | Combler les trous du **P0 mission** (les 18 commandes course de base) | qq-unes | `Missions/level01/M1race.con` tourne 0 stub |
 | SCRIPT-B | **Tuning véhicule** (`SetMass`, `SetTopSpeedKmh`, `SetTireGrip`, suspension…) | ~30 | un .con véhicule applique des params mesurables |
 | SCRIPT-C | **Caméra** (`SetAnimatedCameraName`, `SetConversationCam`, `SetCarStartCamera`…) | ~10 | caméra scriptée change effectivement de vue |
-| SCRIPT-D | **Course** (`SetRaceLaps`, `SetVehicleAIParams`, catchup…) | ~10 | dépend AI-RACE pour effet visible |
+| SCRIPT-D | **Course** (`SetRaceLaps`, `SetVehicleAIParams`, catchup…) | ~10 | PARTIAL 2026-10-18: laps, race catch-up and the opponent's win are wired |
 | SCRIPT-E | **Gags / collectibles** (`GagBegin/SetPosition/SetTrigger/End`…) | ~51 | dépend GAME-010 |
 | SCRIPT-F | **Hit & Run / police** (`EnableHitAndRun`, decay, spawn rate) | ~8 | branché sur ChaseManager (✅) |
 | SCRIPT-G | **Traffic / piétons** (`CreateTrafficGroup`, `CreatePedGroup`, `SetMaxTraffic`) | ~6 | branché sur Traffic/Ped managers (✅) |

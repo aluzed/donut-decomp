@@ -91,6 +91,13 @@ public:
 	int GetCurrentCheckpoint() const { return _currentCheckpoint; }
 	int GetCurrentLap() const { return _currentLap; }
 	int GetTotalLaps() const { return _totalLaps; }
+	void SetRaceLaps(int laps);
+	// SetStageAIRaceCatchupParams(vehicle, distance, ahead, level, behind). The
+	// game's own race scripts pass e.g. (80, 0.6, 1.0, 2.0): read as a distance in
+	// metres and the speed factor with the AI that far ahead, level, and that far
+	// behind -- an interpretation, the data carries no names.
+	void SetStageAIRaceCatchupParams(const std::string& vehicle, float distance, float ahead, float level,
+	                                 float behind);
 	float GetBestTime() const { return _bestTime; }
 	bool IsNewRecord() const { return _isNewRecord; }
 	void AdvanceCheckpoint();
@@ -114,7 +121,12 @@ private:
 	std::vector<Vector3> _checkpoints;
 	int _currentCheckpoint = 0;
 	int _currentLap = 0;
-	int _totalLaps = 2;
+	// Laps when the mission does not say; SetRaceLaps overrides it per objective.
+	static constexpr int kDefaultRaceLaps = 2;
+	int _totalLaps = kDefaultRaceLaps;
+	// Set once the opponent has crossed the line for the last time, so the loss
+	// is declared once.
+	bool _opponentFinished = false;
 	float _bestTime = 999.0f;
 	bool _isNewRecord = false;
 	Vector3 _aiPosition;

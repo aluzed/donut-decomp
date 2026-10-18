@@ -578,6 +578,8 @@ void ScriptEngine::AddObjective(const std::string& type)
 	_objectiveType = type;
 	_currentCheckpoint = 0;
 	_currentLap = 0;
+	_totalLaps = kDefaultRaceLaps;
+	_opponentFinished = false;
 	_checkpoints.clear();
 	_racePath.clear();
 	_aiCheckpoint = 0;
@@ -632,6 +634,28 @@ void ScriptEngine::AddObjective(const std::string& type)
 	}
 }
 
+void ScriptEngine::SetRaceLaps(int laps)
+{
+	if (laps < 1)
+	{
+		Log::Warn("ScriptEngine: SetRaceLaps({}) ignored, keeping {}", laps, _totalLaps);
+		return;
+	}
+	_totalLaps = laps;
+	Log::Info("ScriptEngine: race is {} lap(s)", laps);
+}
+
+void ScriptEngine::SetStageAIRaceCatchupParams(const std::string& vehicle, float distance, float ahead, float level,
+                                               float behind)
+{
+	if (!_raceOpponent || _raceOpponent->GetVehicle().GetName() != vehicle)
+	{
+		Log::Warn("ScriptEngine: catch-up params for '{}', which is not the race opponent here, ignored", vehicle);
+		return;
+	}
+	_raceOpponent->SetCatchup({distance, ahead, level, behind});
+}
+
 void ScriptEngine::UpdateAI(double dt)
 {
 	if (!_raceOpponent)
@@ -649,6 +673,20 @@ void ScriptEngine::UpdateAI(double dt)
 	        ? static_cast<float>(_currentLap)
 	        : static_cast<float>(_currentLap) + static_cast<float>(_currentCheckpoint) / static_cast<float>(_checkpoints.size());
 	_raceOpponent->Update(dt, playerLaps);
+
+	// A race is lost when the opponent finishes it first. Without this the only
+	// way to lose was the stage timer, and a player who was simply beaten kept
+	// racing an opponent that had long since gone round again.
+	if (!_opponentFinished && _stageTimeRemaining > 0.0f && _raceOpponent->Laps() >= _totalLaps)
+	{
+		_opponentFinished = true;
+		Log::Info("ScriptEngine: '{}' finished all {} laps first - mission failed!",
+		          _raceOpponent->GetVehicle().GetName(), _totalLaps);
+		_stageTimeRemaining = -1.0f;
+		_game.AddShake(2.0f);
+		_game.GetAudioManager().PlayRaw(SoundGenerator::Beep(150, 0.5f), 22050, 1, 16);
+		_game.SetState(GameState::MissionFailed);
+	}
 
 	// Keep the legacy readouts pointing at the real car so anything still asking
 	// for the AI transform (debug draw, HUD) follows the opponent.
