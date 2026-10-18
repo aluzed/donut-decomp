@@ -85,7 +85,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 | P3D-010 | ⬜ | P2 | StaticProp (6 chunks) |
 | P3D-011 | ⬜ | P2 | Geometry (Mesh, PackedNormalList, DrawShadow…) |
 | P3D-014 | ⬜ | P2 | CompositeDrawableSkin/Effect parsing |
-| P3D-016 | ⬜ | P2 | **P3DZ** (compression proprio, header `0x5A443350`) — Ghidra |
+| P3D-016 | ✅ | P2 | **P3DZ** (header `0x5A443350`): Radical LZ blocks, decompressed in `P3DFile` |
 | P3D-003 | ⬜ | P3 | Expression/facial anim |
 | P3D-012 | ⬜ | P3 | ExportInfo (métadonnées 3ds Max) |
 | P3D-017 | ⬜ | P3 | Images non-PNG (palettisé, DXT) |
@@ -142,7 +142,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 ### VEH
 | ID | Statut | Pri | Sujet |
 |---|---|---|---|
-| VEH-DAMAGE | ⬜ | P3 | Dégâts visuels (swap `car_damage.p3d`) |
+| VEH-DAMAGE | ✅ | P3 | A damaged car looks damaged: hood, doors and back swap to their `*Dam.bmp` textures as the car's health runs down |
 
 ### LEVEL
 | ID | Statut | Pri | Sujet | Note |

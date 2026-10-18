@@ -135,6 +135,17 @@ void ResourceManager::ImGuiDebugWindow(bool* p_open) const
 	ImGui::End();
 }
 
+bool ResourceManager::ShowTextureAs(const std::string& textureName, const std::string& shownAs)
+{
+	const auto texture = _textures.find(shownAs);
+	if (texture == _textures.end())
+		return false;
+	for (auto& [name, shader] : _shaders)
+		if (shader->GetDiffuseTextureName() == textureName)
+			shader->SetDiffuseTexture(texture->second.get());
+	return true;
+}
+
 /*
  * Searches for the shader in the map, you should cache the result to avoid unnecessary lookups
  */

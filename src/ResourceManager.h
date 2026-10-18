@@ -49,6 +49,9 @@ public:
 	Texture* GetTexture(const std::string& name) const;
 	Font* GetFont(const std::string& name) const;
 	Mesh* GetGeometry(const std::string& name) const;
+	// Every shader whose own texture is `textureName` draws `shownAs` instead;
+	// shownAs = textureName puts it back. False when `shownAs` is not loaded.
+	bool ShowTextureAs(const std::string& textureName, const std::string& shownAs);
 
 	const std::unordered_map<std::string, std::unique_ptr<Font>>& GetFonts() const { return _fonts; }
 

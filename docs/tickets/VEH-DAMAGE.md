@@ -1,31 +1,36 @@
-# VEH-DAMAGE — Dégâts visuels du véhicule (bascule vers car_damage.p3d à l'impact)
+# VEH-DAMAGE — A damaged car looks damaged
 
-- **Status:** TODO
+- **Status:** DONE (2026-10-18)
 - **Priority:** P3
 - **Module:** Vehicle
-- **Depends on:** —
-- **Files:** `src/Vehicle.cpp:22-30` (`LoadModel`), `src/Vehicle.cpp:90-104` (`Update`), `src/Vehicle.cpp:163-167` (`Draw`), `src/Vehicle.h` (membres `_model`/`_name`), `src/Game.cpp:571-576` (« collision damage disabled »)
+- **Depends on:** PHYS-004 (impact damage)
+- **Files:** `src/Game.cpp` (`updateCarDamageLook`), `src/ResourceManager.cpp` (`ShowTextureAs`),
+  `src/Vehicle.h` (`GetModelName`)
 
-## Contexte
-`Vehicle` charge un seul modèle via `LoadModel` (`Vehicle.cpp:22-30`, stocké dans `_model`) et
-le dessine tel quel (`Draw`, `Vehicle.cpp:163-167`). Aucun état de dégât visuel n'existe : à
-l'impact, le mesh reste intact. Le bloc de dégâts côté Game est par ailleurs désactivé
-(`Game.cpp:571-576`).
+## Context
 
-## Approche
-1. Charger un second modèle endommagé dans `Vehicle` : `LoadModel` (`Vehicle.cpp:22-30`)
-   conserve `_model` (intact) et charge en plus `_damagedModel` depuis `car_damage.p3d` (via
-   `CompositeModel::LoadP3D`, comme `Vehicle.cpp:24`).
-2. Ajouter un état `_damaged`/seuil de dégâts (champ float) à `Vehicle.h` et une méthode
-   `OnImpact(float force)` qui l'incrémente et bascule `_damaged = true` au-delà d'un seuil.
-3. Dans `Draw` (`Vehicle.cpp:163-167`), dessiner `_damagedModel` quand `_damaged` est vrai,
-   sinon `_model` ; appliquer le même `GetTransform()`.
-4. Appeler `OnImpact` depuis la détection de collision véhicule côté Game (réactiver/brancher
-   le bloc `Game.cpp:571-576`), ou via un contact Bullet sur le chassis.
+The ticket first assumed a separate `car_damage.p3d` model to swap in. There is none: the
+game's cars carry their dents as **textures**. 53 of the 89 car files hold, for up to four
+parts, a pair `<model><part>Norm.bmp` / `<model><part>Dam.bmp` (`famil_vHoodNorm.bmp` and
+`famil_vHoodDam.bmp`; parts `Hood`, `DoorD`, `DoorP`, `Back`). The other cars (the ATV, the
+coffin, the ambulance...) have no damaged look.
 
-## Critères d'acceptation
-- [ ] `Vehicle` charge `car_damage.p3d` en plus du modèle intact.
-- [ ] Un impact suffisant bascule le rendu sur le modèle endommagé.
-- [ ] `Draw` choisit le bon modèle selon l'état de dégât, même transform.
-- [ ] La bascule est déclenchée par une collision réelle (pas seulement par debug).
-- [ ] Le jeu compile et reste runnable.
+## What is done
+
+- `ResourceManager::ShowTextureAs(texture, shownAs)` makes every shader whose own texture is
+  `texture` draw `shownAs` instead; showing a texture as itself puts it back.
+- `Game::updateCarDamageLook` follows the health of the car the player drives (the one
+  `updateCarDamage` takes down on impacts): the hood gives way below 80, both doors below
+  60, the back below 35. A car the player leaves keeps its dents; a car they swap for is
+  mended to the eye, and a car mended (a wrench, a phone booth, a retry) loses them.
+- Shaders are shared by name, and a mesh asking for its shader the first time resets its
+  texture, so a damaged look is put again every 2 seconds.
+
+Checked: level 1 m0, the family sedan at 20 health, seen from the chase camera: the boot is
+crumpled and the bumper torn, where the same frame at full health shows it smooth.
+
+## Not done
+
+- Two cars of the same model share their look: the traffic's sedan would show the player's
+  dents, were one driving about. Not checked against each level's traffic list.
+- The game also breaks parts off (doors, bumpers); nothing does here.

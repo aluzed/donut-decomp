@@ -604,6 +604,48 @@ Quaternion Game::cameraLooking(float pitchDown, float yaw)
 	return Quaternion::MakeFromEuler(Vector3(pitchDown, yaw, 0.0f)).Inverse();
 }
 
+void Game::updateCarDamageLook(double dt)
+{
+	// Each car with a damaged look has, for each part, "<model><part>Norm.bmp"
+	// and "<model><part>Dam.bmp". The parts give way one after the other.
+	static const char* const kParts[] = {"Hood", "DoorD", "DoorP", "Back"};
+	static const float kGivesWayBelow[] = {80.0f, 60.0f, 60.0f, 35.0f};
+
+	// On foot, the car left at the kerb keeps its dents.
+	if (!_inVehicle || !_activeVehicle)
+		return;
+	const std::string model = _activeVehicle->GetModelName();
+	int stage = 0;
+	if (!model.empty())
+		while (stage < 4 && _health < kGivesWayBelow[stage])
+			++stage;
+
+	// Shaders are shared by name, and a car's are reset to their own texture
+	// when a mesh first asks for them: what is shown is put again now and then.
+	_damageLookAge += dt;
+	if (model == _damageLookModel && stage == _damageLookStage && (stage == 0 || _damageLookAge < 2.0))
+		return;
+	_damageLookAge = 0.0;
+
+	auto& resources = GetResourceManager();
+	auto show = [&](const std::string& car, int parts) {
+		for (int i = 0; i < 4; ++i)
+		{
+			const std::string norm = car + kParts[i] + "Norm.bmp";
+			resources.ShowTextureAs(norm, i < parts ? car + kParts[i] + "Dam.bmp" : norm);
+		}
+	};
+	// The car left behind is mended, to the eye.
+	if (!_damageLookModel.empty() && _damageLookModel != model)
+		show(_damageLookModel, 0);
+	if (!model.empty())
+		show(model, stage);
+	if (model != _damageLookModel || stage != _damageLookStage)
+		Log::Debug("Game: '{}' shows {} damaged part(s), health {:.0f}", model, stage, _health);
+	_damageLookModel = model;
+	_damageLookStage = stage;
+}
+
 void Game::updateCarDamage()
 {
 	// The car is hurt by what stops it: a sudden change in its horizontal
@@ -1868,6 +1910,7 @@ void Game::Run()
 		if (simulate)
 		{
 			updateCarDamage();
+			updateCarDamageLook(deltaTime);
 			if (_gameState == GameState::InGame)
 				updateHitAndRun(deltaTime);
 		}

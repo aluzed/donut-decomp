@@ -60,6 +60,9 @@ public:
 	const Vector3& GetPosition() const { return _position; }
 	const Quaternion& GetRotation() const { return _rotation; }
 	const std::string& GetName() const { return _name; }
+	// The model's file name without its folder or extension, "famil_v": the
+	// prefix of the car's own texture names.
+	const std::string& GetModelName() const { return _modelName; }
 	bool HasModel() const { return _model != nullptr; }
 	float GetSpeedKmh() const;
 	// No wheel touching anything.
@@ -85,6 +88,7 @@ private:
 	float _suspensionLimit = 0.3f;
 
 	std::unique_ptr<CompositeModel> _model;
+	std::string _modelName;
 	std::unique_ptr<btRaycastVehicle> _rayVehicle;
 };
 

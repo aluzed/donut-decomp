@@ -321,6 +321,12 @@ private:
 	static Quaternion cameraLooking(float pitchDown, float yaw);
 	// Health lost to impacts, judged from the car's velocity a frame apart.
 	void updateCarDamage();
+	// The player's car shows its dents: its hood, doors and back swap to their
+	// damaged textures as its health runs down.
+	void updateCarDamageLook(double dt);
+	std::string _damageLookModel;
+	int _damageLookStage = 0;
+	double _damageLookAge = 0.0;
 	const Vehicle* _damageVehicle = nullptr;
 	Vector3 _damageVelocity;
 	Vector3 _damagePosition;

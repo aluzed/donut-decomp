@@ -13,6 +13,7 @@
 #include <LinearMath/btDefaultMotionState.h>
 
 #include <cmath>
+#include <filesystem>
 
 namespace Donut
 {
@@ -72,6 +73,7 @@ Vehicle::~Vehicle()
 void Vehicle::LoadModel(const std::string& modelPath)
 {
 	_model = CompositeModel::LoadP3D(modelPath);
+	_modelName = std::filesystem::path(modelPath).stem().string();
 	if (_model)
 	{
 		_model->SetTransform(Matrix4x4::MakeTranslate(_position) * Matrix4x4(_rotation));
