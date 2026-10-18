@@ -35,6 +35,13 @@ and the door's name contains the tag (`KwikEMart`, `SpringfieldElementary`,
 `SimpsonsHouse`). `Level::FindInteriorFile` takes the interior whose tag the door's name
 contains, the longest such tag. It replaces a table of level 1's three.
 
+**Doors that load an interior.** Level 1's doors are interior-entrance locators (type 7)
+naming the place. From level 2 a door is a zone trigger (type 5) whose data loads the
+interior, `l2i04.p3d@l2z1.p3d:l2z3.p3d:`: the file is what comes before the `@`. Such a
+trigger now takes the player in too, and the interior is known by the trigger's locator,
+`moe1`, which is what level 2's scripts give as an `interior` objective's destination.
+Level 2 m2 (21 stages) used to wait at Moe's door for ever; it now plays through.
+
 **Level 2's files** brought out two loader crashes, both fixed: an `AnimDynamicPhysics`
 with no model (`l2_donotenter_Shape`, `l2_railcross_Shape`), and `DynamicPhysics` objects
 naming meshes they do not carry (`l2_lampoldShape*`). Both are now skipped with a warning;

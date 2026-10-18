@@ -863,7 +863,12 @@ void Game::enterInterior(const Level::Trigger& door)
 	if (_inVehicle || !_interior.empty() || !_character)
 		return;
 
-	const std::string file = _level->FindInteriorFile(door.data);
+	// A zone trigger names the interior's file itself, before its '@'; a door
+	// names the place, which FindInteriorFile matches to a file. The interior
+	// is then known by the trigger's locator ("moe1", which level 2's scripts
+	// name as the destination) or by the place ("KwikEMart", level 1's).
+	const bool zone = door.type == Level::LocatorType::DynamicZone;
+	const std::string file = zone ? door.data.substr(0, door.data.find('@')) : _level->FindInteriorFile(door.data);
 	if (file.empty() || !_level->GetInterior(file, _interiorLayout))
 	{
 		Log::Warn("Game: no interior loaded for door '{}' ({})", door.locator, door.data);
@@ -879,7 +884,7 @@ void Game::enterInterior(const Level::Trigger& door)
 	away.Normalize();
 	_interiorReturn = door.position + away * 4.0f;
 
-	_interior = door.data;
+	_interior = zone ? door.locator : door.data;
 	_interiorExitArmed = false;
 	Log::Info("Game: player goes into '{}'", _interior);
 	SetPlayerPosition(_interiorLayout.entry);
@@ -1492,7 +1497,11 @@ void Game::Run()
 			for (const auto& event : _level->UpdateTriggers(playerPos))
 			{
 				_scriptEngine->OnTrigger(*event.trigger, event.entered);
-				if (event.entered && event.trigger->type == Level::LocatorType::InteriorEntrance)
+				// A door is an interior entrance (level 1), or a zone trigger that
+				// loads an interior, "l2i04.p3d@..." (level 2 onwards).
+				if (event.entered && (event.trigger->type == Level::LocatorType::InteriorEntrance ||
+				                      (event.trigger->type == Level::LocatorType::DynamicZone &&
+				                       event.trigger->data.find('@') != std::string::npos)))
 					enterInterior(*event.trigger);
 			}
 			updateInterior();
