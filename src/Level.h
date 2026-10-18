@@ -108,6 +108,13 @@ public:
 	bool GetLocatorHeading(const std::string& name, float& heading) const;
 	// Where the level's own coins lie: one per coin locator, in every file loaded.
 	const std::vector<Vector3>& GetCoinPositions() const { return _coinPositions; }
+	// The collector cards' locators ("card11" is level 1's first), in load order.
+	struct Card
+	{
+		std::string name;
+		Vector3 position;
+	};
+	const std::vector<Card>& GetCards() const { return _cards; }
 
 	// An interior, as its own P3D file lays it out, somewhere under the map:
 	// where the player appears on coming in, and the spot that takes them back
@@ -190,6 +197,7 @@ private:
 	std::map<std::string, Vector3> _locators;
 	std::map<std::string, float> _locatorHeadings;
 	std::vector<Vector3> _coinPositions;
+	std::vector<Card> _cards;
 	std::map<std::string, Interior> _interiors;
 
 	// What each file put in the draw lists, as [begin, end) index ranges, so a

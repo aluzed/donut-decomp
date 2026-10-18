@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Math/Vector3.h"
+#include <string>
 #include <vector>
 
 namespace Donut
@@ -35,6 +36,10 @@ public:
 	}
 	int GetTotalAvailable() const { return static_cast<int>(_positions.size()); }
 	void Reset();
+	// The level's collector cards. Unlike coins, a card is picked up once for
+	// good: those found are kept in donut_cards.dat.
+	int GetCardsFound() const;
+	int GetCardsTotal() const { return static_cast<int>(_cards.size()); }
 	bool AllCollected() const { return _collected >= static_cast<int>(_positions.size()); }
 
 private:
@@ -50,6 +55,16 @@ private:
 	std::vector<Vector3> _positions;
 	int _collected = 0;
 	int _unclaimed = 0;
+
+	struct Card
+	{
+		std::string id; // the locator's name and where it is: level 1 has two "card13"
+		Vector3 position;
+		bool found;
+	};
+	std::vector<Card> _cards;
+	void loadCards();
+	void saveCards() const;
 	Mesh* _coinModel = nullptr; // the coin model, once committed
 };
 

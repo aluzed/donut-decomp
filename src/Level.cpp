@@ -1,6 +1,7 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
 #include "Render/imgui/imgui.h"
+#include <cctype>
 #include <Core/File.h>
 #include <Core/Log.h>
 #include <Entity.h>
@@ -207,6 +208,10 @@ void Level::LoadP3D(const std::string& filename)
 			}
 			if (static_cast<LocatorType>(loc->GetType()) == LocatorType::Coin)
 				_coinPositions.push_back(loc->GetPosition());
+			// The collector cards: "card" and two digits, the level and the card.
+			if (const std::string& name = loc->GetName();
+			    name.size() == 6 && name.compare(0, 4, "card") == 0 && std::isdigit(name[4]) && std::isdigit(name[5]))
+				_cards.push_back({name, loc->GetPosition()});
 			Log::Debug("Level: locator '{}' at ({:.1f}, {:.1f}, {:.1f})", loc->GetName(), loc->GetPosition().X,
 			           loc->GetPosition().Y, loc->GetPosition().Z);
 

@@ -132,7 +132,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 | ID | Statut | Pri | Sujet | Note |
 |---|---|---|---|---|
 | GAME-003 | 🟡 | P1 | Machine d'état complète (splash→menu→levelselect→game→pause→result→credits) | menus déclarés non rendus |
-| GAME-010 | 🟡 | P2 | Collectibles (coins / cards 7 / gags ~50) + état persistant | coins: the level's 177 coin locators, a purse kept in `donut_coins.dat`, gr1's entry fee paid from it. Cards and gags to do |
+| GAME-010 | 🟡 | P2 | Collectibles (coins / cards 7 / gags ~50) + état persistant | coins: the level's 177 coin locators, a purse kept in `donut_coins.dat`, gr1's entry fee paid from it. the seven cards, found for good (`donut_cards.dat`), drawn as frames. Gags to do |
 | GAME-011 | ⬜ | P2 | Save/Load complet (auj. best-time seul) | |
 | GAME-014 | 🟡 | P1 | Intérieurs (maison Simpson, école, Kwik-E-Mart) chargés dynamiquement | 2026-10-18: the three level 1 interiors load at start-up and doors take the player in and out, drawing only the interior inside; not streamed |
 | GAME-001 | 🧩 | P1 | Refactor `Game` God object (1499 l.) | → § C.1 |

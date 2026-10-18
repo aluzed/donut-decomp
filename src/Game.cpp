@@ -1589,7 +1589,9 @@ void Game::Run()
 				hud.coins = _coins;
 				hud.coinsTotal = 0;
 			}
-			hud.cardsTotal = 7; // collection itself is GAME-010
+			hud.cardsTotal = 7;
+			if (_collectibleManager)
+				hud.cards = _collectibleManager->GetCardsFound();
 
 			if (_scriptEngine->IsMissionActive())
 			{

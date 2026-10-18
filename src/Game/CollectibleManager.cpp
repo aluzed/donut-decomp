@@ -15,6 +15,8 @@
 #include "Core/Log.h"
 
 #include <algorithm>
+#include <fstream>
+#include <set>
 #include <random>
 
 namespace Donut
@@ -23,6 +25,40 @@ namespace Donut
 CollectibleManager::CollectibleManager(Level& level, LineRenderer& lineRenderer)
     : _level(level), _lineRenderer(lineRenderer)
 {
+	loadCards();
+}
+
+void CollectibleManager::loadCards()
+{
+	std::set<std::string> found;
+	std::ifstream file("donut_cards.dat");
+	for (std::string id; std::getline(file, id);)
+		if (!id.empty())
+			found.insert(id);
+
+	_cards.clear();
+	for (const auto& card : _level.GetCards())
+	{
+		const std::string id = fmt::format("{} {:.0f} {:.0f}", card.name, card.position.X, card.position.Z);
+		_cards.push_back({id, card.position + Vector3(0.0f, 0.5f, 0.0f), found.count(id) > 0});
+	}
+	Log::Info("CollectibleManager: {} cards, {} found", _cards.size(), GetCardsFound());
+}
+
+void CollectibleManager::saveCards() const
+{
+	// An unattended run teleports past cards; it has not found them.
+	if (Game::GetInstance().IsAutopilot())
+		return;
+	std::ofstream file("donut_cards.dat");
+	for (const auto& card : _cards)
+		if (card.found)
+			file << card.id << "\n";
+}
+
+int CollectibleManager::GetCardsFound() const
+{
+	return static_cast<int>(std::count_if(_cards.begin(), _cards.end(), [](const Card& c) { return c.found; }));
 }
 
 void CollectibleManager::SpawnOnPath()
@@ -77,6 +113,17 @@ void CollectibleManager::SpawnOnPath()
 
 void CollectibleManager::Update(const Vector3& playerPos, float collectRadius)
 {
+	for (auto& card : _cards)
+	{
+		if (card.found || (card.position - playerPos).Length() >= collectRadius)
+			continue;
+		card.found = true;
+		Log::Info("CollectibleManager: card '{}' found, {}/{}", card.id, GetCardsFound(), GetCardsTotal());
+		Game::GetInstance().GetAudioManager().PlayRaw(
+			SoundGenerator::Chirp(600, 1800, 0.4f, 44100), 44100, 1, 16);
+		saveCards();
+	}
+
 	for (auto& coin : _coins)
 	{
 		if (coin.collected) continue;
@@ -94,6 +141,14 @@ void CollectibleManager::Update(const Vector3& playerPos, float collectRadius)
 
 void CollectibleManager::Draw(GL::ShaderProgram& worldShader, const Matrix4x4& viewProj, float time)
 {
+	// A card is a billboard group in cards.p3d, which nothing here draws yet:
+	// a turning blue frame marks it.
+	const Quaternion cardSpin = Quaternion::MakeFromEuler(Vector3(0.0f, time * 2.0f, 0.0f));
+	for (const auto& card : _cards)
+		if (!card.found)
+			_lineRenderer.DrawBox(card.position, cardSpin, Vector3(-0.3f, -0.45f, -0.02f), Vector3(0.3f, 0.45f, 0.02f),
+			                      Vector4(0.4f, 0.7f, 1.0f, 1.0f));
+
 	// SetCoinDrawable names it in every level script; it lives in the mission
 	// art's level.p3d.
 	Mesh* coin = Game::GetInstance().GetResourceManager().GetGeometry("coinShape_000");

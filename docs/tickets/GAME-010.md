@@ -1,6 +1,6 @@
 # GAME-010 — Système de collectibles (pièces, 7 cartes, ~50 gags) avec état persistant
 
-- **Status:** PARTIAL (2026-10-18: coins)
+- **Status:** PARTIAL (2026-10-18: coins, cards)
 - **Priority:** P2
 - **Module:** Game
 - **Depends on:** REGR-001
@@ -54,4 +54,18 @@ first stage; walking onto a coin adds it to the purse and the file.
   when the model is missing. A geometry from the resource manager must be committed before
   it is drawn, or `Mesh::Draw` binds a null vertex binding and crashes.
 
-Cards and gags are still to do.
+## Cards (2026-10-18)
+
+Level 1's seven collector cards stand at the locators named `card` and two digits (level,
+card): `card11` to `card17`, except that the one which should be `card14` is a second
+`card13`. A card is therefore known by its name **and** its position.
+
+Walking (or driving) within 3m of one finds it for good: found cards are written to
+`donut_cards.dat` (gitignored), are not laid out again, and the HUD's card row counts them.
+`--autopilot` finds nothing. Verified by standing on `card11`: found, 1/7, and still found
+(and gone) on the next run.
+
+A card is a billboard group in `cards.p3d` (`card11_bb1Shape`, `card_collect`...) which is
+not drawn yet; a turning blue frame marks it meanwhile.
+
+Gags are still to do.
