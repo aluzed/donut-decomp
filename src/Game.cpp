@@ -297,6 +297,13 @@ Game::Game(int argc, char** argv)
 	}
 	if (const auto characters = levelScriptCalls("AddCharacter", "leveli.mfk"); !characters.empty())
 		_playerCharacter = characters.front();
+	// Not every character came off the CD (Lisa, level 3's, did not): Homer
+	// stands in rather than nobody.
+	if (!FileSystem::exists(fmt::format("art/chars/{}_m.p3d", _playerCharacter)))
+	{
+		Log::Warn("Game: no model for '{}', Homer plays level {}", _playerCharacter, _levelNumber);
+		_playerCharacter = "homer";
+	}
 	if (const auto cars = levelScriptCalls("InitLevelPlayerVehicle", "leveli.mfk"); !cars.empty())
 		_playerCarModel = cars.front();
 	Log::Info("Game: level {} is played by '{}' in '{}'", _levelNumber, _playerCharacter, _playerCarModel);

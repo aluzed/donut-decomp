@@ -4,6 +4,8 @@
 #include <Render/Mesh.h>
 #include <Render/Shader.h>
 #include <Render/SkinModel.h>
+#include <Core/Log.h>
+#include <set>
 #include <cstdint>
 #include <vector>
 
@@ -95,6 +97,15 @@ void Mesh::Draw(GL::ShaderProgram& shader, bool opaque)
 	{
 		if (prim.cacheShader == nullptr)
 			prim.cacheShader = Game::GetInstance().GetResourceManager().GetShader(prim.shaderName);
+		// A shader no file loaded (some of level 4's and 6's): the group is
+		// left undrawn rather than drawn through a null shader.
+		if (prim.cacheShader == nullptr)
+		{
+			static std::set<std::string> warned;
+			if (warned.insert(prim.shaderName).second)
+				Log::Warn("Mesh: no shader '{}', not drawn", prim.shaderName);
+			continue;
+		}
 
 		bool trans = (!prim.cacheShader->IsAlphaTested() && prim.cacheShader->IsTranslucent());
 

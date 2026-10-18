@@ -40,12 +40,25 @@ with no model (`l2_donotenter_Shape`, `l2_railcross_Shape`), and `DynamicPhysics
 naming meshes they do not carry (`l2_lampoldShape*`). Both are now skipped with a warning;
 they are missing from the level.
 
+**Levels 3-6** each crashed on load, for four reasons, all fixed:
+
+- level 3's player, Lisa, was never extracted (`art/chars/lisa_m.p3d`): a character
+  without a model now falls back to Homer, with a warning;
+- levels 4 and 6 draw meshes naming shaders no file loads: such a group is not drawn,
+  where a null shader was dereferenced;
+- level 5's sky has two props of one name, and the second got the first's mesh after it
+  had been moved out: a null mesh. Each prop now builds its own;
+- level 5's mission art is P3DZ-compressed, which the loader could not read (P3D-016).
+
 ## Verified
 
 - Level 1 loads the same 16 files as before, and its story plays as before.
 - `--level 2`: 15 files, 117 coins, 7 cards, the DMV and Moe's as interiors, Bart beside
   the Honor Roller in front of Springfield Town Hall; m1's six stages complete under
   `--autopilot`.
+- Levels 3 to 7 load and start their first mission under `--autopilot` without crashing
+  (45s each): level 3 (Homer standing in for Lisa) and level 7 play through stages, level 5
+  reaches its `dump` stage.
 
 ## Not done
 

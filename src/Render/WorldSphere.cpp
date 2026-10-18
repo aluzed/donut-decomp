@@ -14,14 +14,9 @@ namespace Donut
 
 WorldSphere::WorldSphere(const P3D::WorldSphere& worldSphere): _name(worldSphere.GetName())
 {
-	auto meshes = std::unordered_map<std::string, std::unique_ptr<Mesh>>(worldSphere.GetGeometryCount());
-
+	std::unordered_map<std::string, const P3D::Geometry*> meshes;
 	for (auto const& p3dmesh : worldSphere.GetGeometries())
-	{
-		auto mesh = std::make_unique<Mesh>(*p3dmesh);
-		mesh->Commit();
-		meshes[p3dmesh->GetName()] = std::move(mesh);
-	}
+		meshes[p3dmesh->GetName()] = p3dmesh.get();
 
 	for (auto const& billboardGroup : worldSphere.GetBillboards())
 	{
@@ -32,10 +27,16 @@ WorldSphere::WorldSphere(const P3D::WorldSphere& worldSphere): _name(worldSphere
 	auto const& compositeDrawableList = worldSphere.GetCompositeDrawable()->GetPropList()->GetProps();
 	for (auto const& p3dprop : compositeDrawableList)
 	{
-		if (meshes.find(p3dprop->GetName()) == meshes.end())
+		const auto geometry = meshes.find(p3dprop->GetName());
+		if (geometry == meshes.end())
 			continue;
 
-		_props.emplace_back(std::move(meshes.at(p3dprop->GetName())), p3dprop->GetSkeletonJoint());
+		// A mesh of its own for each prop: level 5's sky has two props of one
+		// name, and the second used to get the first's, already moved out --
+		// a null mesh, drawn every frame.
+		auto mesh = std::make_unique<Mesh>(*geometry->second);
+		mesh->Commit();
+		_props.emplace_back(std::move(mesh), p3dprop->GetSkeletonJoint());
 	}
 
 	// should be horizon1
