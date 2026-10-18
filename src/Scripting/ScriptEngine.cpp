@@ -65,6 +65,7 @@ void ScriptEngine::SelectMission(const std::string& id)
 	for (auto& v : _missionVehicles)
 		v->DestroyPhysics(_game.GetWorldPhysics());
 	_missionVehicles.clear();
+	_vehicleSpawns.clear();
 	_countdown.clear();
 	_countdownElapsed = 0.0f;
 	_stageTimeRemaining = -1.0f;
@@ -570,6 +571,16 @@ bool ScriptEngine::RetryFromCheckpoint()
 	Log::Info("ScriptEngine: retrying '{}' from stage {}/{}", _missionId, _resetStage + 1, _stageScripts.size());
 	if (_hasPlayerStart)
 		_game.SetPlayerPosition(_playerStart);
+	// Every other car goes back to where it was declared. A stage replayed
+	// only re-declares its own: m5's van, declared the stage before the
+	// checkpoint, stayed wherever the failed chase had left it, more than the
+	// follow distance away, and every retry failed on the spot.
+	for (auto& vehicle : _missionVehicles)
+	{
+		const auto spawn = _vehicleSpawns.find(vehicle->GetName());
+		if (vehicle.get() != _playerCar && spawn != _vehicleSpawns.end())
+			vehicle->Teleport(spawn->second.first, spawn->second.second);
+	}
 	if (_playerCar != nullptr && !_playerCarLocator.empty())
 	{
 		PlacePlayerCar(_playerCar->GetName(), _playerCarLocator);
@@ -686,6 +697,7 @@ void ScriptEngine::CleanupMission()
 	for (auto& v : _missionVehicles)
 		v->DestroyPhysics(_game.GetWorldPhysics());
 	_missionVehicles.clear();
+	_vehicleSpawns.clear();
 	_activeVehicle = nullptr;
 	_chaseManager.reset();
 	_objectiveType.clear();
@@ -867,6 +879,7 @@ Vehicle& ScriptEngine::spawnVehicle(const std::string& car, const std::string& l
 {
 	float heading = 0.0f;
 	const bool faces = _game.GetLevel().GetLocatorHeading(locator, heading);
+	_vehicleSpawns[car] = {pos, faces ? Quaternion(Vector3(0.0f, 1.0f, 0.0f), heading) : Quaternion::Identity};
 
 	// A stage played again (a retry) declares its cars again: move the one that
 	// is already there rather than build a second.

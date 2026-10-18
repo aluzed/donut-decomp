@@ -644,7 +644,23 @@ void Game::runAutopilot(double dt)
 		const Vector3 me = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : _character->GetPosition();
 		if ((followed->GetPosition() - me).Length() < 100.0f)
 			return;
-		const Vector3 behind = followed->GetPosition() - followed->GetRotation() * Vector3::Forward * 25.0f;
+		// 25m behind, or closer when there is no road there: m5's van, put back
+		// on its route in a sunken lane, had nothing but a drop 25m behind it,
+		// and the player's car fell off the map.
+		Vector3 behind;
+		bool grounded = false;
+		for (const float back : {25.0f, 15.0f, 8.0f})
+		{
+			behind = followed->GetPosition() - followed->GetRotation() * Vector3::Forward * back;
+			float ground = 0.0f;
+			if (_worldPhysics->FindGroundHeight(behind, 5.0f, 5.0f, ground, true))
+			{
+				grounded = true;
+				break;
+			}
+		}
+		if (!grounded)
+			return;
 		Log::Info("Game: autopilot catches up with '{}'", followed->GetName());
 		if (_inVehicle && _activeVehicle)
 			_activeVehicle->Teleport(behind, followed->GetRotation());

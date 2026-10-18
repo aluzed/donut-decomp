@@ -226,6 +226,8 @@ private:
 	// How far the player is round the race, in laps, from the checkpoints passed.
 	float playerRaceLaps() const;
 	std::vector<std::unique_ptr<Vehicle>> _missionVehicles;
+	// Where each mission car was last declared, to put it back on a retry.
+	std::map<std::string, std::pair<Vector3, Quaternion>> _vehicleSpawns;
 	Vehicle* _activeVehicle = nullptr;
 	// The player's car for this mission, when the mission places one.
 	Vehicle* _playerCar = nullptr;
