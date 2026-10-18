@@ -176,6 +176,8 @@ void ScriptEngine::beginStage(std::size_t index)
 	_stageWaypoints.clear();
 	_objectiveDistance = 0.0f;
 	_followInRange = false;
+	_conversation.clear();
+	_conversationQueued = false;
 	_racePath.clear();
 	_checkpoints.clear();
 	_currentCheckpoint = 0;
@@ -259,7 +261,21 @@ void ScriptEngine::updateObjective(double dt)
 	}
 	else if (_objectiveType == "dialogue")
 	{
-		if (_objectiveElapsed >= kDialogueSeconds)
+		// The conversation itself, line after line, from the game's recorded
+		// voices; over when the last line has been said. Without them, a pause.
+		auto& audio = _game.GetAudioManager();
+		if (!_conversationQueued)
+		{
+			_conversationQueued = true;
+			const auto lines = conversationLines();
+			for (const auto& line : lines)
+				audio.QueueDialogue(line, AudioManager::DialoguePriority::Gameplay);
+			Log::Info("ScriptEngine: conversation '{}', {} lines", _conversation, lines.size());
+			if (lines.empty())
+				_conversation.clear();
+		}
+		if (_conversation.empty() ? _objectiveElapsed >= kDialogueSeconds
+		                          : (_objectiveElapsed >= 0.5 && !audio.IsDialoguePlaying()))
 			objectiveComplete();
 	}
 	else if (_objectiveType == "delivery" || _objectiveType == "dump")
@@ -1583,6 +1599,33 @@ bool ScriptEngine::GetRacePosition(int& position, int& field) const
 			++position;
 	field = static_cast<int>(_raceOpponents.size()) + 1;
 	return true;
+}
+
+std::vector<std::string> ScriptEngine::conversationLines() const
+{
+	// "conversations\c_<name>_<n>_<kind>_<speaker>_l<level><mission>.rsd": a story
+	// mission mN is "mN", a bonus mission bmN "bN", a street race srN "rN".
+	if (_conversation.empty())
+		return {};
+	std::string mission = _missionId;
+	if (mission.rfind("bm", 0) == 0)
+		mission = "b" + mission.substr(2);
+	else if (mission.rfind("sr", 0) == 0)
+		mission = "r" + mission.substr(2);
+	const std::string tail = fmt::format("_l{}{}.rsd", _game.GetLevelNumber(), mission);
+	std::vector<std::pair<int, std::string>> numbered;
+	for (const auto& name : _game.GetAudioManager().FindSounds("\\c_" + _conversation + "_"))
+	{
+		if (name.size() < tail.size() || name.compare(name.size() - tail.size(), tail.size(), tail) != 0)
+			continue;
+		const std::size_t at = name.find("\\c_" + _conversation + "_") + 4 + _conversation.size();
+		numbered.emplace_back(std::atoi(name.c_str() + at), name);
+	}
+	std::sort(numbered.begin(), numbered.end());
+	std::vector<std::string> lines;
+	for (auto& [n, name] : numbered)
+		lines.push_back(std::move(name));
+	return lines;
 }
 
 const Vehicle* ScriptEngine::chasingTarget() const

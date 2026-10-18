@@ -47,6 +47,8 @@ public:
 	void PlayDialogue(const std::string& name);
 
 	void QueueDialogue(const std::string& name, DialoguePriority priority);
+	// A line queued or still being spoken.
+	bool IsDialoguePlaying() const;
 
 	void SetListenerPosition(const Vector3& position, const Vector3& direction, const Vector3& up);
 	void SetVolume(float volume);
@@ -107,6 +109,8 @@ private:
 
 	std::vector<Source> _sources;
 	std::deque<Dialogue> _dialogueQueue;
+	// The source speaking the current line, or -1.
+	int _dialogueSource = -1;
 	std::unique_ptr<MusicSource> _music;
 	std::vector<std::string> _playlist;
 	std::size_t _playlistIndex = 0;

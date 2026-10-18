@@ -138,6 +138,7 @@ void GameCommands::SetTalkToTarget(const std::string& param0, int32_t param1 /*=
 void GameCommands::SetDialogueInfo(const std::string& param0, const std::string& param1, const std::string& param2,
                                    int32_t param3)
 {
+	Game::GetInstance().GetScriptEngine().SetConversation(param2);
 }
 void GameCommands::SetCamBestSide(const std::string& param0, const std::string& param1 /*= ""*/) {}
 void GameCommands::CloseMission(int32_t param0 /*= 0*/)

@@ -19,3 +19,21 @@ La file de dialogue prioritaire est déjà fonctionnelle (`Dialogue`, `QueueDial
 - [ ] Le texte du dialogue en cours est extrait des bibles frontend et exposé par `AudioManager`.
 - [ ] Le sous-titre apparaît au début de la ligne et disparaît à la fin de sa durée.
 - [ ] La priorité de file existante reste respectée (un dialogue Cutscene coupe toujours un Gameplay).
+
+## The missions' conversations (2026-10-18)
+
+The voices are in `DIALOGF.RCF`, which the `audio/` scan skipped for its capital
+extension; it is now picked up (5389 files). A mission conversation's lines are named
+`conversations\c_<name>_<n>_<kind>_<speaker>_l<level><mission>.rsd`, and a dialogue stage
+names its conversation in `SetDialogueInfo("homer", "lisa", "bladder", 0)`, which did
+nothing. A `dialogue` objective now queues that conversation's lines for the mission (a
+story mission mN is `mN`, a bonus mission bmN `bN`, a street race srN `rN`), and is met
+when the last has been said; with no lines found it is still a 3s pause.
+
+The dialogue queue played every queued line at once, one per free source; it now plays
+one line when the last has finished. Sounds played without a position were placed at the
+world's origin, far from the listener; they are now heard where the listener is.
+
+Checked by log on level 1 m1's last stage: "bladder", six lines, Lisa at 0s, Homer at
+5.3s, Lisa at 8.1s, then 9.9, 11.3 and 16.4s, and the mission complete after the last.
+Not heard: nobody listened on this machine. No subtitles yet.

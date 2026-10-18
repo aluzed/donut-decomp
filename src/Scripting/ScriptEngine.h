@@ -86,6 +86,7 @@ public:
 	void SetObjTargetVehicle(const std::string& target);
 	// How far a "losetail" objective wants the chasing car left behind, in metres.
 	void SetObjDistance(float metres) { _objectiveDistance = metres; }
+	void SetConversation(const std::string& name) { _conversation = name; }
 	// Fails the mission under way, if there is one still undecided.
 	void FailMission(const std::string& reason, const std::string& hint)
 	{
@@ -365,6 +366,12 @@ private:
 	// The chasing car the objective names, or the first; null when none.
 	const Vehicle* chasingTarget() const;
 	float _objectiveDistance = 0.0f;
+	// The stage's conversation (SetDialogueInfo's third argument, "bladder"),
+	// and whether its lines have been queued.
+	std::string _conversation;
+	bool _conversationQueued = false;
+	// The lines of `_conversation` for this mission, in order.
+	std::vector<std::string> conversationLines() const;
 	// The player has had the car being followed within the follow distance.
 	bool _followInRange = false;
 	// Catch-up curves by car name, held until that car's driver exists.

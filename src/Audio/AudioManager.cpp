@@ -112,10 +112,11 @@ void AudioManager::PlayAudio(const std::string& name, const Vector3& position)
 			alDeleteBuffers(1, &src->buffer);
 		alGenBuffers(1, &src->buffer);
 
-		alSource3f(src->id, AL_POSITION, position.X, position.Y, position.Z);
-		alSourcei(src->id, AL_SOURCE_RELATIVE, AL_FALSE);
-
 		playOnSource(src, rsdFile);
+		// Placed in the world, after playOnSource has set it up as heard where
+		// the listener is.
+		alSourcei(src->id, AL_SOURCE_RELATIVE, AL_FALSE);
+		alSource3f(src->id, AL_POSITION, position.X, position.Y, position.Z);
 		return;
 	}
 }
@@ -130,18 +131,41 @@ void AudioManager::QueueDialogue(const std::string& name, DialoguePriority prior
 	_dialogueQueue.push_back({name, priority});
 }
 
+bool AudioManager::IsDialoguePlaying() const
+{
+	if (!_dialogueQueue.empty())
+		return true;
+	if (_dialogueSource < 0)
+		return false;
+	ALint state = AL_STOPPED;
+	alGetSourcei(_sources[_dialogueSource].id, AL_SOURCE_STATE, &state);
+	return state == AL_PLAYING;
+}
+
 void AudioManager::processDialogueQueue()
 {
+	// One line at a time, each when the last has been said: every queued line
+	// used to start at once, on as many free sources.
 	if (_dialogueQueue.empty())
 		return;
+	if (_dialogueSource >= 0)
+	{
+		ALint state = AL_STOPPED;
+		alGetSourcei(_sources[_dialogueSource].id, AL_SOURCE_STATE, &state);
+		if (state == AL_PLAYING)
+			return;
+		_dialogueSource = -1;
+	}
 
 	Source* src = findFreeSource();
 	if (src == nullptr)
 		return;
 
-	const auto& dialogue = _dialogueQueue.front();
+	const std::string name = _dialogueQueue.front().name;
 	_dialogueQueue.pop_front();
-	PlayAudio(dialogue.name);
+	PlayAudio(name);
+	if (src->inUse)
+		_dialogueSource = static_cast<int>(src - _sources.data());
 }
 
 void AudioManager::Update()
@@ -303,6 +327,10 @@ void AudioManager::PlayRaw(const std::vector<uint8_t>& pcmData, int sampleRate, 
 	alBufferData(src->buffer, format, pcmData.data(), static_cast<ALsizei>(pcmData.size()), sampleRate);
 	alSourcei(src->id, AL_BUFFER, src->buffer);
 	alSourcei(src->id, AL_LOOPING, AL_FALSE);
+	// Not placed in the world: heard where the listener is, not from the
+	// world's origin, metres away and faint.
+	alSourcei(src->id, AL_SOURCE_RELATIVE, AL_TRUE);
+	alSource3f(src->id, AL_POSITION, 0.0f, 0.0f, 0.0f);
 	alSourcePlay(src->id);
 	src->inUse = true;
 }
@@ -445,7 +473,10 @@ void AudioManager::discoverFiles(const std::string& directory, const std::string
 		if (!entry.is_regular_file())
 			continue;
 		auto path = entry.path();
-		if (path.extension() == extension)
+		// DIALOGF.RCF, the game's voices, is in capitals.
+		std::string found = path.extension().string();
+		std::transform(found.begin(), found.end(), found.begin(), [](unsigned char c) { return std::tolower(c); });
+		if (found == extension)
 			LoadRCF(path.string());
 	}
 }
