@@ -107,6 +107,9 @@ public:
 	void NoTrafficForStage();
 	bool IsTrafficSuppressed() const { return _missionActive && _noTraffic; }
 	const std::string& GetObjectiveType() const { return _objectiveType; }
+	// The objective as the HUD shows it: its type, and how far along a
+	// delivery is ("delivery 3/9").
+	std::string GetObjectiveText() const;
 	// The player's start as the mission placed it, if it did.
 	bool GetPlayerStart(Vector3& position) const
 	{
@@ -247,6 +250,9 @@ private:
 		float minHealth = 0.0f;
 	};
 	std::vector<Condition> _conditions;
+	// A "delivery": items to pick up, in any order. Taken ones are removed.
+	std::vector<std::pair<std::string, Vector3>> _pickups;
+	std::size_t _pickupsTotal = 0;
 	// How long the player has been out of their car, for "outofvehicle".
 	float _outOfVehicleSeconds = 0.0f;
 	void updateConditions(double dt);

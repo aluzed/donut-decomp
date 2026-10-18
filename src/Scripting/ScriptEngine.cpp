@@ -253,6 +253,31 @@ void ScriptEngine::updateObjective(double dt)
 		if (_objectiveElapsed >= kDialogueSeconds)
 			objectiveComplete();
 	}
+	else if (_objectiveType == "delivery")
+	{
+		// Picked up by coming within reach, in whatever order.
+		constexpr float kPickupRange = 4.0f;
+		for (auto it = _pickups.begin(); it != _pickups.end();)
+		{
+			if ((it->second - player).Length() < kPickupRange)
+			{
+				Log::Info("ScriptEngine: picked up '{}', {}/{}", it->first, _pickupsTotal - _pickups.size() + 1,
+				          _pickupsTotal);
+				_game.GetAudioManager().PlayRaw(SoundGenerator::Beep(900, 0.08f), 22050, 1, 16);
+				it = _pickups.erase(it);
+			}
+			else
+				++it;
+		}
+		if (_pickups.empty())
+			objectiveComplete();
+	}
+	else if (_objectiveType == "gooutside" || _objectiveType == "fmv" || _objectiveType == "buycar")
+	{
+		// Nothing holds the player here: there are no interiors to be inside,
+		// no movies to sit through and no showroom.
+		objectiveComplete();
+	}
 	else if (_objectiveType == "timer")
 	{
 		if (_objectiveElapsed >= _objectiveDuration)
@@ -321,6 +346,11 @@ bool ScriptEngine::GetObjectiveTarget(Vector3& position) const
 	if (_currentCheckpoint >= 0 && _currentCheckpoint < static_cast<int>(_checkpoints.size()))
 	{
 		position = _checkpoints[_currentCheckpoint];
+		return true;
+	}
+	if (_objectiveType == "delivery" && !_pickups.empty())
+	{
+		position = _pickups.front().second;
 		return true;
 	}
 	const auto npc = _npcPositions.find(_talkToTarget);
@@ -407,6 +437,13 @@ bool ScriptEngine::RetryFromCheckpoint()
 	}
 	beginStage(_resetStage);
 	return true;
+}
+
+std::string ScriptEngine::GetObjectiveText() const
+{
+	if (_objectiveType == "delivery" && _pickupsTotal > 0)
+		return fmt::format("{} {}/{}", _objectiveType, _pickupsTotal - _pickups.size(), _pickupsTotal);
+	return _objectiveType;
 }
 
 void ScriptEngine::AnnounceStageComplete()
@@ -544,6 +581,19 @@ void ScriptEngine::PlacePlayerCar(const std::string& car, const std::string& loc
 
 void ScriptEngine::AddCollectible(const std::string& locator, const std::string& type)
 {
+	if (_objectiveType == "delivery")
+	{
+		const Vector3 pos = _game.GetLevel().GetLocatorPosition(locator);
+		if (pos == Vector3::Zero)
+		{
+			Log::Warn("ScriptEngine: delivery item '{}' not found", locator);
+			return;
+		}
+		_pickups.emplace_back(locator, pos);
+		_pickupsTotal = _pickups.size();
+		return;
+	}
+
 	if (_objectiveType != "race")
 	{
 		Log::Debug("ScriptEngine: collectible '{}' ({}) outside a race, not handled", locator, type);
@@ -1013,6 +1063,8 @@ void ScriptEngine::SetHUDIcon(const std::string& icon)
 void ScriptEngine::AddObjective(const std::string& type)
 {
 	_objectiveType = type;
+	_pickups.clear();
+	_pickupsTotal = 0;
 	_hasDestination = false;
 	_talkToTarget.clear();
 	_objectiveElapsed = 0.0f;

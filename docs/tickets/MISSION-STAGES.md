@@ -43,6 +43,8 @@ Two commands made it worse:
   | `talkto` | the player comes within 4m of `SetTalkToTarget`'s NPC, where `AddNPC` put them |
   | `dialogue` | 3s pass. There is no dialogue system |
   | `timer` | `SetDurationTime` seconds pass |
+  | `delivery` | every `AddCollectible` item has been picked up (within 4m), in any order; the HUD shows "delivery 3/9" |
+  | `gooutside`, `fmv`, `buycar` | at once: there is no interior, movie or showroom to hold the player |
   | anything else | at once, with a warning, so it does not block the mission |
 
   When the last stage's objective is met, the mission is complete.
@@ -76,11 +78,11 @@ end and restart. Here is the last stage met, and what was skipped on the way:
 | m1 | 6 | end, 4 cycles | — |
 | m2 | 12 | end, 2 cycles | — |
 | m3 | 4 | end, 8 cycles | `destroy` |
-| m4 | 4 | end, 6 cycles | `delivery` |
-| m5 | 6 | end, 6 cycles | `follow`, `gooutside` |
+| m4 | 4 | end, 6 cycles | — (nine power boxes picked up) |
+| m5 | 6 | end, 6 cycles | `follow` |
 | m6 | 4 | end, 5 cycles | `dump` |
 | m7 | 3 | end, 3 cycles | — |
-| bm1 | 7 | end, 5 cycles | `delivery` |
+| bm1 | 7 | end, 5 cycles | — (5 boxes, then 12 Tomacco) |
 | sr2 | 2 | end | — |
 | gr1 | 2 | fails on its `coins` stage's clock | `coins` |
 | d1 | 1 | — | its locators are not loaded |
@@ -113,4 +115,5 @@ A completed mission still reloads from the top.
 
 - The `followdistance` condition.
 - NPCs as characters in the world (they are positions only), dialogue, interiors.
-- `delivery`, `coins`, `destroy`, `dump`, `follow`, `fmv`, `buycar` objectives are skipped.
+- `coins`, `destroy`, `dump` and `follow` objectives are skipped: they need the coin purse, AI car
+  damage and moving NPCs.

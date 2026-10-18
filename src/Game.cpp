@@ -1283,7 +1283,7 @@ void Game::Run()
 			{
 				hud.missionActive = true;
 				hud.countdown = _scriptEngine->GetCountdownText();
-				hud.objective = _scriptEngine->GetObjectiveType();
+				hud.objective = _scriptEngine->GetObjectiveText();
 				hud.timeRemaining = _scriptEngine->GetStageTimeRemaining();
 				hud.lap = _scriptEngine->GetCurrentLap();
 				hud.totalLaps = _scriptEngine->GetTotalLaps();
