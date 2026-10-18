@@ -63,6 +63,12 @@ public:
 	// The model's file name without its folder or extension, "famil_v": the
 	// prefix of the car's own texture names.
 	const std::string& GetModelName() const { return _modelName; }
+	// The driver's door, 0 shut to 1 wide open.
+	void SetDoorOpen(float amount);
+	// Which side of the car the driver's door is on: the sign of its X, in the
+	// car's own space (-1, the left in the game's left-handed space, when the
+	// model does not say).
+	float GetDriverSide() const { return _driverSide; }
 	bool HasModel() const { return _model != nullptr; }
 	float GetSpeedKmh() const;
 	// No wheel touching anything.
@@ -88,6 +94,11 @@ private:
 	float _suspensionLimit = 0.3f;
 
 	std::unique_ptr<CompositeModel> _model;
+	// The model's wheel joints ("w0".."w3"), by physics wheel, and the driver's
+	// door's hinge ("DoorDRot"): -1 when it has none.
+	int _wheelJoints[4] = {-1, -1, -1, -1};
+	int _doorJoint = -1;
+	float _driverSide = -1.0f;
 	std::string _modelName;
 	std::unique_ptr<btRaycastVehicle> _rayVehicle;
 };

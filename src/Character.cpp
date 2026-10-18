@@ -105,6 +105,14 @@ bool Character::IsAnimationFinished() const
 	return !_animLoops && _currentAnimation != nullptr && _animTime >= _currentAnimation->GetLength();
 }
 
+float Character::GetAnimationProgress() const
+{
+	if (_currentAnimation == nullptr || _currentAnimation->GetLength() <= 0.0f)
+		return 0.0f;
+	const double t = _animTime / _currentAnimation->GetLength();
+	return static_cast<float>(_animLoops ? t - std::floor(t) : std::min(t, 1.0));
+}
+
 void Character::SetAnimation(const std::string& animationName, bool loop)
 {
 	if (_animations.find(animationName) == _animations.end())

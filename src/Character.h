@@ -72,6 +72,8 @@ public:
 	// a victory. IsAnimationFinished says when it has played through.
 	void SetAnimation(const std::string&, bool loop = true);
 	bool IsAnimationFinished() const;
+	// How far through the current animation, 0 to 1.
+	float GetAnimationProgress() const;
 	CharacterController& GetCharacterController() const { return *_characterController; }
 	Skeleton& GetSkeleton() const { return *_skeleton; }
 

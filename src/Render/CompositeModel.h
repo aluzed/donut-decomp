@@ -95,6 +95,13 @@ public:
 	float GetAnimationFrameRate() const;
 	void Pose(float frame, bool loop);
 
+	// A joint of the model's skeleton by name ("w0", "DoorDRot"), or -1; where
+	// it stands at rest, in the model's space; and a rotation of it, in its own
+	// frame, on top of its rest or animation (a wheel turning, a door opening).
+	int FindJoint(const std::string& name) const;
+	Vector3 GetJointRestPosition(int joint) const;
+	void SetJointRotation(int joint, const Quaternion& rotation);
+
 private:
 	struct DrawableProp
 	{
@@ -102,11 +109,19 @@ private:
 		Matrix4x4 transform;
 		// The skeleton joint it hangs from, for Pose.
 		size_t joint = 0;
+		// Whether that joint is of the posed skeleton.
+		bool posable = false;
 	};
 
+	void updateJoints(float frame, bool loop);
+	Matrix4x4 _restGlobal(int joint) const;
+
 	// The drawable's skeleton, kept for posing.
+	std::vector<std::string> _jointNames;
+	std::vector<Matrix4x4> _jointRests;
 	std::vector<int> _jointParents;
 	std::vector<Matrix4x4> _jointGlobals;
+	std::vector<Matrix4x4> _jointRotations;
 	std::unique_ptr<SkinAnimation> _animation;
 
 	Matrix4x4 _transform = Matrix4x4::Identity;

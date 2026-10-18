@@ -76,6 +76,25 @@ void Vehicle::LoadModel(const std::string& modelPath)
 	_modelName = std::filesystem::path(modelPath).stem().string();
 	if (_model)
 	{
+		// The physics wheels are front right, front left, rear right, rear left
+		// (the car faces +Z, its left is +X); each wheel joint goes to the one
+		// on its side of the car.
+		for (int wheel = 0; wheel < 4; ++wheel)
+		{
+			const int found = _model->FindJoint(fmt::format("w{}", wheel));
+			if (found >= 0)
+			{
+				const Vector3 at = _model->GetJointRestPosition(found);
+				_wheelJoints[(at.Z > 0.0f ? 0 : 2) + (at.X > 0.0f ? 1 : 0)] = found;
+			}
+		}
+		_doorJoint = _model->FindJoint("DoorDRot");
+		// "DoorDTrans" stands at the origin; the hinge is where the door is.
+		if (_doorJoint >= 0)
+			_driverSide = _model->GetJointRestPosition(_doorJoint).X >= 0.0f ? 1.0f : -1.0f;
+	}
+	if (_model)
+	{
 		_model->SetTransform(Matrix4x4::MakeTranslate(_position) * Matrix4x4(_rotation));
 		Log::Info("Vehicle: loaded model {}", modelPath);
 	}
@@ -208,6 +227,23 @@ void Vehicle::SetPosition(const Vector3& pos)
 	_position = pos;
 	if (_model)
 		_model->SetTransform(Matrix4x4::MakeTranslate(_position) * Matrix4x4(_rotation));
+
+	// The wheels roll and the front ones steer, as the physics wheels do.
+	if (_model && _rayVehicle)
+		for (int i = 0; i < _rayVehicle->getNumWheels() && i < 4; ++i)
+			if (_wheelJoints[i] >= 0)
+			{
+				const btWheelInfo& wheel = _rayVehicle->getWheelInfo(i);
+				_model->SetJointRotation(_wheelJoints[i], Quaternion(Vector3(0.0f, 1.0f, 0.0f), wheel.m_steering) *
+				                                              Quaternion(Vector3(-1.0f, 0.0f, 0.0f), wheel.m_rotation));
+			}
+}
+
+void Vehicle::SetDoorOpen(float amount)
+{
+	// Hinged at its front edge, it swings out, about 70 degrees.
+	if (_model && _doorJoint >= 0)
+		_model->SetJointRotation(_doorJoint, Quaternion(Vector3(0.0f, 1.0f, 0.0f), 1.2f * amount));
 }
 
 void Vehicle::SetRotation(const Quaternion& rot)

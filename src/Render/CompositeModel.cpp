@@ -99,6 +99,34 @@ CompositeModel::CompositeModel(const ICompositeModel& provider)
 
 		const auto& transforms = jointTransforms[drawable->GetSkeletonName()];
 
+		// The first drawable's skeleton is kept, to pose its props: by the
+		// model's pose animation (Pose), or joint by joint (SetJointRotation:
+		// a car's wheels and doors).
+		const bool posable = _jointNames.empty();
+		if (posable)
+			for (const auto& skeleton : skeletons)
+			{
+				if (skeleton->GetName() != drawable->GetSkeletonName())
+					continue;
+				for (const auto& joint : skeleton->GetJoints())
+				{
+					_jointNames.push_back(joint->GetName());
+					_jointRests.push_back(joint->GetRestPose());
+					_jointParents.push_back(static_cast<int>(joint->GetParent()));
+				}
+				_jointGlobals = transforms;
+				_jointRotations.assign(_jointNames.size(), Matrix4x4::Identity);
+				// The pose animation ("PTRN"): the same files carry texture
+				// animations ("TEX_eyeball_m") that do not move the joints.
+				for (const auto& animation : provider.GetAnimations())
+					if (animation->GetGroupList() && animation->GetType().rfind("PTRN", 0) == 0)
+					{
+						_animation = SkinAnimation::FromP3D(*animation, _jointNames, _jointRests);
+						break;
+					}
+				break;
+			}
+
 		for (const auto& prop : props)
 		{
 			const auto& propName = prop->GetName();
@@ -106,36 +134,38 @@ CompositeModel::CompositeModel(const ICompositeModel& provider)
 				continue;
 
 			const auto& transform = transforms[prop->GetSkeletonJoint()];
-			_props.push_back(DrawableProp {meshNames[prop->GetName()], transform, prop->GetSkeletonJoint()});
-		}
-
-		// The first drawable's skeleton and the model's first animation that
-		// moves it, for Pose.
-		if (_animation || provider.GetAnimations().empty())
-			continue;
-		for (const auto& skeleton : skeletons)
-		{
-			if (skeleton->GetName() != drawable->GetSkeletonName())
-				continue;
-			std::vector<std::string> names;
-			std::vector<Matrix4x4> rests;
-			for (const auto& joint : skeleton->GetJoints())
-			{
-				names.push_back(joint->GetName());
-				rests.push_back(joint->GetRestPose());
-				_jointParents.push_back(static_cast<int>(joint->GetParent()));
-			}
-			_jointGlobals = transforms;
-			// The pose animation ("PTRN"): the same files carry texture
-			// animations ("TEX_eyeball_m") that do not move the joints.
-			for (const auto& animation : provider.GetAnimations())
-				if (animation->GetGroupList() && animation->GetType().rfind("PTRN", 0) == 0)
-				{
-					_animation = SkinAnimation::FromP3D(*animation, names, rests);
-					break;
-				}
+			_props.push_back(DrawableProp {meshNames[prop->GetName()], transform, prop->GetSkeletonJoint(),
+			                               posable && !_jointNames.empty()});
 		}
 	}
+}
+
+int CompositeModel::FindJoint(const std::string& name) const
+{
+	for (std::size_t i = 0; i < _jointNames.size(); ++i)
+		if (_jointNames[i] == name)
+			return static_cast<int>(i);
+	return -1;
+}
+
+Vector3 CompositeModel::GetJointRestPosition(int joint) const
+{
+	return joint >= 0 && joint < static_cast<int>(_jointGlobals.size()) ? _restGlobal(joint).Translation() : Vector3::Zero;
+}
+
+Matrix4x4 CompositeModel::_restGlobal(int joint) const
+{
+	// As the rest pose is built: the root at the model's origin.
+	return joint <= 0 ? Matrix4x4::Identity : _restGlobal(_jointParents[joint]) * _jointRests[joint];
+}
+
+void CompositeModel::SetJointRotation(int joint, const Quaternion& rotation)
+{
+	if (joint < 0 || joint >= static_cast<int>(_jointRotations.size()))
+		return;
+	_jointRotations[joint] = Matrix4x4(rotation);
+	if (!_animation)
+		updateJoints(-1.0f, false);
 }
 
 float CompositeModel::GetAnimationFrames() const
@@ -150,17 +180,26 @@ float CompositeModel::GetAnimationFrameRate() const
 
 void CompositeModel::Pose(float frame, bool loop)
 {
-	if (!_animation)
-		return;
-	// Each joint placed in its parent's frame by its animated local transform,
-	// as the rest pose is built from the rest transforms.
+	if (_animation)
+		updateJoints(frame, loop);
+}
+
+void CompositeModel::updateJoints(float frame, bool loop)
+{
+	// Each joint placed in its parent's frame: by its animated local transform
+	// when there is an animation (the root included), by its rest otherwise
+	// (the root at the model's origin, as the rest pose is built); turned by
+	// SetJointRotation's rotation either way.
 	for (std::size_t i = 0; i < _jointParents.size(); ++i)
 	{
-		const Matrix4x4 local = _animation->Evaluate(i, frame, loop);
+		Matrix4x4 local = _animation ? _animation->Evaluate(i, frame, loop) : _jointRests[i];
+		if (!_animation && i == 0)
+			local = Matrix4x4::Identity;
+		local = local * _jointRotations[i];
 		_jointGlobals[i] = i == 0 ? local : _jointGlobals[_jointParents[i]] * local;
 	}
 	for (auto& prop : _props)
-		if (prop.joint < _jointGlobals.size())
+		if (prop.posable && prop.joint < _jointGlobals.size())
 			prop.transform = _jointGlobals[prop.joint];
 }
 

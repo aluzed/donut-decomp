@@ -455,10 +455,10 @@ void Game::LoadModel(const std::string& name, const std::string& anim)
 
 Vector3 Game::driverDoor(const Vehicle& car) const
 {
-	// The car faces +Z; its left, +X, is the driver's side, and the driver's
-	// seat a little behind the middle (further forward, the climb in ended on
-	// the windscreen).
-	return car.GetPosition() + car.GetRotation() * Vector3(1.4f, 0.0f, -0.5f);
+	// The car faces +Z; its driver's door is on the side the model puts it, and
+	// the driver's seat a little behind the middle (further forward, the climb
+	// in ended on the windscreen).
+	return car.GetPosition() + car.GetRotation() * Vector3(1.4f * car.GetDriverSide(), 0.0f, -0.5f);
 }
 
 void Game::startBoarding(Vehicle* car, bool in)
@@ -500,6 +500,7 @@ void Game::updateBoarding()
 	{
 		if (++_boarding.step >= 3)
 		{
+			car.SetDoorOpen(0.0f);
 			if (_boarding.in)
 			{
 				PutPlayerInVehicle(&car);
@@ -511,6 +512,9 @@ void Game::updateBoarding()
 		if (playPlayerAnimation((_boarding.in ? kIn : kOut)[_boarding.step], false))
 			break;
 	}
+	// The door opens with the first step, stands open, and shuts with the last.
+	const float progress = _character->GetAnimationProgress();
+	car.SetDoorOpen(_boarding.step == 0 ? progress : _boarding.step == 1 ? 1.0f : 1.0f - progress);
 }
 
 bool Game::playPlayerAnimation(const std::string& what, bool loop)
