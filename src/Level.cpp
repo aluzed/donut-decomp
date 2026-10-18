@@ -156,11 +156,15 @@ void Level::LoadP3D(const std::string& filename)
 				transforms.push_back(transform);
 			}
 
-			// Level 2's lamps name meshes their own object does not carry
-			// (l2_lampoldShape3 in l2z2.p3d); map::at threw and the load died.
+			// Level 2's old lamps name their mesh after the instance
+			// ("l2_lampoldShape3") while the object carries it under its own
+			// name ("l2_oldstreetlamp_Shape"); map::at threw and the load died.
+			// An object with a single mesh draws it whatever the name.
 			for (const auto& meshTransformsPair : meshTransforms)
 			{
-				const auto index = meshesNameIndex.find(meshTransformsPair.first);
+				auto index = meshesNameIndex.find(meshTransformsPair.first);
+				if (index == meshesNameIndex.end() && meshesNameIndex.size() == 1)
+					index = meshesNameIndex.begin();
 				if (index == meshesNameIndex.end())
 				{
 					Log::Warn("Level: no mesh '{}' in its physics object, skipped", meshTransformsPair.first);

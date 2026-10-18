@@ -99,7 +99,9 @@ beyond the above:
 
 ## Not done
 
-- The old lamps (`l2_lampoldShape*`), still skipped. The do-not-enter signs and the level
+- Nothing left out any more. The old lamps name their mesh after the instance
+  (`l2_lampoldShape3`) while the object carries it as `l2_oldstreetlamp_Shape`: an object
+  with a single mesh now draws it whatever the name. The do-not-enter signs and the level
   crossing are back: their model comes in an `AnimDynamicPhysicsWrapper` (0x3F0000F), laid
   out like the `AnimObjectWrapper` level 1 uses, which the parser now reads too (a hand
   edit of `P3D.generated.cpp`: the generator in `dev/codegen` is a Windows binary). Not
