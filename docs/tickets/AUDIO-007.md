@@ -45,5 +45,8 @@ Each character has their own lines in `DIALOGF.RCF`, `<character>\<kind>_<who>_N
 run down, `d_air`...) and `w_*` on foot (`w_card` a card found, `w_mfail` a mission
 failed...). `Game::SayLine` plays one of the player character's takes of a kind, at most
 one every 3s and never over a mission's conversation: on a crash beyond 7 m/s, on running
-someone down, on finding a card, on failing a mission. Homer, Bart, Lisa, Marge and Apu
-have 3 to 8 takes of each. Not heard on this machine.
+someone down, on finding a card, on failing a mission, on winning one (`w_mvic`), on a
+jump of more than 0.8s (`d_air`), as the turbo kicks in (`w_turbo`). Homer, Bart, Lisa,
+Marge and Apu have 3 to 8 takes of each. Others speak too: a traffic driver rammed
+(`traffic1..4\d_*crash`), a resident whose doorbell is rung (`w_doorbell`), the level's
+people walked up to (`w_idlereply`). Not heard on this machine.
