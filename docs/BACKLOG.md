@@ -108,7 +108,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 | UI-RACE-GUIDE | ✅ | P1 | Les repères de checkpoint sortent du bloc debug, le radar montre le circuit avec le prochain en doré, et le HUD affiche « Next checkpoint: N m ». Le franchissement reste à confirmer à la main | `Hud.*`, `Game.cpp` |
 | VEH-SINK | ✅ | P1 | **La voiture ne roulait pas** (le châssis s'endormait et `applyEngineForce` n'active pas un corps endormi) et **la caméra passait sous le décor** (offset pivoté par le tangage du châssis). Le décor statique est aussi passé en `btRigidBody` de masse nulle, sans quoi les roues ne trouvaient pas le sol. 58 km/h, 55 s de conduite sans chute | `Vehicle.cpp`, `Game.cpp`, `WorldPhysics.cpp` |
 | RENDER-CAR | ✅ | P1 | **Cars drew as screen-centre debris, or not at all**: drawn with the skinning shader, whose vertex layout a P3D `Mesh` does not have, and in the translucent pass only. Now the world shader, both passes. Follow cameras also stay out of the scenery | `Game.cpp`, `Level.h` |
-| PHYS-004 | ⬜ | P1 | Callbacks collision (damage / pickup / sound) | seules les vérifs manifold/pénétration existent |
+| PHYS-004 | 🟡 | P1 | Callbacks collision (damage / pickup / sound) | impact damage done from the car's change of velocity (`Game::updateCarDamage`), with a thud; no contact callbacks yet |
 | PHYS-011 | ⬜ | P1 | Corps rigides dynamiques pour `AnimDynamicPhysics` | `Level.cpp:149-169` — instancié visuellement, **pas de body** |
 | PHYS-005 | ✅ | P2 | Utiliser `BulletFenceShape` au lieu de `btBoxShape` | `AddP3DFence` |
 | PHYS-008 | ⬜ | P2 | Frictions par surface (route/herbe/trottoir) | actuellement `_tireGrip` figé, pas de système matériau |

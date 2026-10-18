@@ -1,6 +1,6 @@
 # PHYS-004 — Callbacks de collision (dégâts / ramassage / son)
 
-- **Status:** TODO
+- **Status:** PARTIAL (2026-10-18: impact damage)
 - **Priority:** P1
 - **Module:** Physics
 - **Depends on:** REGR-001
@@ -24,3 +24,21 @@ Aujourd'hui seul un test de pénétration/manifold existe dans `recoverFromPenet
 - [ ] Le contact avec un collectible déclenche le ramassage.
 - [ ] Un son d'impact est joué au-delà du seuil d'impulsion.
 - [ ] Aucune régression de la résolution de pénétration existante.
+
+## Impact damage (2026-10-18)
+
+Done without contact callbacks, in `Game::updateCarDamage`: the player's car loses health
+when its **horizontal velocity changes by more than 4 m/s in one frame**, 4 points per m/s
+beyond that, with a camera shake and a thud. That catches every impact, a wall as much as
+a car, while driving itself never comes near (full brakes take ~0.2 m/s off a frame).
+Height is left out, so a jump's landing is free, and a car that moved more than 5m in a
+frame was teleported, not hit.
+
+It replaces the proximity checks, which only hurt the car while its centre was within 1.5m
+of another car's: two cars bumper to bumper are 4m apart, so it never happened, and walls
+were free. Health is also reset to 100 when a mission starts or is retried; it carried
+over before, so a car worn down in one mission started the next close to failing its
+`damage` condition.
+
+Verified: sr2 driven at full throttle into the scenery, one impact, 9 m/s lost, -20; the
+story run by `--autopilot`, m0 to m5, no impact at all.

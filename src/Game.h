@@ -216,6 +216,11 @@ private:
 	int loadStoryProgress() const;
 	void saveStoryProgress(int next) const;
 	int _coins = 0;
+	// Health lost to impacts, judged from the car's velocity a frame apart.
+	void updateCarDamage();
+	const Vehicle* _damageVehicle = nullptr;
+	Vector3 _damageVelocity;
+	Vector3 _damagePosition;
 	void saveCoins() const;
 	// `wanted`, or the nearest point to `subject` on the way to it that the level
 	// does not hide `subject` from.

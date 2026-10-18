@@ -316,6 +316,14 @@ void Vehicle::Draw(Matrix4x4& viewProj, GL::ShaderProgram& shader, bool opaque)
 		_model->Draw(shader, viewProj, _model->GetTransform(), opaque);
 }
 
+Vector3 Vehicle::GetVelocity() const
+{
+	if (!_rayVehicle)
+		return Vector3::Zero;
+	const btVector3& v = _rayVehicle->getRigidBody()->getLinearVelocity();
+	return Vector3(v.x(), v.y(), v.z());
+}
+
 float Vehicle::GetSpeedKmh() const
 {
 	if (_rayVehicle)

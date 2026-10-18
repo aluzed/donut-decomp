@@ -445,6 +445,8 @@ void Game::LockMouse(bool lockMouse)
 void Game::runMissionScript()
 {
 	_missionLoadedAt = _elapsedSeconds;
+	// Every mission starts with a sound car.
+	_health = 100.0f;
 	// A mission starts outdoors, wherever the last one left the player.
 	_interior.clear();
 	if (_level)
@@ -530,6 +532,44 @@ void Game::saveStoryProgress(int next) const
 	if (file.good())
 		file << next << "\n";
 	Log::Info("Game: story progress saved, next mission {}", next + 1);
+}
+
+void Game::updateCarDamage()
+{
+	// The car is hurt by what stops it: a sudden change in its horizontal
+	// velocity, whatever it hit -- a wall, a lamp post, another car. Damage used
+	// to be dealt only while the car's centre was within 1.5m of another car's,
+	// which two cars bumper to bumper never are, and walls cost nothing.
+	// Driving makes no such jolt: full brakes take ~0.2 m/s off a frame. Height
+	// is left out, so that landing a jump on the suspension is free.
+	constexpr float kImpactThreshold = 4.0f; // m/s lost in one frame
+	constexpr float kDamagePerMs = 4.0f;     // health per m/s beyond it
+
+	if (!_inVehicle || !_activeVehicle)
+	{
+		_damageVehicle = nullptr;
+		return;
+	}
+	const Vector3 velocity = _activeVehicle->GetVelocity();
+	const Vector3 position = _activeVehicle->GetPosition();
+	if (_damageVehicle == _activeVehicle)
+	{
+		// A car moved further than its speed explains was teleported, not hit.
+		const float moved = (position - _damagePosition).Length();
+		const float flat = Vector3(velocity.X - _damageVelocity.X, 0.0f, velocity.Z - _damageVelocity.Z).Length();
+		if (moved < 5.0f && flat > kImpactThreshold)
+		{
+			const float damage = (flat - kImpactThreshold) * kDamagePerMs;
+			_health = std::max(0.0f, _health - damage);
+			AddShake(std::min(1.0f, flat * 0.05f));
+			// A low falling thud, for want of the game's crash sounds.
+			_audioManager->PlayRaw(SoundGenerator::Chirp(140.0f, 50.0f, 0.25f, 44100), 44100, 1, 16);
+			Log::Info("Game: impact, {:.1f} m/s lost, -{:.0f} health, {:.0f} left", flat, damage, _health);
+		}
+	}
+	_damageVehicle = _activeVehicle;
+	_damageVelocity = velocity;
+	_damagePosition = position;
 }
 
 bool Game::SpendCoins(int amount)
@@ -1104,58 +1144,8 @@ void Game::Run()
 			_worldPhysics->Update(static_cast<float>(deltaTime));
 
 		_audioManager->Update();
-		if (_inVehicle && _activeVehicle)
-		{
-			auto vehPos = _activeVehicle->GetPosition();
-			float vehSpeed = _activeVehicle->GetSpeedKmh();
-
-			for (auto& v : _scriptEngine->GetMissionVehicles())
-			{
-				if (v.get() == _activeVehicle) continue;
-				float dist = (v->GetPosition() - vehPos).Length();
-				if (dist < 1.5f && vehSpeed > 20.0f)
-				{
-					float dmg = vehSpeed * 0.5f * static_cast<float>(deltaTime);
-					_health -= dmg;
-					AddShake(0.3f);
-					if (_health < 0.0f) _health = 0.0f;
-				}
-			}
-
-			if (_trafficManager && !_scriptEngine->IsTrafficSuppressed())
-			{
-				for (const auto& tc : _trafficManager->GetCars())
-				{
-					float dist = (tc.position - vehPos).Length();
-					if (dist < 1.5f && vehSpeed > 20.0f)
-					{
-						float dmg = vehSpeed * 0.3f * static_cast<float>(deltaTime);
-						_health -= dmg;
-						AddShake(0.2f);
-						if (_health < 0.0f) _health = 0.0f;
-					}
-				}
-			}
-
-			if (_scriptEngine->IsMissionActive())
-			{
-				auto* chase = _scriptEngine->GetChaseManager();
-				if (chase)
-				{
-					for (auto& cop : chase->GetCopCars())
-					{
-						float dist = (cop->GetPosition() - vehPos).Length();
-						if (dist < 1.5f && vehSpeed > 10.0f)
-						{
-							float dmg = vehSpeed * 0.7f * static_cast<float>(deltaTime);
-							_health -= dmg;
-							AddShake(0.5f);
-							if (_health < 0.0f) _health = 0.0f;
-						}
-					}
-				}
-			}
-		}
+		if (simulate)
+			updateCarDamage();
 
 		if (_shakeAmount > 0.0f)
 		{
@@ -1189,7 +1179,9 @@ void Game::Run()
 					saveStoryProgress(_storyIndex + 1);
 				if (!failed && _storyIndex >= 0 && _storyIndex + 1 < static_cast<int>(_story.size()))
 					startStoryMission(_storyIndex + 1);
-				else if (!failed || !_scriptEngine->RetryFromCheckpoint())
+				else if (failed && _scriptEngine->RetryFromCheckpoint())
+					_health = 100.0f;
+				else
 				{
 					_scriptEngine->CleanupMission();
 					if (_collectibleManager) _collectibleManager->SpawnOnPath();
