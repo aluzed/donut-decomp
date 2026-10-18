@@ -636,8 +636,10 @@ void Game::updateCarDamage()
 
 void Game::updateHitAndRun(double dt)
 {
-	// Indoors the police wait.
-	if (!_hitAndRun || !_character || !_interior.empty())
+	// Indoors the police wait. Nor do they chase --autopilot, whose teleports
+	// across a target's path are not the player's driving: in the unattended
+	// level 4 run they rammed the traffic into a police chase.
+	if (!_hitAndRun || !_character || !_interior.empty() || _autopilot)
 		return;
 	const bool driving = _inVehicle && _activeVehicle;
 	const Vector3 player = driving ? _activeVehicle->GetPosition() : _character->GetPosition();
