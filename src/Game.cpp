@@ -1493,6 +1493,8 @@ void Game::loadGags()
 			                      static_cast<float>(std::atof(args[2].c_str())));
 		else if (command == "GagSetSound" && !args.empty())
 			gag->sound = args[0];
+		else if (command == "GagSetCameraShake")
+			gag->shakes = true;
 		else if (command == "GagSetCoins" && !args.empty())
 			gag->coins = std::atoi(args[0].c_str());
 		else if (command == "GagSetTrigger" && args.size() == 3)
@@ -1555,6 +1557,8 @@ void Game::playGag(Gag& gag)
 		_audioManager->QueueDialogue(sounds[static_cast<std::size_t>(rand()) % sounds.size()],
 		                             AudioManager::DialoguePriority::Gameplay);
 	gag.lastPlayed = _elapsedSeconds;
+	if (gag.shakes)
+		AddShake(1.0f);
 	Log::Info("Game: gag '{}' ({}), {} sound(s){}", gag.model, gag.sound, sounds.size(),
 	          !gag.played && gag.coins > 0 ? fmt::format(", {} coin(s)", gag.coins) : "");
 	if (!gag.played && gag.coins > 0)

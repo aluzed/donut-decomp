@@ -265,6 +265,8 @@ private:
 		Vector3 position;
 		float radius = 1.0f;
 		int coins = 0;
+		// GagSetCameraShake: the power plant's meltdown shakes the view.
+		bool shakes = false;
 		bool played = false;
 		bool inside = false;
 		double lastPlayed = -100.0;
