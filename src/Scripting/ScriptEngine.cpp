@@ -277,6 +277,54 @@ void ScriptEngine::updateObjective(double dt)
 		if (_pickups.empty())
 			objectiveComplete();
 	}
+	else if (_objectiveType == "destroy")
+	{
+		if (_raceOpponents.empty())
+		{
+			Log::Warn("ScriptEngine: nothing to destroy, skipping");
+			objectiveComplete();
+			return;
+		}
+
+		// There is no damage model for cars, so ramming is judged from the gap
+		// between the player's car and the target: touching (under 5m between
+		// their centres) while closing faster than 4 m/s is a hit, worth three
+		// points of health per m/s of closing speed.
+		constexpr float kContactGap = 5.0f;
+		constexpr float kHitClosingSpeed = 4.0f;
+		constexpr float kDamagePerClosingSpeed = 3.0f;
+		const Vehicle* car = _game.GetPlayerVehicle();
+		const Vehicle& target = _raceOpponents.front()->GetVehicle();
+		_rammingCooldown -= static_cast<float>(dt);
+		if (car == nullptr || dt <= 0.0)
+		{
+			_lastTargetGap = -1.0f;
+			return;
+		}
+
+		const float gap = (target.GetPosition() - car->GetPosition()).Length();
+		float closing = _lastTargetGap < 0.0f ? 0.0f : (_lastTargetGap - gap) / static_cast<float>(dt);
+		_lastTargetGap = gap;
+		// Faster than any car closes is a car being moved, not driven: a
+		// teleport read as a 40 m/s hit.
+		constexpr float kMaxClosingSpeed = 25.0f;
+		if (closing > kMaxClosingSpeed)
+			closing = 0.0f;
+		if (gap < kContactGap && closing > kHitClosingSpeed && _rammingCooldown <= 0.0f)
+		{
+			_rammingCooldown = 0.5f;
+			_targetHealth -= closing * kDamagePerClosingSpeed;
+			Log::Info("ScriptEngine: '{}' rammed at {:.0f} m/s, health {:.0f}", target.GetName(), closing,
+			          _targetHealth > 0.0f ? _targetHealth : 0.0f);
+			_game.AddShake(0.6f);
+			if (_targetHealth <= 0.0f)
+			{
+				Log::Info("ScriptEngine: '{}' destroyed", target.GetName());
+				_raceOpponents.clear();
+				objectiveComplete();
+			}
+		}
+	}
 	else if (_objectiveType == "follow")
 	{
 		// Met in UpdateAI, when the target arrives. With nobody to follow it
@@ -371,7 +419,7 @@ bool ScriptEngine::GetObjectiveTarget(Vector3& position) const
 		position = _checkpoints[_currentCheckpoint];
 		return true;
 	}
-	if (_objectiveType == "follow" && !_raceOpponents.empty())
+	if ((_objectiveType == "follow" || _objectiveType == "destroy") && !_raceOpponents.empty())
 	{
 		position = _raceOpponents.front()->GetVehicle().GetPosition();
 		return true;
@@ -501,6 +549,8 @@ std::string ScriptEngine::GetObjectiveText() const
 	}
 	if (_objectiveType == "delivery" && _pickupsTotal > 0)
 		text += fmt::format(" {}/{}", _pickupsTotal - _pickups.size(), _pickupsTotal);
+	if (_objectiveType == "destroy")
+		text += fmt::format(" ({:.0f}%)", _targetHealth > 0.0f ? _targetHealth : 0.0f);
 	return text;
 }
 
@@ -525,7 +575,7 @@ std::string ScriptEngine::GetObjectiveTargetLabel() const
 		return "Next checkpoint";
 	if (_objectiveType == "delivery")
 		return "Nearest item";
-	if (_objectiveType == "follow")
+	if (_objectiveType == "follow" || _objectiveType == "destroy")
 		return "Target";
 	if (_objectiveType == "talkto")
 		return "Talk to " + _talkToTarget;
@@ -983,7 +1033,7 @@ void ScriptEngine::buildRaceCircuit()
 
 	// A "follow" drives its target the same way: m5's van runs its waypoints
 	// and the player has to keep up.
-	if (_objectiveType != "race" && _objectiveType != "follow")
+	if (_objectiveType != "race" && _objectiveType != "follow" && _objectiveType != "destroy")
 		return;
 	for (Vehicle* vehicle : _raceVehicles)
 	{
@@ -1161,6 +1211,9 @@ void ScriptEngine::SetHUDIcon(const std::string& icon)
 void ScriptEngine::AddObjective(const std::string& type)
 {
 	_objectiveType = type;
+	_targetHealth = 100.0f;
+	_lastTargetGap = -1.0f;
+	_rammingCooldown = 0.0f;
 	_pickups.clear();
 	_pickupsTotal = 0;
 	_hasDestination = false;
@@ -1378,6 +1431,13 @@ void ScriptEngine::UpdateAI(double dt)
 		if (_objectiveType == "follow" && opponent->Laps() >= _totalLaps)
 		{
 			objectiveComplete();
+			return;
+		}
+
+		// A car to be destroyed that reaches the end of its route has got away.
+		if (_objectiveType == "destroy" && opponent->Laps() >= _totalLaps)
+		{
+			missionFailed(fmt::format("'{}' got away", opponent->GetVehicle().GetName()));
 			return;
 		}
 

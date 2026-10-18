@@ -166,10 +166,12 @@ public:
 	// destination, or whoever they are to talk to. For --autopilot.
 	bool GetObjectiveTarget(Vector3& position) const;
 	bool ObjectiveWantsCar() const { return _objectiveType == "getin"; }
-	// The car a "follow" objective is following, if any.
+	// The car a "follow" or "destroy" objective is after, if any.
 	const Vehicle* GetFollowTarget() const
 	{
-		return _objectiveType == "follow" && !_raceOpponents.empty() ? &_raceOpponents.front()->GetVehicle() : nullptr;
+		return (_objectiveType == "follow" || _objectiveType == "destroy") && !_raceOpponents.empty()
+		           ? &_raceOpponents.front()->GetVehicle()
+		           : nullptr;
 	}
 	// What GetObjectiveTarget points at, for the HUD.
 	std::string GetObjectiveTargetLabel() const;
@@ -284,6 +286,10 @@ private:
 	// A "delivery": items to pick up, in any order. Taken ones are removed.
 	std::vector<std::pair<std::string, Vector3>> _pickups;
 	std::size_t _pickupsTotal = 0;
+	// A "destroy" target's health, 0-100, and what tracks the player ramming it.
+	float _targetHealth = 100.0f;
+	float _lastTargetGap = -1.0f;
+	float _rammingCooldown = 0.0f;
 	// How long the player has been out of their car, for "outofvehicle".
 	float _outOfVehicleSeconds = 0.0f;
 	void updateConditions(double dt);

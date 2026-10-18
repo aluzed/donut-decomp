@@ -483,6 +483,17 @@ void Game::runAutopilot(double dt)
 	// Tailing a car is done from behind it, and only when it is getting away:
 	// dropping the player's car onto the target every two seconds rammed it
 	// off its route.
+	// A car to destroy is met head on: the player's car is parked across its
+	// path, 15m ahead, and it drives into it.
+	if (const Vehicle* quarry = _scriptEngine->GetFollowTarget();
+	    quarry && _scriptEngine->GetObjectiveType() == "destroy" && _inVehicle && _activeVehicle)
+	{
+		const Vector3 ahead = quarry->GetPosition() + quarry->GetRotation() * Vector3::Forward * 15.0f;
+		Log::Info("Game: autopilot blocks '{}'", quarry->GetName());
+		_activeVehicle->Teleport(ahead, quarry->GetRotation() * Quaternion(Vector3(0.0f, 1.0f, 0.0f), 1.5708f));
+		return;
+	}
+
 	if (const Vehicle* followed = _scriptEngine->GetFollowTarget())
 	{
 		const Vector3 me = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : _character->GetPosition();
