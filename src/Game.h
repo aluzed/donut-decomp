@@ -284,6 +284,8 @@ private:
 	// Whether level `level`'s scripts were copied off the CD.
 	bool levelAvailable(int level) const;
 	int _coins = 0;
+	// The car whose engine is heard ("famil_v"), empty on foot.
+	std::string _engineCar;
 	// A found card's title, shown for a while ("CRAB JUICE").
 	std::string _cardMessage;
 	double _cardMessageUntil = 0.0;

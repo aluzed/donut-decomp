@@ -229,6 +229,7 @@ bool AudioManager::startMusicTrack(const std::string& name, bool loop)
 	// The previous track's source and buffers used to be dropped without
 	// being deleted.
 	releaseMusic();
+	StopEngine();
 
 	auto soundIt = _sounds.find(name);
 	if (soundIt == _sounds.end())
@@ -276,6 +277,87 @@ void AudioManager::PlayMusicPlaylist(std::vector<std::string> tracks)
 	}
 	Log::Info("Audio: music, {} tracks from '{}'", _playlist.size(), _playlist.front());
 	startMusicTrack(_playlist.front(), false);
+}
+
+std::string AudioManager::CarSoundFile(const std::string& car, const std::string& suffix) const
+{
+	// create daSoundResourceData named famil { AddFilename ( "sound/carsound/familycar.rsd" 1.0 ) ...
+	const std::string script = "sound\\scripts\\" + car + ".spt";
+	const auto found = _sounds.find(script);
+	if (found == _sounds.end())
+		return {};
+	auto stream = found->second->GetFileStream(script);
+	if (!stream)
+		return {};
+	std::string text(stream->Size(), '\0');
+	stream->ReadBytes(reinterpret_cast<uint8_t*>(text.data()), text.size());
+
+	// The resource whose name ends with `suffix`, "_horn"; or the engine.
+	std::size_t at = 0;
+	while ((at = text.find("named ", at)) != std::string::npos)
+	{
+		at += 6;
+		const std::size_t end = text.find_first_of(" \r\n{", at);
+		const std::string name = text.substr(at, end - at);
+		// The engine is the first resource that is not the horn ("famil",
+		// "snake_car", "lisa_v_car").
+		const auto endsWith = [&](const std::string& tail) {
+			return name.size() > tail.size() && name.compare(name.size() - tail.size(), tail.size(), tail) == 0;
+		};
+		const bool wanted = suffix.empty() ? !endsWith("_horn") : endsWith(suffix);
+		if (!wanted)
+			continue;
+		const std::size_t open = text.find('"', text.find("AddFilename", at));
+		const std::size_t close = open == std::string::npos ? open : text.find('"', open + 1);
+		if (close == std::string::npos)
+			return {};
+		std::string file = text.substr(open + 1, close - open - 1);
+		std::replace(file.begin(), file.end(), '/', '\\');
+		return file;
+	}
+	return {};
+}
+
+void AudioManager::PlayEngine(const std::string& file)
+{
+	StopEngine();
+	const auto found = _sounds.find(file);
+	if (found == _sounds.end())
+		return;
+	auto stream = found->second->GetFileStream(file);
+	if (!stream)
+		return;
+	RCL::RSDFile rsd(*stream);
+	if (rsd.GetData().empty())
+		return;
+	alGenSources(1, &_engineSource);
+	alGenBuffers(1, &_engineBuffer);
+	alBufferData(_engineBuffer, getFormat(rsd), rsd.GetData().data(), static_cast<ALsizei>(rsd.GetData().size()),
+	             rsd.GetSampleRate());
+	alSourcei(_engineSource, AL_BUFFER, static_cast<ALint>(_engineBuffer));
+	alSourcei(_engineSource, AL_LOOPING, AL_TRUE);
+	alSourcei(_engineSource, AL_SOURCE_RELATIVE, AL_TRUE);
+	alSourcef(_engineSource, AL_GAIN, 0.35f);
+	alSourcePlay(_engineSource);
+	Log::Info("Audio: engine '{}'", file);
+}
+
+void AudioManager::SetEnginePitch(float pitch)
+{
+	if (_engineSource != 0)
+		alSourcef(_engineSource, AL_PITCH, std::clamp(pitch, 0.5f, 2.0f));
+}
+
+void AudioManager::StopEngine()
+{
+	if (_engineSource == 0)
+		return;
+	alSourceStop(_engineSource);
+	alSourcei(_engineSource, AL_BUFFER, 0);
+	alDeleteSources(1, &_engineSource);
+	alDeleteBuffers(1, &_engineBuffer);
+	_engineSource = 0;
+	_engineBuffer = 0;
 }
 
 void AudioManager::StopMusic()

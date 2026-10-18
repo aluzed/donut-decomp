@@ -35,3 +35,14 @@ the `*_main` themes. Checked by log: tuba_001 (7.8s), tuba_002, tuba_003 in turn
 heard: this machine was not listened to.
 
 Not done: the music script (what plays when, the mission and chase themes, the endings).
+
+## The cars' own engines and horns (2026-10-18)
+
+Each car has a sound script in `scripts.rcf`, `sound\scripts\<car>.spt`, of
+`daSoundResourceData` blocks: the engine loop (the first resource not named `*_horn`:
+`famil` is `familycar.rsd`, `snake_car` `snake.rsd`, `lisa_v_car` `malibustacy.rsd`) and
+the horn (`*_horn`). The car the player drives now plays its engine loop, pitched from
+0.7 at rest up with the speed, and stops when the player gets out; the horn key plays the
+car's horn, the generated one only for a car without. Checked by log for the family
+sedan, the Honor Roller, the Canyonero, Lisa's and Apu's cars; the police car has no
+script. Not heard on this machine.

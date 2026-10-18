@@ -1532,8 +1532,11 @@ void Game::Run()
 		{
 			if (_hornCooldown <= 0.0f)
 			{
-				auto horn = SoundGenerator::Horn(0.4f);
-				_audioManager->PlayRaw(horn, 22050, 1, 16);
+				// The car's own horn when its sound script names one.
+				if (const std::string horn = _audioManager->CarSoundFile(_activeVehicle->GetName(), "_horn"); !horn.empty())
+					_audioManager->PlayAudio(horn);
+				else
+					_audioManager->PlayRaw(SoundGenerator::Horn(0.4f), 22050, 1, 16);
 				_hornCooldown = 0.4f;
 			}
 		}
@@ -1632,6 +1635,23 @@ void Game::Run()
 			_worldPhysics->Update(static_cast<float>(deltaTime));
 
 		_audioManager->Update();
+		// The engine of the car the player drives: its own recorded loop (its
+		// sound script's), pitched up with the speed.
+		{
+			const std::string driving = _inVehicle && _activeVehicle ? _activeVehicle->GetName() : std::string();
+			if (driving != _engineCar)
+			{
+				_engineCar = driving;
+				const std::string file = driving.empty() ? std::string() : _audioManager->CarSoundFile(driving);
+				if (file.empty())
+					_audioManager->StopEngine();
+				else
+					_audioManager->PlayEngine(file);
+			}
+			if (!_engineCar.empty() && _activeVehicle)
+				_audioManager->SetEnginePitch(0.7f + std::abs(_activeVehicle->GetSpeedKmh()) / 110.0f);
+		}
+
 		if (simulate)
 		{
 			updateCarDamage();

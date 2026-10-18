@@ -58,6 +58,14 @@ public:
 	// music is made of short segments chained together.
 	void PlayMusicPlaylist(std::vector<std::string> tracks);
 	void StopMusic();
+
+	// A car's sounds, from its sound script (sound\\scripts\\<car>.spt):
+	// the engine loop and the horn it names. Empty when there is none.
+	std::string CarSoundFile(const std::string& car, const std::string& suffix = "") const;
+	// The engine of the car the player drives: one loop, pitched to the revs.
+	void PlayEngine(const std::string& file);
+	void SetEnginePitch(float pitch);
+	void StopEngine();
 	// Every sound the loaded RCFs hold whose name contains `part`, sorted.
 	std::vector<std::string> FindSounds(const std::string& part) const;
 
@@ -113,6 +121,8 @@ private:
 	int _dialogueSource = -1;
 	std::unique_ptr<MusicSource> _music;
 	std::vector<std::string> _playlist;
+	ALuint _engineSource = 0;
+	ALuint _engineBuffer = 0;
 	std::size_t _playlistIndex = 0;
 	// Stops and frees the music source, if any.
 	void releaseMusic();
