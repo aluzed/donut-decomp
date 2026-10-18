@@ -1836,7 +1836,11 @@ void Game::Run()
 			                                       "suburb_night_loop",  "city_night_loop",      "squidport_night_loop",
 			                                       "halloween_amb_loop"};
 			const int level = std::clamp(_levelNumber, 1, 7);
-			_audioManager->PlayAmbience(_interior.empty() ? kOutdoors[level - 1] : "room_small_01");
+			std::string indoors = _interior;
+			std::transform(indoors.begin(), indoors.end(), indoors.begin(), [](unsigned char c) { return std::tolower(c); });
+			_audioManager->PlayAmbience(_interior.empty()                         ? kOutdoors[level - 1]
+			                            : indoors.find("dmv") != std::string::npos ? "\\dmv.rsd"
+			                                                                       : "room_small_01");
 		}
 
 		// The engine of the car the player drives: its own recorded loop (its
