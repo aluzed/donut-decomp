@@ -134,13 +134,13 @@ void Hud::drawSpeedometer(SpriteBatch& sprites, const Font* font, const HudState
 		const float inner = radius - (i % 5 == 0 ? 12.0f : 6.0f);
 		const Vector2 dir(std::cos(angle), std::sin(angle));
 		const Vector2 p = centre + dir * ((inner + radius) * 0.5f);
-		const float ratio = state.topSpeedKmh > 0.0f ? clamp01(state.speedKmh / state.topSpeedKmh) : 0.0f;
+		const float ratio = state.topSpeedKmh > 0.0f ? clamp01(std::abs(state.speedKmh) / state.topSpeedKmh) : 0.0f;
 		const Vector4 col = t <= ratio ? Vector4(1.0f, 0.55f, 0.1f, 1.0f) : Vector4(1.0f, 1.0f, 1.0f, 0.35f);
 		drawRect(sprites, p - Vector2(1.5f, 1.5f), Vector2(3.0f, 3.0f), col);
 	}
 
 	// needle
-	const float ratio = state.topSpeedKmh > 0.0f ? clamp01(state.speedKmh / state.topSpeedKmh) : 0.0f;
+	const float ratio = state.topSpeedKmh > 0.0f ? clamp01(std::abs(state.speedKmh) / state.topSpeedKmh) : 0.0f;
 	const float needleAngle = startAngle + sweep * ratio;
 	const Vector2 needleDir(std::cos(needleAngle), std::sin(needleAngle));
 	for (float d = 6.0f; d < radius - 10.0f; d += 3.0f)
@@ -150,7 +150,8 @@ void Hud::drawSpeedometer(SpriteBatch& sprites, const Font* font, const HudState
 	}
 
 	// readout centred inside the dial
-	const std::string speed = fmt::format("{:.0f}", state.speedKmh);
+	// Reversing reads as a speed too, and a car at rest as 0, not "-0".
+	const std::string speed = fmt::format("{}", static_cast<int>(std::abs(state.speedKmh) + 0.5f));
 	const float w = font != nullptr ? font->MeasureWidth(speed) : 0.0f;
 	drawShadowedText(sprites, font, speed, centre + Vector2(-w * 0.5f, -line * 0.5f), kWhite);
 }
