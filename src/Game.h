@@ -4,6 +4,8 @@
 
 #include "UI/TextBible.h"
 
+#include <map>
+
 #include "Core/Math/Fwd.h"
 #include "Core/Math/Vector3.h"
 
@@ -92,6 +94,10 @@ public:
 	// Seats the player at the wheel of `vehicle`, as getting in by hand does.
 	void PutPlayerInVehicle(Vehicle* vehicle);
 	const TextBible& GetTextBible() const { return _textBible; }
+	// A mission's NPC, standing at `position`, when their model has been
+	// extracted (art/chars/<name>_m.p3d). Placing one already there moves them.
+	void PlaceNpc(const std::string& name, const Vector3& position);
+	void ClearNpcs();
 	// The player's car damage meter, 100 when whole (the HUD's "CAR" bar).
 	float GetCarHealth() const { return _health; }
 	void AddShake(float amount) { _shakeAmount = std::max(_shakeAmount, amount); }
@@ -177,6 +183,7 @@ private:
 	bool _startStory = false;
 	// The game's phrase table, in the language --language picks (E by default).
 	TextBible _textBible;
+	std::map<std::string, std::unique_ptr<Character>> _npcs;
 	char _language = 'E';
 	// Tears down whatever mission is running and starts story mission `index`.
 	void startStoryMission(int index);

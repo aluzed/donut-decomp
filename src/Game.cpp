@@ -520,6 +520,37 @@ void Game::runAutopilot(double dt)
 		SetPlayerPosition(target + Vector3(0.0f, 1.0f, 0.0f));
 }
 
+void Game::PlaceNpc(const std::string& name, const Vector3& position)
+{
+	auto found = _npcs.find(name);
+	if (found == _npcs.end())
+	{
+		// Most of the cast is not among the models extracted so far (Lisa,
+		// Patty, Selma...); they stay positions for "talkto" only.
+		if (!FileSystem::exists(fmt::format("art/chars/{}_m.p3d", name)))
+			return;
+
+		auto npc = std::make_unique<Character>(name);
+		npc->LoadModel(name);
+		npc->LoadAnimations(name);
+		// Standing about: the first idle in the set, if it has one.
+		for (const auto& [anim, data] : npc->GetAnimations())
+			if (anim.find("idle") != std::string::npos)
+			{
+				npc->SetAnimation(anim);
+				break;
+			}
+		found = _npcs.emplace(name, std::move(npc)).first;
+		Log::Info("Game: NPC '{}' joins the scene", name);
+	}
+	found->second->SetPosition(position);
+}
+
+void Game::ClearNpcs()
+{
+	_npcs.clear();
+}
+
 void Game::PutPlayerInVehicle(Vehicle* vehicle)
 {
 	if (vehicle == nullptr)
@@ -1201,6 +1232,8 @@ void Game::Run()
 
 		if (_character != nullptr)
 			_character->Update(deltaTime);
+		for (auto& [name, npc] : _npcs)
+			npc->Update(deltaTime);
 
 		ImGui::Render();
 
@@ -1243,6 +1276,15 @@ void Game::Run()
 			// culled away. Render the character double-sided.
 			glDisable(GL_CULL_FACE);
 			_character->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
+			glEnable(GL_CULL_FACE);
+		}
+
+		// The mission's NPCs, double-sided for the same reason as the player.
+		if (!_npcs.empty())
+		{
+			glDisable(GL_CULL_FACE);
+			for (auto& [name, npc] : _npcs)
+				npc->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
 			glEnable(GL_CULL_FACE);
 		}
 

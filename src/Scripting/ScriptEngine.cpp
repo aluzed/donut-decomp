@@ -619,6 +619,7 @@ void ScriptEngine::AnnounceStageComplete()
 
 void ScriptEngine::CleanupMission()
 {
+	_game.ClearNpcs();
 	_stageScripts.clear();
 	_recordingStage = false;
 	_resetStage = 0;
@@ -718,7 +719,11 @@ void ScriptEngine::AddCharacter(const std::string& name, const std::string& loca
 	// they are where the mission puts them.
 	const Vector3 pos = _game.GetLevel().GetLocatorPosition(locator);
 	if (pos != Vector3::Zero)
+	{
 		_npcPositions[name] = pos;
+		if (name != "homer")
+			_game.PlaceNpc(name, pos);
+	}
 	if (name == "homer")
 		_game.LoadModel("homer", "homer");
 }
@@ -1426,7 +1431,9 @@ float ScriptEngine::playerRaceLaps() const
 
 bool ScriptEngine::GetRacePosition(int& position, int& field) const
 {
-	if (_raceOpponents.empty())
+	// Only in a race: m6's truck is a target, not a rival, and "2nd / 2" over a
+	// delivery made no sense.
+	if (_raceOpponents.empty() || _objectiveType != "race")
 		return false;
 
 	// Checkpoints are coarse -- sr2 has seven a lap -- so the player only gains a
