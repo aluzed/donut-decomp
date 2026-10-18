@@ -116,7 +116,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 ### AUDIO
 | ID | Statut | Pri | Sujet | Note |
 |---|---|---|---|---|
-| AUDIO-002 | 🟡 | P1 | **Finir** streaming musique double-buffer | `MusicSource` déclaré (`AudioManager.h:71-79`), `PlayMusic()` incomplet |
+| AUDIO-002 | 🟡 | P1 | **Finir** streaming musique double-buffer | the game's music plays: each level's RSD segments chained in order (`PlayMusicPlaylist`); the l<n>_music.rms script is not read |
 | AUDIO-007 | 🟡 | P2 | Dialogue : **sous-titres** + lip sync | queue priorité ✅ ; sous-titres **absents** |
 | AUDIO-006 | ✅ | P3 | Auto-scan dossier `audio/` (au lieu de 10 noms en dur) | constructeur |
 | AUDIO-008 | ⬜ | P3 | EFX reverb par zone (intérieur/extérieur) | |

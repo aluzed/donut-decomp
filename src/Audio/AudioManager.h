@@ -52,6 +52,12 @@ public:
 	void SetVolume(float volume);
 	void PlayRaw(const std::vector<uint8_t>& pcmData, int sampleRate, int channels, int bits);
 	void PlayMusic(const std::string& name);
+	// Plays these tracks one after another, round and round: the game's own
+	// music is made of short segments chained together.
+	void PlayMusicPlaylist(std::vector<std::string> tracks);
+	void StopMusic();
+	// Every sound the loaded RCFs hold whose name contains `part`, sorted.
+	std::vector<std::string> FindSounds(const std::string& part) const;
 
 	void Update();
 	void DebugGUI(bool* open);
@@ -102,6 +108,12 @@ private:
 	std::vector<Source> _sources;
 	std::deque<Dialogue> _dialogueQueue;
 	std::unique_ptr<MusicSource> _music;
+	std::vector<std::string> _playlist;
+	std::size_t _playlistIndex = 0;
+	// Stops and frees the music source, if any.
+	void releaseMusic();
+	// Decodes `name` whole and plays it once on a fresh music source.
+	bool startMusicTrack(const std::string& name, bool loop);
 };
 
 } // namespace Donut

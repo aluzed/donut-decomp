@@ -205,6 +205,7 @@ Game::Game(int argc, char** argv)
 	if (FileSystem::exists("./assets/audio/ambience/ambience.rcf"))
 		_audioManager->LoadRCF("./assets/audio/ambience/ambience.rcf");
 
+
 	if (FileSystem::exists("./art/frontend/scrooby2/resource/fonts/font0_16.p3d"))
 	{
 		const P3D::P3DFile p3dFont("./art/frontend/scrooby2/resource/fonts/font0_16.p3d");
@@ -830,6 +831,24 @@ void Game::loadLevel()
 			}
 		}
 		Log::Info("Game: {} people about level {}", _ambientNpcs.size(), _levelNumber);
+	}
+
+	// The level's music. The game chains short segments by a music script
+	// (l<n>_music.rms) that is not read here; the segments of the level's own
+	// set play in order instead: Homer's tubas on level 1, Lisa's on 3, Marge's
+	// lounge on 4, Halloween on 7. The other levels have no set of their own
+	// and get the main themes.
+	{
+		static const std::map<int, std::string> kSets {
+		    {1, "\\homer\\"}, {3, "\\lisa\\"}, {4, "\\marge\\"}, {7, "\\halloween\\"}};
+		const auto set = kSets.find(_levelNumber);
+		std::vector<std::string> tracks;
+		for (const std::string& track : _audioManager->FindSounds(set != kSets.end() ? set->second : "_main.rsd"))
+			if (track.find("\\music\\") != std::string::npos && track.size() > 4 &&
+			    track.compare(track.size() - 4, 4, ".rsd") == 0 &&
+			    track.find("_end_") == std::string::npos && track.find("reward") == std::string::npos)
+				tracks.push_back(track);
+		_audioManager->PlayMusicPlaylist(std::move(tracks));
 	}
 
 	// Hit & Run: the level's police car (CreateChaseManager) and how fast the

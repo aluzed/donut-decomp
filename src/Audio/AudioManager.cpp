@@ -1,5 +1,6 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
+#include <algorithm>
 #include "AudioManager.h"
 
 #include "Core/FileSystem.h"
@@ -147,6 +148,18 @@ void AudioManager::Update()
 {
 	cleanupFinished();
 	processDialogueQueue();
+
+	// The next segment when one ends.
+	if (_music && !_playlist.empty())
+	{
+		ALint state = AL_STOPPED;
+		alGetSourcei(_music->id, AL_SOURCE_STATE, &state);
+		if (state == AL_STOPPED)
+		{
+			_playlistIndex = (_playlistIndex + 1) % _playlist.size();
+			startMusicTrack(_playlist[_playlistIndex], false);
+		}
+	}
 }
 
 void AudioManager::cleanupFinished()
@@ -176,47 +189,85 @@ ALenum AudioManager::getFormat(int channels, int bits) const
 	return AL_FORMAT_STEREO16;
 }
 
-void AudioManager::PlayMusic(const std::string& name)
+void AudioManager::releaseMusic()
 {
+	if (!_music)
+		return;
+	alSourceStop(_music->id);
+	alSourcei(_music->id, AL_BUFFER, 0);
+	alDeleteSources(1, &_music->id);
+	alDeleteBuffers(kStreamingBuffers, _music->buffers);
 	_music.reset();
+}
+
+bool AudioManager::startMusicTrack(const std::string& name, bool loop)
+{
+	// The previous track's source and buffers used to be dropped without
+	// being deleted.
+	releaseMusic();
 
 	auto soundIt = _sounds.find(name);
 	if (soundIt == _sounds.end())
-		return;
-
-	RCL::RCFFile* rcfFile = soundIt->second;
-	auto ms = rcfFile->GetFileStream(name);
+		return false;
+	auto ms = soundIt->second->GetFileStream(name);
+	if (!ms)
+		return false;
 	RCL::RSDFile rsdFile(*ms);
+	const auto& data = rsdFile.GetData();
+	if (data.empty())
+		return false;
 
 	_music = std::make_unique<MusicSource>();
 	_music->sampleRate = rsdFile.GetSampleRate();
 	_music->channels = rsdFile.GetNumChannels();
 	_music->bits = rsdFile.GetBitsPerChannel();
-	_music->playing = false;
-
 	alGenSources(1, &_music->id);
 	alGenBuffers(kStreamingBuffers, _music->buffers);
-
-	ALenum format = getFormat(_music->channels, _music->bits);
-	const auto& data = rsdFile.GetData();
-	size_t totalBytes = data.size();
-
-	if (totalBytes < 2 * kStreamingBufferSize)
-	{
-		alBufferData(_music->buffers[0], format, data.data(), static_cast<ALsizei>(totalBytes), _music->sampleRate);
-		alSourceQueueBuffers(_music->id, 1, _music->buffers);
-		alSourcei(_music->id, AL_LOOPING, AL_TRUE);
-	}
-	else
-	{
-		size_t half = totalBytes / 2;
-		alBufferData(_music->buffers[0], format, data.data(), static_cast<ALsizei>(half), _music->sampleRate);
-		alBufferData(_music->buffers[1], format, data.data() + half, static_cast<ALsizei>(totalBytes - half), _music->sampleRate);
-		alSourceQueueBuffers(_music->id, 2, _music->buffers);
-	}
-
+	// A segment is a few seconds: decoded whole, it fits one buffer.
+	alBufferData(_music->buffers[0], getFormat(_music->channels, _music->bits), data.data(),
+	             static_cast<ALsizei>(data.size()), _music->sampleRate);
+	alSourcei(_music->id, AL_BUFFER, static_cast<ALint>(_music->buffers[0]));
+	alSourcei(_music->id, AL_LOOPING, loop ? AL_TRUE : AL_FALSE);
+	alSourcei(_music->id, AL_SOURCE_RELATIVE, AL_TRUE);
+	alSourcef(_music->id, AL_GAIN, 0.45f);
 	alSourcePlay(_music->id);
 	_music->playing = true;
+	return true;
+}
+
+void AudioManager::PlayMusic(const std::string& name)
+{
+	_playlist.clear();
+	startMusicTrack(name, true);
+}
+
+void AudioManager::PlayMusicPlaylist(std::vector<std::string> tracks)
+{
+	_playlist = std::move(tracks);
+	_playlistIndex = 0;
+	if (_playlist.empty())
+	{
+		releaseMusic();
+		return;
+	}
+	Log::Info("Audio: music, {} tracks from '{}'", _playlist.size(), _playlist.front());
+	startMusicTrack(_playlist.front(), false);
+}
+
+void AudioManager::StopMusic()
+{
+	_playlist.clear();
+	releaseMusic();
+}
+
+std::vector<std::string> AudioManager::FindSounds(const std::string& part) const
+{
+	std::vector<std::string> found;
+	for (const auto& [name, rcf] : _sounds)
+		if (name.find(part) != std::string::npos)
+			found.push_back(name);
+	std::sort(found.begin(), found.end());
+	return found;
 }
 
 void AudioManager::SetListenerPosition(const Vector3& position, const Vector3& direction, const Vector3& up)
@@ -304,13 +355,7 @@ void AudioManager::initializeOpenAL()
 
 void AudioManager::shutdownOpenAL()
 {
-	if (_music)
-	{
-		alSourceStop(_music->id);
-		alDeleteSources(1, &_music->id);
-		alDeleteBuffers(2, _music->buffers);
-		_music.reset();
-	}
+	releaseMusic();
 
 	for (auto& src : _sources)
 	{

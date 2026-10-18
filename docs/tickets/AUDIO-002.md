@@ -1,6 +1,6 @@
 # AUDIO-002 — Finir le streaming musique double-buffer
 
-- **Status:** TODO
+- **Status:** PARTIAL (2026-10-18: the game's music plays)
 - **Priority:** P1
 - **Module:** Audio
 - **Depends on:** —
@@ -19,3 +19,19 @@ La structure `MusicSource` (source OpenAL + 2 buffers de streaming) est déclar�
 - [ ] `PlayMusic` joue un morceau du début à la fin sans coupure ni underrun audible.
 - [ ] Le streaming recycle réellement les 2 buffers dans `Update` (vérifiable via `AL_BUFFERS_PROCESSED`).
 - [ ] Les ressources OpenAL de `MusicSource` sont libérées proprement à l'arrêt.
+
+## The game's music (2026-10-18)
+
+The music RCFs (`music00/01/03.rcf`, picked up by the `audio/` scan) hold the game's
+score as short RSD segments (7-20s, 24 kHz stereo), and a music script per level
+(`l1_music.rms`... binary, not read) that chains them. `AudioManager::PlayMusicPlaylist`
+plays a list of segments one after another, round and round: each is decoded whole into
+one buffer (no streaming needed for a segment), and `Update` starts the next when one
+ends. `PlayMusic` no longer leaks the previous track's source and buffers.
+
+Each level plays its own set in order: Homer's tubas on level 1 (61 segments), Lisa's
+on 3, Marge's lounge on 4, Halloween on 7; the levels without a set of their own play
+the `*_main` themes. Checked by log: tuba_001 (7.8s), tuba_002, tuba_003 in turn. Not
+heard: this machine was not listened to.
+
+Not done: the music script (what plays when, the mission and chase themes, the endings).
