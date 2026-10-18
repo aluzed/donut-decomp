@@ -453,6 +453,66 @@ void Game::LoadModel(const std::string& name, const std::string& anim)
 	playPlayerAnimation("loco_idle_rest", true);
 }
 
+Vector3 Game::driverDoor(const Vehicle& car) const
+{
+	// The car faces +Z; its left, +X, is the driver's side, and the driver's
+	// seat a little behind the middle (further forward, the climb in ended on
+	// the windscreen).
+	return car.GetPosition() + car.GetRotation() * Vector3(1.4f, 0.0f, -0.5f);
+}
+
+void Game::startBoarding(Vehicle* car, bool in)
+{
+	_boarding = {car, in, -1};
+	_playerIdleFor = 0.0;
+	updateBoarding();
+}
+
+void Game::updateBoarding()
+{
+	if (!_boarding.car || !_character)
+		return;
+	// The car may be gone (a mission restarted): the player stays where he is.
+	bool exists = _boarding.car == _scriptEngine->GetPlayerCar();
+	for (const auto& v : _scriptEngine->GetMissionVehicles())
+		exists = exists || v.get() == _boarding.car;
+	if (!exists || _inVehicle)
+	{
+		_boarding = {};
+		return;
+	}
+
+	static const char* const kIn[] = {"get_into_car_open_door_driver", "get_into_car_driver",
+	                                  "get_into_car_close_door_driver"};
+	static const char* const kOut[] = {"get_out_of_car_open_door_driver", "get_out_of_car_driver",
+	                                   "get_out_of_car_close_door_driver"};
+	Vehicle& car = *_boarding.car;
+
+	// At the door, facing the car (the model faces -Z, hence the half turn).
+	const Vector3 door = driverDoor(car);
+	const Vector3 toCar = car.GetPosition() - door;
+	_character->SetPosition(door);
+	_character->SetRotation(Quaternion::MakeFromEuler(Vector3(0.0f, std::atan2(toCar.X, toCar.Z) + 3.14159265f, 0.0f)));
+
+	// The next step once this one has played; a step the character has no
+	// animation for is skipped.
+	while (_boarding.step < 0 || _character->IsAnimationFinished())
+	{
+		if (++_boarding.step >= 3)
+		{
+			if (_boarding.in)
+			{
+				PutPlayerInVehicle(&car);
+				_audioManager->PlayRaw(SoundGenerator::Beep(800, 0.15f), 22050, 1, 16);
+			}
+			_boarding = {};
+			return;
+		}
+		if (playPlayerAnimation((_boarding.in ? kIn : kOut)[_boarding.step], false))
+			break;
+	}
+}
+
 bool Game::playPlayerAnimation(const std::string& what, bool loop)
 {
 	const auto found = _playerAnimations.find(what);
@@ -467,6 +527,8 @@ bool Game::playPlayerAnimation(const std::string& what, bool loop)
 
 void Game::updatePlayerAnimation(double dt, bool moving, bool onGround)
 {
+	if (_boarding.car)
+		return;
 	// The idle ones: Homer scratches, checks his shoes, dances.
 	static const char* const kIdles[] = {"idle_scratch", "idle_bumshake", "idle_check_shoes", "idle_dancing",
 	                                     "idle_donut",   "idle_fat",      "idle_chili",       "idle_scuzzy"};
@@ -2052,6 +2114,12 @@ void Game::Run()
 			if (_camPitch > 0.2f) _camPitch = 0.2f;    // slightly up
 		}
 
+		if (onFoot && _boarding.car)
+		{
+			intent.moveForward = intent.moveBackward = intent.moveLeft = intent.moveRight = 0.0f;
+			intent.interact = false;
+			updateBoarding();
+		}
 		if (onFoot)
 		{
 			auto& ctrl = _character->GetCharacterController();
@@ -2073,13 +2141,10 @@ void Game::Run()
 					{
 						if ((v->GetPosition() - _character->GetPosition()).Length() < 5.0f)
 						{
-							_inVehicle = true;
-							_activeVehicle = v.get();
-							Log::Info("Game: entered vehicle '{}'", v->GetName());
-							_audioManager->PlayRaw(SoundGenerator::Beep(800, 0.15f), 22050, 1, 16);
-							// Consume the press: the exit check below is guarded on
-							// _inVehicle, which was just set, so the same intent would
-							// enter and immediately leave again within one frame.
+							// By the driver's door, the door first (updateBoarding
+							// seats the player when done). Consume the press, or it
+							// would jump as well.
+							startBoarding(v.get(), true);
 							intent.interact = false;
 							// getting in the car starts the race; finishing it is the
 							// checkpoint loop's job (this used to complete the stage here)
@@ -2087,7 +2152,7 @@ void Game::Run()
 						}
 					}
 				}
-				if (!_inVehicle && ctrl.canJump())
+				if (!_inVehicle && !_boarding.car && ctrl.canJump())
 				{
 					ctrl.jump(btVector3(0, 0, 0));
 					playPlayerAnimation("jump_idle_take_off", false);
@@ -2153,9 +2218,12 @@ void Game::Run()
 		{
 			if (intent.interact)
 			{
+				// Out by the driver's door, and the door shut behind.
+				Vehicle* car = _activeVehicle;
 				_inVehicle = false;
-				SetPlayerPosition(_activeVehicle->GetPosition() + Vector3(3.0f, 0, 0));
 				_activeVehicle = nullptr;
+				SetPlayerPosition(driverDoor(*car));
+				startBoarding(car, false);
 				Log::Info("Game: exited vehicle");
 			}
 		else if (intent.honk)

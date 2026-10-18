@@ -260,6 +260,19 @@ private:
 	bool playPlayerAnimation(const std::string& what, bool loop);
 	// Picks the player's animation each frame: run, jump, land, idle.
 	void updatePlayerAnimation(double dt, bool moving, bool onGround);
+	// Getting into or out of a car, by its driver's door: the door opens, the
+	// player climbs in or out, the door shuts -- three of the character's
+	// animations. The player has no control meanwhile.
+	struct Boarding
+	{
+		Vehicle* car = nullptr;
+		bool in = true;
+		int step = -1;
+	};
+	Boarding _boarding;
+	void startBoarding(Vehicle* car, bool in);
+	void updateBoarding();
+	Vector3 driverDoor(const Vehicle& car) const;
 	// The debug Warp menu: the level script's AddTeleportDest places.
 	std::vector<std::pair<std::string, Vector3>> _teleports;
 	// The level's interactive gags (level.mfk's GagBegin ... GagEnd): Moe's
