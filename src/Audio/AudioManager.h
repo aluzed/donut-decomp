@@ -66,6 +66,8 @@ public:
 	void PlayEngine(const std::string& file);
 	void SetEnginePitch(float pitch);
 	void StopEngine();
+	// The place's background sound, looped softly ("suburb_day_loop.rsd").
+	void PlayAmbience(const std::string& part);
 	// Every sound the loaded RCFs hold whose name contains `part`, sorted.
 	std::vector<std::string> FindSounds(const std::string& part) const;
 
@@ -122,6 +124,10 @@ private:
 	std::unique_ptr<MusicSource> _music;
 	std::vector<std::string> _playlist;
 	ALuint _engineSource = 0;
+	ALuint _ambienceSource = 0;
+	ALuint _ambienceBuffer = 0;
+	std::string _ambience;
+	std::string _ambienceAsked; // the last `part`, to look it up only on a change
 	ALuint _engineBuffer = 0;
 	std::size_t _playlistIndex = 0;
 	// Stops and frees the music source, if any.

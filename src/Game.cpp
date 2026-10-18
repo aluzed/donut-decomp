@@ -1677,6 +1677,16 @@ void Game::Run()
 			_worldPhysics->Update(static_cast<float>(deltaTime));
 
 		_audioManager->Update();
+		// The place's background: the level's outdoors, or a small room indoors.
+		// The game picks it by zone with a script (ambience.rms) not read here.
+		{
+			static const char* const kOutdoors[] = {"suburb_day_loop",    "city_busy_loop",       "squidport_amb_loop_02",
+			                                       "suburb_night_loop",  "city_night_loop",      "squidport_night_loop",
+			                                       "halloween_amb_loop"};
+			const int level = std::clamp(_levelNumber, 1, 7);
+			_audioManager->PlayAmbience(_interior.empty() ? kOutdoors[level - 1] : "room_small_01");
+		}
+
 		// The engine of the car the player drives: its own recorded loop (its
 		// sound script's), pitched up with the speed.
 		{

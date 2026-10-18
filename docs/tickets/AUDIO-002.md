@@ -46,3 +46,11 @@ the horn (`*_horn`). The car the player drives now plays its engine loop, pitche
 car's horn, the generated one only for a car without. Checked by log for the family
 sedan, the Honor Roller, the Canyonero, Lisa's and Apu's cars; the police car has no
 script. Not heard on this machine.
+
+## The place's background (2026-10-18)
+
+`ambience.rcf` holds looped backgrounds by place (suburb by day and night, the busy city,
+the Squidport, Halloween, small rooms...), which the game picks by zone with a script
+(`ambience.rms`) not read here. Each level now plays one for its outdoors (level 1 the
+suburb by day, 2 the busy city, 3 the Squidport, 4 the suburb at night, 5 the city at
+night, 6 the Squidport at night, 7 Halloween), and a small room indoors, softly, looped.

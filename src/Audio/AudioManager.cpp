@@ -230,6 +230,7 @@ bool AudioManager::startMusicTrack(const std::string& name, bool loop)
 	// being deleted.
 	releaseMusic();
 	StopEngine();
+	PlayAmbience("\x01"); // matches nothing: stops it
 
 	auto soundIt = _sounds.find(name);
 	if (soundIt == _sounds.end())
@@ -358,6 +359,44 @@ void AudioManager::StopEngine()
 	alDeleteBuffers(1, &_engineBuffer);
 	_engineSource = 0;
 	_engineBuffer = 0;
+}
+
+void AudioManager::PlayAmbience(const std::string& part)
+{
+	if (part == _ambienceAsked)
+		return;
+	_ambienceAsked = part;
+	const auto found = FindSounds(part);
+	const std::string name = found.empty() ? std::string() : found.front();
+	if (name == _ambience)
+		return;
+	_ambience = name;
+	if (_ambienceSource != 0)
+	{
+		alSourceStop(_ambienceSource);
+		alSourcei(_ambienceSource, AL_BUFFER, 0);
+		alDeleteSources(1, &_ambienceSource);
+		alDeleteBuffers(1, &_ambienceBuffer);
+		_ambienceSource = 0;
+	}
+	if (name.empty())
+		return;
+	auto stream = _sounds.at(name)->GetFileStream(name);
+	if (!stream)
+		return;
+	RCL::RSDFile rsd(*stream);
+	if (rsd.GetData().empty())
+		return;
+	alGenSources(1, &_ambienceSource);
+	alGenBuffers(1, &_ambienceBuffer);
+	alBufferData(_ambienceBuffer, getFormat(rsd), rsd.GetData().data(), static_cast<ALsizei>(rsd.GetData().size()),
+	             rsd.GetSampleRate());
+	alSourcei(_ambienceSource, AL_BUFFER, static_cast<ALint>(_ambienceBuffer));
+	alSourcei(_ambienceSource, AL_LOOPING, AL_TRUE);
+	alSourcei(_ambienceSource, AL_SOURCE_RELATIVE, AL_TRUE);
+	alSourcef(_ambienceSource, AL_GAIN, 0.3f);
+	alSourcePlay(_ambienceSource);
+	Log::Info("Audio: ambience '{}'", name);
 }
 
 void AudioManager::StopMusic()
