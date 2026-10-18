@@ -48,9 +48,8 @@ inside a hedge.
       without cars).
 - [x] A car seen from close range renders whole and textured (M1race, `snake_v` and
       `famil_v`).
-- [ ] The player's car is seen from the chase camera at sr2's grid. The car is there
-      (-201.5, -2.2, -261.6) and the camera's line of sight to it is clear by raycast, but the
-      captured frame shows grass where it should be. Unresolved.
+- [x] The player's car is seen from the chase camera at sr2's grid (see "The view that
+      turned the wrong way" below).
 
 ## The yaw that was in degrees (2026-10-18, later)
 
@@ -64,7 +63,19 @@ for 0, 0.5, pi/2, 2.5 and -2.5.
 The chase camera also looks **at the car** from wherever it ends up, rather than along the
 car's heading at a fixed pitch, so a camera pulled in by the level still frames the car.
 
-The sr2 grid is still not solved, but narrowed: the car camera runs, stands 12m behind the
-car on its heading and looks at it, and the frame shows a lawn bank with a tree where the
-car is. The static raycast from the car to the camera is clear, so the bank that is drawn
-there is not in the collision, or not where it is drawn. That is what to look at next.
+## The view that turned the wrong way (2026-10-18, solved)
+
+The sr2 grid was not a hidden car but a camera looking the other way. `FreeCamera` keeps
+the **view's** rotation (world to camera), the inverse of the camera's own: its own
+`Move` takes `_orientation.Inverse()` to go back to the world. Both follow cameras gave it
+the camera's own rotation, so the view turned the other way about Y. For a heading of 0
+or pi the two are the same, which is why every earlier check looked right; for any other
+the camera stood in the right place and looked away from its subject. sr2's grid faces +X,
+so the camera sat behind the car and showed the lawn behind itself. On foot, turned a
+quarter, it showed the street with Homer out of the frame.
+
+`Game::cameraLooking(pitchDown, yaw)` now builds the view rotation, inverse included, for
+both. Checked: sr2's grid shows `famil_v` square in the frame with the school bus ahead;
+on foot at a quarter turn, Homer is in the middle. `--autopilot` story runs as before.
+
+- [x] The player's car is seen from the chase camera at sr2's grid.

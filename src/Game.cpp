@@ -534,6 +534,17 @@ void Game::saveStoryProgress(int next) const
 	Log::Info("Game: story progress saved, next mission {}", next + 1);
 }
 
+Quaternion Game::cameraLooking(float pitchDown, float yaw)
+{
+	// FreeCamera's orientation is the view's rotation, world to camera: the
+	// inverse of the camera's own. Both follow cameras used to pass their own
+	// rotation, so the view turned the other way about Y. At a yaw of 0 or pi
+	// that is the same thing, which is why it went unseen; anywhere else the
+	// camera stood on the right side of its subject and looked away from it --
+	// at sr2's grid, facing +X, it showed the lawn behind the car.
+	return Quaternion::MakeFromEuler(Vector3(pitchDown, yaw, 0.0f)).Inverse();
+}
+
 void Game::updateCarDamage()
 {
 	// The car is hurt by what stops it: a sudden change in its horizontal
@@ -1123,7 +1134,7 @@ void Game::Run()
 			const float flat = std::sqrt(toCar.X * toCar.X + toCar.Z * toCar.Z);
 			const float yaw = flat > 0.5f ? atan2f(toCar.X, toCar.Z) : vehRot.Yaw();
 			_camera->SetPosition(cameraPos);
-			_camera->SetQuaternion(Quaternion::MakeFromEuler(Vector3(atan2f(toCar.Y, std::max(flat, 0.5f)), yaw, 0)));
+			_camera->SetQuaternion(cameraLooking(atan2f(-toCar.Y, std::max(flat, 0.5f)), yaw));
 		}
 		else if (_character)
 		{
@@ -1132,7 +1143,9 @@ void Game::Run()
 			// and looks at it. It follows the character's position but not its
 			// facing, so it no longer swings around when the character turns.
 			auto charPos = _character->GetPosition();
-			Quaternion camRot = Quaternion::MakeFromEuler(Vector3(_camPitch, _camYaw, 0.0f));
+			// _camPitch is negative looking down; MakeFromEuler pitches +Z down
+			// for a positive angle.
+			Quaternion camRot = Quaternion::MakeFromEuler(Vector3(-_camPitch, _camYaw, 0.0f));
 			Vector3 lookAt = charPos + Vector3(0.0f, 1.2f, 0.0f);
 			Vector3 forward = camRot * Vector3::Forward;
 			Vector3 targetPos = lookAt - forward * 6.0f;
@@ -1142,7 +1155,7 @@ void Game::Run()
 			_smoothCamPos = _smoothCamPos + (targetPos - _smoothCamPos) * lerpFactor;
 
 			_camera->SetPosition(unoccludedCameraPosition(lookAt, _smoothCamPos));
-			_camera->SetQuaternion(camRot);
+			_camera->SetQuaternion(cameraLooking(-_camPitch, _camYaw));
 		}
 		//_camera->SetPosition(cameraTransform.Translation());
 

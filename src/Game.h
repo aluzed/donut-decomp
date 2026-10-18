@@ -216,6 +216,9 @@ private:
 	int loadStoryProgress() const;
 	void saveStoryProgress(int next) const;
 	int _coins = 0;
+	// The view rotation for a camera looking along heading `yaw` (radians about
+	// +Y, 0 is +Z), tipped `pitchDown` radians below the horizon.
+	static Quaternion cameraLooking(float pitchDown, float yaw);
 	// Health lost to impacts, judged from the car's velocity a frame apart.
 	void updateCarDamage();
 	const Vehicle* _damageVehicle = nullptr;
