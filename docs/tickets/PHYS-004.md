@@ -28,8 +28,9 @@ Aujourd'hui seul un test de pénétration/manifold existe dans `recoverFromPenet
 ## Impact damage (2026-10-18)
 
 Done without contact callbacks, in `Game::updateCarDamage`: the player's car loses health
-when its **horizontal velocity changes by more than 4 m/s in one frame**, 4 points per m/s
-beyond that, with a camera shake and a thud. That catches every impact, a wall as much as
+when its **horizontal velocity changes by more than 4 m/s in one frame**, 2.5 points per
+m/s beyond that (4 at first: a 70 km/h hit cost 64, and level 3 m3's destroy wrecked the
+car four times over), with a camera shake and a thud. That catches every impact, a wall as much as
 a car, while driving itself never comes near (full brakes take ~0.2 m/s off a frame).
 Height is left out, so a jump's landing is free, and a car that moved more than 5m in a
 frame was teleported, not hit.

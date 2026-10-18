@@ -60,7 +60,8 @@ Two commands made it worse:
   car for a `getin`, and out of it for an `interior` or a `talkto`; left on foot by a
 `talkto` when the next stage is driving (`follow`, `destroy`, `dump`, `race`), it has the
 player's car brought round and takes the wheel (level 4 m1's dump was "rammed" on foot
-and timed out). It exists to run a whole mission unattended.
+and timed out). Something to pick up is taken at its own height: level 4 m3's ketchup
+hangs 11m above the road, for a jump the autopilot does not make. It exists to run a whole mission unattended.
 
 ## A crash it uncovered
 

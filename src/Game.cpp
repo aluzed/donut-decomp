@@ -590,7 +590,7 @@ void Game::updateCarDamage()
 	// Driving makes no such jolt: full brakes take ~0.2 m/s off a frame. Height
 	// is left out, so that landing a jump on the suspension is free.
 	constexpr float kImpactThreshold = 4.0f; // m/s lost in one frame
-	constexpr float kDamagePerMs = 4.0f;     // health per m/s beyond it
+	constexpr float kDamagePerMs = 2.5f;     // health per m/s beyond it: a 70 km/h crash costs ~40
 
 	if (!_inVehicle || !_activeVehicle)
 	{
@@ -782,8 +782,11 @@ void Game::runAutopilot(double dt)
 	if (!_scriptEngine->GetObjectiveTarget(target))
 		return;
 	Log::Info("Game: autopilot to ({:.1f}, {:.1f}, {:.1f})", target.X, target.Y, target.Z);
+	// Something to pick up is taken where it is, at its height: level 4 m3's
+	// ketchup hangs 11m above the road, for a jump the autopilot cannot make.
+	const bool pickup = objective == "delivery" || objective == "dump";
 	if (_inVehicle && _activeVehicle)
-		_activeVehicle->Teleport(target, _activeVehicle->GetRotation());
+		_activeVehicle->Teleport(target, _activeVehicle->GetRotation(), !pickup);
 	else
 		SetPlayerPosition(target + Vector3(0.0f, 1.0f, 0.0f));
 }

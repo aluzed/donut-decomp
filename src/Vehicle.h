@@ -51,7 +51,9 @@ public:
 
 	// Moves the car bodily: resets the chassis transform, clears its momentum and
 	// lets the suspension settle again. SetPosition only moves the model.
-	void Teleport(const Vector3& position, const Quaternion& rotation);
+	// Puts the car down on the ground at `position`; `onGround` false leaves it
+	// at that very height, to fall from there.
+	void Teleport(const Vector3& position, const Quaternion& rotation, bool onGround = true);
 
 	void SetPosition(const Vector3& pos);
 	void SetRotation(const Quaternion& rot);
