@@ -49,6 +49,8 @@ public:
 	// The pedestrians within `radius` of a car going through them: they are
 	// taken off the street (there is no knock-down animation) and counted.
 	int KnockDown(const Vector3& position, float radius, const Vector3& carVelocity = Vector3::Zero);
+	// Pedestrians standing within `radius` of `position`, still on their feet.
+	int CountNear(const Vector3& position, float radius) const;
 
 private:
 	void despawnFar(float despawnRadius, const Vector3& playerPosition);

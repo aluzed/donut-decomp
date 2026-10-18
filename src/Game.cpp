@@ -719,6 +719,23 @@ void Game::updateHitAndRun(double dt)
 			if (!cries.empty())
 				_audioManager->PlayAudio(cries[static_cast<std::size_t>(rand()) % cries.size()]);
 		}
+	// A near miss at speed: someone jumps clear and says what they think of it
+	// (generic_*\p_nhitbyc_*).
+	if (driving && std::abs(speed) > 30.0f && _pedestrianManager && _interior.empty())
+		if (static double lastShout = -10.0;
+		    _elapsedSeconds - lastShout > 2.5 && _pedestrianManager->CountNear(player, 5.0f) > 0)
+		{
+			static const std::vector<std::string> shouts = [this] {
+				std::vector<std::string> lines;
+				for (const auto& line : _audioManager->FindSounds("\\p_nhitbyc_"))
+					if (line.rfind("generic_", 0) == 0)
+						lines.push_back(line);
+				return lines;
+			}();
+			lastShout = _elapsedSeconds;
+			if (!shouts.empty())
+				_audioManager->PlayAudio(shouts[static_cast<std::size_t>(rand()) % shouts.size()]);
+		}
 
 	switch (_hitAndRun->Update(dt, player, speed, !driving, *_worldPhysics, *_pathGraph))
 	{

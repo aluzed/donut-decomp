@@ -215,6 +215,21 @@ int PedestrianManager::KnockDown(const Vector3& position, float radius, const Ve
 	return hit;
 }
 
+int PedestrianManager::CountNear(const Vector3& position, float radius) const
+{
+	int near = 0;
+	for (const auto& pedestrian : _pedestrians)
+	{
+		if (!pedestrian.active || pedestrian.flying >= 0.0f)
+			continue;
+		Vector3 d = pedestrian.position - position;
+		d.Y = 0.0f;
+		if (d.LengthSquared() < radius * radius)
+			++near;
+	}
+	return near;
+}
+
 void PedestrianManager::despawnFar(float despawnRadius, const Vector3& playerPosition)
 {
 	auto it = _pedestrians.begin();
