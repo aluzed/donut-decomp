@@ -1004,6 +1004,13 @@ void Game::PlaceNpc(const std::string& name, const Vector3& position)
 
 		auto npc = std::make_unique<Character>(name);
 		npc->LoadModel(name);
+		// npd_m.p3d and the like are a skeleton without a body: drawing one
+		// crashed level 1 m5 the moment its "npd" joined the scene.
+		if (!npc->HasMesh())
+		{
+			Log::Warn("Game: '{}' has no body to show, not placed", name);
+			return;
+		}
 		npc->LoadAnimations(name);
 		// Like the pedestrians, a character extracted without animations borrows
 		// Apu's, whose skeleton the adult models share; Barney stood in his

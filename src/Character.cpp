@@ -56,6 +56,11 @@ void Character::LoadModel(const std::string& name)
 	}
 }
 
+bool Character::HasMesh() const
+{
+	return _skinModel && _skinModel->HasMesh();
+}
+
 void Character::LoadAnimations(const std::string& name)
 {
 	_animations.clear();

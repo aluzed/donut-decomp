@@ -73,6 +73,8 @@ public:
 
 	// maybe change this to just anim names
 	const std::unordered_map<std::string, std::unique_ptr<SkinAnimation>>& GetAnimations() const { return _animations; }
+	// False for a character file that is a skeleton alone (npd_m.p3d).
+	bool HasMesh() const;
 
 private:
 	void addAnimation(const P3D::Animation&);

@@ -64,6 +64,9 @@ public:
 
 	// Update / Draw methods
 	void Draw();
+	// Whether a PolySkin was loaded: some character files are a skeleton alone
+	// (npd_m.p3d, a driver's), with nothing to draw.
+	bool HasMesh() const { return _vertexBinding != nullptr; }
 
 private:
 	std::unique_ptr<GL::VertexBinding> _vertexBinding;

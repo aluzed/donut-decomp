@@ -87,6 +87,8 @@ void SkinModel::LoadPolySkin(const P3D::PolySkin& polySkin)
 
 void SkinModel::Draw()
 {
+	if (!_vertexBinding)
+		return;
 	_vertexBinding->Bind();
 
 	glActiveTexture(GL_TEXTURE0);

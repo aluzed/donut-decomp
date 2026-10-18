@@ -159,3 +159,11 @@ against the fastest of all of them, and gr1's bogus -8.6s beat them all. `donut_
 now holds a line per mission, `L<level>:<mission> <seconds>`; a mission is compared with
 its own, and only a positive time can set one. The old file (a bare number, then a
 position) has no keys and reads as no records at all.
+
+## A character with no body (2026-10-18)
+
+With the art copied in full, level 1 m5's `AddNPC("npd", ...)` found `art/chars/npd_m.p3d`
+and the game crashed the moment it drew it: `npd`, `nps` and `ndr` are the generic
+drivers, a skeleton alone with no PolySkin, and a skin model without one dereferenced a
+null vertex binding. Such a character is now not placed (with a warning), and a skin model
+with nothing loaded draws nothing.
