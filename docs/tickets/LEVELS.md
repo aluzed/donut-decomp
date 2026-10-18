@@ -49,8 +49,10 @@ they are missing from the level.
 
 **Levels 3-6** each crashed on load, for four reasons, all fixed:
 
-- level 3's player, Lisa, was never extracted (`art/chars/lisa_m.p3d`): a character
-  without a model now falls back to Homer, with a warning;
+- level 3's player, Lisa, had no model in `art/chars` -- the local copy of the art was
+  incomplete, not the extraction (`cp -a files/extracted/Art/. art/` brings her, and
+  every other character, in). A character without a model still falls back to Homer,
+  with a warning, rather than crashing;
 - levels 4 and 6 draw meshes naming shaders no file loads: such a group is not drawn,
   where a null shader was dereferenced;
 - level 5's sky has two props of one name, and the second got the first's mesh after it
@@ -64,8 +66,8 @@ they are missing from the level.
   the Honor Roller in front of Springfield Town Hall; m1's six stages complete under
   `--autopilot`.
 - Levels 3 to 7 load and start their first mission under `--autopilot` without crashing
-  (45s each): level 3 (Homer standing in for Lisa) and level 7 play through stages, level 5
-  reaches its `dump` stage.
+  (45s each): level 3 and level 7 play through stages, level 5 reaches its `dump` stage.
+  With the art copied in full, level 3 is played by Lisa in her car, racing the nerd.
 
 ## One level after another (2026-10-18, later)
 

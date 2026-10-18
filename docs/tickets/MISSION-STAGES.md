@@ -146,8 +146,9 @@ A completed mission still reloads from the top.
 
 ## Not done
 
-- Dialogue. NPCs stand where placed, turning to face a player on foot within 10m, and only
-  those whose model was extracted; one without animations borrows Apu's idle.
+- Dialogue. NPCs stand where placed, turning to face a player on foot within 10m; one
+  without animations borrows Apu's idle. (Lisa and the rest of the cast were thought not
+  extracted: they were, the local `art/` copy was incomplete.)
 - A target "getting away" in `destroy` has not been exercised:
   it goes through the same path as a `follow` target arriving, which has.
 
