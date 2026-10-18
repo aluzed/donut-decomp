@@ -29,6 +29,7 @@ public:
 		float speed;
 		float maxSpeed;
 		Vector3 color;
+		// The road node last passed, and the one being driven to.
 		int currentNode;
 		int targetNode;
 		// Index into the traffic models, or -1 to draw the placeholder box.
@@ -52,6 +53,11 @@ public:
 	const std::vector<TrafficCar>& GetCars() const { return _cars; }
 
 private:
+	// The way on from `node`, coming from `from`: a neighbour other than the
+	// one just left, the straighter the likelier; back the way it came only at
+	// a dead end. -1 when the node leads nowhere.
+	int chooseNextNode(int from, int node) const;
+
 	Level& _level;
 	LineRenderer& _lineRenderer;
 	const PathGraph& _graph;

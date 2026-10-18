@@ -68,7 +68,8 @@ Walking (or driving) within 3m of one finds it for good: found cards are written
 A card is drawn, turning, with the one card geometry in `cards.p3d` (`card11_geoShapeh`),
 whose shaders, textures and geometries are loaded at start-up; the rest of that file is the
 pick-up effect (billboards, particles), not played. Without the file, a blue frame marks the
-card. Not confirmed on screen yet: `card11`, the one looked for, stands 3m up, in Bart's
-treehouse, out of the chase camera's sight.
+card. Seen on screen (drawn for the check on the lawn in front of Homer): the Buzz Cola card,
+textured, turning, about Homer's height and leaning on its axis as authored. `card11` itself
+stands 3m up, inside Bart's treehouse.
 
 Gags are still to do.

@@ -41,12 +41,36 @@ static float seekSteer(const Vector3& position, const Vector3& target, const Qua
 	return steer;
 }
 
-static float arrivalSpeed(const Vector3& position, const Vector3& target, float maxSpeed, float slowDist)
+int TrafficManager::chooseNextNode(int from, int node) const
 {
-	float dist = (target - position).Length();
-	if (dist < 0.5f) return 0.0f;
-	if (dist < slowDist) return maxSpeed * (dist / slowDist);
-	return maxSpeed;
+	const auto& nodes = _graph.GetNodes();
+	const auto& here = nodes[node];
+	Vector3 heading = from >= 0 ? here.position - nodes[from].position : Vector3::Zero;
+	heading.Y = 0.0f;
+	if (heading.LengthSquared() > 0.0001f)
+		heading.Normalize();
+
+	// Weigh each way on by how straight it carries on: a junction is turned
+	// at now and then, a bend is simply followed.
+	int best = -1;
+	float bestScore = -1e9f;
+	for (const int next : here.neighbors)
+	{
+		if (next == from || nodes[next].shortcut)
+			continue;
+		Vector3 way = nodes[next].position - here.position;
+		way.Y = 0.0f;
+		if (way.LengthSquared() > 0.0001f)
+			way.Normalize();
+		const float straight = way.X * heading.X + way.Z * heading.Z;
+		const float score = straight + static_cast<float>(rand() % 100) * 0.008f;
+		if (score > bestScore)
+		{
+			bestScore = score;
+			best = next;
+		}
+	}
+	return best >= 0 ? best : from;
 }
 
 TrafficManager::TrafficManager(Level& level, LineRenderer& lineRenderer, const PathGraph& graph)
@@ -72,19 +96,24 @@ TrafficManager::TrafficManager(Level& level, LineRenderer& lineRenderer, const P
 
 	int maxCars = std::min(12, static_cast<int>(nodes.size()));
 
-	for (int i = 0; i < maxCars; ++i)
+	for (int i = 0, tries = 0; i < maxCars && tries < 1000; ++tries)
 	{
+		// On a road that goes somewhere, heading for one of its neighbours.
 		TrafficCar car;
 		car.currentNode = rand() % nodes.size();
-		car.targetNode = rand() % nodes.size();
-		while (car.targetNode == car.currentNode && nodes.size() > 1)
-			car.targetNode = rand() % nodes.size();
+		if (nodes[car.currentNode].shortcut || nodes[car.currentNode].neighbors.empty())
+			continue;
+		car.targetNode = chooseNextNode(-1, car.currentNode);
+		if (car.targetNode < 0)
+			continue;
+		++i;
 
 		car.speed = 6.0f + (rand() % 10) * 0.8f;
 		car.maxSpeed = car.speed;
 		car.color = colors[i % colors.size()];
-		car.rotation = Quaternion::Identity;
 		car.position = nodes[car.currentNode].position;
+		const Vector3 way = nodes[car.targetNode].position - car.position;
+		car.rotation = Quaternion::MakeFromEuler(Vector3(0.0f, std::atan2(way.X, way.Z), 0.0f));
 		_cars.push_back(car);
 	}
 
@@ -93,38 +122,49 @@ TrafficManager::TrafficManager(Level& level, LineRenderer& lineRenderer, const P
 
 void TrafficManager::Update(double dt)
 {
+	// Each car looks this far down its road and steers for that point. It used
+	// to steer for the very next node and slow to a stop at each one; with the
+	// nodes 2-13m apart, a node that came alongside the car was out of reach of
+	// its turning circle, and it orbited the node for good.
+	constexpr float kLookahead = 8.0f;
 	const auto& nodes = _graph.GetNodes();
 
 	for (auto& car : _cars)
 	{
-		if (car.currentNode < 0 || car.currentNode >= static_cast<int>(nodes.size()))
+		if (car.currentNode < 0 || car.targetNode < 0)
 			continue;
 
-		int nextNode = _graph.GetNextNode(car.currentNode, car.targetNode);
-		if (nextNode < 0 || nextNode >= static_cast<int>(nodes.size()))
-			continue;
-
-		Vector3 target = nodes[nextNode].position;
-		Vector3 dir = target - car.position;
-		float dist = dir.Length();
-
-		if (dist < 1.0f)
+		for (int skip = 0; skip < 8 && (nodes[car.targetNode].position - car.position).Length() < kLookahead; ++skip)
 		{
-			car.currentNode = nextNode;
-			if (car.currentNode == car.targetNode)
-				car.targetNode = rand() % nodes.size();
-			continue;
+			const int next = chooseNextNode(car.currentNode, car.targetNode);
+			if (next < 0)
+				break;
+			car.currentNode = car.targetNode;
+			car.targetNode = next;
 		}
 
-		float steer = seekSteer(car.position, target, car.rotation, car.maxSpeed, 2.5f);
-		float speed = arrivalSpeed(car.position, target, car.maxSpeed, 15.0f);
+		const Vector3 target = nodes[car.targetNode].position;
+		const float steer = seekSteer(car.position, target, car.rotation, car.maxSpeed, 2.5f);
 
 		float yaw = car.rotation.Yaw();
 		yaw += steer * static_cast<float>(dt);
 		car.rotation = Quaternion::MakeFromEuler(Vector3(0, yaw, 0));
 
+		// Slower through the turns: down to a third of its speed for a point
+		// off to the side or behind.
 		Vector3 forward = car.rotation * Vector3::Forward;
+		Vector3 toTarget = target - car.position;
+		toTarget.Y = 0.0f;
+		float facing = 1.0f;
+		if (toTarget.LengthSquared() > 0.0001f)
+		{
+			toTarget.Normalize();
+			facing = forward.X * toTarget.X + forward.Z * toTarget.Z;
+		}
+		const float speed = car.maxSpeed * std::clamp(facing, 0.35f, 1.0f);
 		car.position += forward * speed * static_cast<float>(dt);
+		// The roads rise and fall; the car follows the height of its way.
+		car.position.Y = target.Y;
 	}
 }
 

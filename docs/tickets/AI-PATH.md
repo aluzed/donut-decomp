@@ -300,3 +300,21 @@ reaches waypoint 177 of 186 before the 120s stage timer restarts the mission; th
       M1race once nodes are dropped onto the surface and shortcut roads are not routed
       (2026-10-18, see above).
 - [ ] Aucun lien du réseau routier ne dépasse la largeur d'une rue — **95 dépassent 25 m**.
+
+## Traffic that drove (2026-10-18)
+
+Looked at on screen, the traffic did not drive: a car stood on one spot turning round and
+round. Three things, each hiding the others:
+
+- its yaw was read from `Euler()`, in degrees (see RENDER-CAR);
+- its steering had the opposite sign to that yaw, so it turned away from its node;
+- it steered for the very next road node and slowed to a stop at each one. The nodes are
+  2-13m apart; once one came alongside, it was inside the car's turning circle and the car
+  orbited it for good. `GetNextNode`'s greedy pick (the neighbour nearest a random goal)
+  could also send it back and forth at a dead end.
+
+`TrafficManager` now cruises: at each node it carries on to a neighbour other than the one
+it came from, the straighter the likelier (back only at a dead end, never onto a shortcut);
+it steers for the first node at least 8m down its way, and slows only to turn, to a third
+of its speed for a point off to the side. Checked: cars cover 5-6m per half second at their
+11-12 m/s, heading the way they move, and the school bus is seen driving along its street.
