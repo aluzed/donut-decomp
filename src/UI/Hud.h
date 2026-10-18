@@ -67,6 +67,8 @@ struct HudState
 	bool hasNextCheckpoint = false;
 	Vector2 nextCheckpointXZ;
 	float nextCheckpointDistance = 0.0f;
+	// What the marker is ("Next checkpoint", "Talk to lisa"...).
+	std::string nextCheckpointLabel = "Next checkpoint";
 	float radarRange = 120.0f;
 
 	// free-form lines drawn under the HUD (control hints, help overlay)

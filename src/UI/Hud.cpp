@@ -254,7 +254,7 @@ void Hud::Draw(SpriteBatch& sprites, const Font* font, const HudState& state)
 
 		if (state.hasNextCheckpoint)
 		{
-			const std::string text = fmt::format("Next checkpoint: {:.0f}m", state.nextCheckpointDistance);
+			const std::string text = fmt::format("{}: {:.0f}m", state.nextCheckpointLabel, state.nextCheckpointDistance);
 			const float w = font != nullptr ? font->MeasureWidth(text) : 0.0f;
 			drawShadowedText(sprites, font, text, Vector2((state.viewportWidth - w) * 0.5f, topY), kGold);
 			topY += line;

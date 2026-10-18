@@ -1341,16 +1341,20 @@ void Game::Run()
 				for (const auto& cp : cps)
 					hud.checkpointBlips.emplace_back(cp.X, cp.Z);
 
-				const int cur = _scriptEngine->GetCurrentCheckpoint();
-				if (cur >= 0 && cur < static_cast<int>(cps.size()))
+				// Wherever the objective wants the player -- a checkpoint, a
+				// destination, an item to pick up, someone to talk to -- not only
+				// a race's next checkpoint, which left every other objective
+				// without a marker.
+				Vector3 target;
+				if (_scriptEngine->GetObjectiveTarget(target))
 				{
-					const Vector3 target = cps[cur];
 					const Vector3 from = _inVehicle && _activeVehicle
 					                         ? _activeVehicle->GetPosition()
 					                         : (_character ? _character->GetPosition() : Vector3::Zero);
 					hud.hasNextCheckpoint = true;
 					hud.nextCheckpointXZ = Vector2(target.X, target.Z);
 					hud.nextCheckpointDistance = (target - from).Length();
+					hud.nextCheckpointLabel = _scriptEngine->GetObjectiveTargetLabel();
 				}
 			}
 

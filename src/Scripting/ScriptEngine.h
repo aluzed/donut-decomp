@@ -160,6 +160,8 @@ public:
 	// destination, or whoever they are to talk to. For --autopilot.
 	bool GetObjectiveTarget(Vector3& position) const;
 	bool ObjectiveWantsCar() const { return _objectiveType == "getin"; }
+	// What GetObjectiveTarget points at, for the HUD.
+	std::string GetObjectiveTargetLabel() const;
 	// A trigger volume the player has just entered or left (Level::UpdateTriggers).
 	void OnTrigger(const Level::Trigger& trigger, bool entered);
 	// SetStageAIRaceCatchupParams(vehicle, distance, ahead, level, behind). The

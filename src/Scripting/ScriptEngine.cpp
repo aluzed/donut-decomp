@@ -362,7 +362,12 @@ bool ScriptEngine::GetObjectiveTarget(Vector3& position) const
 	}
 	if (_objectiveType == "delivery" && !_pickups.empty())
 	{
+		// The nearest one: they can be taken in any order.
+		const Vector3 player = _game.GetPlayerPosition();
 		position = _pickups.front().second;
+		for (const auto& pickup : _pickups)
+			if ((pickup.second - player).Length() < (position - player).Length())
+				position = pickup.second;
 		return true;
 	}
 	const auto npc = _npcPositions.find(_talkToTarget);
@@ -471,6 +476,17 @@ void ScriptEngine::SetParTime(float seconds)
 void ScriptEngine::SetCoinFee(int coins)
 {
 	_coinFee = coins;
+}
+
+std::string ScriptEngine::GetObjectiveTargetLabel() const
+{
+	if (_objectiveType == "race")
+		return "Next checkpoint";
+	if (_objectiveType == "delivery")
+		return "Nearest item";
+	if (_objectiveType == "talkto")
+		return "Talk to " + _talkToTarget;
+	return "Destination";
 }
 
 void ScriptEngine::AnnounceStageComplete()
