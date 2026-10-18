@@ -1290,6 +1290,30 @@ void Game::ClearNpcs()
 	_npcs.clear();
 }
 
+bool Game::ringDoorbell()
+{
+	if (!_character || _inVehicle)
+		return false;
+	const Vector3 me = _character->GetPosition();
+	for (const auto& trigger : _level->GetTriggers())
+	{
+		// [DB_skinner | skinner_switch11 | Doorbell]: the resident is named
+		// in the first string.
+		if (trigger.action != "Doorbell" || trigger.data.rfind("DB_", 0) != 0 ||
+		    !(trigger.Contains(me) || (trigger.position - me).Length() < 3.0f))
+			continue;
+		const std::string resident = trigger.data.substr(3);
+		const auto lines = _audioManager->FindSounds(resident + "\\w_doorbell_");
+		Log::Info("Game: rang {}'s doorbell ({} answers)", resident, lines.size());
+		_audioManager->PlayRaw(SoundGenerator::Chirp(900.0f, 700.0f, 0.3f, 44100), 44100, 1, 16);
+		if (!lines.empty())
+			_audioManager->QueueDialogue(lines[static_cast<std::size_t>(rand()) % lines.size()],
+			                             AudioManager::DialoguePriority::Gameplay);
+		return true;
+	}
+	return false;
+}
+
 bool Game::usePhoneBooth()
 {
 	if (!_character || _inVehicle)
@@ -1499,7 +1523,7 @@ void Game::Run()
 			charMove += Vector3::Right * intent.moveRight;
 
 			// A phone booth answers the action button before anything else.
-			if (intent.interact && usePhoneBooth())
+			if (intent.interact && (usePhoneBooth() || ringDoorbell()))
 				intent.interact = false;
 
 			if (intent.interact)

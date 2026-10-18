@@ -98,6 +98,9 @@ public:
 	// At a phone booth, on foot: the player's car is brought to the road by it,
 	// repaired, with the player at the wheel. False away from a booth.
 	bool usePhoneBooth();
+	// At a door with a bell, on foot: whoever lives there answers, in one of
+	// their recorded lines. False away from one.
+	bool ringDoorbell();
 	const TextBible& GetTextBible() const { return _textBible; }
 	// A mission's NPC, standing at `position`, when their model has been
 	// extracted (art/chars/<name>_m.p3d). Placing one already there moves them.

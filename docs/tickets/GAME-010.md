@@ -91,3 +91,7 @@ Only the first was read. `Level::Trigger::action` now holds the third.
 A card found shows its title for 4s, from the phrase table: `CARD_TITLE_nn`, numbered per
 level from (level - 1) x 8, the eighth of each level a bonus card. `card11` is "HOME MADE
 FOOTBALL"; the seventh of a level adds "LEVEL CARDS COLLECTED!".
+
+**Doorbells** (`Doorbell` action locators, `[DB_quimby | quimby_switch6 | Doorbell]`): the
+action button at one, on foot, rings, and the resident named in the first string answers in
+one of their recorded `w_doorbell` lines. Checked at Mayor Quimby's (5 lines).
