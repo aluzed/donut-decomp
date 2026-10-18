@@ -34,6 +34,8 @@ public:
 	void DrawSkeleton(const Vector3& position, const Skeleton& skeleton);
 
 	void Flush(Matrix4x4& viewProj);
+	// Drops what was drawn this frame without showing it.
+	void Discard() { _vertexCount = 0; }
 
 	std::size_t GetVertexCount() const { return _vertexCount; }
 	std::size_t GetMaxVertexCount() const { return _maxVertexCount; }

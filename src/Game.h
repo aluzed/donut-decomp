@@ -212,6 +212,8 @@ private:
 	int _storyIndex = -1;
 	// --story: start on the first story mission rather than the test mission.
 	bool _startStory = false;
+	// --clean: the game as it is played, without the developer's overlays.
+	bool _clean = false;
 	int _storyFrom = 0;
 	// --level: which level to play, and where its files are.
 	int _levelNumber = 1;

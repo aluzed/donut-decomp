@@ -77,6 +77,8 @@ into a playable arcade racing game.
 - **Screen Shake**: On jump, checkpoint, mission fail
 
 ### UI/HUD
+- **`--clean`**: the game as it is played, without the developer's windows, lines and
+  skeletons
 - **Splash Screen**: Frontend bootup.p3d with "PRESS ENTER TO START"
 - **HUD**: FPS, position, HP, timer, objectives, laps, speed, heat
 - **Pause Menu**: ESC toggle with Quit option

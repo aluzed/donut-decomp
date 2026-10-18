@@ -136,6 +136,7 @@ Game::Game(int argc, char** argv)
 	//   --autopilot          walk the player through each objective (testing)
 	//   --story              play the level's story missions, in order
 	//   --level <n>          play level n (1 by default)
+	//   --clean              the game alone: no debug windows, lines or skeletons
 	//   --from <k>           with --story, start at the level's k-th story mission (from 0)
 	//   --language <E|F|G|I|S>  language of the game's own text (English)
 	for (int i = 1; i < argc; ++i)
@@ -156,6 +157,8 @@ Game::Game(int argc, char** argv)
 			_startStory = true;
 		else if (arg == "--from" && i + 1 < argc)
 			_storyFrom = std::max(0, std::atoi(argv[++i]));
+		else if (arg == "--clean")
+			_clean = true;
 		else if (arg == "--level" && i + 1 < argc)
 			_levelNumber = std::max(1, std::atoi(argv[++i]));
 		else if (arg == "--language" && i + 1 < argc)
@@ -2171,7 +2174,10 @@ void Game::Run()
 		}
 
 		glDisable(GL_DEPTH_TEST);
-		_lineRenderer->Flush(viewProjection);
+		if (_clean)
+			_lineRenderer->Discard();
+		else
+			_lineRenderer->Flush(viewProjection);
 		glEnable(GL_DEPTH_TEST);
 
 		// Scene complete: blit the FBO to the backbuffer through the
@@ -2467,7 +2473,8 @@ void Game::Run()
 		if (_gameState == GameState::Splash)
 			_frontend->Draw(proj);
 
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		if (!_clean)
+			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 		_window->Swap();
 	}
 }
