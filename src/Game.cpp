@@ -135,6 +135,7 @@ Game::Game(int argc, char** argv)
 	//   --autopilot          walk the player through each objective (testing)
 	//   --story              play the level's story missions, in order
 	//   --level <n>          play level n (1 by default)
+	//   --from <k>           with --story, start at the level's k-th story mission (from 0)
 	//   --language <E|F|G|I|S>  language of the game's own text (English)
 	for (int i = 1; i < argc; ++i)
 	{
@@ -152,6 +153,8 @@ Game::Game(int argc, char** argv)
 			_autopilot = true;
 		else if (arg == "--story")
 			_startStory = true;
+		else if (arg == "--from" && i + 1 < argc)
+			_storyFrom = std::max(0, std::atoi(argv[++i]));
 		else if (arg == "--level" && i + 1 < argc)
 			_levelNumber = std::max(1, std::atoi(argv[++i]));
 		else if (arg == "--language" && i + 1 < argc)
@@ -210,15 +213,6 @@ Game::Game(int argc, char** argv)
 		_resourceManager->AddFont(_textureFontP3D->GetName(), std::move(font));
 	}
 
-	_level = std::make_unique<Level>();
-	// The level's world: its terrain, every zone and road file, and its
-	// interiors, which live under the map and are reached through doors. The
-	// game streams these in and out as the player moves; they are all loaded
-	// here. This was level 1's list, written out.
-	for (const std::string& file : levelWorldFiles())
-		_level->LoadP3D(file);
-	// The mission art shared by the whole level: the coin, among others.
-	_level->LoadP3D(fmt::format("missions/{}/level.p3d", levelDirectory()));
 	// The collector card's model, from the shared card art. Only its geometry,
 	// shaders and textures: the rest is the pick-up effect's billboards and
 	// particles, which nothing here plays.
@@ -243,13 +237,7 @@ Game::Game(int argc, char** argv)
 		}
 	}
 
-	_pathGraph = std::make_unique<PathGraph>(*_level, *_worldPhysics);
-	_trafficManager = std::make_unique<TrafficManager>(*_level, *_lineRenderer, *_pathGraph);
-	_trafficManager->LoadModels(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
-	_pedestrianManager = std::make_unique<PedestrianManager>(*_worldPhysics);
-	_pedestrianManager->LoadModels(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
-	_collectibleManager = std::make_unique<CollectibleManager>(*_level, *_lineRenderer);
-	_collectibleManager->SpawnOnPath();
+	loadLevel();
 	_gameInput = std::make_unique<GameInput>();
 	Input::CaptureTextEntry(this, &Game::OnInputTextEntry);
 
@@ -268,48 +256,6 @@ Game::Game(int argc, char** argv)
 
 	_playerMesh = SimpleMesh::CreateCapsule(0.3f, 1.8f, Vector4(0.2f, 1.0f, 0.2f, 1.0f), 12);
 	_carMesh = SimpleMesh::CreateBox(Vector3(0.9f, 0.5f, 2.2f), Vector4(0.2f, 0.5f, 1.0f, 1.0f));
-
-	// The game's own missions, when they have been copied off the CD. Without
-	// them "New Game" plays the test mission, as it always has.
-	// The story is the level script's AddMission list, in order.
-	for (const std::string& id : levelScriptCalls("AddMission"))
-	{
-		const std::string path = fmt::format("scripts/{}/{}i.mfk", levelDirectory(), id);
-		if (FileSystem::exists(path))
-			_story.push_back(path);
-	}
-	// The Warp menu's places, AddTeleportDest("name", x, y, z, "zones").
-	{
-		std::ifstream script(fmt::format("scripts/{}/level.mfk", levelDirectory()));
-		for (std::string line; std::getline(script, line);)
-		{
-			const std::size_t at = line.find("AddTeleportDest(");
-			const std::size_t comment = line.find("//");
-			if (at == std::string::npos || (comment != std::string::npos && comment < at))
-				continue;
-			const std::size_t open = line.find('"', at);
-			const std::size_t close = open == std::string::npos ? open : line.find('"', open + 1);
-			Vector3 place;
-			if (close != std::string::npos &&
-			    std::sscanf(line.c_str() + close + 1, " , %f , %f , %f", &place.X, &place.Y, &place.Z) == 3)
-				_teleports.emplace_back(line.substr(open + 1, close - open - 1), place);
-		}
-	}
-	if (const auto characters = levelScriptCalls("AddCharacter", "leveli.mfk"); !characters.empty())
-		_playerCharacter = characters.front();
-	// Not every character came off the CD (Lisa, level 3's, did not): Homer
-	// stands in rather than nobody.
-	if (!FileSystem::exists(fmt::format("art/chars/{}_m.p3d", _playerCharacter)))
-	{
-		Log::Warn("Game: no model for '{}', Homer plays level {}", _playerCharacter, _levelNumber);
-		_playerCharacter = "homer";
-	}
-	if (const auto cars = levelScriptCalls("InitLevelPlayerVehicle", "leveli.mfk"); !cars.empty())
-		_playerCarModel = cars.front();
-	Log::Info("Game: level {} is played by '{}' in '{}'", _levelNumber, _playerCharacter, _playerCarModel);
-	// Away from level 1 there is no test mission: the level opens on its story.
-	if (_levelNumber != 1 && !_missionScriptGiven && !_story.empty())
-		_missionScript = _story.front();
 
 	runMissionScript();
 
@@ -356,21 +302,28 @@ Game::Game(int argc, char** argv)
 	_camera->SetZFar(100000.0f);
 
 	if (_startStory && !_story.empty())
-		startStoryMission(0);
+		startStoryMission(std::min(_storyFrom, static_cast<int>(_story.size()) - 1));
 
 	if (std::ifstream coins("donut_coins.dat"); !(coins >> _coins) || _coins < 0)
 		_coins = 0;
 
 	_mainMenu = std::make_unique<GameMenu>();
 	// Picking up the story where it was left, when it was.
-	if (const int progress = loadStoryProgress(); progress > 0 && progress < static_cast<int>(_story.size()))
+	if (const StoryProgress progress = loadStoryProgress();
+	    (progress.level > 1 || progress.mission > 0) && levelAvailable(progress.level))
 	{
 		_mainMenu->AddButton("Continue", 0, 0, 200, 40, [this, progress]() {
-			startStoryMission(progress);
+			if (progress.level != _levelNumber)
+				switchLevel(progress.level);
+			if (progress.mission < static_cast<int>(_story.size()))
+				startStoryMission(progress.mission);
 			_gameState = GameState::InGame;
 		});
 	}
 	_mainMenu->AddButton("New Game", 0, 0, 200, 40, [this]() {
+		// The story starts on level 1, whatever level is loaded.
+		if (_levelNumber != 1 && levelAvailable(1))
+			switchLevel(1);
 		if (!_story.empty())
 			startStoryMission(0);
 		_gameState = GameState::InGame;
@@ -554,24 +507,59 @@ void Game::startStoryMission(int index)
 		SetPlayerPosition(start);
 }
 
-int Game::loadStoryProgress() const
+Game::StoryProgress Game::loadStoryProgress() const
 {
+	// "<mission> <level>"; a file written before there were levels holds only
+	// the mission, of level 1.
 	std::ifstream file("donut_progress.dat");
-	int next = 0;
-	if (!(file >> next) || next < 0)
-		return 0;
-	return next;
+	StoryProgress progress;
+	if (!(file >> progress.mission) || progress.mission < 0)
+		return {};
+	if (!(file >> progress.level) || progress.level < 1)
+		progress.level = 1;
+	return progress;
 }
 
-void Game::saveStoryProgress(int next) const
+void Game::saveStoryProgress(int level, int next) const
 {
 	// An unattended run proves the missions play through; it has not won them.
 	if (_autopilot)
 		return;
 	std::ofstream file("donut_progress.dat");
 	if (file.good())
-		file << next << "\n";
-	Log::Info("Game: story progress saved, next mission {}", next + 1);
+		file << next << " " << level << "\n";
+	Log::Info("Game: story progress saved, level {} mission {}", level, next + 1);
+}
+
+bool Game::levelAvailable(int level) const
+{
+	return FileSystem::exists(fmt::format("scripts/level{:02}/level.mfk", level));
+}
+
+void Game::switchLevel(int level)
+{
+	Log::Info("Game: leaving level {} for level {}", _levelNumber, level);
+
+	// Everything that lives in the physics world goes before it: the mission's
+	// cars and drivers, the NPCs, the pedestrians and the player.
+	_scriptEngine->CleanupMission();
+	_inVehicle = false;
+	_activeVehicle = nullptr;
+	_interior.clear();
+	ClearNpcs();
+	_pedestrianManager.reset();
+	_trafficManager.reset();
+	_collectibleManager.reset();
+	_pathGraph.reset();
+	_character.reset();
+	_level.reset();
+	_worldPhysics = std::make_unique<WorldPhysics>(_lineRenderer.get());
+
+	_levelNumber = level;
+	_storyIndex = -1;
+	loadLevel();
+	LoadModel(_playerCharacter, _playerCharacter);
+	_smoothCamPos = Vector3::Zero;
 }
 
 Quaternion Game::cameraLooking(float pitchDown, float yaw)
@@ -725,6 +713,72 @@ void Game::runAutopilot(double dt)
 		_activeVehicle->Teleport(target, _activeVehicle->GetRotation());
 	else
 		SetPlayerPosition(target + Vector3(0.0f, 1.0f, 0.0f));
+}
+
+void Game::loadLevel()
+{
+	_level = std::make_unique<Level>();
+	// The level's world: its terrain, every zone and road file, and its
+	// interiors, which live under the map and are reached through doors. The
+	// game streams these in and out as the player moves; they are all loaded
+	// here. This was level 1's list, written out.
+	for (const std::string& file : levelWorldFiles())
+		_level->LoadP3D(file);
+	// The mission art shared by the whole level: the coin, among others.
+	_level->LoadP3D(fmt::format("missions/{}/level.p3d", levelDirectory()));
+	_pathGraph = std::make_unique<PathGraph>(*_level, *_worldPhysics);
+	_trafficManager = std::make_unique<TrafficManager>(*_level, *_lineRenderer, *_pathGraph);
+	_trafficManager->LoadModels(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
+	_pedestrianManager = std::make_unique<PedestrianManager>(*_worldPhysics);
+	_pedestrianManager->LoadModels(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
+	_collectibleManager = std::make_unique<CollectibleManager>(*_level, *_lineRenderer);
+	_collectibleManager->SpawnOnPath();
+
+	// The story is the level script's AddMission list, in order, when the
+	// scripts have been copied off the CD. Without them "New Game" plays the
+	// test mission, as it always has.
+	_story.clear();
+	_teleports.clear();
+	_playerCharacter = "homer";
+	_playerCarModel = "famil_v";
+	for (const std::string& id : levelScriptCalls("AddMission"))
+	{
+		const std::string path = fmt::format("scripts/{}/{}i.mfk", levelDirectory(), id);
+		if (FileSystem::exists(path))
+			_story.push_back(path);
+	}
+	// The Warp menu's places, AddTeleportDest("name", x, y, z, "zones").
+	{
+		std::ifstream script(fmt::format("scripts/{}/level.mfk", levelDirectory()));
+		for (std::string line; std::getline(script, line);)
+		{
+			const std::size_t at = line.find("AddTeleportDest(");
+			const std::size_t comment = line.find("//");
+			if (at == std::string::npos || (comment != std::string::npos && comment < at))
+				continue;
+			const std::size_t open = line.find('"', at);
+			const std::size_t close = open == std::string::npos ? open : line.find('"', open + 1);
+			Vector3 place;
+			if (close != std::string::npos &&
+			    std::sscanf(line.c_str() + close + 1, " , %f , %f , %f", &place.X, &place.Y, &place.Z) == 3)
+				_teleports.emplace_back(line.substr(open + 1, close - open - 1), place);
+		}
+	}
+	if (const auto characters = levelScriptCalls("AddCharacter", "leveli.mfk"); !characters.empty())
+		_playerCharacter = characters.front();
+	// Not every character came off the CD (Lisa, level 3's, did not): Homer
+	// stands in rather than nobody.
+	if (!FileSystem::exists(fmt::format("art/chars/{}_m.p3d", _playerCharacter)))
+	{
+		Log::Warn("Game: no model for '{}', Homer plays level {}", _playerCharacter, _levelNumber);
+		_playerCharacter = "homer";
+	}
+	if (const auto cars = levelScriptCalls("InitLevelPlayerVehicle", "leveli.mfk"); !cars.empty())
+		_playerCarModel = cars.front();
+	Log::Info("Game: level {} is played by '{}' in '{}'", _levelNumber, _playerCharacter, _playerCarModel);
+	// Away from level 1 there is no test mission: the level opens on its story.
+	if (_levelNumber != 1 && !_missionScriptGiven && !_story.empty())
+		_missionScript = _story.front();
 }
 
 std::string Game::levelDirectory() const
@@ -1300,10 +1354,20 @@ void Game::Run()
 				// A story mission won leads on to the next one.
 				_interior.clear();
 				_level->SetDrawOnly({});
-				if (!failed && _storyIndex >= 0)
-					saveStoryProgress(_storyIndex + 1);
-				if (!failed && _storyIndex >= 0 && _storyIndex + 1 < static_cast<int>(_story.size()))
+				// The level's last won leads on to the next level.
+				const bool levelWon = !failed && _storyIndex >= 0 && _storyIndex + 1 >= static_cast<int>(_story.size());
+				if (levelWon && levelAvailable(_levelNumber + 1))
+				{
+					saveStoryProgress(_levelNumber + 1, 0);
+					switchLevel(_levelNumber + 1);
+					if (!_story.empty())
+						startStoryMission(0);
+				}
+				else if (!failed && _storyIndex >= 0 && _storyIndex + 1 < static_cast<int>(_story.size()))
+				{
+					saveStoryProgress(_levelNumber, _storyIndex + 1);
 					startStoryMission(_storyIndex + 1);
+				}
 				else if (failed && _scriptEngine->RetryFromCheckpoint())
 					_health = 100.0f;
 				else

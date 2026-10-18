@@ -53,14 +53,27 @@ they are missing from the level.
 ## Verified
 
 - Level 1 loads the same 16 files as before, and its story plays as before.
-- `--level 2`: 15 files, 117 coins, 7 cards, the DMV and Moe's as interiors, Bart beside
+- `--level 2`: 11 files, 117 coins, 7 cards, the DMV and Moe's as interiors, Bart beside
   the Honor Roller in front of Springfield Town Hall; m1's six stages complete under
   `--autopilot`.
 - Levels 3 to 7 load and start their first mission under `--autopilot` without crashing
   (45s each): level 3 (Homer standing in for Lisa) and level 7 play through stages, level 5
   reaches its `dump` stage.
 
+## One level after another (2026-10-18, later)
+
+Winning a level's last story mission leads on to the next level's first, in the same
+session. `Game::switchLevel` tears down everything built on the level, the physics world
+included (mission cars and drivers, NPCs, pedestrians, the player, then the world), and
+`Game::loadLevel` -- the level half of start-up, now a function of its own -- builds the
+next one, with its own player. `donut_progress.dat` holds the mission and the level
+("3 2": level 2's fourth mission), so Continue starts on the right level; a file written
+before holds only the mission, read as level 1's. New Game always starts on level 1.
+
+`--from <k>` starts `--story` at the level's k-th mission, to reach the end of a level
+without playing all of it. `--story --from 7 --autopilot`: level 1's m7 won, level 2
+loaded, Bart standing outside the Try-N-Save on m1, which plays through, then m2.
+
 ## Not done
 
-- Going from one level to the next in a single session: the story ends with the level.
 - The skipped do-not-enter signs, level crossing and old lamps.

@@ -194,6 +194,7 @@ private:
 	int _storyIndex = -1;
 	// --story: start on the first story mission rather than the test mission.
 	bool _startStory = false;
+	int _storyFrom = 0;
 	// --level: which level to play, and where its files are.
 	int _levelNumber = 1;
 	bool _missionScriptGiven = false;
@@ -234,10 +235,23 @@ private:
 	char _language = 'E';
 	// Tears down whatever mission is running and starts story mission `index`.
 	void startStoryMission(int index);
-	// The story mission to continue from, kept in donut_progress.dat: the one
-	// after the last won. 0 when there is none.
-	int loadStoryProgress() const;
-	void saveStoryProgress(int next) const;
+	// Where the story continues, kept in donut_progress.dat: the level and the
+	// mission after the last won. Level 1's first when there is none.
+	struct StoryProgress
+	{
+		int level = 1;
+		int mission = 0;
+	};
+	StoryProgress loadStoryProgress() const;
+	void saveStoryProgress(int level, int next) const;
+	// The level's world and everything built on it: its files, road graph,
+	// traffic, pedestrians, coins and cards, story and player.
+	void loadLevel();
+	// Tears the current level down, physics world included, and loads level
+	// `level` in its place, with its own player; no mission is started.
+	void switchLevel(int level);
+	// Whether level `level`'s scripts were copied off the CD.
+	bool levelAvailable(int level) const;
 	int _coins = 0;
 	// The view rotation for a camera looking along heading `yaw` (radians about
 	// +Y, 0 is +Z), tipped `pitchDown` radians below the horizon.
