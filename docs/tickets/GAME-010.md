@@ -73,3 +73,17 @@ textured, turning, about Homer's height and leaning on its axis as authored. `ca
 stands 3m up, inside Bart's treehouse.
 
 Gags are still to do.
+
+## Wrenches and phone booths (2026-10-18)
+
+The level's action locators (type 9) carry three strings: the object, its joint or switch,
+and the action -- `SummonVehiclePhone`, `Wrench`, `Doorbell`, `PlayAnim`, `ToggleOnOff`...
+Only the first was read. `Level::Trigger::action` now holds the third.
+
+- **Wrenches** (`Wrench`, 14 on level 1): drawn with `wrench.p3d`'s `wrench7Shape`,
+  turning a metre above the road. Driven over (within 4m), one repairs the car to full
+  and is gone until the coins are laid out again. Checked: a car at 40 put on level 1's
+  first wrench came back at 100.
+- **Phone booths** (`SummonVehiclePhone`): the action button at a booth, on foot, brings
+  the player's car (the one the mission gave them; there is no garage yet) to the nearest
+  road, repaired, with the player at the wheel. Checked at R1P2 on level 1 m2.

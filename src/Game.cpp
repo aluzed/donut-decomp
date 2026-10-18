@@ -214,12 +214,14 @@ Game::Game(int argc, char** argv)
 		_resourceManager->AddFont(_textureFontP3D->GetName(), std::move(font));
 	}
 
-	// The collector card's model, from the shared card art. Only its geometry,
-	// shaders and textures: the rest is the pick-up effect's billboards and
-	// particles, which nothing here plays.
-	if (FileSystem::exists("./art/cards.p3d"))
+	// The collector card's and the wrench's models, from the shared art. Only
+	// their geometry, shaders and textures: the rest is the pick-up effect's
+	// billboards and particles, which nothing here plays.
+	for (const char* art : {"./art/cards.p3d", "./art/wrench.p3d"})
 	{
-		const P3D::P3DFile cards("./art/cards.p3d");
+		if (!FileSystem::exists(art))
+			continue;
+		const P3D::P3DFile cards(art);
 		for (const auto& chunk : cards.GetRoot().GetChildren())
 		{
 			switch (chunk->GetType())
@@ -229,7 +231,7 @@ Game::Game(int argc, char** argv)
 			case P3D::ChunkType::Geometry:
 			{
 				const auto geometry = P3D::Geometry::Load(*chunk);
-				Log::Info("Game: card model '{}'", geometry->GetName());
+				Log::Info("Game: model '{}' from {}", geometry->GetName(), art);
 				_resourceManager->LoadGeometry(*geometry);
 				break;
 			}
@@ -1076,6 +1078,38 @@ void Game::ClearNpcs()
 	_npcs.clear();
 }
 
+bool Game::usePhoneBooth()
+{
+	if (!_character || _inVehicle)
+		return false;
+	const Vector3 me = _character->GetPosition();
+	for (const auto& trigger : _level->GetTriggers())
+	{
+		if (trigger.action != "SummonVehiclePhone" ||
+		    !(trigger.Contains(me) || (trigger.position - me).Length() < 3.0f))
+			continue;
+
+		// The game offers every car the player owns; there is no garage here,
+		// so it is the car the mission gave them.
+		Vehicle* car = _scriptEngine->GetPlayerCar();
+		if (car == nullptr)
+		{
+			Log::Info("Game: phone booth '{}', but no car to send", trigger.locator);
+			return true;
+		}
+		const int node = _pathGraph->FindNearestRoadNode(trigger.position);
+		const Vector3 road = node >= 0 ? _pathGraph->GetNodes()[node].position : trigger.position;
+		car->Teleport(road, car->GetRotation());
+		_health = 100.0f;
+		PutPlayerInVehicle(car);
+		_audioManager->PlayRaw(SoundGenerator::Beep(1200, 0.2f), 22050, 1, 16);
+		Log::Info("Game: phone booth '{}' sends '{}' to ({:.0f}, {:.0f}, {:.0f}), repaired", trigger.locator,
+		          car->GetName(), road.X, road.Y, road.Z);
+		return true;
+	}
+	return false;
+}
+
 void Game::PutPlayerInVehicle(Vehicle* vehicle)
 {
 	if (vehicle == nullptr)
@@ -1251,6 +1285,10 @@ void Game::Run()
 			charMove += Vector3::Backward * intent.moveBackward;
 			charMove += Vector3::Left * intent.moveLeft;
 			charMove += Vector3::Right * intent.moveRight;
+
+			// A phone booth answers the action button before anything else.
+			if (intent.interact && usePhoneBooth())
+				intent.interact = false;
 
 			if (intent.interact)
 			{
@@ -1646,6 +1684,12 @@ void Game::Run()
 					_pedestrianManager->Spawn(_character->GetPosition(), 40.0f);
 			}
 			// Coins every frame: a car at 30 m/s is past one in a tenth of a second.
+			if (_collectibleManager && _inVehicle && _activeVehicle &&
+			    _collectibleManager->TakeWrench(_activeVehicle->GetPosition()))
+			{
+				Log::Info("Game: a wrench, the car is repaired ({:.0f} -> 100)", _health);
+				_health = 100.0f;
+			}
 			if (_collectibleManager)
 			{
 				const Vector3 collector = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()

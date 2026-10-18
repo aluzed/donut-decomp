@@ -94,6 +94,9 @@ public:
 	const Vehicle* GetPlayerVehicle() const { return _inVehicle ? _activeVehicle : nullptr; }
 	// Seats the player at the wheel of `vehicle`, as getting in by hand does.
 	void PutPlayerInVehicle(Vehicle* vehicle);
+	// At a phone booth, on foot: the player's car is brought to the road by it,
+	// repaired, with the player at the wheel. False away from a booth.
+	bool usePhoneBooth();
 	const TextBible& GetTextBible() const { return _textBible; }
 	// A mission's NPC, standing at `position`, when their model has been
 	// extracted (art/chars/<name>_m.p3d). Placing one already there moves them.

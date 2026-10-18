@@ -260,6 +260,25 @@ void Level::LoadP3D(const std::string& filename)
 					break;
 			}
 
+			// An action locator's data is three strings, each NUL-ended and
+			// padded: the object, its joint or switch, and the action.
+			std::string action;
+			if (static_cast<LocatorType>(loc->GetType()) == LocatorType::Action)
+			{
+				std::vector<std::string> strings(1);
+				for (uint32_t word : loc->GetData())
+					for (int byte = 0; byte < 4; ++byte)
+					{
+						const char c = static_cast<char>((word >> (8 * byte)) & 0xFF);
+						if (c != '\0')
+							strings.back() += c;
+						else if (!strings.back().empty())
+							strings.emplace_back();
+					}
+				if (strings.size() >= 3)
+					action = strings[2];
+			}
+
 			for (const auto& trigger : loc->GetTriggers())
 			{
 				// Rows 0-2 are the volume's axes, row 3 its centre (the P3D
@@ -270,6 +289,7 @@ void Level::LoadP3D(const std::string& filename)
 				tvol.locator = loc->GetName();
 				tvol.type = static_cast<LocatorType>(loc->GetType());
 				tvol.data = data;
+				tvol.action = action;
 				tvol.position = Vector3(m[3][0], m[3][1], m[3][2]);
 				for (int axis = 0; axis < 3; ++axis)
 				{

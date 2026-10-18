@@ -209,6 +209,8 @@ public:
 	bool IsNewRecord() const { return _isNewRecord; }
 	void AdvanceCheckpoint();
 	std::vector<std::unique_ptr<Vehicle>>& GetMissionVehicles() { return _missionVehicles; }
+	// The car the mission gave the player (SetMissionResetPlayerInCar/OutCar), or null.
+	Vehicle* GetPlayerCar() const { return _playerCar; }
 
 private:
 	Game& _game;

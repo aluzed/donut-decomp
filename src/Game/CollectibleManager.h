@@ -40,6 +40,10 @@ public:
 	// The level's collector cards. Unlike coins, a card is picked up once for
 	// good: those found are kept in donut_cards.dat.
 	int GetCardsFound() const;
+	// The level's wrenches (its "Wrench" action locators): driven over, one
+	// repairs the car and is gone until the coins are laid out again. True
+	// when one was just taken.
+	bool TakeWrench(const Vector3& carPosition);
 	int GetCardsTotal() const { return static_cast<int>(_cards.size()); }
 	bool AllCollected() const { return _collected >= static_cast<int>(_positions.size()); }
 
@@ -64,7 +68,14 @@ private:
 		bool found;
 	};
 	std::vector<Card> _cards;
+	struct Wrench
+	{
+		Vector3 position;
+		bool taken;
+	};
+	std::vector<Wrench> _wrenches;
 	void loadCards();
+	void layOutWrenches();
 	void saveCards() const;
 	// The resource manager's geometry `name`, committed on first use; null when
 	// it is not loaded.

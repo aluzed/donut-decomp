@@ -56,6 +56,28 @@ void CollectibleManager::saveCards() const
 			file << card.id << "\n";
 }
 
+void CollectibleManager::layOutWrenches()
+{
+	_wrenches.clear();
+	for (const auto& trigger : _level.GetTriggers())
+		if (trigger.action == "Wrench")
+			_wrenches.push_back({trigger.position, false});
+	Log::Info("CollectibleManager: {} wrenches", _wrenches.size());
+}
+
+bool CollectibleManager::TakeWrench(const Vector3& carPosition)
+{
+	for (auto& wrench : _wrenches)
+		if (!wrench.taken && (wrench.position - carPosition).Length() < 4.0f)
+		{
+			wrench.taken = true;
+			Game::GetInstance().GetAudioManager().PlayRaw(SoundGenerator::Chirp(400, 900, 0.3f, 44100), 44100, 1,
+			                                              16);
+			return true;
+		}
+	return false;
+}
+
 int CollectibleManager::GetCardsFound() const
 {
 	return static_cast<int>(std::count_if(_cards.begin(), _cards.end(), [](const Card& c) { return c.found; }));
@@ -63,6 +85,8 @@ int CollectibleManager::GetCardsFound() const
 
 void CollectibleManager::SpawnOnPath()
 {
+	layOutWrenches();
+
 	// The level's own coins, where it has them; a scatter along the longest
 	// path otherwise.
 	const auto& placed = _level.GetCoinPositions();
@@ -162,6 +186,29 @@ void CollectibleManager::Draw(GL::ShaderProgram& worldShader, const Matrix4x4& v
 			if (!c.found)
 				_lineRenderer.DrawBox(c.position, cardSpin, Vector3(-0.3f, -0.45f, -0.02f), Vector3(0.3f, 0.45f, 0.02f),
 				                      Vector4(0.4f, 0.7f, 1.0f, 1.0f));
+	}
+
+	// The wrench, turning above the road where it lies.
+	const Quaternion wrenchSpin = Quaternion::MakeFromEuler(Vector3(0.0f, time * 2.5f, 0.0f));
+	if (Mesh* wrench = committed("wrench7Shape"))
+	{
+		worldShader.Bind();
+		for (const bool opaque : {true, false})
+			for (const auto& w : _wrenches)
+			{
+				if (w.taken)
+					continue;
+				worldShader.SetUniformValue("viewProj", viewProj * Matrix4x4::MakeTranslate(w.position + Vector3(0.0f, 1.0f, 0.0f)) *
+				                                            Matrix4x4(wrenchSpin));
+				wrench->Draw(worldShader, opaque);
+			}
+	}
+	else
+	{
+		for (const auto& w : _wrenches)
+			if (!w.taken)
+				_lineRenderer.DrawBox(w.position + Vector3(0.0f, 1.0f, 0.0f), wrenchSpin, Vector3(-0.15f, -0.5f, -0.05f),
+				                      Vector3(0.15f, 0.5f, 0.05f), Vector4(1.0f, 0.5f, 0.1f, 1.0f));
 	}
 
 	// SetCoinDrawable names it in every level script; it lives in the mission

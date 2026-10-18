@@ -85,6 +85,9 @@ public:
 		std::string locator;
 		LocatorType type;
 		std::string data;
+		// An action locator's action, the third string of its data:
+		// "SummonVehiclePhone" (a phone booth), "Wrench", "Doorbell"...
+		std::string action;
 		Vector3 position;
 		// The volume's own axes. Boxes are not all axis-aligned: L1's loader
 		// triggers sit at 90 and 45 degrees.
@@ -95,6 +98,8 @@ public:
 
 		bool Contains(const Vector3& point) const;
 	};
+
+	const std::vector<Trigger>& GetTriggers() const { return _triggers; }
 
 	struct TriggerEvent
 	{
