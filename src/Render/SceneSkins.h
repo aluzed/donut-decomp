@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Math/Matrix4x4.h"
+#include "Render/TextureAnimation.h"
 
 #include <memory>
 #include <string>
@@ -41,6 +42,10 @@ private:
 	std::unique_ptr<Skeleton> _skeleton;
 	std::unique_ptr<SkinAnimation> _animation;
 	std::unique_ptr<GL::TextureBuffer> _boneBuffer;
+	// The characters' eyes, keyed to the scene (TEX_eyeball_m), and the frame
+	// last posed.
+	std::optional<TextureAnimation> _eyes;
+	float _frame = 0.0f;
 };
 
 } // namespace Donut

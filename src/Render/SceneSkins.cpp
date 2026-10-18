@@ -11,6 +11,8 @@
 #include "Render/SkinModel.h"
 #include "Skeleton.h"
 
+#include <cmath>
+
 namespace Donut
 {
 
@@ -26,13 +28,18 @@ std::unique_ptr<SceneSkins> SceneSkins::Load(const std::string& file)
 	std::vector<std::unique_ptr<P3D::PolySkin>> polySkins;
 	std::vector<std::unique_ptr<P3D::Skeleton>> skeletons;
 	std::vector<std::unique_ptr<P3D::Animation>> animations;
+	std::optional<TextureAnimation> eyesFound;
 	for (const auto& chunk : p3d.GetRoot().GetChildren())
 	{
 		switch (chunk->GetType())
 		{
 		case P3D::ChunkType::PolySkin: polySkins.push_back(P3D::PolySkin::Load(*chunk)); break;
 		case P3D::ChunkType::Skeleton: skeletons.push_back(P3D::Skeleton::Load(*chunk)); break;
-		case P3D::ChunkType::Animation: animations.push_back(P3D::Animation::Load(*chunk)); break;
+		case P3D::ChunkType::Animation:
+			animations.push_back(P3D::Animation::Load(*chunk));
+			if (auto eyes = TextureAnimation::FromChunk(*chunk))
+				eyesFound = std::move(eyes);
+			break;
 		// Their shaders and textures are loaded with the props (CompositeModel).
 		default: break;
 		}
@@ -77,6 +84,7 @@ std::unique_ptr<SceneSkins> SceneSkins::Load(const std::string& file)
 			scene->_animation = SkinAnimation::FromP3D(*animation, names, rests);
 			break;
 		}
+	scene->_eyes = std::move(eyesFound);
 	scene->Pose(0.0f, false);
 	Log::Info("SceneSkins: {} skin(s) in {}{}", scene->_skins.size(), file,
 	          scene->_animation ? "" : ", not animated");
@@ -85,6 +93,9 @@ std::unique_ptr<SceneSkins> SceneSkins::Load(const std::string& file)
 
 void SceneSkins::Pose(float frame, bool loop)
 {
+	_frame = loop && _animation && _animation->GetFrameCount() > 0
+	             ? std::fmod(frame, static_cast<float>(_animation->GetFrameCount()))
+	             : frame;
 	std::vector<Matrix4x4> matrices(_skeleton->GetJoints().size(), Matrix4x4::Identity);
 	if (_animation)
 	{
@@ -104,8 +115,10 @@ void SceneSkins::Draw(const Matrix4x4& viewProjection, const Matrix4x4& model, G
 	skinShader.SetUniformValue("boneBuffer", 1);
 	glActiveTexture(GL_TEXTURE1);
 	_boneBuffer->Bind();
+	// The eyes as the scene has them at this frame: open, shut, half.
+	Texture* eyes = _eyes ? Game::GetInstance().GetResourceManager().GetTexture(_eyes->TextureAt(_frame)) : nullptr;
 	for (const auto& skin : _skins)
-		skin->Draw();
+		skin->Draw(_eyes ? _eyes->shader : std::string(), eyes);
 }
 
 } // namespace Donut
