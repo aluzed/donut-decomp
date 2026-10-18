@@ -37,3 +37,13 @@ world's origin, far from the listener; they are now heard where the listener is.
 Checked by log on level 1 m1's last stage: "bladder", six lines, Lisa at 0s, Homer at
 5.3s, Lisa at 8.1s, then 9.9, 11.3 and 16.4s, and the mission complete after the last.
 Not heard: nobody listened on this machine. No subtitles yet.
+
+## The player's character speaks (2026-10-18)
+
+Each character has their own lines in `DIALOGF.RCF`, `<character>\<kind>_<who>_NN.rsd`:
+`d_*` at the wheel (`d_bcrash` a big crash, `d_mcrash` a lesser one, `d_hitp` someone
+run down, `d_air`...) and `w_*` on foot (`w_card` a card found, `w_mfail` a mission
+failed...). `Game::SayLine` plays one of the player character's takes of a kind, at most
+one every 3s and never over a mission's conversation: on a crash beyond 7 m/s, on running
+someone down, on finding a card, on failing a mission. Homer, Bart, Lisa, Marge and Apu
+have 3 to 8 takes of each. Not heard on this machine.

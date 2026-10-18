@@ -659,6 +659,7 @@ void ScriptEngine::missionFailed(const std::string& reason, const std::string& h
 	Log::Info("ScriptEngine: mission failed - {}", reason);
 	_game.AddShake(2.0f);
 	_game.GetAudioManager().PlayRaw(SoundGenerator::Beep(150, 0.5f), 22050, 1, 16);
+	_game.SayLine("w_mfail");
 	_game.SetState(GameState::MissionFailed);
 }
 

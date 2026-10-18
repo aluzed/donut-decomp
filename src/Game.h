@@ -114,6 +114,9 @@ public:
 	// Takes `amount` from the purse; false, taking nothing, if it holds less.
 	bool SpendCoins(int amount);
 	bool IsAutopilot() const { return _autopilot; }
+	// The player's character says one of their recorded lines of a kind
+	// ("d_bcrash", a big crash; "w_card", a card found...), now and then.
+	void SayLine(const std::string& kind);
 	int GetLevelNumber() const { return _levelNumber; }
 	std::string GetLevelDirectory() const { return levelDirectory(); }
 	// The car the player drives ("current" in the mission scripts): the level's
@@ -286,6 +289,7 @@ private:
 	// Whether level `level`'s scripts were copied off the CD.
 	bool levelAvailable(int level) const;
 	int _coins = 0;
+	double _lastLineAt = -10.0;
 	// The car whose engine is heard ("famil_v"), empty on foot.
 	std::string _engineCar;
 	// A found card's title, shown for a while ("CRAB JUICE").

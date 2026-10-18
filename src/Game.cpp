@@ -633,6 +633,8 @@ void Game::updateCarDamage()
 			// A low falling thud, for want of the game's crash sounds.
 			_audioManager->PlayRaw(SoundGenerator::Chirp(140.0f, 50.0f, 0.25f, 44100), 44100, 1, 16);
 			Log::Info("Game: impact, {:.1f} m/s lost, -{:.0f} health, {:.0f} left", flat, damage, _health);
+			if (flat > 7.0f)
+				SayLine(flat > 12.0f ? "d_bcrash" : "d_mcrash");
 			// Ramming the traffic is a Hit & Run offence.
 			if (_hitAndRun && _trafficManager && !_scriptEngine->IsTrafficSuppressed())
 				for (const auto& car : _trafficManager->GetCars())
@@ -646,6 +648,19 @@ void Game::updateCarDamage()
 	_damageVehicle = _activeVehicle;
 	_damageVelocity = velocity;
 	_damagePosition = position;
+}
+
+void Game::SayLine(const std::string& kind)
+{
+	// homer\d_bcrash_hom_03.rsd: the character's folder, the kind, a take. One
+	// every few seconds at most, and never over a mission's conversation.
+	if (_elapsedSeconds - _lastLineAt < 3.0 || _audioManager->IsDialoguePlaying())
+		return;
+	const auto lines = _audioManager->FindSounds(_playerCharacter + "\\" + kind + "_");
+	if (lines.empty())
+		return;
+	_lastLineAt = _elapsedSeconds;
+	_audioManager->PlayAudio(lines[static_cast<std::size_t>(rand()) % lines.size()]);
 }
 
 void Game::alert(const std::string& term, const char* fallback)
@@ -679,6 +694,7 @@ void Game::updateHitAndRun(double dt)
 		{
 			_hitAndRun->Add(25.0f * static_cast<float>(hit), hit == 1 ? "ran someone down" : "ran people down");
 			AddShake(0.4f);
+			SayLine("d_hitp");
 			// And they say so: one of the generic passers-by's "hit by a car"
 			// lines (generic_male_1\p_hitbyc_mn1_01.rsd...).
 			static const std::vector<std::string> cries = [this] {
@@ -1934,6 +1950,7 @@ void Game::Run()
 						_cardMessage += _cardMessage.empty() ? all : " - " + all;
 					}
 					_cardMessageUntil = _elapsedSeconds + 4.0;
+					SayLine("w_card");
 				}
 			// Coins every frame: a car at 30 m/s is past one in a tenth of a second.
 			if (_collectibleManager && _inVehicle && _activeVehicle &&
