@@ -255,6 +255,7 @@ private:
 	bool _playerOneShot = false;
 	double _playerIdleFor = 0.0;
 	double _playerAirborneFor = 0.0;
+	double _playerGestureAt = 0.0;
 	// Plays the player's animation `what` ("loco_run"), if the character has it.
 	bool playPlayerAnimation(const std::string& what, bool loop);
 	// Picks the player's animation each frame: run, jump, land, idle.
@@ -308,6 +309,15 @@ private:
 	// The game's phrase table, in the language --language picks (E by default).
 	TextBible _textBible;
 	std::map<std::string, std::unique_ptr<Character>> _npcs;
+	// A non-player character's rest pose, and its gestures while it talks.
+	static std::string npcRestAnimation(const Character& npc);
+	void animateNpc(Character& npc, bool talking);
+	struct NpcGesture
+	{
+		double nextAt = 0.0;
+		bool gesturing = false;
+	};
+	std::map<const Character*, NpcGesture> _npcGestures;
 	// The level's own people, standing about (leveli.mfk's AddAmbientCharacter:
 	// Apu behind his counter, Ralph, the Moleman...). One a mission has placed
 	// as its own NPC is not shown twice.

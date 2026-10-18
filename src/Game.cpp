@@ -501,6 +501,26 @@ void Game::updatePlayerAnimation(double dt, bool moving, bool onGround)
 			playPlayerAnimation("loco_walk", true);
 		return;
 	}
+	// In a conversation -- a line being spoken, someone within a few metres --
+	// the player gestures too.
+	bool company = false;
+	for (const auto* people : {&_npcs, &_ambientNpcs})
+		for (const auto& [name, npc] : *people)
+			company = company || (npc->GetPosition() - _character->GetPosition()).Length() < 8.0f;
+	for (const auto& giver : _bonusGivers)
+		company = company || (giver.npc && (giver.position - _character->GetPosition()).Length() < 8.0f);
+	if (company && _audioManager->IsDialoguePlaying() && _elapsedSeconds >= _playerGestureAt)
+	{
+		std::vector<std::string> gestures;
+		for (const auto& [what, name] : _playerAnimations)
+			if (what.rfind("dialogue_", 0) == 0)
+				gestures.push_back(what);
+		_playerGestureAt = _elapsedSeconds + 2.0 + (rand() % 15) / 10.0;
+		_playerIdleFor = 0.0;
+		if (!gestures.empty() && playPlayerAnimation(gestures[static_cast<std::size_t>(rand()) % gestures.size()], false))
+			return;
+	}
+
 	_playerIdleFor += dt;
 	if (_playerIdleFor > 8.0)
 	{
@@ -1422,14 +1442,50 @@ std::unique_ptr<Character> Game::makeNpc(const std::string& name) const
 	// pose, arms out.
 	if (npc->GetAnimations().empty())
 		npc->LoadAnimations("apu");
-	// Standing about: the first idle in the set, if it has one.
-	for (const auto& [anim, data] : npc->GetAnimations())
-		if (anim.find("idle") != std::string::npos)
-		{
-			npc->SetAnimation(anim);
-			break;
-		}
+	// Standing about: at rest, or else the first idle in the set. "The first"
+	// alone, in no particular order, had Apu doing yoga behind his counter.
+	if (const std::string rest = npcRestAnimation(*npc); !rest.empty())
+		npc->SetAnimation(rest);
 	return npc;
+}
+
+std::string Game::npcRestAnimation(const Character& npc)
+{
+	std::string any;
+	for (const auto& [anim, data] : npc.GetAnimations())
+	{
+		if (anim.size() > 15 && anim.compare(anim.size() - 15, 15, "_loco_idle_rest") == 0)
+			return anim;
+		if (any.empty() && anim.find("idle") != std::string::npos)
+			any = anim;
+	}
+	return any;
+}
+
+void Game::animateNpc(Character& npc, bool talking)
+{
+	// Talking, a character gestures, one gesture after another, and goes back
+	// to standing at rest.
+	NpcGesture& gesture = _npcGestures[&npc];
+	if (gesture.gesturing)
+	{
+		if (!npc.IsAnimationFinished())
+			return;
+		gesture.gesturing = false;
+		if (const std::string rest = npcRestAnimation(npc); !rest.empty())
+			npc.SetAnimation(rest);
+	}
+	if (!talking || _elapsedSeconds < gesture.nextAt)
+		return;
+	std::vector<std::string> gestures;
+	for (const auto& [anim, data] : npc.GetAnimations())
+		if (anim.find("_dialogue_") != std::string::npos)
+			gestures.push_back(anim);
+	if (gestures.empty())
+		return;
+	npc.SetAnimation(gestures[static_cast<std::size_t>(rand()) % gestures.size()], false);
+	gesture.gesturing = true;
+	gesture.nextAt = _elapsedSeconds + 1.5 + (rand() % 20) / 10.0;
 }
 
 void Game::PlaceNpc(const std::string& name, const Vector3& position)
@@ -2673,6 +2729,12 @@ void Game::Run()
 					_audioManager->QueueDialogue(lines[static_cast<std::size_t>(rand()) % lines.size()],
 					                             AudioManager::DialoguePriority::Gameplay);
 			}
+		// Someone near the player while a line is being spoken is in the
+		// conversation, and gestures.
+		const bool speaking = _audioManager->IsDialoguePlaying() && _character && !_inVehicle;
+		const auto talkingNear = [&](const Vector3& position) {
+			return speaking && (position - _character->GetPosition()).Length() < 8.0f;
+		};
 		for (auto& giver : _bonusGivers)
 			if (giver.npc)
 			{
@@ -2683,11 +2745,13 @@ void Game::Run()
 						giver.npc->SetRotation(Quaternion::MakeFromEuler(
 						    Vector3(0.0f, std::atan2(toPlayer.X, toPlayer.Z) + 3.14159265f, 0.0f)));
 				}
+				animateNpc(*giver.npc, talkingNear(giver.npc->GetPosition()));
 				giver.npc->Update(deltaTime);
 			}
 		for (auto* people : {&_npcs, &_ambientNpcs})
 		for (auto& [name, npc] : *people)
 		{
+			animateNpc(*npc, talkingNear(npc->GetPosition()));
 			// Someone the player walks up to turns to face them. The model faces
 			// -Z, hence the half turn.
 			if (_character && !_inVehicle)
