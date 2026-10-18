@@ -85,6 +85,8 @@ into a playable arcade racing game.
   The player's car shows its dents: hood, doors and back swap to their damaged textures
 - **Pedestrians**: Springfield's people, walking, outdoors only
 - **Auto-Restart**: 5-second countdown after win/lose
+- **Falling off the map**: a car is put back on the road nearest where it last stood, the
+  player at the wheel; on foot, the player is set down where they last walked
 - **Screen Shake**: On jump, checkpoint, mission fail
 
 ### UI/HUD
