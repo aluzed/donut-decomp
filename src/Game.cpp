@@ -430,6 +430,8 @@ void Game::LoadModel(const std::string& name, const std::string& anim)
 	_character->LoadModel(name);
 	_character->LoadAnimations(anim);
 	_character->SetPosition(Vector3(220, 4.5, -172));
+	// Facing +Z, away from the camera that starts behind him: the model faces -Z.
+	_character->SetRotation(Quaternion::MakeFromEuler(Vector3(0.0f, 3.14159265f, 0.0f)));
 
 	if (anim == "homer")
 		_character->SetAnimation("hom_loco_walk");
