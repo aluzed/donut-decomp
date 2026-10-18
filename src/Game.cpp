@@ -717,7 +717,10 @@ void Game::runAutopilot(double dt)
 	if (const Vehicle* followed = objective == "follow" ? _scriptEngine->GetFollowTarget() : nullptr)
 	{
 		const Vector3 me = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : _character->GetPosition();
-		if ((followed->GetPosition() - me).Length() < 100.0f)
+		// Well inside the tightest follow distance the scripts set (level 4 m1's
+		// 120m): the autopilot moves every 2s, and at 75 km/h the car gains 40m
+		// between two looks. At 100m it was lost before the next one.
+		if ((followed->GetPosition() - me).Length() < 60.0f)
 			return;
 		// 25m behind, or closer when there is no road there: m5's van, put back
 		// on its route in a sunken lane, had nothing but a drop 25m behind it,

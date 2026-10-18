@@ -72,6 +72,20 @@ void Vehicle::LoadModel(const std::string& modelPath)
 	}
 }
 
+namespace
+{
+// The ground a car is put down on at `position`: the surface just under it,
+// looking only a little above it first. Searching from 50m up found the deck
+// of any bridge overhead -- level 2 m6's monkey under the overpass got the car
+// dropped on the road 18m above it. Only when nothing is that close does the
+// search reach 50m up, for points given below the surface.
+bool findSpawnGround(const WorldPhysics& physics, const Vector3& position, float& groundY)
+{
+	return physics.FindGroundHeight(position, 3.0f, 50.0f, groundY, true) ||
+	       physics.FindGroundHeight(position, 50.0f, 50.0f, groundY, true);
+}
+} // namespace
+
 void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 {
 	SetPosition(position);
@@ -85,7 +99,7 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 	// on it instead.
 	float spawnY = position.Y + kSpawnRideHeight;
 	float groundY = 0.0f;
-	if (physics.FindGroundHeight(position, 50.0f, 50.0f, groundY, true))
+	if (findSpawnGround(physics, position, groundY))
 	{
 		spawnY = groundY + kSpawnRideHeight;
 	}
@@ -158,7 +172,7 @@ void Vehicle::Teleport(const Vector3& position, const Quaternion& rotation)
 	float groundY = 0.0f;
 	// The level's ground, not whatever is in the way: a car moved to where it
 	// already stands found its own roof and was dropped from 1.3m up.
-	if (_physicsWorld && _physicsWorld->FindGroundHeight(position, 50.0f, 50.0f, groundY, true))
+	if (_physicsWorld && findSpawnGround(*_physicsWorld, position, groundY))
 		spawnY = groundY + kSpawnRideHeight;
 
 	btTransform transform;

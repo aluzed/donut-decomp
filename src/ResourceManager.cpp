@@ -1,5 +1,6 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
+#include <set>
 #include <P3D/P3D.generated.h>
 #include <Render/Font.h>
 #include <Render/Mesh.h>
@@ -141,7 +142,10 @@ Shader* ResourceManager::GetShader(const std::string& name) const
 {
 	if (_shaders.find(name) == _shaders.end())
 	{
-		Log::Warn("could not find shader {0}", name);
+		// Once a name: a mesh that asks for it every frame filled the log.
+		static std::set<std::string> warned;
+		if (warned.insert(name).second)
+			Log::Warn("could not find shader {0}", name);
 		return nullptr; // todo: return an error shader
 	}
 

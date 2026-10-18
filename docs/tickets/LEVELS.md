@@ -83,6 +83,20 @@ before holds only the mission, read as level 1's. New Game always starts on leve
 without playing all of it. `--story --from 7 --autopilot`: level 1's m7 won, level 2
 loaded, Bart standing outside the Try-N-Save on m1, which plays through, then m2.
 
+## Level 2 end to end (2026-10-18, later)
+
+`--level 2 --story --autopilot` plays m1 to m8 and carries on into level 3. What it took,
+beyond the above:
+
+- A car put down at a point under a bridge was put on the bridge: the ground search
+  started 50m above the point and found the deck first. m6's monkey under the overpass
+  was never picked up, and the stage timed out on each retry. The search now looks 3m
+  above the point first.
+- `--autopilot` caught up with a car it follows only beyond 100m, and moves every 2s: at
+  75 km/h the car gains 40m between two looks, past level 4 m1's 120m follow distance.
+  It now catches up beyond 60m.
+- A missing shader was reported every frame it was asked for; once now.
+
 ## Not done
 
 - The skipped do-not-enter signs, level crossing and old lamps.
