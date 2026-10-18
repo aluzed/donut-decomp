@@ -50,6 +50,11 @@ public:
 	void AddCharacter(const std::string& name, const std::string& locator);
 	void AddNPC(const std::string& name, const std::string& locator, const std::string& type = "");
 	void PlacePlayerCar(const std::string& car, const std::string& locator);
+	// Seats the player in the car PlacePlayerCar placed.
+	void PutPlayerInCar();
+	// Inside a race objective, each collectible is a checkpoint the player has to
+	// drive through, in order (sr2: "carsphere" at sr2_waypoint1..8).
+	void AddCollectible(const std::string& locator, const std::string& type);
 	void InitLevelPlayerVehicle(const std::string& car, const std::string& locator,
 	                            const std::string& role, const std::string& aiScript = "");
 	void AddStageVehicle(const std::string& car, const std::string& locator,
@@ -125,6 +130,11 @@ private:
 	float _goTimer = 1.5f;
 	std::vector<std::unique_ptr<Vehicle>> _missionVehicles;
 	Vehicle* _activeVehicle = nullptr;
+	// The player's car for this mission, when the mission places one.
+	Vehicle* _playerCar = nullptr;
+	// Builds a mission car at `pos`, tuned from its script, facing the way the
+	// locator does when it says. The caller decides what the car is for.
+	Vehicle& spawnVehicle(const std::string& car, const std::string& locator, const Vector3& pos);
 
 	std::string _objectiveType;
 	std::string _objectiveTarget;
@@ -137,6 +147,9 @@ private:
 	// Set once the opponent has crossed the line for the last time, so the loss
 	// is declared once.
 	bool _opponentFinished = false;
+	// Whether _checkpoints came from the objective's own collectibles rather than
+	// the level path AddObjective falls back on.
+	bool _checkpointsFromCollectibles = false;
 	float _bestTime = 999.0f;
 	bool _isNewRecord = false;
 	Vector3 _aiPosition;

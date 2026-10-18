@@ -94,6 +94,7 @@ void GameCommands::SetHUDIcon(const std::string& param0)
 void GameCommands::AddCollectible(const std::string& param0, const std::string& param1 /*= ""*/,
                                   const std::string& param2 /*= ""*/, const std::string& param3 /*= ""*/)
 {
+	Game::GetInstance().GetScriptEngine().AddCollectible(param0, param1);
 }
 void GameCommands::SetStageTime(int32_t param0)
 {
@@ -220,7 +221,10 @@ void GameCommands::SetActorRotationSpeed(const std::string& param0, const std::s
 void GameCommands::SetAnimatedCameraName(const std::string& param0) {}
 void GameCommands::SetAnimCamMulticontName(const std::string& param0) {}
 void GameCommands::SetCoinFee(int32_t param0) {}
-void GameCommands::PutMFPlayerInCar(int32_t param0 /*= 0*/) {}
+void GameCommands::PutMFPlayerInCar(int32_t param0 /*= 0*/)
+{
+	Game::GetInstance().GetScriptEngine().PutPlayerInCar();
+}
 void GameCommands::StartCountdown(const std::string& param0, const std::string& param1 /*= ""*/) {}
 void GameCommands::AddToCountdownSequence(const std::string& param0, int32_t param1) {}
 void GameCommands::UseElapsedTime(int32_t param0 /*= 0*/) {}

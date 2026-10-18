@@ -51,6 +51,7 @@ void ScriptEngine::SelectMission(const std::string& id)
 	_raceOpponents.clear();
 	_raceVehicles.clear();
 	_raceCatchups.clear();
+	_playerCar = nullptr;
 	_stageWaypoints.clear();
 	for (auto& v : _missionVehicles)
 		v->DestroyPhysics(_game.GetWorldPhysics());
@@ -137,6 +138,7 @@ void ScriptEngine::CleanupMission()
 	_raceOpponents.clear();
 	_raceVehicles.clear();
 	_raceCatchups.clear();
+	_playerCar = nullptr;
 	_racePath.clear();
 	_stageWaypoints.clear();
 
@@ -213,7 +215,77 @@ void ScriptEngine::AddNPC(const std::string& name, const std::string& locator, c
 
 void ScriptEngine::PlacePlayerCar(const std::string& car, const std::string& locator)
 {
-	Log::Info("ScriptEngine: place player car '{}' at '{}'", car, locator);
+	const Vector3 pos = _game.GetLevel().GetLocatorPosition(locator);
+	if (pos == Vector3::Zero)
+	{
+		Log::Warn("ScriptEngine: player car locator '{}' not found", locator);
+		return;
+	}
+
+	// "current" is whatever the player drives at the time. There is no garage
+	// yet, so it is the family sedan the game starts the player in.
+	const std::string model = car == "current" ? "famil_v" : car;
+	Log::Info("ScriptEngine: place player car '{}' ('{}') at '{}' ({:.1f}, {:.1f}, {:.1f})", car, model, locator,
+	          pos.X, pos.Y, pos.Z);
+	_playerCar = &spawnVehicle(model, locator, pos);
+}
+
+void ScriptEngine::AddCollectible(const std::string& locator, const std::string& type)
+{
+	if (_objectiveType != "race")
+	{
+		Log::Debug("ScriptEngine: collectible '{}' ({}) outside a race, not handled", locator, type);
+		return;
+	}
+
+	const Vector3 pos = _game.GetLevel().GetLocatorPosition(locator);
+	if (pos == Vector3::Zero)
+	{
+		Log::Warn("ScriptEngine: race checkpoint '{}' not found", locator);
+		return;
+	}
+
+	// The first one replaces the six points AddObjective spread over the level's
+	// longest path: a mission that names its checkpoints means those.
+	if (!_checkpointsFromCollectibles)
+	{
+		_checkpoints.clear();
+		_checkpointsFromCollectibles = true;
+	}
+	_checkpoints.push_back(pos);
+	Log::Info("ScriptEngine: race checkpoint {} '{}' at ({:.1f}, {:.1f}, {:.1f})", _checkpoints.size(), locator,
+	          pos.X, pos.Y, pos.Z);
+}
+
+void ScriptEngine::PutPlayerInCar()
+{
+	if (_playerCar == nullptr)
+	{
+		Log::Warn("ScriptEngine: PutMFPlayerInCar with no player car placed");
+		return;
+	}
+	_game.PutPlayerInVehicle(_playerCar);
+}
+
+Vehicle& ScriptEngine::spawnVehicle(const std::string& car, const std::string& locator, const Vector3& pos)
+{
+	auto vehicle = std::make_unique<Vehicle>(car);
+	std::string modelPath = "art/cars/" + car + ".p3d";
+	if (!FileSystem::exists(modelPath))
+		modelPath = "art/cars/famil_v.p3d";
+	vehicle->LoadModel(modelPath);
+	applyCarScript(*vehicle);
+	vehicle->CreatePhysicsBody(_game.GetWorldPhysics(), pos);
+
+	// Every car used to spawn facing +Z whatever its locator said, so sr2's grid
+	// sat across the street it had to start down.
+	float heading = 0.0f;
+	if (_game.GetLevel().GetLocatorHeading(locator, heading))
+		vehicle->Teleport(pos, Quaternion(Vector3(0.0f, 1.0f, 0.0f), heading));
+
+	_activeVehicle = vehicle.get();
+	_missionVehicles.push_back(std::move(vehicle));
+	return *_missionVehicles.back();
 }
 
 void ScriptEngine::InitLevelPlayerVehicle(const std::string& car, const std::string& locator,
@@ -229,16 +301,7 @@ void ScriptEngine::InitLevelPlayerVehicle(const std::string& car, const std::str
 	Log::Info("ScriptEngine: init player vehicle '{}' at ({:.1f}, {:.1f}, {:.1f}) role='{}' ai='{}'",
 	          car, pos.X, pos.Y, pos.Z, role, aiScript);
 
-	auto vehicle = std::make_unique<Vehicle>(car);
-	std::string modelPath = "art/cars/" + car + ".p3d";
-	if (!FileSystem::exists(modelPath))
-		modelPath = "art/cars/famil_v.p3d";
-	vehicle->LoadModel(modelPath);
-	applyCarScript(*vehicle);
-	vehicle->CreatePhysicsBody(_game.GetWorldPhysics(), pos);
-	_activeVehicle = vehicle.get();
-
-	_missionVehicles.push_back(std::move(vehicle));
+	spawnVehicle(car, locator, pos);
 }
 
 void ScriptEngine::AddStageVehicle(const std::string& car, const std::string& locator,
@@ -273,21 +336,12 @@ void ScriptEngine::AddStageVehicle(const std::string& car, const std::string& lo
 	Log::Info("ScriptEngine: add stage vehicle '{}' at '{}' ({:.1f}, {:.1f}, {:.1f}) behaviour='{}' ai='{}' driver='{}'",
 	          car, locator, pos.X, pos.Y, pos.Z, behaviour, aiScript, driver);
 
-	auto vehicle = std::make_unique<Vehicle>(car);
-	std::string modelPath = "art/cars/" + car + ".p3d";
-	if (!FileSystem::exists(modelPath))
-		modelPath = "art/cars/famil_v.p3d";
-	vehicle->LoadModel(modelPath);
-	applyCarScript(*vehicle);
-	vehicle->CreatePhysicsBody(_game.GetWorldPhysics(), pos);
-	_activeVehicle = vehicle.get();
+	Vehicle& vehicle = spawnVehicle(car, locator, pos);
 
 	// A "race" stage vehicle is an opponent's. Its driver comes with the circuit,
 	// in buildRaceCircuit.
 	if (behaviour == "race")
-		_raceVehicles.push_back(vehicle.get());
-
-	_missionVehicles.push_back(std::move(vehicle));
+		_raceVehicles.push_back(&vehicle);
 }
 
 // Every car has a tuning script of its own -- scripts/cars/<car>.con, copied off
@@ -612,6 +666,7 @@ void ScriptEngine::AddObjective(const std::string& type)
 	_currentLap = 0;
 	_totalLaps = kDefaultRaceLaps;
 	_opponentFinished = false;
+	_checkpointsFromCollectibles = false;
 	_checkpoints.clear();
 	_racePath.clear();
 	_aiCheckpoint = 0;

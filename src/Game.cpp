@@ -392,6 +392,15 @@ void Game::runMissionScript()
 	_scriptEngine->RunFile(_missionScript);
 }
 
+void Game::PutPlayerInVehicle(Vehicle* vehicle)
+{
+	if (vehicle == nullptr)
+		return;
+	_inVehicle = true;
+	_activeVehicle = vehicle;
+	Log::Info("Game: player put in vehicle '{}'", vehicle->GetName());
+}
+
 void Game::SetPlayerPosition(const Vector3& pos)
 {
 	if (_character)

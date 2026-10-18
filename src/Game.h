@@ -87,6 +87,8 @@ public:
 	// The vehicle the player is currently driving, or nullptr on foot. Lets the
 	// AI skip a car the player has taken over instead of fighting it for control.
 	const Vehicle* GetPlayerVehicle() const { return _inVehicle ? _activeVehicle : nullptr; }
+	// Seats the player at the wheel of `vehicle`, as getting in by hand does.
+	void PutPlayerInVehicle(Vehicle* vehicle);
 	void AddShake(float amount) { _shakeAmount = std::max(_shakeAmount, amount); }
 
 	static Game& GetInstance() { return *instance; }

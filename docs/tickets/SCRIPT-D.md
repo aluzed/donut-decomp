@@ -72,9 +72,20 @@ the route drops off a raised section, and once at the U-turn at waypoint 7, wher
 circuit doubles back onto the other carriageway. The game's physics gives every car the
 same 0.9 x 0.4 x 2.2m chassis box, which a bus outgrows.
 
-Not done: the player's own car (`PlacePlayerCar`, `PutMFPlayerInCar`), checkpoints from the
-objective's `AddCollectible` waypoints (the player still gets the level's longest path),
-the countdown, and the `position` condition.
+Then, the same day, the player's side:
+
+- **Cars face their locators.** A car-start locator's first data word is its heading, a
+  float in radians about +Y (sr2's grid reads 1.571, facing +X down the starting street).
+  Every car used to spawn facing +Z, across the street. Facing the right way took the
+  first laps to **84.4s / 88.0s / 109.2s**.
+- **`PlacePlayerCar("current", locator)`** builds the player's car at the locator.
+  "current" is the family sedan, since there is no garage yet. **`PutMFPlayerInCar`**
+  seats the player in it.
+- **`AddCollectible` inside a race objective** makes the player's checkpoints, in order.
+  sr2 gets its own seven (`sr2_waypoint1..6`, `sr2_waypoint8`) in place of six points
+  spread over the level's longest path.
+
+Not done: the countdown and the `position` condition.
 
 ## Critères d'acceptation
 - [ ] Un `.con` de course représentatif s'exécute avec 0 avertissement « unimplemented command ».

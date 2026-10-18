@@ -100,6 +100,9 @@ public:
 	};
 
 	Vector3 GetLocatorPosition(const std::string& name) const;
+	// The heading a car-start locator faces, in radians about +Y (0 faces +Z,
+	// pi/2 faces +X). False for a locator that carries none.
+	bool GetLocatorHeading(const std::string& name, float& heading) const;
 	const std::vector<Path>& GetPaths() const { return _paths; }
 
 	// Named camera/animation splines. Spline chunks are nested inside the level
@@ -162,6 +165,7 @@ private:
 	std::set<std::string> _loadedRegions;
 	std::set<std::string> _loadedP3Ds;
 	std::map<std::string, Vector3> _locators;
+	std::map<std::string, float> _locatorHeadings;
 };
 
 } // namespace Donut

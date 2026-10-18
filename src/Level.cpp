@@ -12,6 +12,7 @@
 #include <Render/BillboardBatch.h>
 
 #include <cmath>
+#include <cstring>
 #include <Render/Font.h>
 #include <Render/LineRenderer.h>
 #include <Render/Mesh.h>
@@ -187,6 +188,17 @@ void Level::LoadP3D(const std::string& filename)
 			// was dropped outright -- and those are most of them (spawn points,
 			// car starts, race_finish...).
 			_locators.insert({loc->GetName(), loc->GetPosition()});
+
+			// A car start's first data word is its heading as a float, in radians
+			// about +Y: sr2's grid reads 1.571, facing +X down the street the race
+			// starts on.
+			if (static_cast<LocatorType>(loc->GetType()) == LocatorType::CarStart && !loc->GetData().empty())
+			{
+				float heading = 0.0f;
+				const uint32_t word = loc->GetData().front();
+				std::memcpy(&heading, &word, sizeof(heading));
+				_locatorHeadings.insert({loc->GetName(), heading});
+			}
 			Log::Debug("Level: locator '{}' at ({:.1f}, {:.1f}, {:.1f})", loc->GetName(), loc->GetPosition().X,
 			           loc->GetPosition().Y, loc->GetPosition().Z);
 
@@ -359,6 +371,15 @@ void Level::ImGuiDebugWindow(bool* p_open) const
 	}
 
 	ImGui::End();
+}
+
+bool Level::GetLocatorHeading(const std::string& name, float& heading) const
+{
+	const auto found = _locatorHeadings.find(name);
+	if (found == _locatorHeadings.end())
+		return false;
+	heading = found->second;
+	return true;
 }
 
 Vector3 Level::GetLocatorPosition(const std::string& name) const
