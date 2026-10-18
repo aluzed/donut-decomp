@@ -41,3 +41,9 @@ failed.
 - Mission scripts' `SetHitNRun`, `DisableHitAndRun`, `ResetHitAndRun` and the meter
   commands are still empty. The old `ChaseManager` is left as it was.
 - No siren, no "BUSTED" screen of its own: the mission-failed screen says it.
+
+A bust (or the police giving up) crashed the game on the next physics step: the police
+car was dropped without `Vehicle::DestroyPhysics`, and its raycast vehicle stayed
+registered as an action. `~Vehicle` now takes its physics out itself if nobody has; it
+showed up in the unattended level 4 run, where the autopilot's teleports left a chase
+behind.

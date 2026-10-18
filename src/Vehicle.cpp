@@ -60,7 +60,14 @@ constexpr float kSteerTaperKmh = 90.0f;
 
 Vehicle::Vehicle(const std::string& name): _name(name), _position(Vector3::Zero), _rotation(Quaternion::Identity) {}
 
-Vehicle::~Vehicle() = default;
+Vehicle::~Vehicle()
+{
+	// A car dropped without DestroyPhysics left its raycast vehicle registered
+	// as an action, and the next physics step called into freed memory: the
+	// Hit & Run police car, removed on a bust, crashed the game.
+	if (_physicsWorld && _rayVehicle)
+		DestroyPhysics(*_physicsWorld);
+}
 
 void Vehicle::LoadModel(const std::string& modelPath)
 {
