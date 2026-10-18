@@ -40,6 +40,8 @@ naming the place. From level 2 a door is a zone trigger (type 5) whose data load
 interior, `l2i04.p3d@l2z1.p3d:l2z3.p3d:`: the file is what comes before the `@`. Such a
 trigger now takes the player in too, and the interior is known by the trigger's locator,
 `moe1`, which is what level 2's scripts give as an `interior` objective's destination.
+The file is the one just before the `@`, after any the trigger unloads: level 1's front
+door is `l1z7.p3d:l1z2.p3d:l1i02.p3d@`.
 Level 2 m2 (21 stages) used to wait at Moe's door for ever; it now plays through.
 
 **Level 2's files** brought out two loader crashes, both fixed: an `AnimDynamicPhysics`

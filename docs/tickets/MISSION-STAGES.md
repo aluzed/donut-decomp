@@ -50,7 +50,8 @@ Two commands made it worse:
   | `losetail` | the car on the player's tail is `SetObjDistance` metres behind (150 by default). A car activated as `chase` is driven along the roads to the player, its route drawn again as the player moves on; one more than 80m off when activated is first brought to the road 40m behind the player, the game's own chase script not being run. `--autopilot` makes for a road beyond that distance, straight away from it |
   | `gooutside` | the player comes back out of the interior |
   | `coins` | the purse holds `SetCoinFee`'s fee, which is taken (GAME-010) |
-| `fmv`, `buycar` | at once: there is no movie or showroom to hold the player |
+| `buycar` | the purse holds the car's price (`scripts/rewards.mfk`'s `BindReward ... "forsale", level, cost`: the Plow King is 150), which is taken; the car is the player's "current" from then on, until the level ends. Owned already, at once. `--autopilot` is given it |
+  | `fmv` | at once: there is no movie to sit through |
   | anything else | at once, with a warning, so it does not block the mission |
 
   When the last stage's objective is met, the mission is complete.
