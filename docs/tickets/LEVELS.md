@@ -22,7 +22,7 @@ walk and idle animations, and the phrase table's mission titles (`L1`).
 |---|---|
 | world files | `art/l<n>_TERRA.p3d`, every `l<n>z*` and `l<n>r*` (where a road comes in an `a` and a `b` version, only `a`: they are the same stretch, before and after a change), the interiors `l<n>i*` |
 | mission art | `art/missions/level0<n>/level.p3d`, and each mission's own `<id>.p3d` |
-| story | `scripts/level0<n>/level.mfk`, its `AddMission` calls in order |
+| story | `scripts/level0<n>/level.mfk`, its `AddMission` calls in order, each preceded by its "Sunday drive" `<id>sdi.mfk` (go home, talk to Marge, buy the car the mission needs), played as a mission of its own: level 1 is 16 |
 | Warp menu | the same script's `AddTeleportDest` calls |
 | player and car | `leveli.mfk`'s first `AddCharacter` and `InitLevelPlayerVehicle`: Homer and `famil_v` on level 1, Bart and `honor_v` on level 2; "current" in a mission script is that car |
 | walk and idle | the character's own `*_loco_walk` / `*_loco_idle_rest` (`hom_`, `brt_`...) |

@@ -894,9 +894,16 @@ void Game::loadLevel()
 	_playerCarModel = "famil_v";
 	for (const std::string& id : levelScriptCalls("AddMission"))
 	{
-		const std::string path = fmt::format("scripts/{}/{}i.mfk", levelDirectory(), id);
-		if (FileSystem::exists(path))
-			_story.push_back(path);
+		// Each mission is reached through its "Sunday drive", <id>sdi.mfk: go
+		// home, talk to Marge, buy the car the mission needs... It is played
+		// first, as a mission of its own. The story used to jump from one
+		// mission straight into the next.
+		for (const char* part : {"sd", ""})
+		{
+			const std::string path = fmt::format("scripts/{}/{}{}i.mfk", levelDirectory(), id, part);
+			if (FileSystem::exists(path))
+				_story.push_back(path);
+		}
 	}
 	// The Warp menu's places, AddTeleportDest("name", x, y, z, "zones").
 	{
@@ -2085,7 +2092,7 @@ void Game::Run()
 					// A level's first story mission also says which level this is.
 					if (_storyIndex == 0)
 						if (const std::string& level = _textBible.Get(fmt::format("LEVEL_{}", _levelNumber)); !level.empty())
-							hud.banner = level + " - " + hud.banner;
+							hud.banner = hud.banner.empty() ? level : level + " - " + hud.banner;
 				}
 				hud.countdown = _scriptEngine->GetCountdownText();
 				hud.objective = _scriptEngine->GetObjectiveText();
