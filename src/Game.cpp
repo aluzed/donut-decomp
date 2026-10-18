@@ -1445,6 +1445,9 @@ bool Game::ringDoorbell()
 		    !(trigger.Contains(me) || (trigger.position - me).Length() < 3.0f))
 			continue;
 		const std::string resident = trigger.data.substr(3);
+		// The button goes in, and the switch it names moves with it.
+		_level->PlayAnimatedObject(trigger.data);
+		_level->PlayAnimatedObject(trigger.actionTarget);
 		const auto lines = _audioManager->FindSounds(resident + "\\w_doorbell_");
 		Log::Info("Game: rang {}'s doorbell ({} answers)", resident, lines.size());
 		_audioManager->PlayRaw(SoundGenerator::Chirp(900.0f, 700.0f, 0.3f, 44100), 44100, 1, 16);

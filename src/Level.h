@@ -39,6 +39,9 @@ public:
 	~Level();
 
 	void Update(double deltatime);
+	// Plays, once, the animated objects of that name that wait to be worked
+	// (a doorbell's button, its porch light switch). How many there were.
+	int PlayAnimatedObject(const std::string& name);
 	void Draw(Matrix4x4& viewProj, const Vector3& cameraPos = Vector3::Zero);
 	// The shader the level's own meshes are drawn with, uniforms as Draw left
 	// them -- what any other P3D Mesh (a car's, say) has to be drawn with too.
@@ -88,6 +91,8 @@ public:
 		// An action locator's action, the third string of its data:
 		// "SummonVehiclePhone" (a phone booth), "Wrench", "Doorbell"...
 		std::string action;
+		// Its second string: the object it works ("skinner_switch11").
+		std::string actionTarget;
 		Vector3 position;
 		// The volume's own axes. Boxes are not all axis-aligned: L1's loader
 		// triggers sit at 90 and 45 degrees.
@@ -194,8 +199,16 @@ private:
 	std::unique_ptr<GL::ShaderProgram> _billboardBatchShader;
 
 	std::vector<std::unique_ptr<CompositeModel>> _compositeModels;
-	// Those of them that play an animation of their own, round and round.
-	std::vector<std::size_t> _animatedComposites;
+	// Those of them that play an animation of their own: round and round, or
+	// once when worked (a doorbell, a switch), from `startedAt`.
+	struct AnimatedObject
+	{
+		std::size_t index;
+		std::string name;
+		bool loops;
+		double startedAt = -1.0;
+	};
+	std::vector<AnimatedObject> _animatedObjects;
 	double _animationTime = 0.0;
 
 	std::vector<Path> _paths;

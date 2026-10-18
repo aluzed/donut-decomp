@@ -177,8 +177,8 @@ void Level::LoadP3D(const std::string& filename)
 			std::string lower = name;
 			std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return std::tolower(c); });
 			const bool waits = lower.rfind("db_", 0) == 0 || lower.find("switch") != std::string::npos;
-			if (model->IsAnimated() && !waits)
-				_animatedComposites.push_back(_compositeModels.size());
+			if (model->IsAnimated())
+				_animatedObjects.push_back({_compositeModels.size(), name, !waits});
 			// Their rest pose is not where they stand: the first frame places
 			// them (a switch's rest is the world's origin).
 			model->Pose(0.0f, false);
@@ -365,7 +365,7 @@ void Level::LoadP3D(const std::string& filename)
 
 			// An action locator's data is three strings, each NUL-ended and
 			// padded: the object, its joint or switch, and the action.
-			std::string action;
+			std::string action, actionTarget;
 			if (static_cast<LocatorType>(loc->GetType()) == LocatorType::Action)
 			{
 				std::vector<std::string> strings(1);
@@ -379,7 +379,10 @@ void Level::LoadP3D(const std::string& filename)
 							strings.emplace_back();
 					}
 				if (strings.size() >= 3)
+				{
+					actionTarget = strings[1];
 					action = strings[2];
+				}
 			}
 
 			for (const auto& trigger : loc->GetTriggers())
@@ -393,6 +396,7 @@ void Level::LoadP3D(const std::string& filename)
 				tvol.type = static_cast<LocatorType>(loc->GetType());
 				tvol.data = data;
 				tvol.action = action;
+				tvol.actionTarget = actionTarget;
 				tvol.position = Vector3(m[3][0], m[3][1], m[3][2]);
 				for (int axis = 0; axis < 3; ++axis)
 				{
@@ -679,14 +683,39 @@ void Level::unloadRegion(const std::string& filename)
 	_loadedP3Ds.erase(filename);
 }
 
+int Level::PlayAnimatedObject(const std::string& name)
+{
+	int started = 0;
+	for (auto& object : _animatedObjects)
+		if (!object.loops && object.name == name)
+		{
+			object.startedAt = _animationTime;
+			++started;
+		}
+	return started;
+}
+
 void Level::Update(double deltatime)
 {
 	// The level's animated objects, round and round at their own rate.
 	_animationTime += deltatime;
-	for (const std::size_t index : _animatedComposites)
+	for (auto& object : _animatedObjects)
 	{
-		auto& model = *_compositeModels[index];
-		model.Pose(static_cast<float>(_animationTime) * model.GetAnimationFrameRate(), true);
+		auto& model = *_compositeModels[object.index];
+		if (object.loops)
+			model.Pose(static_cast<float>(_animationTime) * model.GetAnimationFrameRate(), true);
+		else if (object.startedAt >= 0.0)
+		{
+			// Played once through, then back to where it stood.
+			const float frame = static_cast<float>(_animationTime - object.startedAt) * model.GetAnimationFrameRate();
+			if (frame >= model.GetAnimationFrames())
+			{
+				object.startedAt = -1.0;
+				model.Pose(0.0f, false);
+			}
+			else
+				model.Pose(frame, false);
+		}
 	}
 
 	// draws debug shit
