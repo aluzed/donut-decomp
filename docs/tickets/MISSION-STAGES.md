@@ -46,6 +46,7 @@ Two commands made it worse:
   | `delivery` | every `AddCollectible` item has been picked up (within 4m), in any order; the HUD shows "delivery 3/9" |
   | `follow` | the target car, driven along the stage waypoints like a one-lap race, reaches the end. The `followdistance` condition (`SetFollowDistances`) fails the stage if the player falls further behind than its maximum |
   | `destroy` | the target car, fleeing along the stage waypoints, is rammed to 0 health. There is no car damage model, so a hit is judged from the gap: touching (under 5m) while closing faster than 4 m/s costs 3 points per m/s. The target reaching the end of its route has got away, and fails the stage |
+  | `dump` | every item has been knocked out of the target vehicle (one per ram, dropped where it is) and picked up. The items' locators are placeholders 110m underground, so they are only names |
   | `gooutside`, `fmv`, `buycar` | at once: there is no interior, movie or showroom to hold the player |
   | anything else | at once, with a warning, so it does not block the mission |
 
@@ -82,7 +83,7 @@ end and restart. Here is the last stage met, and what was skipped on the way:
 | m3 | 4 | end | — (`smith_v` rammed to destruction) |
 | m4 | 4 | end, 6 cycles | — (nine power boxes picked up) |
 | m5 | 6 | end | — (the van is followed for 181s) |
-| m6 | 4 | end, 5 cycles | `dump` |
+| m6 | 4 | end | — (ten games knocked out of the truck and picked up, 79s) |
 | m7 | 3 | end, 3 cycles | — |
 | bm1 | 7 | end, 5 cycles | — (5 boxes, then 12 Tomacco) |
 | sr2 | 2 | end | — |
@@ -139,6 +140,6 @@ A completed mission still reloads from the top.
 ## Not done
 
 - NPCs as characters in the world (they are positions only), dialogue, interiors.
-- The `dump` objective is skipped. A target "getting away" in `destroy` has not been exercised:
+- A target "getting away" in `destroy` has not been exercised:
   it goes through the same path as a `follow` target arriving, which has.
   The `coins` fee is waived until there is a coin purse.

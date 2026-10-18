@@ -485,8 +485,10 @@ void Game::runAutopilot(double dt)
 	// off its route.
 	// A car to destroy is met head on: the player's car is parked across its
 	// path, 15m ahead, and it drives into it.
-	if (const Vehicle* quarry = _scriptEngine->GetFollowTarget();
-	    quarry && _scriptEngine->GetObjectiveType() == "destroy" && _inVehicle && _activeVehicle)
+	// A dump's truck likewise, until something has dropped out of it to pick up.
+	const std::string& objective = _scriptEngine->GetObjectiveType();
+	const bool ramming = objective == "destroy" || (objective == "dump" && !_scriptEngine->HasPickupsLying());
+	if (const Vehicle* quarry = _scriptEngine->GetFollowTarget(); quarry && ramming && _inVehicle && _activeVehicle)
 	{
 		const Vector3 ahead = quarry->GetPosition() + quarry->GetRotation() * Vector3::Forward * 15.0f;
 		Log::Info("Game: autopilot blocks '{}'", quarry->GetName());
@@ -494,7 +496,7 @@ void Game::runAutopilot(double dt)
 		return;
 	}
 
-	if (const Vehicle* followed = _scriptEngine->GetFollowTarget())
+	if (const Vehicle* followed = objective == "follow" ? _scriptEngine->GetFollowTarget() : nullptr)
 	{
 		const Vector3 me = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : _character->GetPosition();
 		if ((followed->GetPosition() - me).Length() < 100.0f)

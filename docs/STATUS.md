@@ -33,20 +33,30 @@ into a playable arcade racing game.
 - **RCF Loading**: Auto-detect archive files
 
 ### Script Engine
-- **Parser**: Text-based .con script loader, multi-command lines
-- **40+ Commands**: Mission flow, vehicle tuning, objectives
-- **Mission State**: SelectMission→AddStage→Checkpoints→CloseMission
-- **Locator System**: Name→position mapping from P3D data
+- **Parser**: Text-based .con/.mfk script loader, multi-command lines
+- **Stages**: each stage's commands are recorded and run when it begins; objectives
+  complete and advance (goto, interior, race, getin, talkto, dialogue, timer, delivery,
+  dump, follow, destroy); conditions fail them (timeout, outofvehicle, damage,
+  followdistance, race); a failure is retried from `RESET_TO_HERE` (MISSION-STAGES)
+- **The game's own missions**: level 1's m0-m7, bm1, sr1-sr3 and gr1 play through
+  with `--autopilot`; New Game plays the story in order (`scripts/level01`, docs/ASSETS.md)
+- **Car scripts**: every car's mass, engine and top speed from `scripts/cars/<car>.con`
+- **Phrase table**: objective lines in the game's own words, in five languages
+- **Locator System**: Name→position mapping from P3D data, car-start headings, trigger
+  volumes with entry/exit events
 
 ### AI
 - **PathGraph**: Road network from level Path data, nearest-neighbor graph
 - **Traffic**: 12 cars with steering behaviors (seek, arrival)
-- **Race Opponent**: Adaptive AI (rubber-banding 6-20 m/s)
+- **Race Opponents**: any number, driving real vehicles over a circuit routed through
+  the road network (shortcuts excluded); speed profile, hairpins and three-point turns,
+  mission catch-up curves; loops or start-to-finish routes (AI-RACE, SCRIPT-D)
 - **Police Chase**: ChaseManager with heat system, pursuit, bust/evade
 
 ### Gameplay
 - **Vehicle System**: Enter/exit, boost (Shift), jump (Space), horn (H)
-- **Checkpoint Racing**: 2-lap circuit with 6 checkpoints
+- **Races**: the mission's own checkpoints and lap count, countdown, race position,
+  losing to an opponent who finishes first, races against the clock (par time)
 - **Best Times**: Persistent save/load to `donut_save.dat`
 - **Auto-Restart**: 5-second countdown after win/lose
 - **Screen Shake**: On jump, checkpoint, mission fail

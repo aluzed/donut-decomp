@@ -258,24 +258,43 @@ void ScriptEngine::updateObjective(double dt)
 		if (_objectiveElapsed >= kDialogueSeconds)
 			objectiveComplete();
 	}
-	else if (_objectiveType == "delivery")
+	else if (_objectiveType == "delivery" || _objectiveType == "dump")
 	{
+		// A dump's items come out of the vehicle being rammed, one a hit, where
+		// it is at the time: their locators are placeholders 110m underground.
+		if (_objectiveType == "dump" && !_raceOpponents.empty() && !_dumpQueue.empty())
+		{
+			const Vehicle& truck = _raceOpponents.front()->GetVehicle();
+			const float closing = rammingSpeed(dt, truck);
+			if (closing > 0.0f)
+			{
+				Log::Info("ScriptEngine: '{}' rammed at {:.0f} m/s, drops '{}'", truck.GetName(), closing,
+				          _dumpQueue.front());
+				_pickups.emplace_back(_dumpQueue.front(), truck.GetPosition());
+				_dumpQueue.erase(_dumpQueue.begin());
+			}
+		}
+
 		// Picked up by coming within reach, in whatever order.
 		constexpr float kPickupRange = 4.0f;
 		for (auto it = _pickups.begin(); it != _pickups.end();)
 		{
 			if ((it->second - player).Length() < kPickupRange)
 			{
-				Log::Info("ScriptEngine: picked up '{}', {}/{}", it->first, _pickupsTotal - _pickups.size() + 1,
-				          _pickupsTotal);
+				Log::Info("ScriptEngine: picked up '{}', {}/{}", it->first,
+				          _pickupsTotal - _pickups.size() - _dumpQueue.size() + 1, _pickupsTotal);
 				_game.GetAudioManager().PlayRaw(SoundGenerator::Beep(900, 0.08f), 22050, 1, 16);
 				it = _pickups.erase(it);
 			}
 			else
 				++it;
 		}
-		if (_pickups.empty())
+		if (_pickups.empty() && _dumpQueue.empty())
+		{
+			if (_pickupsTotal == 0)
+				Log::Warn("ScriptEngine: '{}' objective with nothing found to pick up, skipping", _objectiveType);
 			objectiveComplete();
+		}
 	}
 	else if (_objectiveType == "destroy")
 	{
@@ -286,37 +305,14 @@ void ScriptEngine::updateObjective(double dt)
 			return;
 		}
 
-		// There is no damage model for cars, so ramming is judged from the gap
-		// between the player's car and the target: touching (under 5m between
-		// their centres) while closing faster than 4 m/s is a hit, worth three
-		// points of health per m/s of closing speed.
-		constexpr float kContactGap = 5.0f;
-		constexpr float kHitClosingSpeed = 4.0f;
 		constexpr float kDamagePerClosingSpeed = 3.0f;
-		const Vehicle* car = _game.GetPlayerVehicle();
 		const Vehicle& target = _raceOpponents.front()->GetVehicle();
-		_rammingCooldown -= static_cast<float>(dt);
-		if (car == nullptr || dt <= 0.0)
+		const float closing = rammingSpeed(dt, target);
+		if (closing > 0.0f)
 		{
-			_lastTargetGap = -1.0f;
-			return;
-		}
-
-		const float gap = (target.GetPosition() - car->GetPosition()).Length();
-		float closing = _lastTargetGap < 0.0f ? 0.0f : (_lastTargetGap - gap) / static_cast<float>(dt);
-		_lastTargetGap = gap;
-		// Faster than any car closes is a car being moved, not driven: a
-		// teleport read as a 40 m/s hit.
-		constexpr float kMaxClosingSpeed = 25.0f;
-		if (closing > kMaxClosingSpeed)
-			closing = 0.0f;
-		if (gap < kContactGap && closing > kHitClosingSpeed && _rammingCooldown <= 0.0f)
-		{
-			_rammingCooldown = 0.5f;
 			_targetHealth -= closing * kDamagePerClosingSpeed;
 			Log::Info("ScriptEngine: '{}' rammed at {:.0f} m/s, health {:.0f}", target.GetName(), closing,
 			          _targetHealth > 0.0f ? _targetHealth : 0.0f);
-			_game.AddShake(0.6f);
 			if (_targetHealth <= 0.0f)
 			{
 				Log::Info("ScriptEngine: '{}' destroyed", target.GetName());
@@ -371,6 +367,36 @@ void ScriptEngine::updateObjective(double dt)
 	}
 }
 
+float ScriptEngine::rammingSpeed(double dt, const Vehicle& target)
+{
+	// There is no damage model for cars, so a ram is judged from the gap between
+	// the player's car and the target: touching (under 5m between centres) while
+	// closing faster than 4 m/s is a hit, at most one every half second.
+	constexpr float kContactGap = 5.0f;
+	constexpr float kHitClosingSpeed = 4.0f;
+	// Faster than any car closes is a car being moved, not driven: a teleport
+	// read as a 40 m/s hit.
+	constexpr float kMaxClosingSpeed = 25.0f;
+
+	_rammingCooldown -= static_cast<float>(dt);
+	const Vehicle* car = _game.GetPlayerVehicle();
+	if (car == nullptr || dt <= 0.0)
+	{
+		_lastTargetGap = -1.0f;
+		return 0.0f;
+	}
+
+	const float gap = (target.GetPosition() - car->GetPosition()).Length();
+	const float closing = _lastTargetGap < 0.0f ? 0.0f : (_lastTargetGap - gap) / static_cast<float>(dt);
+	_lastTargetGap = gap;
+	if (gap >= kContactGap || closing <= kHitClosingSpeed || closing > kMaxClosingSpeed || _rammingCooldown > 0.0f)
+		return 0.0f;
+
+	_rammingCooldown = 0.5f;
+	_game.AddShake(0.6f);
+	return closing;
+}
+
 void ScriptEngine::SetDestination(const std::string& locator, const std::string& type)
 {
 	// An interior is reached through its entrance, whose locator carries the
@@ -419,12 +445,14 @@ bool ScriptEngine::GetObjectiveTarget(Vector3& position) const
 		position = _checkpoints[_currentCheckpoint];
 		return true;
 	}
-	if ((_objectiveType == "follow" || _objectiveType == "destroy") && !_raceOpponents.empty())
+	if ((_objectiveType == "follow" || _objectiveType == "destroy" ||
+	     (_objectiveType == "dump" && _pickups.empty())) &&
+	    !_raceOpponents.empty())
 	{
 		position = _raceOpponents.front()->GetVehicle().GetPosition();
 		return true;
 	}
-	if (_objectiveType == "delivery" && !_pickups.empty())
+	if ((_objectiveType == "delivery" || _objectiveType == "dump") && !_pickups.empty())
 	{
 		// The nearest one: they can be taken in any order.
 		const Vector3 player = _game.GetPlayerPosition();
@@ -547,8 +575,8 @@ std::string ScriptEngine::GetObjectiveText() const
 		if (!phrase.empty())
 			text = phrase;
 	}
-	if (_objectiveType == "delivery" && _pickupsTotal > 0)
-		text += fmt::format(" {}/{}", _pickupsTotal - _pickups.size(), _pickupsTotal);
+	if ((_objectiveType == "delivery" || _objectiveType == "dump") && _pickupsTotal > 0)
+		text += fmt::format(" {}/{}", _pickupsTotal - _pickups.size() - _dumpQueue.size(), _pickupsTotal);
 	if (_objectiveType == "destroy")
 		text += fmt::format(" ({:.0f}%)", _targetHealth > 0.0f ? _targetHealth : 0.0f);
 	return text;
@@ -573,7 +601,9 @@ std::string ScriptEngine::GetObjectiveTargetLabel() const
 {
 	if (_objectiveType == "race")
 		return "Next checkpoint";
-	if (_objectiveType == "delivery")
+	if (_objectiveType == "dump" && _pickups.empty())
+		return "Target";
+	if (_objectiveType == "delivery" || _objectiveType == "dump")
 		return "Nearest item";
 	if (_objectiveType == "follow" || _objectiveType == "destroy")
 		return "Target";
@@ -727,6 +757,14 @@ void ScriptEngine::PlacePlayerCar(const std::string& car, const std::string& loc
 
 void ScriptEngine::AddCollectible(const std::string& locator, const std::string& type)
 {
+	// A "dump"'s items fall out of a vehicle the player rams (m6's ten
+	// Bonestorm games): queued here, dropped one a hit in updateObjective.
+	if (_objectiveType == "dump")
+	{
+		_dumpQueue.push_back(locator);
+		_pickupsTotal = _dumpQueue.size();
+		return;
+	}
 	if (_objectiveType == "delivery")
 	{
 		const Vector3 pos = _game.GetLevel().GetLocatorPosition(locator);
@@ -1033,7 +1071,8 @@ void ScriptEngine::buildRaceCircuit()
 
 	// A "follow" drives its target the same way: m5's van runs its waypoints
 	// and the player has to keep up.
-	if (_objectiveType != "race" && _objectiveType != "follow" && _objectiveType != "destroy")
+	if (_objectiveType != "race" && _objectiveType != "follow" && _objectiveType != "destroy" &&
+	    _objectiveType != "dump")
 		return;
 	for (Vehicle* vehicle : _raceVehicles)
 	{
@@ -1215,6 +1254,7 @@ void ScriptEngine::AddObjective(const std::string& type)
 	_lastTargetGap = -1.0f;
 	_rammingCooldown = 0.0f;
 	_pickups.clear();
+	_dumpQueue.clear();
 	_pickupsTotal = 0;
 	_hasDestination = false;
 	_talkToTarget.clear();

@@ -166,10 +166,13 @@ public:
 	// destination, or whoever they are to talk to. For --autopilot.
 	bool GetObjectiveTarget(Vector3& position) const;
 	bool ObjectiveWantsCar() const { return _objectiveType == "getin"; }
-	// The car a "follow" or "destroy" objective is after, if any.
+	// A dump's dropped items are lying about to be picked up.
+	bool HasPickupsLying() const { return !_pickups.empty(); }
+	// The car a "follow", "destroy" or "dump" objective is after, if any.
 	const Vehicle* GetFollowTarget() const
 	{
-		return (_objectiveType == "follow" || _objectiveType == "destroy") && !_raceOpponents.empty()
+		return (_objectiveType == "follow" || _objectiveType == "destroy" || _objectiveType == "dump") &&
+		               !_raceOpponents.empty()
 		           ? &_raceOpponents.front()->GetVehicle()
 		           : nullptr;
 	}
@@ -290,6 +293,10 @@ private:
 	float _targetHealth = 100.0f;
 	float _lastTargetGap = -1.0f;
 	float _rammingCooldown = 0.0f;
+	// The speed the player's car just rammed `target` at, or 0 for no hit.
+	float rammingSpeed(double dt, const Vehicle& target);
+	// A "dump"'s items not yet knocked out of the vehicle.
+	std::vector<std::string> _dumpQueue;
 	// How long the player has been out of their car, for "outofvehicle".
 	float _outOfVehicleSeconds = 0.0f;
 	void updateConditions(double dt);
