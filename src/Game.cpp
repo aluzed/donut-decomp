@@ -634,6 +634,13 @@ void Game::updateCarDamage()
 	_damagePosition = position;
 }
 
+void Game::alert(const std::string& term, const char* fallback)
+{
+	const std::string& text = _textBible.Get(term);
+	_alertMessage = text.empty() ? fallback : text;
+	_alertUntil = _elapsedSeconds + 3.0;
+}
+
 void Game::updateHitAndRun(double dt)
 {
 	// Indoors the police wait. Nor do they chase --autopilot, whose teleports
@@ -675,6 +682,7 @@ void Game::updateHitAndRun(double dt)
 	{
 	case HitAndRun::Event::ChaseStarted:
 		_audioManager->PlayRaw(SoundGenerator::Chirp(700.0f, 1400.0f, 0.6f, 44100), 44100, 1, 16);
+		alert("HIT_AND_RUN", "Hit & Run!");
 		break;
 	case HitAndRun::Event::Busted:
 	{
@@ -684,6 +692,7 @@ void Game::updateHitAndRun(double dt)
 		if (fine > 0)
 			SpendCoins(fine);
 		Log::Info("Game: busted, fined {} coins", fine);
+		alert("BUSTED", "BUSTED!");
 		_hitAndRun->Reset();
 		_scriptEngine->FailMission("busted by the police", "MISSION_FAILED_HIT_N_RUN_HINT1");
 		break;
@@ -742,6 +751,9 @@ bool Game::BuySkin(const std::string& skin)
 		const Vector3 where = _character->GetPosition();
 		LoadModel(model, _playerCharacter);
 		SetPlayerPosition(where);
+		// A change of clothes empties the Hit & Run meter, the game's hint says.
+		if (_hitAndRun)
+			_hitAndRun->Reset();
 	}
 	return true;
 }
@@ -1153,6 +1165,9 @@ void Game::enterInterior(const Level::Trigger& door)
 
 	_interior = zone ? door.locator : door.data;
 	_interiorExitArmed = false;
+	// Going indoors loses the police, as the game's hint says.
+	if (_hitAndRun)
+		_hitAndRun->Reset();
 	Log::Info("Game: player goes into '{}'", _interior);
 	SetPlayerPosition(_interiorLayout.entry);
 	// Facing into the room: the camera kept the heading from outside, which
@@ -2214,6 +2229,11 @@ void Game::Run()
 			if (_collectibleManager)
 			{
 				hud.coins = _coins;
+				if (!_alertMessage.empty() && _elapsedSeconds < _alertUntil && hud.banner.empty())
+				{
+					hud.banner = _alertMessage;
+					hud.bannerColour = Vector4(1.0f, 0.25f, 0.2f, 1.0f);
+				}
 				if (!_cardMessage.empty() && _elapsedSeconds < _cardMessageUntil && hud.banner.empty())
 				{
 					hud.banner = _cardMessage;

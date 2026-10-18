@@ -291,6 +291,10 @@ private:
 	// A found card's title, shown for a while ("CRAB JUICE").
 	std::string _cardMessage;
 	double _cardMessageUntil = 0.0;
+	// "Hit & Run!", "BUSTED!": shown for a while, in red.
+	std::string _alertMessage;
+	double _alertUntil = 0.0;
+	void alert(const std::string& term, const char* fallback);
 	// The view rotation for a camera looking along heading `yaw` (radians about
 	// +Y, 0 is +Z), tipped `pitchDown` radians below the horizon.
 	static Quaternion cameraLooking(float pitchDown, float yaw);
