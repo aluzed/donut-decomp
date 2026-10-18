@@ -47,6 +47,9 @@ constexpr float kSpawnRideHeight = 0.9f;
 // of 1.3s. The player's car shares this value, boost (x3) included.
 constexpr float kEngineAcceleration = 1.5f;
 
+// The chassis mass the brake figures in ApplyInput were tuned on.
+constexpr float kBrakeReferenceMass = 1200.0f;
+
 // Steering lock, tapered with speed. The wheels turn kMaxSteerStill radians when
 // the car is stopped and kMaxSteerFast once it is doing kSteerTaperKmh, which is
 // what keeps a fast car pointing where it is going.
@@ -269,7 +272,12 @@ void Vehicle::ApplyInput(float throttle, float steer, float brake, float boost)
 	const float maxSteer = kMaxSteerStill + (kMaxSteerFast - kMaxSteerStill) * t;
 
 	SetSteeringValue(steer * maxSteer);
-	SetBrake(brake * 100.0f + 10.0f);
+	// btRaycastVehicle takes the brake as a cap on the friction impulse per step,
+	// so the same figure stops a heavy car more slowly. These were set on the one
+	// 1200kg chassis every car used to share; since the car scripts give each its
+	// own mass, a 2500kg bus braked at half the rate the race planner counts on,
+	// overshot a right-angle corner at 60 km/h and wedged itself sideways.
+	SetBrake((brake * 100.0f + 10.0f) * (mass / kBrakeReferenceMass));
 }
 
 void Vehicle::Jump()
