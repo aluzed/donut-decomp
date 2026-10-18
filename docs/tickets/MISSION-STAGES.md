@@ -153,8 +153,10 @@ A completed mission still reloads from the top.
 ## Not done
 
 - `destroyboss` objectives: met at once with a warning ("not implemented"), seen 8 times
-  over the 2026-10-18 validation runs of all seven levels. A barrel named by a mission
-  that did not place it (level 7 m5, m7) leaves `pickupitem` with nowhere to go, skipped.
+  over the 2026-10-18 validation runs of all seven levels. Level 7 m5 and m7 name a
+  barrel they do not place: they go to where the last mission put it (m3's for m5, m6's for m7,
+  in the story), or, loaded alone, have nowhere to go and are skipped. Not checked against
+  the game.
 
 - Subtitles and lip sync for the conversations: the lines are heard, not shown, and the
   speakers do not move their lips. NPCs stand where placed, turning to face a player on
