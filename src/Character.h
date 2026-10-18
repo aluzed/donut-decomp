@@ -77,7 +77,7 @@ public:
 private:
 	void addAnimation(const P3D::Animation&);
 
-	double _animTime;
+	double _animTime = 0.0;
 
 	// only used as an entity name for now
 	std::string _name;
@@ -97,6 +97,8 @@ private:
 
 	// animations / bone buffers
 	std::unordered_map<std::string, std::unique_ptr<SkinAnimation>> _animations;
-	SkinAnimation* _currentAnimation;
+	// Null until SetAnimation; it was left uninitialised, and a character with
+	// no animation file (most pedestrians) posed its skeleton from garbage.
+	SkinAnimation* _currentAnimation = nullptr;
 };
 } // namespace Donut

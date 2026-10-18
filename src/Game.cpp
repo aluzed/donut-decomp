@@ -230,6 +230,7 @@ Game::Game(int argc, char** argv)
 	_trafficManager = std::make_unique<TrafficManager>(*_level, *_lineRenderer, *_pathGraph);
 	_trafficManager->LoadModels("scripts/level01/leveli.mfk");
 	_pedestrianManager = std::make_unique<PedestrianManager>(*_worldPhysics);
+	_pedestrianManager->LoadModels("scripts/level01/leveli.mfk");
 	_collectibleManager = std::make_unique<CollectibleManager>(*_level, *_lineRenderer);
 	_collectibleManager->SpawnOnPath();
 	_gameInput = std::make_unique<GameInput>();
@@ -363,6 +364,8 @@ Game::~Game()
 	// Everything holding a physics reference goes first, the world last.
 	_scriptEngine.reset(); // mission vehicles and the race opponent
 	_character.reset();    // its CharacterController unregisters an action
+	_npcs.clear();         // NPCs and pedestrians are Characters too
+	_pedestrianManager.reset();
 	_level.reset();        // static level geometry
 	_worldPhysics.reset();
 
@@ -1480,8 +1483,16 @@ void Game::Run()
 				_trafficManager->DrawSolid(*_carMesh, *_meshShader, viewProjection);
 		}
 
-		if (!_showDebug && _pedestrianManager)
-			_pedestrianManager->Draw(*_meshShader, *_playerMesh, viewProjection);
+		// Pedestrians with a body are drawn as people in either view, like the
+		// traffic; the rest are capsules outside the debug view.
+		if (_pedestrianManager)
+		{
+			if (!_showDebug)
+				_pedestrianManager->Draw(*_meshShader, *_playerMesh, viewProjection);
+			glDisable(GL_CULL_FACE); // skinned characters, as for the player
+			_pedestrianManager->DrawBodies(viewProjection, *_skinShaderProgram, *_resourceManager);
+			glEnable(GL_CULL_FACE);
+		}
 
 		if (_collectibleManager)
 			_collectibleManager->Draw();

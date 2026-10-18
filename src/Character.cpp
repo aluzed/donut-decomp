@@ -118,7 +118,9 @@ void Character::Update(double deltatime)
 	// update our bonebuffer
 	auto joints = _skeleton->GetJoints();
 	std::vector<Matrix4x4> matrices(joints.size());
-	for (auto i = 0; i < joints.size(); i++) matrices[i] = joints[i].finalGlobal;
+	// Unanimated, a skin is drawn in its bind pose, which identity bones give.
+	for (auto i = 0; i < joints.size(); i++)
+		matrices[i] = _currentAnimation != nullptr ? joints[i].finalGlobal : Matrix4x4::Identity;
 
 	_boneBuffer->SetBuffer(matrices.data(), matrices.size() * sizeof(Matrix4x4));
 }

@@ -1,12 +1,19 @@
 #include "PedestrianManager.h"
 
+#include "Character.h"
+#include "Core/FileSystem.h"
+#include "Core/Log.h"
+
 #include "Core/Math/Matrix4x4.h"
 #include "Physics/WorldPhysics.h"
 #include "Render/SimpleMesh.h"
 #include "Render/OpenGL/ShaderProgram.h"
 
 #include <btBulletDynamicsCommon.h>
+#include <algorithm>
 #include <cmath>
+#include <fmt/format.h>
+#include <fstream>
 
 namespace Donut
 {
@@ -29,8 +36,9 @@ void PedestrianManager::Spawn(const Vector3& nearPosition, float radius)
 
 	float angle = angleDist(_rng);
 	float r = radDist(_rng);
+	// At the player's height to start with, then stood on the ground in Update:
+	// a fixed 0.5m put them under every street that is not at sea level.
 	Vector3 pos = nearPosition + Vector3(std::cos(angle) * r, 0, std::sin(angle) * r);
-	pos.Y = 0.5f;
 
 	Pedestrian p;
 	p.position = pos;
@@ -38,6 +46,13 @@ void PedestrianManager::Spawn(const Vector3& nearPosition, float radius)
 	p.targetDirection = pos + Vector3(std::cos(angleDist(_rng)), 0, std::sin(angleDist(_rng)));
 	p.targetTimer = 2.0f + std::uniform_real_distribution<float>(0.0f, 3.0f)(_rng);
 	p.active = true;
+	for (std::size_t i = 0; i < _bodyInUse.size(); ++i)
+		if (!_bodyInUse[i])
+		{
+			_bodyInUse[i] = true;
+			p.body = static_cast<int>(i);
+			break;
+		}
 	_pedestrians.push_back(p);
 }
 
@@ -67,6 +82,21 @@ void PedestrianManager::Update(double deltaTime, const Vector3& playerPosition)
 			p.velocity = desiredDir * speed;
 			p.position += p.velocity * static_cast<float>(deltaTime);
 		}
+
+		// On the ground, not at a fixed 0.5m: Springfield has hills, and a
+		// pedestrian drawn as a person shows it.
+		float groundY = 0.0f;
+		if (_worldPhysics.FindGroundHeight(p.position, 4.0f, 8.0f, groundY, true))
+			p.position.Y = groundY;
+
+		if (p.body >= 0)
+		{
+			Character& body = *_bodies[p.body];
+			body.SetPosition(p.position);
+			if (p.velocity.LengthSquared() > 0.01f)
+				body.SetRotation(Quaternion::MakeFromEuler(Vector3(0.0f, std::atan2(p.velocity.X, p.velocity.Z), 0.0f)));
+			body.Update(deltaTime);
+		}
 	}
 
 	despawnFar(_despawnRadius, playerPosition);
@@ -76,11 +106,71 @@ void PedestrianManager::Draw(GL::ShaderProgram& shader, SimpleMesh& mesh, const 
 {
 	for (const auto& p : _pedestrians)
 	{
-		if (!p.active) continue;
+		if (!p.active || p.body >= 0) continue;
 		mesh.Draw(shader,
 			Matrix4x4::MakeTranslate(p.position),
 			viewProj, Vector4(0.3f, 0.8f, 0.3f, 1.0f));
 	}
+}
+
+void PedestrianManager::LoadModels(const std::string& levelScript)
+{
+	std::ifstream file(levelScript);
+	if (!file.good())
+		return;
+
+	std::vector<std::string> people;
+	std::string line;
+	while (std::getline(file, line))
+	{
+		const auto call = line.find("AddPed");
+		if (call == std::string::npos || line.find("//") < call)
+			continue;
+		const auto open = line.find('"', call);
+		const auto close = open == std::string::npos ? open : line.find('"', open + 1);
+		if (close == std::string::npos)
+			continue;
+		const std::string name = line.substr(open + 1, close - open - 1);
+		if (FileSystem::exists(fmt::format("art/chars/{}_m.p3d", name)) &&
+		    std::find(people.begin(), people.end(), name) == people.end())
+			people.push_back(name);
+	}
+	if (people.empty())
+		return;
+
+	for (int i = 0; i < _maxPedestrians; ++i)
+	{
+		const std::string& name = people[static_cast<std::size_t>(i) % people.size()];
+		auto body = std::make_unique<Character>(name);
+		body->LoadModel(name);
+		body->LoadAnimations(name);
+		// None of the pedestrian models extracted so far comes with animations of
+		// its own. They share the 33-joint skeleton of Apu and Bart (Marge's has
+		// 36), so they borrow theirs: Bart's for children, Apu's for adults.
+		// Without, they slid about in their bind pose, arms out.
+		if (body->GetAnimations().empty())
+		{
+			const bool child = name.rfind("boy", 0) == 0 || name.rfind("girl", 0) == 0;
+			body->LoadAnimations(child ? "bart" : "apu");
+		}
+		for (const auto& [anim, data] : body->GetAnimations())
+			if (anim.find("walk") != std::string::npos)
+			{
+				body->SetAnimation(anim);
+				break;
+			}
+		_bodies.push_back(std::move(body));
+	}
+	_bodyInUse.assign(_bodies.size(), false);
+	Log::Info("PedestrianManager: {} bodies from {} extracted pedestrian models", _bodies.size(), people.size());
+}
+
+void PedestrianManager::DrawBodies(const Matrix4x4& viewProj, GL::ShaderProgram& skinShader,
+                                   const ResourceManager& resources)
+{
+	for (const auto& p : _pedestrians)
+		if (p.active && p.body >= 0)
+			_bodies[p.body]->Draw(viewProj, skinShader, resources);
 }
 
 void PedestrianManager::despawnFar(float despawnRadius, const Vector3& playerPosition)
@@ -90,6 +180,8 @@ void PedestrianManager::despawnFar(float despawnRadius, const Vector3& playerPos
 	{
 		if (!it->active)
 		{
+			if (it->body >= 0)
+				_bodyInUse[it->body] = false;
 			it = _pedestrians.erase(it);
 			continue;
 		}
