@@ -1645,6 +1645,11 @@ void Game::Run()
 				float brake = intent.moveBackward;
 				const float steer = intent.moveRight - intent.moveLeft;
 				const float boost = intent.boostHeld ? 3.0f : 1.0f;
+				// The turbo's first moment gets a word.
+				static bool boosting = false;
+				if (intent.boostHeld && !boosting)
+					SayLine("w_turbo");
+				boosting = intent.boostHeld;
 
 				// Back brakes while the car is still rolling forwards and reverses
 				// once it has stopped. Previously it only ever braked, so a car

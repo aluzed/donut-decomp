@@ -1885,6 +1885,8 @@ void ScriptEngine::SetObjTargetVehicle(const std::string& target)
 
 void ScriptEngine::missionComplete()
 {
+	// The player's character is pleased with themselves.
+	_game.SayLine("w_mvic");
 	_raceDecided = true;
 	// Measured, not derived from the stage clock: gr1's counts up from 1s, and
 	// the old "initial minus remaining" came out at -8.6s -- a new record, saved.
