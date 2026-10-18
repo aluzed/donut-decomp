@@ -60,11 +60,18 @@ public:
 	const std::string& GetName() const { return _name; }
 	const std::string& GetModelName() const { return _modelName; }
 	const std::string& GetAnimName() const { return _animName; }
+	// Puts the character there, its controller standing it on the ground.
 	void SetPosition(const Vector3& position);
+	// Where its controller has moved it, this step; no warp, which would set it
+	// down and stop any jump or fall.
+	void FollowController(const Vector3& position) { _position = position; }
 	void SetRotation(const Quaternion& rotation);
 	const Vector3& GetPosition() const { return _position; }
 	const Quaternion& GetRotation() const { return _rotation; }
-	void SetAnimation(const std::string&);
+	// `loop` false plays it once and holds its last frame: a jump's take-off,
+	// a victory. IsAnimationFinished says when it has played through.
+	void SetAnimation(const std::string&, bool loop = true);
+	bool IsAnimationFinished() const;
 	CharacterController& GetCharacterController() const { return *_characterController; }
 	Skeleton& GetSkeleton() const { return *_skeleton; }
 
@@ -80,6 +87,7 @@ private:
 	void addAnimation(const P3D::Animation&);
 
 	double _animTime = 0.0;
+	bool _animLoops = true;
 
 	// only used as an entity name for now
 	std::string _name;

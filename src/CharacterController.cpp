@@ -162,6 +162,7 @@ void CharacterController::playerStep(btCollisionWorld* collisionWorld, btScalar 
 	btTransform transform = _physGhostObject->getWorldTransform();
 
 	stepUp(collisionWorld);
+	rise(collisionWorld);
 
 	btVector3 walkVelocity = BulletCast<btVector3>(_walkDirection) * dt;
 	stepForwardAndStrafe(collisionWorld, walkVelocity);
@@ -173,7 +174,7 @@ void CharacterController::playerStep(btCollisionWorld* collisionWorld, btScalar 
 	_position = BulletCast<Vector3>(_targetPosition);
 	transform.setOrigin(BulletCast<btVector3>(_position));
 	_physGhostObject->setWorldTransform(transform);
-	_character->SetPosition(_position);
+	_character->FollowController(_position);
 }
 
 bool CharacterController::canJump() const
@@ -338,6 +339,37 @@ btVector3 CharacterController::parallelComponent(const btVector3& direction, con
 btVector3 CharacterController::perpendicularComponent(const btVector3& direction, const btVector3& normal)
 {
 	return direction - parallelComponent(direction, normal);
+}
+
+void CharacterController::rise(btCollisionWorld* world)
+{
+	// A jump's way up. Nothing moved the character up before: stepUp only climbs
+	// steps and stepDown does nothing while rising, so a jump lifted it 5cm and
+	// set it down the next frame. Swept, so that a ceiling stops it.
+	if (_verticalOffset <= 0.0f)
+		return;
+
+	btTransform start, end;
+	start.setIdentity();
+	end.setIdentity();
+	start.setOrigin(_targetPosition);
+	end.setOrigin(_targetPosition + btVector3(0.0f, _verticalOffset, 0.0f));
+
+	btKinematicClosestNotMeConvexResultCallback callback(_physGhostObject.get(), btVector3(0.0f, -1.0f, 0.0f), 0.7071f);
+	callback.m_collisionFilterGroup = _physGhostObject->getBroadphaseHandle()->m_collisionFilterGroup;
+	callback.m_collisionFilterMask = _physGhostObject->getBroadphaseHandle()->m_collisionFilterMask;
+	world->convexSweepTest(_physShape.get(), start, end, callback, world->getDispatchInfo().m_allowedCcdPenetration);
+
+	if (callback.hasHit())
+	{
+		// Head against something: up no further, and start falling.
+		_targetPosition.setInterpolate3(start.getOrigin(), end.getOrigin(), callback.m_closestHitFraction);
+		_verticalVelocity = 0.0f;
+		_verticalOffset = 0.0f;
+	}
+	else
+		_targetPosition = end.getOrigin();
+	_position = BulletCast<Vector3>(_targetPosition);
 }
 
 void CharacterController::stepUp(btCollisionWorld* world)

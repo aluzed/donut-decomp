@@ -53,6 +53,8 @@ private:
 
 	bool recoverFromPenetration(btCollisionWorld* collisionWorld);
 	void stepUp(btCollisionWorld*);
+	// A jump's way up, swept so that a ceiling stops it.
+	void rise(btCollisionWorld*);
 	void stepDown(btCollisionWorld*, btScalar dt);
 	void stepForwardAndStrafe(btCollisionWorld* collsionWorld, const btVector3& walkMove);
 

@@ -442,21 +442,74 @@ void Game::LoadModel(const std::string& name, const std::string& anim)
 	// Facing +Z, away from the camera that starts behind him: the model faces -Z.
 	_character->SetRotation(Quaternion::MakeFromEuler(Vector3(0.0f, 3.14159265f, 0.0f)));
 
-	_walkAnimation.clear();
-	_idleAnimation.clear();
+	// "hom_loco_run" is "loco_run": the prefix is the character's.
+	_playerAnimations.clear();
 	for (const auto& [animation, data] : _character->GetAnimations())
+		if (const std::size_t underscore = animation.find('_'); underscore != std::string::npos)
+			_playerAnimations[animation.substr(underscore + 1)] = animation;
+	_playerOneShot = false;
+	_playerIdleFor = 0.0;
+	_playerAirborneFor = 0.0;
+	playPlayerAnimation("loco_idle_rest", true);
+}
+
+bool Game::playPlayerAnimation(const std::string& what, bool loop)
+{
+	const auto found = _playerAnimations.find(what);
+	if (!_character || found == _playerAnimations.end())
+		return false;
+	// Only on a change, or a looped one would restart every frame.
+	if (_character->GetAnimName() != found->second || !loop)
+		_character->SetAnimation(found->second, loop);
+	_playerOneShot = !loop;
+	return true;
+}
+
+void Game::updatePlayerAnimation(double dt, bool moving, bool onGround)
+{
+	// The idle ones: Homer scratches, checks his shoes, dances.
+	static const char* const kIdles[] = {"idle_scratch", "idle_bumshake", "idle_check_shoes", "idle_dancing",
+	                                     "idle_donut",   "idle_fat",      "idle_chili",       "idle_scuzzy"};
+
+	_playerAirborneFor = onGround ? 0.0 : _playerAirborneFor + dt;
+	const bool wasFalling = _playerAirborneFor == 0.0 && _character->GetAnimName() == _playerAnimations["jump_idle_in_air"];
+
+	// In the air for more than a moment (a drop off a kerb is not a jump), or
+	// off the ground once a jump's take-off has played.
+	const bool tookOff = _character->GetAnimName() == _playerAnimations["jump_idle_take_off"] &&
+	                     _character->IsAnimationFinished();
+	const bool falling = _character->GetAnimName() == _playerAnimations["jump_idle_in_air"];
+	if (_playerAirborneFor > 0.25 || (!onGround && (tookOff || falling)))
 	{
-		const auto endsWith = [&](const std::string& suffix) {
-			return animation.size() > suffix.size() &&
-			       animation.compare(animation.size() - suffix.size(), suffix.size(), suffix) == 0;
-		};
-		if (endsWith("_loco_walk"))
-			_walkAnimation = animation;
-		else if (endsWith("_loco_idle_rest"))
-			_idleAnimation = animation;
+		_playerIdleFor = 0.0;
+		playPlayerAnimation("jump_idle_in_air", true);
+		return;
 	}
-	if (!_walkAnimation.empty())
-		_character->SetAnimation(_walkAnimation);
+	if (wasFalling)
+	{
+		playPlayerAnimation("jump_idle_land", false);
+		return;
+	}
+	// A one-shot plays through, unless the player sets off: a landing or an
+	// idle is cut short by moving, a victory too.
+	if (_playerOneShot && !_character->IsAnimationFinished() && !moving)
+		return;
+	if (moving)
+	{
+		_playerIdleFor = 0.0;
+		if (!playPlayerAnimation("loco_run", true))
+			playPlayerAnimation("loco_walk", true);
+		return;
+	}
+	_playerIdleFor += dt;
+	if (_playerIdleFor > 8.0)
+	{
+		_playerIdleFor = 0.0;
+		for (int tries = 0; tries < 4; ++tries)
+			if (playPlayerAnimation(kIdles[static_cast<std::size_t>(rand()) % std::size(kIdles)], false))
+				return;
+	}
+	playPlayerAnimation("loco_idle_rest", true);
 }
 
 void Game::LockMouse(bool lockMouse)
@@ -1445,6 +1498,7 @@ bool Game::ringDoorbell()
 		    !(trigger.Contains(me) || (trigger.position - me).Length() < 3.0f))
 			continue;
 		const std::string resident = trigger.data.substr(3);
+		playPlayerAnimation("hit_switch", false);
 		// The button goes in, and the switch it names moves with it.
 		_level->PlayAnimatedObject(trigger.data);
 		_level->PlayAnimatedObject(trigger.actionTarget);
@@ -1961,7 +2015,10 @@ void Game::Run()
 					}
 				}
 				if (!_inVehicle && ctrl.canJump())
+				{
 					ctrl.jump(btVector3(0, 0, 0));
+					playPlayerAnimation("jump_idle_take_off", false);
+				}
 			}
 
 			if (intent.debugTeleportToVehicle && _scriptEngine->IsMissionActive())
@@ -2003,11 +2060,7 @@ void Game::Run()
 				ctrl.setWalkDirection(btVector3(0, 0, 0));
 			}
 
-			// walk while moving, idle otherwise — only switch on change so the
-			// animation isn't reset to frame 0 every frame
-			const std::string& desiredAnim = moving ? _walkAnimation : _idleAnimation;
-			if (!desiredAnim.empty() && _character->GetAnimName() != desiredAnim)
-				_character->SetAnimation(desiredAnim);
+			updatePlayerAnimation(deltaTime, moving, ctrl.onGround());
 		}
 
 		// Checkpoints are reached on foot as well as at the wheel: a mission's
@@ -2217,6 +2270,9 @@ void Game::Run()
 
 		if (_gameState == GameState::MissionComplete || _gameState == GameState::MissionFailed)
 		{
+			// Won on foot, the player celebrates.
+			if (_missionCompleteTimer == 0.0 && _gameState == GameState::MissionComplete && !_inVehicle)
+				playPlayerAnimation("victory_small", false);
 			_missionCompleteTimer += deltaTime;
 			if (_missionCompleteTimer > 5.0)
 			{

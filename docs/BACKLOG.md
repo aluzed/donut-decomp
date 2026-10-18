@@ -82,7 +82,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
 | GAME-003 | 🟡 | P1 | The full state machine | Splash, main menu (New Game, Continue, level select), in game, pause, mission complete and failed work. Missing: the game's own frontend screens (`FrontendProject` pages), loading screen, credits (the `Loading` and `Credits` states are never entered) |
-| GAME-010 | 🟡 | P2 | Collectibles and their saved state | Coins (purse in `donut_coins.dat`), cards (`donut_cards.dat`), wrenches, phone booths, doorbells, gags (sound, coin, rest-pose model, count, `donut_gags.dat`), buying cars and outfits. Missing: gag animations (P3D-004), wasp cameras |
+| GAME-010 | 🟡 | P2 | Collectibles and their saved state | Coins (purse in `donut_coins.dat`), cards (`donut_cards.dat`), wrenches, phone booths, doorbells, gags (sound, coin, animated model and characters, count, `donut_gags.dat`), buying cars and outfits. Missing: wasp cameras |
 | GAME-011 | 🟡 | P2 | Full save and load | Separate files for story progress, best times, coins, cards and gags. Missing: one save slot holding them all, the player's car and outfit, the cars bought |
 | GAME-014 | 🟡 | P1 | Interiors | Every level's interiors load with the level; doors and zone triggers take the player in and out. Not streamed |
 | GAME-WASP | ⬜ | P2 | Wasp cameras (kicked for coins) | New. Their locators and models are in the level files |

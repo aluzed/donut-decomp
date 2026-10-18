@@ -100,13 +100,19 @@ void Character::Draw(const Matrix4x4& viewProjection, GL::ShaderProgram& shaderP
 	_skinModel->Draw();
 }
 
-void Character::SetAnimation(const std::string& animationName)
+bool Character::IsAnimationFinished() const
+{
+	return !_animLoops && _currentAnimation != nullptr && _animTime >= _currentAnimation->GetLength();
+}
+
+void Character::SetAnimation(const std::string& animationName, bool loop)
 {
 	if (_animations.find(animationName) == _animations.end())
 		return;
 
 	_currentAnimation = _animations.at(animationName).get();
 	_animName = animationName;
+	_animLoops = loop;
 
 	_animTime = 0.0;
 	Update(0);
@@ -118,7 +124,7 @@ void Character::Update(double deltatime)
 	_animTime += deltatime;
 
 	if (_currentAnimation != nullptr)
-		_skeleton->UpdatePose(*_currentAnimation, _animTime);
+		_skeleton->UpdatePose(*_currentAnimation, _animTime, _animLoops);
 
 	// update our bonebuffer
 	auto joints = _skeleton->GetJoints();

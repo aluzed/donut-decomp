@@ -247,9 +247,18 @@ private:
 	int rewardPrice(const std::string& name, const std::string& type, std::string* file = nullptr) const;
 	std::set<std::string> _ownedCars;
 	std::string _playerCarModel = "famil_v";
-	// The player's walk and idle, whatever the character's prefix
-	// ("hom_loco_walk", "brt_loco_walk").
-	std::string _walkAnimation, _idleAnimation;
+	// The player's animations by what they are, without the character's
+	// prefix: "loco_run" is hom_loco_run for Homer, brt_loco_run for Bart.
+	std::map<std::string, std::string> _playerAnimations;
+	// Played once, and what to go back to after; the idle ones are picked after
+	// a while standing still.
+	bool _playerOneShot = false;
+	double _playerIdleFor = 0.0;
+	double _playerAirborneFor = 0.0;
+	// Plays the player's animation `what` ("loco_run"), if the character has it.
+	bool playPlayerAnimation(const std::string& what, bool loop);
+	// Picks the player's animation each frame: run, jump, land, idle.
+	void updatePlayerAnimation(double dt, bool moving, bool onGround);
 	// The debug Warp menu: the level script's AddTeleportDest places.
 	std::vector<std::pair<std::string, Vector3>> _teleports;
 	// The level's interactive gags (level.mfk's GagBegin ... GagEnd): Moe's
