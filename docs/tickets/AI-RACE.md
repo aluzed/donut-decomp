@@ -403,6 +403,38 @@ three-point turn at the start node, after the line. Mean logged speed is 53 km/h
 Unrelated and unchanged: the idle player still logs "fell off the map" about ten times per
 run (CHARCTRL-FALL). It did so at the same rate before the fence fix.
 
+### Engine raised to 1.5 (2026-10-18)
+
+The section below rests on a premise that turned out to be false. Every car was believed
+to top out at about 56 km/h against "its own drag", but the model has no drag. The 58 km/h
+in VEH-SINK was what a test drive reached, not a ceiling. Two more facts came out of a
+standing-start test down the 140m straight at z = -271:
+
+- `SetEngineForce` drives all four wheels, so the car accelerates at **four times**
+  `kEngineAcceleration`;
+- at 0.83 the car accelerates linearly at 3.3 m/s² and is doing 103 km/h at the end of the
+  straight. Only `_topSpeedKmh` (180) would ever stop it.
+
+With the circuit drivable, the opponent is clean at every setting tried:
+
+| `kEngineAcceleration` | real accel | 0-100 km/h | lap | mean / max |
+|---|---|---|---|---|
+| 0.83 | 3.3 m/s² | 8.5s | 118.7s | 52 / 79 km/h |
+| 1.2 | 4.8 m/s² | 5.8s | 113.0s | 55 / 85 km/h |
+| **1.5** | **6 m/s²** | **4.7s** | **110.1s** | **55 / 83 km/h** |
+| 2.0 | 8 m/s² | 3.5s | 107.2s | 63 / 82 km/h |
+
+There was no wedge, skip or fall in any run, and one three-point turn at the start node
+in each. The lap is now bound by the corners (`kLateralAccelMss`), not the engine. 1.5 is
+a believable arcade car, and it finishes 10s inside the 120s stage where 0.83 had 1.3s to
+spare. `RaceOpponent` now logs each completed lap and its time.
+
+Still open:
+- per-car tuning: the car scripts carry `SetGasScale`, `SetTopSpeedKmh` and `SetMass`
+  (e.g. `snake_v` 8.0 / 160 km/h, `famil_v` 4.5 / 120 km/h), but none of them is run.
+  Every car shares one engine, a hardcoded 1200kg chassis and a 180 km/h cap;
+- the player's boost multiplies the engine by 3: 18 m/s² at 1.5. It is untested by hand.
+
 ### La force moteur n'est plus bloquée par l'IA, mais reste à 0,83
 
 | `kEngineAcceleration` | waypoint atteint | tour bouclé |

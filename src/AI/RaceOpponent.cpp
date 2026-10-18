@@ -164,6 +164,8 @@ void RaceOpponent::SetCircuit(std::vector<Vector3> circuit)
 	Log::Info("RaceOpponent: circuit replaced, {} waypoints", circuit.size());
 	_path.SetWaypoints(std::move(circuit));
 	_path.SnapToNearest(_vehicle.GetPosition());
+	_lapTimer = 0.0;
+	_timedLap = _path.Laps();
 }
 
 void RaceOpponent::Update(double dt, float playerProgress)
@@ -375,6 +377,16 @@ void RaceOpponent::Update(double dt, float playerProgress)
 	// Whether the opponent is making progress is the whole question for AI-RACE,
 	// and a car wedged against a wall looks identical to one driving from the
 	// outside. Report where it is, what it is aiming at, and how fast.
+	// Lap time is what any change to the car or the driving is judged by, so give
+	// it its own line rather than leave it to be read off the 5s progress log.
+	_lapTimer += dt;
+	if (_path.Laps() != _timedLap)
+	{
+		Log::Info("RaceOpponent: '{}' completed lap {} in {:.1f}s", _vehicle.GetName(), _path.Laps(), _lapTimer);
+		_timedLap = _path.Laps();
+		_lapTimer = 0.0;
+	}
+
 	_logTimer += dt;
 	if (_logTimer >= 5.0)
 	{

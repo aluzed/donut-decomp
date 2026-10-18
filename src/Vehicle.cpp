@@ -25,21 +25,27 @@ namespace
 // onto its own suspension.
 constexpr float kSpawnRideHeight = 0.9f;
 
-// Acceleration a car makes at full throttle, before drag. Engine force is this
-// times the chassis mass, so a heavier car needs more of it to move the same.
+// Engine force per driven wheel, as an acceleration: the force is this times the
+// chassis mass. SetEngineForce drives all four wheels, so the car accelerates at
+// four times this -- 6 m/s^2, 0-100 km/h in about 4.7s, on the flat.
 //
-// 0.83 m/s^2 is feeble -- it is what the old flat 1000N came to against the
-// 1200kg chassis, and it caps every car, the player's included, at about
-// 56 km/h however long the straight.
+// Nothing in the model stops it short of _topSpeedKmh. There is no drag, and the
+// long-held belief that every car ran out of acceleration at about 56 km/h was
+// wrong: 58 km/h was what a test drive happened to reach (VEH-SINK), not a
+// ceiling. Measured from a standing start down M1race's 140m straight, 0.83 made
+// 3.3 m/s^2 and 103 km/h by the end of it.
 //
-// It stays at 0.83 because raising it still does not pay, though no longer for
-// the old reason. With the speed profile and the tapered steering lock below,
-// 3.0 no longer wrecks the race opponent -- it was 18 waypoints of 126, it is
-// now 116 -- but 0.83 gets 122 and a completed lap, because what is left in the
-// way is geometry the circuit runs through, and arriving at it faster only means
-// hitting it harder. Raise this once the circuit is drivable, not before, and
-// measure the player's car when you do.
-constexpr float kEngineAcceleration = 0.83f;
+// 0.83 was kept because more power wrecked the race opponent. It no longer does.
+// Over a full M1race lap (186 waypoints, 1861m), with no wedge, skip or fall at
+// any setting:
+//
+//   0.83   118.7s   mean 52 km/h      1.5   110.1s   mean 55 km/h
+//   1.2    113.0s   mean 55 km/h      2.0   107.2s   mean 63 km/h
+//
+// The lap is bound by the corners now, not the engine. 1.5 is a believable
+// arcade car, and it lets the opponent finish 10s inside the 120s stage instead
+// of 1.3s. The player's car shares this value, boost (x3) included.
+constexpr float kEngineAcceleration = 1.5f;
 
 // Steering lock, tapered with speed. The wheels turn kMaxSteerStill radians when
 // the car is stopped and kMaxSteerFast once it is doing kSteerTaperKmh, which is

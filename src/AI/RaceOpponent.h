@@ -71,6 +71,9 @@ private:
 	int _wedgeRepeats = 0;
 	Vector3 _lastWedgePosition = Vector3(1.0e6f, 0.0f, 1.0e6f);
 	double _logTimer = 0.0;
+	// Time since the current lap began, and the lap it is timing.
+	double _lapTimer = 0.0;
+	int _timedLap = 0;
 	Vector3 _lastPosition;
 };
 
