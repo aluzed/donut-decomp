@@ -36,6 +36,7 @@ class AnimationSize;
 class AnimationGroupList;
 class AnimationGroup;
 class ChannelInterpolationMode;
+class Vector1Channel;
 class Vector2Channel;
 class Vector3Channel;
 class QuaternionChannel;
@@ -221,6 +222,11 @@ public:
 	const std::string& GetName() const { return _name; }
 	const uint32_t& GetGroupId() const { return _groupId; }
 	const uint32_t& GetNumChannels() const { return _numChannels; }
+	Vector1Channel* GetVector1ChannelsValue(const std::string& key) const
+	{
+		auto it = _vector1Channels.find(key);
+		return (it != _vector1Channels.end()) ? it->second.get() : nullptr;
+	}
 	Vector2Channel* GetVector2ChannelsValue(const std::string& key) const
 	{
 		auto it = _vector2Channels.find(key);
@@ -247,6 +253,7 @@ private:
 	std::string _name;
 	uint32_t _groupId;
 	uint32_t _numChannels;
+	std::map<std::string, std::unique_ptr<Vector1Channel>> _vector1Channels;
 	std::map<std::string, std::unique_ptr<Vector2Channel>> _vector2Channels;
 	std::map<std::string, std::unique_ptr<Vector3Channel>> _vector3Channels;
 	std::map<std::string, std::unique_ptr<QuaternionChannel>> _quaternionChannels;
@@ -269,6 +276,33 @@ public:
 private:
 	uint32_t _version;
 	uint32_t _mode;
+};
+
+class Vector1Channel
+{
+public:
+	Vector1Channel(const P3DChunk&);
+
+	static std::unique_ptr<Vector1Channel> Load(const P3DChunk& chunk) { return std::make_unique<Vector1Channel>(chunk); }
+
+	const uint32_t& GetVersion() const { return _version; }
+	const std::string& GetParam() const { return _param; }
+	const uint16_t& GetMapping() const { return _mapping; }
+	const Vector3& GetConstants() const { return _constants; }
+	const uint32_t& GetNumFrames() const { return _numFrames; }
+	const std::vector<uint16_t>& GetFrames() const { return _frames; }
+	const std::vector<float>& GetValues() const { return _values; }
+	const std::unique_ptr<ChannelInterpolationMode>& GetInterpolationMode() const { return _interpolationMode; }
+
+private:
+	uint32_t _version;
+	std::string _param;
+	uint16_t _mapping;
+	Vector3 _constants;
+	uint32_t _numFrames;
+	std::vector<uint16_t> _frames;
+	std::vector<float> _values;
+	std::unique_ptr<ChannelInterpolationMode> _interpolationMode;
 };
 
 class Vector2Channel

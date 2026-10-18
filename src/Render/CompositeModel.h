@@ -18,6 +18,12 @@ public:
 	virtual const std::vector<std::unique_ptr<P3D::Geometry>>& GetMeshes() const = 0;
 	virtual const std::vector<std::unique_ptr<P3D::Shader>>& GetShaders() const = 0;
 	virtual const std::vector<std::unique_ptr<P3D::Texture>>& GetTextures() const = 0;
+	// The animations that move the skeleton's joints (gags, doors); none by default.
+	virtual const std::vector<std::unique_ptr<P3D::Animation>>& GetAnimations() const
+	{
+		static const std::vector<std::unique_ptr<P3D::Animation>> none;
+		return none;
+	}
 };
 
 class CompositeModel_AnimObjectWrapper: public ICompositeModel
@@ -53,8 +59,10 @@ public:
 	const std::vector<std::unique_ptr<P3D::Geometry>>& GetMeshes() const override { return _meshes; }
 	const std::vector<std::unique_ptr<P3D::Shader>>& GetShaders() const override { return _shaders; }
 	const std::vector<std::unique_ptr<P3D::Texture>>& GetTextures() const override { return _textures; }
+	const std::vector<std::unique_ptr<P3D::Animation>>& GetAnimations() const override { return _animations; }
 
 private:
+	std::vector<std::unique_ptr<P3D::Animation>> _animations;
 	std::vector<std::unique_ptr<P3D::CompositeDrawable>> _drawables;
 	std::vector<std::unique_ptr<P3D::Skeleton>> _skeletons;
 	std::vector<std::unique_ptr<P3D::Geometry>> _meshes;
@@ -75,12 +83,27 @@ public:
 	void SetTransform(const Matrix4x4& transform) { _transform = transform; }
 	const Matrix4x4& GetTransform() const { return _transform; }
 
+	// The model's first animation, if it has one: its length in frames and its
+	// rate. Pose() moves the props to `frame` of it; with `loop`, a frame past
+	// the end wraps round, otherwise it holds the last.
+	bool IsAnimated() const { return _animation != nullptr; }
+	float GetAnimationFrames() const;
+	float GetAnimationFrameRate() const;
+	void Pose(float frame, bool loop);
+
 private:
 	struct DrawableProp
 	{
 		size_t meshIndex;
 		Matrix4x4 transform;
+		// The skeleton joint it hangs from, for Pose.
+		size_t joint = 0;
 	};
+
+	// The drawable's skeleton, kept for posing.
+	std::vector<int> _jointParents;
+	std::vector<Matrix4x4> _jointGlobals;
+	std::unique_ptr<SkinAnimation> _animation;
 
 	Matrix4x4 _transform;
 	std::vector<std::unique_ptr<Mesh>> _meshes;

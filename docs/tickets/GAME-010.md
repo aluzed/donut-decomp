@@ -104,8 +104,7 @@ to `_03`, `nis\gag_s1`: the English set) and pays its coins the first time in th
 A touch gag plays again on the way back in, no more than every 5s. Checked: the player put
 on each of level 1's 33 in turn, all but one found their sound (`gag_loot`, which the data
 does not have). Each gag's model (`art/nis/gags/gag_bbq.p3d`) stands where `GagSetPosition`
-puts it, in its rest pose: seen, the barbecue by the Simpsons' door. Not done: the
-model's animation (its `GagController`) played when the gag is triggered;
+puts it, in its rest pose: seen, the barbecue by the Simpsons' door. Not done:
 `GagSetInterior`, `GagSetPersist`, `GagSetCycle` and the movies.
 
 Gags found are kept in `donut_gags.dat` (gitignored), one line per gag, keyed by level,
@@ -124,3 +123,11 @@ at full strength: what its three numbers measure is not known.
 A touch gag the player starts the level standing in is not "walked into": levels 4 and 7
 put the player in the Simpsons' house inside two of them, which played and counted as found
 the moment the level loaded.
+
+**Gag animations** (2026-10-19): a gag's model plays its pose animation (`PTRN_GagScene`,
+not the `TEX_*` texture animations the same files carry) when triggered, by its
+`GagSetCycle`: "cycle" plays round and round, "single" once, staying as it ends, "reset"
+once, then back to its rest. Each gag has a model of its own, posed frame by frame
+(`CompositeModel::Pose`). Checked: level 1's swing set, standing, topples over and stays
+down. Not done: the characters many gags hold (Homer on the couch, Nelson): they are
+skins, which `CompositeModel` does not draw, so they are not seen at all.

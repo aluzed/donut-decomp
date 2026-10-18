@@ -260,6 +260,11 @@ private:
 		// GagSetPosition puts it. Not animated.
 		std::shared_ptr<CompositeModel> drawable;
 		Vector3 placed;
+		// GagSetCycle: "cycle" plays round and round; "single" plays once when
+		// triggered and stays as it ends; "reset" plays once and goes back.
+		std::string cycle;
+		// When it was last triggered, < 0 when it stands at rest.
+		double animStartedAt = -1.0;
 		std::string sound;
 		bool byHand = false;
 		Vector3 position;
@@ -281,6 +286,7 @@ private:
 	void saveGags() const;
 	void playGag(Gag& gag);
 	void updateGags();
+	void drawGags(const Matrix4x4& viewProjection);
 	// When the running mission was loaded, for its title card.
 	double _missionLoadedAt = 0.0;
 	// The game's phrase table, in the language --language picks (E by default).

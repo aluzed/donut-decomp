@@ -1509,6 +1509,8 @@ void Game::loadGags()
 			                      static_cast<float>(std::atof(args[2].c_str())));
 		else if (command == "GagSetSound" && !args.empty())
 			gag->sound = args[0];
+		else if (command == "GagSetCycle" && !args.empty())
+			gag->cycle = args[0];
 		else if (command == "GagSetCameraShake")
 			gag->shakes = true;
 		else if (command == "GagSetCoins" && !args.empty())
@@ -1535,16 +1537,10 @@ void Game::loadGags()
 		{
 			if (!gag->sound.empty())
 			{
-				// Several gags share a model: the Simpsons' couch has six.
-				static std::map<std::string, std::shared_ptr<CompositeModel>> models;
+				// A model of its own: an animated one is posed gag by gag.
 				const std::string file = "art/nis/gags/" + gag->model;
 				if (gag->placed != Vector3::Zero && FileSystem::exists(file))
-				{
-					auto& model = models[file];
-					if (!model)
-						model = CompositeModel::LoadP3D(file);
-					gag->drawable = model;
-				}
+					gag->drawable = CompositeModel::LoadP3D(file);
 				gag->played = found.count(gagId(*gag)) > 0;
 				_gags.push_back(*gag);
 			}
@@ -1599,6 +1595,8 @@ void Game::playGag(Gag& gag)
 		_audioManager->QueueDialogue(sounds[static_cast<std::size_t>(rand()) % sounds.size()],
 		                             AudioManager::DialoguePriority::Gameplay);
 	gag.lastPlayed = _elapsedSeconds;
+	if (gag.animStartedAt < 0.0 || gag.cycle != "single")
+		gag.animStartedAt = _elapsedSeconds;
 	if (gag.shakes)
 		AddShake(1.0f);
 	Log::Info("Game: gag '{}' ({}), {} sound(s){}", gag.model, gag.sound, sounds.size(),
@@ -1620,6 +1618,38 @@ void Game::playGag(Gag& gag)
 			_cardMessage += " - " + _textBible.Get("GAGS_COMPLETE");
 		_cardMessageUntil = _elapsedSeconds + 3.0;
 		saveGags();
+	}
+}
+
+void Game::drawGags(const Matrix4x4& viewProjection)
+{
+	GL::ShaderProgram& worldShader = _level->GetWorldShader();
+	for (auto& gag : _gags)
+	{
+		if (!gag.drawable || (gag.placed - _camera->GetPosition()).Length() > 150.0f)
+			continue;
+		if (gag.drawable->IsAnimated())
+		{
+			const float rate = gag.drawable->GetAnimationFrameRate();
+			const float frames = gag.drawable->GetAnimationFrames();
+			float frame = 0.0f;
+			if (gag.cycle == "cycle")
+				frame = static_cast<float>(_elapsedSeconds) * rate;
+			else if (gag.animStartedAt >= 0.0)
+			{
+				frame = static_cast<float>(_elapsedSeconds - gag.animStartedAt) * rate;
+				// Played through: "reset" goes back to its rest, the others
+				// stay as they end.
+				if (frame >= frames && gag.cycle == "reset")
+				{
+					gag.animStartedAt = -1.0;
+					frame = 0.0f;
+				}
+			}
+			gag.drawable->Pose(frame, gag.cycle == "cycle");
+		}
+		for (const bool opaque : {true, false})
+			gag.drawable->Draw(worldShader, viewProjection, Matrix4x4::MakeTranslate(gag.placed), opaque);
 	}
 }
 
@@ -2690,15 +2720,7 @@ void Game::Run()
 		if (_collectibleManager)
 			_collectibleManager->Draw(_level->GetWorldShader(), viewProjection, static_cast<float>(_elapsedSeconds));
 
-		// The gags, as they stand. One model drawn more than once is drawn at
-		// each place in turn.
-		{
-			GL::ShaderProgram& worldShader = _level->GetWorldShader();
-			for (const bool opaque : {true, false})
-				for (const auto& gag : _gags)
-					if (gag.drawable && (gag.placed - _camera->GetPosition()).Length() < 150.0f)
-						gag.drawable->Draw(worldShader, viewProjection, Matrix4x4::MakeTranslate(gag.placed), opaque);
-		}
+		drawGags(viewProjection);
 
 		if (_scriptEngine->IsMissionActive() && !_scriptEngine->GetCheckpoints().empty())
 		{

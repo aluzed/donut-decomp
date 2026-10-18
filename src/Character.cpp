@@ -142,81 +142,17 @@ void Character::SetRotation(const Quaternion& rotation)
 
 void Character::addAnimation(const P3D::Animation& p3dAnim)
 {
-	const auto& animGroupList = p3dAnim.GetGroupList();
-	if (!animGroupList)
+	if (!p3dAnim.GetGroupList())
 		return;
 
-	auto animation = std::make_unique<SkinAnimation>(p3dAnim.GetName(), p3dAnim.GetNumFrames() / p3dAnim.GetFrameRate(),
-	                                                 static_cast<int32_t>(p3dAnim.GetNumFrames()), p3dAnim.GetFrameRate());
-
-	const auto& groups = animGroupList->GetGroups();
-	std::map<std::string, size_t> groupNameIndex;
-	for (const auto& group : groups) { groupNameIndex.insert({group->GetName(), groupNameIndex.size()}); }
-
-	for (auto const& joint : _skeleton->GetJoints())
+	std::vector<std::string> names;
+	std::vector<Matrix4x4> rests;
+	for (const auto& joint : _skeleton->GetJoints())
 	{
-		auto track = std::make_unique<SkinAnimation::Track>(joint.name);
-
-		const auto& jointRestPose = joint.rest;
-		const auto& jointTranslation = jointRestPose.Translation();
-		const auto& jointRotation = jointRestPose.ToQuat();
-
-		if (groupNameIndex.find(joint.name) == groupNameIndex.end())
-		{
-			track->AddTranslationKey(0, jointTranslation);
-			track->AddRotationKey(0, jointRotation);
-		}
-		else
-		{
-			const auto& animGroup = groups.at(groupNameIndex.at(joint.name));
-			const auto& vector2Channel = animGroup->GetVector2ChannelsValue("TRAN");
-			const auto& vector3Channel = animGroup->GetVector3ChannelsValue("TRAN");
-			const auto& quaternionChannel = animGroup->GetQuaternionChannelsValue("ROT");
-			const auto& compressedQuaternionChannel = animGroup->GetCompressedQuaternionChannelsValue("ROT");
-
-			if (vector3Channel)
-			{
-				const auto& frames = vector3Channel->GetFrames();
-				const auto& values = vector3Channel->GetValues();
-
-				for (std::size_t i = 0; i < vector3Channel->GetNumFrames(); ++i)
-				{ track->AddTranslationKey(frames[i], values[i]); }
-			}
-			else
-			{
-				track->AddTranslationKey(0, jointTranslation);
-			}
-
-			if (compressedQuaternionChannel)
-			{
-				const auto& frames = compressedQuaternionChannel->GetFrames();
-				const auto& values = compressedQuaternionChannel->GetValues();
-
-				for (std::size_t i = 0; i < compressedQuaternionChannel->GetNumFrames(); ++i)
-				{
-					const uint64_t& value = values[i];
-					float z = (int16_t)((value >> 48) & 0xFFFF) / (float)0x7FFF;
-					float y = (int16_t)((value >> 32) & 0xFFFF) / (float)0x7FFF;
-					float x = (int16_t)((value >> 16) & 0xFFFF) / (float)0x7FFF;
-					float w = (int16_t)(value & 0xFFFF) / (float)0x7FFF;
-
-					// Quaternion's ctor is (x, y, z, w). Normalize: the int16
-					// compressed components aren't exactly unit, and a non-unit
-					// quaternion makes ToRotationMatrix produce a non-orthonormal
-					// (squashing) matrix — which flattened the skinned body.
-					track->AddRotationKey(frames[i], Quaternion(x, y, z, w).Normal());
-				}
-			}
-			else
-			{
-				track->AddRotationKey(0, jointRotation);
-			}
-		}
-
-		animation->AddTrack(track);
+		names.push_back(joint.name);
+		rests.push_back(joint.rest);
 	}
-
-	_animations[p3dAnim.GetName()] = std::move(animation);
+	_animations[p3dAnim.GetName()] = SkinAnimation::FromP3D(p3dAnim, names, rests);
 }
 
 } // namespace Donut

@@ -100,6 +100,12 @@ AnimationGroup::AnimationGroup(const P3DChunk& chunk)
 	{
 		switch (child->GetType())
 		{
+		case ChunkType::Vector1Channel:
+		{
+			auto value = std::make_unique<Vector1Channel>(*child);
+			_vector1Channels.insert({value->GetParam(), std::move(value)});
+			break;
+		}
 		case ChunkType::Vector2Channel:
 		{
 			auto value = std::make_unique<Vector2Channel>(*child);
@@ -136,6 +142,35 @@ ChannelInterpolationMode::ChannelInterpolationMode(const P3DChunk& chunk)
 	MemoryStream stream(chunk.GetData());
 	_version = stream.Read<uint32_t>();
 	_mode = stream.Read<uint32_t>();
+}
+
+Vector1Channel::Vector1Channel(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::Vector1Channel));
+
+	MemoryStream stream(chunk.GetData());
+	_version = stream.Read<uint32_t>();
+	_param = stream.ReadString(4);
+	_mapping = stream.Read<uint16_t>();
+	_constants = stream.Read<Vector3>();
+	_numFrames = stream.Read<uint32_t>();
+	_frames.resize(_numFrames);
+	stream.ReadBytes(reinterpret_cast<uint8_t*>(_frames.data()), _frames.size() * sizeof(uint16_t));
+	_values.resize(_numFrames);
+	stream.ReadBytes(reinterpret_cast<uint8_t*>(_values.data()), _values.size() * sizeof(float));
+
+	for (auto const& child : chunk.GetChildren())
+	{
+		switch (child->GetType())
+		{
+		case ChunkType::ChannelInterpolationMode:
+		{
+			_interpolationMode = std::make_unique<ChannelInterpolationMode>(*child);
+			break;
+		}
+		default: break;
+		}
+	}
 }
 
 Vector2Channel::Vector2Channel(const P3DChunk& chunk)

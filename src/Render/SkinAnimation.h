@@ -15,6 +15,11 @@
 namespace Donut
 {
 
+namespace P3D
+{
+class Animation;
+}
+
 class SkinAnimation
 {
 public:
@@ -96,13 +101,17 @@ public:
 			_keyValues.push_back(std::make_unique<RotationKey>(time, value));
 		}
 
-		T Evalulate(float time, T defaultValue)
+		// `loop`: time wraps round the last key; otherwise it holds there, for a
+		// prop played once that stays as it ends.
+		T Evalulate(float time, T defaultValue, bool loop = true)
 		{
 			auto count = _keyValues.size();
 			if (count == 0)
 				return defaultValue;
 
 			auto lastIndex = _keyValues.size() - 1;
+			if (!loop && time >= _keyValues[lastIndex]->GetTime())
+				return _keyValues[lastIndex]->GetValue();
 			time = glm::mod(time, _keyValues[lastIndex]->GetTime());
 
 			auto index = GetKeyValueIndex(time);
@@ -172,7 +181,7 @@ public:
 	public:
 		Track(std::string name): _name(name) {}
 
-		Matrix4x4 Evaluate(float time);
+		Matrix4x4 Evaluate(float time, bool loop = true);
 
 		void AddTranslationKey(float time, const Vector3& value) { _translationKeys.AddTranslationKey(time, value); }
 		void AddRotationKey(float time, const Quaternion& value) { _rotationKeys.AddRotationKey(time, value); }
@@ -188,7 +197,16 @@ public:
 	{
 	}
 
-	Matrix4x4 Evaluate(size_t trackIndex, float time);
+	Matrix4x4 Evaluate(size_t trackIndex, float time, bool loop = true);
+
+	// From a P3D animation, a track per joint in `jointNames` order: a joint the
+	// animation has no group for, or a channel it lacks, holds its rest pose.
+	// Key times are in frames.
+	static std::unique_ptr<SkinAnimation> FromP3D(const P3D::Animation& animation,
+	                                              const std::vector<std::string>& jointNames,
+	                                              const std::vector<Matrix4x4>& restPoses);
+	float GetLength() const { return _length; }
+	int32_t GetFrameCount() const { return _frameCount; }
 
 	void AddTrack(std::unique_ptr<Track>& track) { _tracks.push_back(std::move(track)); }
 	size_t GetNumTracks() const { return _tracks.size(); }

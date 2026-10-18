@@ -29,6 +29,7 @@
     "name": "string",
     "groupId": "u32",
     "numChannels": "u32",
+    "vector1Channels": "dictionary<string param> Vector1Channel",
     "vector2Channels": "dictionary<string param> Vector2Channel",
     "vector3Channels": "dictionary<string param> Vector3Channel",
     "quaternionChannels": "dictionary<string param> QuaternionChannel",
@@ -38,6 +39,17 @@
   "ChannelInterpolationMode": {
     "version": "u32",
     "mode": "u32"
+  },
+
+  "Vector1Channel": {
+    "version": "u32",
+    "param": "string[4]",
+    "mapping": "u16",
+    "constants": "vec3",
+    "numFrames": "u32",
+    "frames": "buffer<u16[numFrames]>",
+    "values": "buffer<f32[numFrames]>",
+    "interpolationMode": "child ChannelInterpolationMode"
   },
 
   "Vector2Channel": {

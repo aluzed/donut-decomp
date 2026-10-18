@@ -40,6 +40,11 @@ CompositeModel_Chunk::CompositeModel_Chunk(const P3D::P3DChunk& chunk)
 			_textures.push_back(P3D::Texture::Load(*child));
 			break;
 		}
+		case P3D::ChunkType::Animation:
+		{
+			_animations.push_back(P3D::Animation::Load(*child));
+			break;
+		}
 		default: break;
 		}
 	}
@@ -101,9 +106,62 @@ CompositeModel::CompositeModel(const ICompositeModel& provider)
 				continue;
 
 			const auto& transform = transforms[prop->GetSkeletonJoint()];
-			_props.push_back(DrawableProp {meshNames[prop->GetName()], transform});
+			_props.push_back(DrawableProp {meshNames[prop->GetName()], transform, prop->GetSkeletonJoint()});
+		}
+
+		// The first drawable's skeleton and the model's first animation that
+		// moves it, for Pose.
+		if (_animation || provider.GetAnimations().empty())
+			continue;
+		for (const auto& skeleton : skeletons)
+		{
+			if (skeleton->GetName() != drawable->GetSkeletonName())
+				continue;
+			std::vector<std::string> names;
+			std::vector<Matrix4x4> rests;
+			for (const auto& joint : skeleton->GetJoints())
+			{
+				names.push_back(joint->GetName());
+				rests.push_back(joint->GetRestPose());
+				_jointParents.push_back(static_cast<int>(joint->GetParent()));
+			}
+			_jointGlobals = transforms;
+			// The pose animation ("PTRN"): the same files carry texture
+			// animations ("TEX_eyeball_m") that do not move the joints.
+			for (const auto& animation : provider.GetAnimations())
+				if (animation->GetGroupList() && animation->GetType().rfind("PTRN", 0) == 0)
+				{
+					_animation = SkinAnimation::FromP3D(*animation, names, rests);
+					break;
+				}
 		}
 	}
+}
+
+float CompositeModel::GetAnimationFrames() const
+{
+	return _animation ? static_cast<float>(_animation->GetFrameCount()) : 0.0f;
+}
+
+float CompositeModel::GetAnimationFrameRate() const
+{
+	return _animation ? _animation->GetFrameRate() : 0.0f;
+}
+
+void CompositeModel::Pose(float frame, bool loop)
+{
+	if (!_animation)
+		return;
+	// Each joint placed in its parent's frame by its animated local transform,
+	// as the rest pose is built from the rest transforms.
+	for (std::size_t i = 0; i < _jointParents.size(); ++i)
+	{
+		const Matrix4x4 local = _animation->Evaluate(i, frame, loop);
+		_jointGlobals[i] = i == 0 ? local : _jointGlobals[_jointParents[i]] * local;
+	}
+	for (auto& prop : _props)
+		if (prop.joint < _jointGlobals.size())
+			prop.transform = _jointGlobals[prop.joint];
 }
 
 std::unique_ptr<CompositeModel> CompositeModel::LoadP3D(const std::string& filename)
