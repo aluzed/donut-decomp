@@ -63,7 +63,9 @@ public:
 	void LoadPolySkin(const P3D::PolySkin&);
 
 	// Update / Draw methods
-	void Draw();
+	// `retextured`, when given, is drawn with `texture` instead of its own (a
+	// blink's eyes).
+	void Draw(const std::string& retextured = {}, class Texture* texture = nullptr);
 	// Whether a PolySkin was loaded: some character files are a skeleton alone
 	// (npd_m.p3d, a driver's), with nothing to draw.
 	bool HasMesh() const { return _vertexBinding != nullptr; }

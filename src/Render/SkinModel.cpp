@@ -85,7 +85,7 @@ void SkinModel::LoadPolySkin(const P3D::PolySkin& polySkin)
 	_vertexBinding->Create(vertexLayout, 5, *_indexBuffer, GL::AE_UINT);
 }
 
-void SkinModel::Draw()
+void SkinModel::Draw(const std::string& retextured, Texture* texture)
 {
 	if (!_vertexBinding)
 		return;
@@ -97,6 +97,9 @@ void SkinModel::Draw()
 		auto const& shader = Game::GetInstance().GetResourceManager().GetShader(primGroup.shaderName);
 		if (shader == nullptr)
 			continue;
+		// GetShader has just set its own texture back; this draw only.
+		if (texture != nullptr && primGroup.shaderName == retextured)
+			shader->SetDiffuseTexture(texture);
 		shader->Bind(0);
 
 		glDrawElements(primGroup.mode, primGroup.indicesCount, _indexBuffer->GetType(),
