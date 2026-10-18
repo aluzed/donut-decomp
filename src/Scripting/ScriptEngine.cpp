@@ -175,6 +175,7 @@ void ScriptEngine::beginStage(std::size_t index)
 	_raceCatchups.clear();
 	_stageWaypoints.clear();
 	_objectiveDistance = 0.0f;
+	_followInRange = false;
 	_racePath.clear();
 	_checkpoints.clear();
 	_currentCheckpoint = 0;
@@ -590,8 +591,16 @@ void ScriptEngine::updateConditions(double dt)
 			              "MISSION_FAILED_PLAYER_OUT_OF_VEHICLE_HINT1");
 			return;
 		}
+		// The car is only lost once the player has had it in range: level 5 m4's
+		// Wiggum sets off from his own spot, 300m from where the stage before
+		// left the player, and the mission failed the moment it began.
+		const float followed = _raceOpponents.empty()
+		                           ? 0.0f
+		                           : (_raceOpponents.front()->GetVehicle().GetPosition() - player).Length();
+		if (condition.type == "followdistance" && condition.maxDistance > 0.0f && followed <= condition.maxDistance)
+			_followInRange = true;
 		if (condition.type == "followdistance" && condition.maxDistance > 0.0f && !_raceOpponents.empty() &&
-		    (_raceOpponents.front()->GetVehicle().GetPosition() - player).Length() > condition.maxDistance)
+		    _followInRange && followed > condition.maxDistance)
 		{
 			missionFailed(fmt::format("lost the car being followed (over {:.0f}m)", condition.maxDistance),
 			              "MISSION_FAILED_FOLLOW_DISTANCE_HINT1");
@@ -1644,7 +1653,13 @@ void ScriptEngine::UpdateAI(double dt)
 		// done, not a race lost.
 		if (_objectiveType == "follow" && opponent->Laps() >= _totalLaps)
 		{
-			objectiveComplete();
+			// Followed all the way, or never caught up with at all.
+			const bool distanceKept = std::any_of(_conditions.begin(), _conditions.end(),
+			                                      [](const auto& c) { return c.type == "followdistance"; });
+			if (distanceKept && !_followInRange)
+				missionFailed("never caught up with the car to follow", "MISSION_FAILED_FOLLOW_DISTANCE_HINT1");
+			else
+				objectiveComplete();
 			return;
 		}
 

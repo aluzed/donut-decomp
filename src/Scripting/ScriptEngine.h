@@ -363,6 +363,8 @@ private:
 	// The chasing car the objective names, or the first; null when none.
 	const Vehicle* chasingTarget() const;
 	float _objectiveDistance = 0.0f;
+	// The player has had the car being followed within the follow distance.
+	bool _followInRange = false;
 	// Catch-up curves by car name, held until that car's driver exists.
 	std::map<std::string, RaceOpponent::Catchup> _raceCatchups;
 	// Where the mission puts the player, for when the character is created after
