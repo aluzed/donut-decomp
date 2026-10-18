@@ -70,6 +70,9 @@ into a playable arcade racing game.
 - **Coins**: the level's own coins (177 on level 1), in the game's coin model; a purse
   kept in `donut_coins.dat`, which pays entry fees (gr1)
 - **Collector cards**: each level's seven, found for good (`donut_cards.dat`)
+- **Gags**: the level's interactive gags (33 on level 1) stand in their rest pose, and play
+  their sound when walked into or worked by hand, paying a coin the first time; the count
+  found is shown. Their animations are not played
 - **Wrenches and phone booths**: a wrench repairs the car; a booth sends the player's car,
   repaired; a doorbell rung is answered
 - **Street races and bonus missions**: offered by their characters about the level, the
@@ -78,7 +81,8 @@ into a playable arcade racing game.
 - **People**: the level's ambient characters stand about (Ralph, the Moleman...), and
   mission NPCs and they turn to face the player
 - **Car damage**: from impacts, judged by the car's change of velocity; a mission's
-  "damage" condition fails it, with the game's reason and hint on the failure screen
+  "damage" condition fails it, with the game's reason and hint on the failure screen.
+  The player's car shows its dents: hood, doors and back swap to their damaged textures
 - **Pedestrians**: Springfield's people, walking, outdoors only
 - **Auto-Restart**: 5-second countdown after win/lose
 - **Screen Shake**: On jump, checkpoint, mission fail
