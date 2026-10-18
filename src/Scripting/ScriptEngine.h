@@ -9,6 +9,7 @@
 #include "AI/ChaseManager.h"
 #include "AI/RaceOpponent.h"
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -85,6 +86,12 @@ public:
 	float GetInitialStageTime() const { return _initialStageTime; }
 	float GetGoTimer() const { return _goTimer; }
 	const std::string& GetObjectiveType() const { return _objectiveType; }
+	// The player's start as the mission placed it, if it did.
+	bool GetPlayerStart(Vector3& position) const
+	{
+		position = _playerStart;
+		return _hasPlayerStart;
+	}
 	const Vector3& GetAIPosition() const { return _aiPosition; }
 	const Quaternion& GetAIRotation() const { return _aiRotation; }
 	ChaseManager* GetChaseManager() const { return _chaseManager.get(); }
@@ -142,7 +149,17 @@ private:
 	std::vector<Vector3> _stageWaypoints;
 	bool _raceCarNeedsPlacement = false;
 	std::vector<Vector3> _racePath;
-	std::unique_ptr<RaceOpponent> _raceOpponent;
+	// Every car the stage declares as racing, in declaration order. Their drivers
+	// are only created once the circuit exists (CloseMission): the game's scripts
+	// declare the cars before the race objective and its waypoints.
+	std::vector<Vehicle*> _raceVehicles;
+	std::vector<std::unique_ptr<RaceOpponent>> _raceOpponents;
+	// Catch-up curves by car name, held until that car's driver exists.
+	std::map<std::string, RaceOpponent::Catchup> _raceCatchups;
+	// Where the mission puts the player, for when the character is created after
+	// the script has run (the first start).
+	bool _hasPlayerStart = false;
+	Vector3 _playerStart;
 	std::unique_ptr<ChaseManager> _chaseManager;
 };
 

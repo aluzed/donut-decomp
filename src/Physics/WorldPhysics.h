@@ -62,13 +62,19 @@ public:
 	// Height of the ground under `position`, searched from `searchUp` metres above
 	// it down to `searchDown` below. False when the ray finds nothing, which means
 	// there is no collision geometry there at all.
-	bool FindGroundHeight(const Vector3& position, float searchUp, float searchDown, float& outHeight) const;
+	//
+	// `staticOnly` ignores anything that moves -- cars, the character -- for
+	// questions about the level itself: a route probe that met a parked car took
+	// its roof for the road.
+	bool FindGroundHeight(const Vector3& position, float searchUp, float searchDown, float& outHeight,
+	                      bool staticOnly = false) const;
 
 	// First thing hit going `range` metres along `direction` from `from`. Used to
 	// ask what a stuck car is actually pressed against: a route that runs through
 	// a wall and a car that has simply spun both look like "not moving" from the
 	// outside, and they need opposite fixes.
-	bool CastRay(const Vector3& from, const Vector3& direction, float range, Vector3& outPoint, Vector3& outNormal) const;
+	bool CastRay(const Vector3& from, const Vector3& direction, float range, Vector3& outPoint, Vector3& outNormal,
+	             bool staticOnly = false) const;
 
 	void SetDebugDrawMode(PhysicsDebugDrawMode mode) const { _debugDraw->setDebugMode((int)mode); }
 	PhysicsDebugDrawMode GetDebugDrawMode() const { return (PhysicsDebugDrawMode)_debugDraw->getDebugMode(); }

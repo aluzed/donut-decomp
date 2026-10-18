@@ -152,6 +152,10 @@ private:
 	// over a whole mission without a human holding ENTER down for two minutes.
 	bool _autoStart = false;
 	double _quitAfterSeconds = 0.0; // 0 = run until the window is closed
+	// The mission script started and restarted; --mission overrides it.
+	std::string _missionScript = "scripts/Missions/level01/M1race.con";
+	// Runs _missionScript, preceded by its load script when it has one.
+	void runMissionScript();
 	double _elapsedSeconds = 0.0;
 
 	bool _inVehicle = false;

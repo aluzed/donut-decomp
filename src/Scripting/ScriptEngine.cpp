@@ -48,7 +48,9 @@ void ScriptEngine::SelectMission(const std::string& id)
 	// that). Dropping the unique_ptrs would leave its rigid body and action
 	// behind in the physics world, dangling: the first run left a car falling
 	// forever, reaching Y = -440.
-	_raceOpponent.reset();
+	_raceOpponents.clear();
+	_raceVehicles.clear();
+	_raceCatchups.clear();
 	_stageWaypoints.clear();
 	for (auto& v : _missionVehicles)
 		v->DestroyPhysics(_game.GetWorldPhysics());
@@ -74,6 +76,8 @@ void ScriptEngine::SetMissionResetPlayerInCar(const std::string& locator)
 	if (pos != Vector3::Zero)
 	{
 		_game.SetPlayerPosition(pos);
+		_playerStart = pos;
+		_hasPlayerStart = true;
 		Log::Info("ScriptEngine: player placed at locator '{}' ({:.1f}, {:.1f}, {:.1f})", locator, pos.X, pos.Y, pos.Z);
 	}
 	else
@@ -89,6 +93,8 @@ void ScriptEngine::SetMissionResetPlayerOutCar(const std::string& locator)
 	if (pos != Vector3::Zero)
 	{
 		_game.SetPlayerPosition(pos);
+		_playerStart = pos;
+		_hasPlayerStart = true;
 		Log::Info("ScriptEngine: player placed (out of car) at '{}' ({:.1f}, {:.1f}, {:.1f})", locator, pos.X, pos.Y, pos.Z);
 	}
 }
@@ -128,7 +134,9 @@ void ScriptEngine::CloseMission()
 
 void ScriptEngine::CleanupMission()
 {
-	_raceOpponent.reset();
+	_raceOpponents.clear();
+	_raceVehicles.clear();
+	_raceCatchups.clear();
 	_racePath.clear();
 	_stageWaypoints.clear();
 
@@ -274,10 +282,10 @@ void ScriptEngine::AddStageVehicle(const std::string& car, const std::string& lo
 	vehicle->CreatePhysicsBody(_game.GetWorldPhysics(), pos);
 	_activeVehicle = vehicle.get();
 
-	// A "race" stage vehicle is the opponent's; give it a driver following the
-	// same circuit the player's checkpoints come from.
-	if (behaviour == "race" && !_racePath.empty())
-		_raceOpponent = std::make_unique<RaceOpponent>(*vehicle, _racePath);
+	// A "race" stage vehicle is an opponent's. Its driver comes with the circuit,
+	// in buildRaceCircuit.
+	if (behaviour == "race")
+		_raceVehicles.push_back(vehicle.get());
 
 	_missionVehicles.push_back(std::move(vehicle));
 }
@@ -334,13 +342,31 @@ void ScriptEngine::buildRaceCircuit()
 	// missing it is sitting on a fallback guess, and anchoring the circuit there
 	// bakes that guess in as a corner of the route -- it left a 97m leg running
 	// back into the fence the fallback had parked against.
-	if (_raceOpponent && !_raceCarNeedsPlacement)
-		nodes.push_back(_raceOpponent->GetVehicle().GetPosition());
+	//
+	// And only when the mission gives too few waypoints to make a loop of their
+	// own. sr2 names eight; adding the grid to them put a detour through the
+	// parked opponents into every lap.
+	if (!_raceVehicles.empty() && !_raceCarNeedsPlacement && _stageWaypoints.size() < 2)
+		nodes.push_back(_raceVehicles.front()->GetPosition());
 	nodes.insert(nodes.end(), _stageWaypoints.begin(), _stageWaypoints.end());
 
+	// The finish line, likewise, only completes a route the waypoints cannot
+	// close on their own. On sr2 it sits just past the last waypoint, on the
+	// far carriageway, and threading it in turned the end of every lap into two
+	// hairpins.
 	const Vector3 finish = _game.GetLevel().GetLocatorPosition("race_finish");
-	if (finish != Vector3::Zero)
+	if (finish != Vector3::Zero && _stageWaypoints.size() < 2)
 		nodes.push_back(finish);
+
+	// Locators are not all on the ground: sr2_waypoint3 hangs 2.5m above the
+	// road. Each node becomes a point of the circuit as it is, so stand them on
+	// the surface the way PathGraph stands its road nodes.
+	for (Vector3& node : nodes)
+	{
+		float groundY = 0.0f;
+		if (_game.GetWorldPhysics().FindGroundHeight(node, 3.0f, 3.0f, groundY, true))
+			node.Y = groundY;
+	}
 
 	if (nodes.size() < 2)
 		return;
@@ -416,8 +442,14 @@ void ScriptEngine::buildRaceCircuit()
 	// car actually is, and it is about to move.
 	placeRaceCarOnCircuit();
 
-	if (_raceOpponent)
-		_raceOpponent->SetCircuit(_racePath);
+	for (Vehicle* vehicle : _raceVehicles)
+	{
+		auto opponent = std::make_unique<RaceOpponent>(*vehicle, _racePath);
+		const auto catchup = _raceCatchups.find(vehicle->GetName());
+		if (catchup != _raceCatchups.end())
+			opponent->SetCatchup(catchup->second);
+		_raceOpponents.push_back(std::move(opponent));
+	}
 }
 
 // A routed circuit is a list of road-graph positions, and nothing so far asked
@@ -461,7 +493,7 @@ void ScriptEngine::validateCircuit() const
 		const Vector3& here = _racePath[i];
 
 		float groundY = 0.0f;
-		if (!physics.FindGroundHeight(here, 50.0f, 50.0f, groundY))
+		if (!physics.FindGroundHeight(here, 50.0f, 50.0f, groundY, true))
 		{
 			++holes;
 			Log::Warn("ScriptEngine: circuit point {} ({:.1f}, {:.1f}, {:.1f}) has no ground under it", i, here.X,
@@ -509,7 +541,7 @@ void ScriptEngine::validateCircuit() const
 		{
 			const Vector3 at = here + along * (static_cast<float>(step) * strideMetres);
 			float midY = 0.0f;
-			if (physics.FindGroundHeight(at, 50.0f, 50.0f, midY))
+			if (physics.FindGroundHeight(at, 50.0f, 50.0f, midY, true))
 				continue;
 			++gaps;
 			Log::Warn("ScriptEngine: circuit leg {}->{} crosses a hole at ({:.1f}, {:.1f}, {:.1f}), {:.0f}m along", i,
@@ -519,7 +551,7 @@ void ScriptEngine::validateCircuit() const
 
 		Vector3 hit, normal;
 		const Vector3 from(here.X, here.Y + bumperHeight, here.Z);
-		if (!physics.CastRay(from, along, span, hit, normal))
+		if (!physics.CastRay(from, along, span, hit, normal, true))
 			continue;
 		if (std::abs(normal.Y) > wallNormalY)
 			continue;
@@ -544,7 +576,7 @@ void ScriptEngine::placeRaceCarOnCircuit()
 {
 	// Only when the mission's own car-start locator was missing: when the level
 	// names one, that is where the car belongs.
-	if (!_raceCarNeedsPlacement || !_activeVehicle || _racePath.size() < 3)
+	if (!_raceCarNeedsPlacement || _raceVehicles.empty() || _racePath.size() < 3)
 		return;
 
 	// Every point of the circuit now comes out of the road graph, so start on the
@@ -559,7 +591,7 @@ void ScriptEngine::placeRaceCarOnCircuit()
 	if (forward.LengthSquared() > 0.01f)
 		rotation = Quaternion(Vector3(0.0f, 1.0f, 0.0f), std::atan2(forward.X, forward.Z));
 
-	_activeVehicle->Teleport(here, rotation);
+	_raceVehicles.front()->Teleport(here, rotation);
 	_raceCarNeedsPlacement = false;
 }
 
@@ -658,50 +690,50 @@ void ScriptEngine::SetRaceLaps(int laps)
 void ScriptEngine::SetStageAIRaceCatchupParams(const std::string& vehicle, float distance, float ahead, float level,
                                                float behind)
 {
-	if (!_raceOpponent || _raceOpponent->GetVehicle().GetName() != vehicle)
-	{
-		Log::Warn("ScriptEngine: catch-up params for '{}', which is not the race opponent here, ignored", vehicle);
-		return;
-	}
-	_raceOpponent->SetCatchup({distance, ahead, level, behind});
+	// Kept by name: the driver it is for does not exist until the circuit does.
+	_raceCatchups[vehicle] = {distance, ahead, level, behind};
 }
 
 void ScriptEngine::UpdateAI(double dt)
 {
-	if (!_raceOpponent)
+	if (_raceOpponents.empty())
 		return;
 
-	// If the player has taken the opponent's car, stop driving it: two inputs on
-	// one vehicle in the same frame just fight each other.
-	if (_game.GetPlayerVehicle() == &_raceOpponent->GetVehicle())
-		return;
-
-	// In laps, so it is comparable with the opponent's own progress around a
+	// In laps, so it is comparable with each opponent's own progress around a
 	// circuit that has a different number of points than the checkpoint list.
 	const float playerLaps =
 	    _checkpoints.empty()
 	        ? static_cast<float>(_currentLap)
 	        : static_cast<float>(_currentLap) + static_cast<float>(_currentCheckpoint) / static_cast<float>(_checkpoints.size());
-	_raceOpponent->Update(dt, playerLaps);
 
-	// A race is lost when the opponent finishes it first. Without this the only
-	// way to lose was the stage timer, and a player who was simply beaten kept
-	// racing an opponent that had long since gone round again.
-	if (!_opponentFinished && _stageTimeRemaining > 0.0f && _raceOpponent->Laps() >= _totalLaps)
+	for (auto& opponent : _raceOpponents)
 	{
-		_opponentFinished = true;
-		Log::Info("ScriptEngine: '{}' finished all {} laps first - mission failed!",
-		          _raceOpponent->GetVehicle().GetName(), _totalLaps);
-		_stageTimeRemaining = -1.0f;
-		_game.AddShake(2.0f);
-		_game.GetAudioManager().PlayRaw(SoundGenerator::Beep(150, 0.5f), 22050, 1, 16);
-		_game.SetState(GameState::MissionFailed);
+		// If the player has taken this opponent's car, stop driving it: two
+		// inputs on one vehicle in the same frame just fight each other.
+		if (_game.GetPlayerVehicle() == &opponent->GetVehicle())
+			continue;
+
+		opponent->Update(dt, playerLaps);
+
+		// A race is lost when an opponent finishes it first. Without this the
+		// only way to lose was the stage timer, and a player who was simply
+		// beaten kept racing an opponent that had long since gone round again.
+		if (!_opponentFinished && _stageTimeRemaining > 0.0f && opponent->Laps() >= _totalLaps)
+		{
+			_opponentFinished = true;
+			Log::Info("ScriptEngine: '{}' finished all {} laps first - mission failed!",
+			          opponent->GetVehicle().GetName(), _totalLaps);
+			_stageTimeRemaining = -1.0f;
+			_game.AddShake(2.0f);
+			_game.GetAudioManager().PlayRaw(SoundGenerator::Beep(150, 0.5f), 22050, 1, 16);
+			_game.SetState(GameState::MissionFailed);
+		}
 	}
 
-	// Keep the legacy readouts pointing at the real car so anything still asking
-	// for the AI transform (debug draw, HUD) follows the opponent.
-	_aiPosition = _raceOpponent->GetVehicle().GetPosition();
-	_aiRotation = _raceOpponent->GetVehicle().GetRotation();
+	// Keep the legacy readouts pointing at a real car so anything still asking
+	// for the AI transform (debug draw, HUD) follows the leading opponent's.
+	_aiPosition = _raceOpponents.front()->GetVehicle().GetPosition();
+	_aiRotation = _raceOpponents.front()->GetVehicle().GetRotation();
 }
 
 void ScriptEngine::ResetBestTime()

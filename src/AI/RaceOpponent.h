@@ -64,6 +64,11 @@ private:
 	// Radius of the bend at the waypoint `offset` places along the route, from the
 	// circle through it and its two neighbours. Huge when they are in line.
 	float cornerRadius(std::ptrdiff_t offset) const;
+	// Takes `circuit` re-indexed to start at the point nearest the car.
+	void startFromHere(std::vector<Vector3> circuit);
+	// Counts a wedge at `position`, and puts the car back on the circuit past it
+	// once it has wedged in the same spot too often. True when it did.
+	bool wedgedAgain(const Vector3& position);
 	// What the car is pressed against, for the log line that reports it stuck.
 	std::string describeObstacle() const;
 	// Puts the car back on the circuit facing the next waypoint. With a non-zero
@@ -83,6 +88,7 @@ private:
 	double _noProgressTimer = 0.0;
 	int _wedgeRepeats = 0;
 	Vector3 _lastWedgePosition = Vector3(1.0e6f, 0.0f, 1.0e6f);
+	float _lastWedgeProgress = 0.0f;
 	double _logTimer = 0.0;
 	bool _hasCatchup = false;
 	Catchup _catchup {};

@@ -8,6 +8,7 @@
 
 #include <fmt/format.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <string>
@@ -40,6 +41,9 @@ constexpr int kReverseAttempts = 3;
 // Two wedges closer together than this are the same wedge, however much driving
 // happened in between.
 constexpr float kSameWedgeMetres = 15.0f;
+// Waypoints reached since the last wedge after which a new one starts the count
+// afresh.
+constexpr float kWedgeForgetWaypoints = 5.0f;
 // Longest a car may go without reaching a waypoint before it is moved on. The
 // circuit's longest leg is 46m, which is eight seconds even at a crawl.
 constexpr double kNoProgressSeconds = 12.0;
@@ -168,16 +172,33 @@ RaceOpponent::RaceOpponent(Vehicle& vehicle, std::vector<Vector3> circuit)
     : _vehicle(vehicle), _path(circuit), _circuitMetres(loopLength(circuit)), _lastPosition(vehicle.GetPosition())
 {
 	Log::Info("RaceOpponent: driving '{}' around {} waypoints", _vehicle.GetName(), _path.Count());
+	startFromHere(std::move(circuit));
 }
 
 void RaceOpponent::SetCircuit(std::vector<Vector3> circuit)
 {
 	Log::Info("RaceOpponent: circuit replaced, {} waypoints", circuit.size());
 	_circuitMetres = loopLength(circuit);
-	_path.SetWaypoints(std::move(circuit));
-	_path.SnapToNearest(_vehicle.GetPosition());
+	startFromHere(std::move(circuit));
 	_lapTimer = 0.0;
 	_timedLap = _path.Laps();
+}
+
+void RaceOpponent::startFromHere(std::vector<Vector3> circuit)
+{
+	// Join the circuit where the car is, and count laps from there. Starting at
+	// waypoint 0 sent sr2's grid 85m across the verge towards it; joining at the
+	// nearest point but counting from 0 scored the 9s from the grid to the first
+	// waypoint as a lap. The grid is the line.
+	_path.SetWaypoints(circuit);
+	if (circuit.empty())
+		return;
+	_path.SnapToNearest(_vehicle.GetPosition());
+	const std::size_t start = _path.Index();
+	if (start == 0)
+		return;
+	std::rotate(circuit.begin(), circuit.begin() + static_cast<std::ptrdiff_t>(start), circuit.end());
+	_path.SetWaypoints(std::move(circuit));
 }
 
 void RaceOpponent::Update(double dt, float playerProgress)
@@ -352,7 +373,12 @@ void RaceOpponent::Update(double dt, float playerProgress)
 		_turnStallTimer = 0.0;
 		_stuckTimer = 0.0;
 		_stuckTravel = 0.0f;
-		_reverseTimer = kReverseSeconds;
+		// Counted like any other wedge: sr2's bus, hung on a kerb, backed up
+		// and stalled again at the same spot six times, and since this branch
+		// reset the stuck window every time, only the 12s no-progress rescue
+		// ever got it out.
+		if (!wedgedAgain(position))
+			_reverseTimer = kReverseSeconds;
 		return;
 	}
 
@@ -367,22 +393,8 @@ void RaceOpponent::Update(double dt, float playerProgress)
 			// drove off, came straight back and wedged again, over and over: every
 			// escape reset a consecutive counter, so the give-up never arrived and
 			// the race was spent shuttling in and out of the same hole 14 times.
-			Vector3 fromLastWedge = position - _lastWedgePosition;
-			fromLastWedge.Y = 0.0f;
-			if (fromLastWedge.Length() < kSameWedgeMetres)
-				++_wedgeRepeats;
-			else
-				_wedgeRepeats = 1;
-			_lastWedgePosition = position;
-
-			if (_wedgeRepeats > kReverseAttempts)
-			{
-				Log::Warn("RaceOpponent: '{}' wedged at ({:.1f}, {:.1f}, {:.1f}) for the {}th time{}",
-				          _vehicle.GetName(), position.X, position.Y, position.Z, _wedgeRepeats, describeObstacle());
-				_wedgeRepeats = 0;
-				respawnOnCircuit(kUnwedgeClearanceMetres);
+			if (wedgedAgain(position))
 				return;
-			}
 
 			Log::Debug("RaceOpponent: '{}' moved {:.1f}m in {:.0f}s at ({:.1f}, {:.1f}, {:.1f}), backing out{}",
 			           _vehicle.GetName(), _stuckTravel, kStuckWindowSeconds, position.X, position.Y, position.Z,
@@ -525,6 +537,30 @@ float RaceOpponent::targetSpeedKmh(float boost) const
 	}
 
 	return limit < kCornerSpeedKmh ? kCornerSpeedKmh : limit;
+}
+
+bool RaceOpponent::wedgedAgain(const Vector3& position)
+{
+	// The same spot, and no real progress in between: M1race's start-line
+	// three-point turn comes round again every lap, and is not a trap.
+	Vector3 fromLastWedge = position - _lastWedgePosition;
+	fromLastWedge.Y = 0.0f;
+	const bool progressed = _path.Progress() - _lastWedgeProgress > kWedgeForgetWaypoints;
+	if (fromLastWedge.Length() < kSameWedgeMetres && !progressed)
+		++_wedgeRepeats;
+	else
+		_wedgeRepeats = 1;
+	_lastWedgePosition = position;
+	_lastWedgeProgress = _path.Progress();
+
+	if (_wedgeRepeats <= kReverseAttempts)
+		return false;
+
+	Log::Warn("RaceOpponent: '{}' wedged at ({:.1f}, {:.1f}, {:.1f}) for the {}th time{}", _vehicle.GetName(),
+	          position.X, position.Y, position.Z, _wedgeRepeats, describeObstacle());
+	_wedgeRepeats = 0;
+	respawnOnCircuit(kUnwedgeClearanceMetres);
+	return true;
 }
 
 std::string RaceOpponent::describeObstacle() const

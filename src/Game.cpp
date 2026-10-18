@@ -129,6 +129,7 @@ Game::Game(int argc, char** argv)
 	// hand through the splash screen and then killed. These make a run repeatable:
 	//   --autostart          drop straight into the mission, no splash, no menu
 	//   --quit-after <secs>  close the window after that much wall time
+	//   --mission <script>   run that mission script instead of M1race.con
 	for (int i = 1; i < argc; ++i)
 	{
 		const std::string_view arg = argv[i];
@@ -136,6 +137,8 @@ Game::Game(int argc, char** argv)
 			_autoStart = true;
 		else if (arg == "--quit-after" && i + 1 < argc)
 			_quitAfterSeconds = std::atof(argv[++i]);
+		else if (arg == "--mission" && i + 1 < argc)
+			_missionScript = argv[++i];
 	}
 
 	Commands::RunLine("HelloWorld();");
@@ -230,17 +233,21 @@ Game::Game(int argc, char** argv)
 	_playerMesh = SimpleMesh::CreateCapsule(0.3f, 1.8f, Vector4(0.2f, 1.0f, 0.2f, 1.0f), 12);
 	_carMesh = SimpleMesh::CreateBox(Vector3(0.9f, 0.5f, 2.2f), Vector4(0.2f, 0.5f, 1.0f, 1.0f));
 
-	if (FileSystem::exists("scripts/Missions/level01/M1race.con"))
-		_scriptEngine->RunFile("scripts/Missions/level01/M1race.con");
-	else if (FileSystem::exists("scripts/Missions/level01/m1.con"))
-		_scriptEngine->RunFile("scripts/Missions/level01/m1.con");
+	runMissionScript();
 
 	loadGlobal();
 	LoadModel("homer", "homer");
 
+	// The mission ran before the character existed, so its player placement went
+	// nowhere: apply it now. Only a mission that places nobody falls back to the
+	// main road. That fallback used to run unconditionally and moved the M1race
+	// player 460m away from level1_homer_start.
+	Vector3 playerStart;
+	if (_scriptEngine->GetPlayerStart(playerStart))
+		SetPlayerPosition(playerStart);
 	// spawn on the main road (longest path) so the physics ground lines up with
 	// the visual ground — the raised grass at the old spawn buried the player
-	if (_level)
+	else if (_level)
 	{
 		const auto& paths = _level->GetPaths();
 		if (!paths.empty())
@@ -289,7 +296,7 @@ Game::Game(int argc, char** argv)
 	_pauseMenu->AddButton("Restart", 0, 0, 200, 40, [this]() {
 		_scriptEngine->CleanupMission();
 		if (_collectibleManager) _collectibleManager->SpawnOnPath();
-		_scriptEngine->RunFile("scripts/Missions/level01/M1race.con");
+		runMissionScript();
 		_gameState = GameState::InGame;
 		_missionCompleteTimer = 0.0;
 	});
@@ -362,6 +369,27 @@ void Game::LockMouse(bool lockMouse)
 	if (!_gameInput)
 		return;
 	_gameInput->LockMouse(static_cast<SDL_Window*>(*_window), lockMouse);
+}
+
+void Game::runMissionScript()
+{
+	// The game splits each mission in two: <id>l.mfk loads its files and cars,
+	// <id>i.mfk sets it up. Given the set-up script, run the loader first.
+	const std::string suffix = "i.mfk";
+	if (_missionScript.size() > suffix.size() &&
+	    _missionScript.compare(_missionScript.size() - suffix.size(), suffix.size(), suffix) == 0)
+	{
+		const std::string loader = _missionScript.substr(0, _missionScript.size() - suffix.size()) + "l.mfk";
+		if (FileSystem::exists(loader))
+			_scriptEngine->RunFile(loader);
+	}
+
+	if (!FileSystem::exists(_missionScript))
+	{
+		Log::Warn("Game: mission script '{}' not found", _missionScript);
+		return;
+	}
+	_scriptEngine->RunFile(_missionScript);
 }
 
 void Game::SetPlayerPosition(const Vector3& pos)
@@ -800,8 +828,7 @@ void Game::Run()
 					_inVehicle = false;
 					_activeVehicle = nullptr;
 				}
-				if (FileSystem::exists("scripts/Missions/level01/M1race.con"))
-					_scriptEngine->RunFile("scripts/Missions/level01/M1race.con");
+				runMissionScript();
 			}
 		}
 
@@ -976,10 +1003,7 @@ void Game::Run()
 			_scriptEngine->CleanupMission();
 			if (_collectibleManager) _collectibleManager->SpawnOnPath();
 			if (_inVehicle) { _inVehicle = false; _activeVehicle = nullptr; }
-			if (FileSystem::exists("scripts/Missions/level01/M1race.con"))
-				_scriptEngine->RunFile("scripts/Missions/level01/M1race.con");
-			else if (FileSystem::exists("scripts/Missions/level01/m1.con"))
-				_scriptEngine->RunFile("scripts/Missions/level01/m1.con");
+			runMissionScript();
 		}
 
 		if (intent.toggleDebug)

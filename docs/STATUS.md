@@ -117,12 +117,20 @@ cmake --build build -j$(nproc)
 | `--log-level <debug\|info\|warn\|error>`, `-l` | Log verbosity (or the `DONUT_LOG_LEVEL` env var) |
 | `--autostart` | Skip the splash and main menu, straight into the mission |
 | `--quit-after <secs>` | Close the window after that much wall time |
+| `--mission <script>` | Run that mission script instead of `M1race.con`. Given a game set-up script (`<id>i.mfk`), its loader (`<id>l.mfk`) runs first |
 
 The last two make a run repeatable without a keyboard, which is how the race AI is measured
 over a whole 120-second mission:
 
 ```bash
 ./build/bin/donut --log-level debug --autostart --quit-after 140 > run.log
+```
+
+The game's own street race, three AI cars over three laps:
+
+```bash
+./build/bin/donut --autostart --quit-after 150 \
+    --mission files/extracted/Scripts/missions/level01/sr2i.mfk > sr2.log
 ```
 
 ## Asset Extraction

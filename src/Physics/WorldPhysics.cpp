@@ -73,12 +73,31 @@ void WorldPhysics::Update(const float dt) const
 	_dynamicsWorld->debugDrawWorld();
 }
 
-bool WorldPhysics::FindGroundHeight(const Vector3& position, float searchUp, float searchDown, float& outHeight) const
+namespace
+{
+// The closest hit, optionally among static objects only.
+struct LevelRayCallback : btCollisionWorld::ClosestRayResultCallback
+{
+	bool staticOnly;
+	LevelRayCallback(const btVector3& from, const btVector3& to, bool onlyStatic)
+	    : ClosestRayResultCallback(from, to), staticOnly(onlyStatic) {}
+
+	bool needsCollision(btBroadphaseProxy* proxy) const override
+	{
+		if (staticOnly && !static_cast<btCollisionObject*>(proxy->m_clientObject)->isStaticObject())
+			return false;
+		return ClosestRayResultCallback::needsCollision(proxy);
+	}
+};
+} // namespace
+
+bool WorldPhysics::FindGroundHeight(const Vector3& position, float searchUp, float searchDown, float& outHeight,
+                                    bool staticOnly) const
 {
 	const btVector3 from(position.X, position.Y + searchUp, position.Z);
 	const btVector3 to(position.X, position.Y - searchDown, position.Z);
 
-	btCollisionWorld::ClosestRayResultCallback callback(from, to);
+	LevelRayCallback callback(from, to, staticOnly);
 	_dynamicsWorld->rayTest(from, to, callback);
 	if (!callback.hasHit())
 		return false;
@@ -88,12 +107,12 @@ bool WorldPhysics::FindGroundHeight(const Vector3& position, float searchUp, flo
 }
 
 bool WorldPhysics::CastRay(const Vector3& from, const Vector3& direction, float range, Vector3& outPoint,
-                           Vector3& outNormal) const
+                           Vector3& outNormal, bool staticOnly) const
 {
 	const btVector3 start(from.X, from.Y, from.Z);
 	const btVector3 end(from.X + direction.X * range, from.Y + direction.Y * range, from.Z + direction.Z * range);
 
-	btCollisionWorld::ClosestRayResultCallback callback(start, end);
+	LevelRayCallback callback(start, end, staticOnly);
 	_dynamicsWorld->rayTest(start, end, callback);
 	if (!callback.hasHit())
 		return false;

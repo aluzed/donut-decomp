@@ -36,6 +36,46 @@ Left as stubs: `SetVehicleAIParams(vehicle, -51, -50)`, whose two integers have 
 meaning I could establish; the target and evade catch-up variants; and the `position`
 condition, which needs more than one opponent to mean anything.
 
+## The game's own street race runs (2026-10-18)
+
+`--mission files/extracted/Scripts/missions/level01/sr2i.mfk` runs sr2 as the game ships it:
+three AI cars (`honor_v`, `minivanA`, `schoolbu`), eight stage waypoints, three laps. What
+it took:
+
+- **Several opponents.** `ScriptEngine` held one `RaceOpponent`. The game's scripts
+  declare the cars *before* the race objective and its waypoints, so it was never even
+  created. Race cars are now recorded at `AddStageVehicle`, and their drivers are created
+  with the circuit, in `CloseMission`. Catch-up parameters are kept by car name until then.
+  Any opponent completing every lap first loses the race.
+- **The circuit is the waypoints.** The car's start and `race_finish` are added as nodes
+  only when the mission gives fewer than two waypoints (M1race's case). On sr2 the finish
+  sits on the far carriageway, and threading it in put two hairpins into every lap.
+- **Locator nodes stand on the road.** `sr2_waypoint3` hangs 2.5m in the air.
+- **The probe ignores cars.** `FindGroundHeight` and `CastRay` take `staticOnly`; the
+  circuit probe had taken a parked car's roof for the road.
+- **Laps count from the grid.** Each opponent's circuit is re-indexed to start at the
+  point nearest the car. Joining at the nearest point but counting from waypoint 0 scored
+  the 9s from the grid to the first waypoint as a lap.
+- **A failed turn-round counts as a wedge.** Otherwise the bus backed up and stalled at
+  the same kerb until the 12s no-progress rescue fired.
+
+Measured over 150s with an idle player (every car on its x0.6/x0.9 "ahead" catch-up):
+
+| car | script | first lap |
+|---|---|---|
+| `honor_v` | 1200kg, gas 6.0, 125 km/h | 91.7s, one three-point turn at waypoint 3 |
+| `minivanA` | 2000kg, gas 4.0, 125 km/h | 92.3s, clean |
+| `schoolbu` | 2500kg, gas 3.5, 120 km/h | 115.8s, rescued twice |
+
+The bus is still rescued twice per lap: once hung on a kerb at (-186.5, 4.0, -101.3) where
+the route drops off a raised section, and once at the U-turn at waypoint 7, where the
+circuit doubles back onto the other carriageway. The game's physics gives every car the
+same 0.9 x 0.4 x 2.2m chassis box, which a bus outgrows.
+
+Not done: the player's own car (`PlacePlayerCar`, `PutMFPlayerInCar`), checkpoints from the
+objective's `AddCollectible` waypoints (the player still gets the level's longest path),
+the countdown, and the `position` condition.
+
 ## Critères d'acceptation
 - [ ] Un `.con` de course représentatif s'exécute avec 0 avertissement « unimplemented command ».
 - [x] `SetRaceLaps` change effectivement le nombre de tours requis pour terminer (player and opponent alike).
