@@ -62,6 +62,8 @@ public:
 	const std::string& GetName() const { return _name; }
 	bool HasModel() const { return _model != nullptr; }
 	float GetSpeedKmh() const;
+	// No wheel touching anything.
+	bool IsAirborne() const;
 	// The chassis' velocity, in m/s.
 	Vector3 GetVelocity() const;
 

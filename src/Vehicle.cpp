@@ -347,6 +347,16 @@ Vector3 Vehicle::GetVelocity() const
 	return Vector3(v.x(), v.y(), v.z());
 }
 
+bool Vehicle::IsAirborne() const
+{
+	if (!_rayVehicle)
+		return false;
+	for (int i = 0; i < _rayVehicle->getNumWheels(); ++i)
+		if (_rayVehicle->getWheelInfo(i).m_raycastInfo.m_isInContact)
+			return false;
+	return true;
+}
+
 float Vehicle::GetSpeedKmh() const
 {
 	if (_rayVehicle)

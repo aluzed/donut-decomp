@@ -1718,6 +1718,11 @@ void Game::Run()
 			}
 			if (!_engineCar.empty() && _activeVehicle)
 				_audioManager->SetEnginePitch(0.7f + std::abs(_activeVehicle->GetSpeedKmh()) / 110.0f);
+			// A good jump gets a word from the driver.
+			static double airborne = 0.0;
+			airborne = _inVehicle && _activeVehicle && _activeVehicle->IsAirborne() ? airborne + deltaTime : 0.0;
+			if (airborne > 0.8 && airborne - deltaTime <= 0.8)
+				SayLine("d_air");
 		}
 
 		if (simulate)
