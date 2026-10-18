@@ -106,8 +106,15 @@ on each of level 1's 33 in turn, all but one found their sound (`gag_loot`, whic
 does not have). Each gag's model (`art/nis/gags/gag_bbq.p3d`) stands where `GagSetPosition`
 puts it, in its rest pose: seen, the barbecue by the Simpsons' door. Not done: the
 model's animation (its `GagController`) played when the gag is triggered;
-`GagSetInterior`, `GagSetPersist`, `GagSetCycle` and the movies; keeping
-the gags found from one session to the next.
+`GagSetInterior`, `GagSetPersist`, `GagSetCycle` and the movies.
+
+Gags found are kept in `donut_gags.dat` (gitignored), one line per gag, keyed by level,
+model and place; one found before pays no coin again. Checked: 11 of level 2's 12 found
+in one run, "11 found before" in the next.
+
+`donut_cards.dat` was rewritten with the current level's cards alone, so the first card
+found on another level lost every card found before it. Both files now keep the lines of
+the other levels as they were read.
 
 A gag found for the first time shows the count for 3s, "Gags 3/12" (the phrase table's
 `GAGS`), and "LEVEL GAGS COMPLETE!" (`GAGS_COMPLETE`) with the last. Seen in Moe's.

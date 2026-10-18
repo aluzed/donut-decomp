@@ -50,10 +50,22 @@ void CollectibleManager::saveCards() const
 	// An unattended run teleports past cards; it has not found them.
 	if (Game::GetInstance().IsAutopilot())
 		return;
-	std::ofstream file("donut_cards.dat");
+	// The file holds every level's cards: those of the others are kept as they
+	// were read. Writing this level's alone lost them all on the first card
+	// found on the next level.
+	std::set<std::string> found;
+	{
+		std::ifstream file("donut_cards.dat");
+		for (std::string id; std::getline(file, id);)
+			if (!id.empty())
+				found.insert(id);
+	}
 	for (const auto& card : _cards)
 		if (card.found)
-			file << card.id << "\n";
+			found.insert(card.id);
+	std::ofstream file("donut_cards.dat");
+	for (const auto& id : found)
+		file << id << "\n";
 }
 
 void CollectibleManager::layOutWrenches()

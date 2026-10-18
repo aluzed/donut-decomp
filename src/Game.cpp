@@ -1454,6 +1454,14 @@ void Game::loadGags()
 	std::ifstream script(fmt::format("scripts/{}/level.mfk", levelDirectory()));
 	if (!script)
 		return;
+	// Found in an earlier session (donut_gags.dat, every level's).
+	std::set<std::string> found;
+	{
+		std::ifstream file("donut_gags.dat");
+		for (std::string id; std::getline(file, id);)
+			if (!id.empty())
+				found.insert(id);
+	}
 	std::optional<Gag> gag;
 	int unplaced = 0;
 	for (std::string line; std::getline(script, line);)
@@ -1529,12 +1537,38 @@ void Game::loadGags()
 						model = CompositeModel::LoadP3D(file);
 					gag->drawable = model;
 				}
+				gag->played = found.count(gagId(*gag)) > 0;
 				_gags.push_back(*gag);
 			}
 			gag.reset();
 		}
 	}
-	Log::Info("Game: {} gag(s) in the level, {} whose trigger locator is not loaded", _gags.size(), unplaced);
+	Log::Info("Game: {} gag(s) in the level, {} found before, {} whose trigger locator is not loaded", _gags.size(),
+	          std::count_if(_gags.begin(), _gags.end(), [](const Gag& g) { return g.played; }), unplaced);
+}
+
+std::string Game::gagId(const Gag& gag) const
+{
+	return fmt::format("{} {} {:.0f} {:.0f}", levelDirectory(), gag.model, gag.position.X, gag.position.Z);
+}
+
+void Game::saveGags() const
+{
+	if (_autopilot)
+		return;
+	std::set<std::string> found;
+	{
+		std::ifstream file("donut_gags.dat");
+		for (std::string id; std::getline(file, id);)
+			if (!id.empty())
+				found.insert(id);
+	}
+	for (const auto& gag : _gags)
+		if (gag.played)
+			found.insert(gagId(gag));
+	std::ofstream file("donut_gags.dat");
+	for (const auto& id : found)
+		file << id << "\n";
 }
 
 void Game::playGag(Gag& gag)
@@ -1577,6 +1611,7 @@ void Game::playGag(Gag& gag)
 		if (static_cast<std::size_t>(found) == _gags.size())
 			_cardMessage += " - " + _textBible.Get("GAGS_COMPLETE");
 		_cardMessageUntil = _elapsedSeconds + 3.0;
+		saveGags();
 	}
 }
 

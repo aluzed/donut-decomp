@@ -272,7 +272,10 @@ private:
 		double lastPlayed = -100.0;
 	};
 	std::vector<Gag> _gags;
+	// Gags found are kept in donut_gags.dat, keyed by level, model and place.
 	void loadGags();
+	std::string gagId(const Gag& gag) const;
+	void saveGags() const;
 	void playGag(Gag& gag);
 	void updateGags();
 	// When the running mission was loaded, for its title card.
