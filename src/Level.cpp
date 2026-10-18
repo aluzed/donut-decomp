@@ -71,6 +71,11 @@ void Level::LoadP3D(const std::string& filename)
 
 	collectSplines(root);
 
+	// This file's own locators, for an interior's entry and exit.
+	std::map<std::string, Vector3> fileLocators;
+	DrawRange range {{_entities.size(), 0}, {_instances.size(), 0}, {_compositeModels.size(), 0},
+	                 {_billboardBatches.size(), 0}};
+
 	for (const auto& chunk : root.GetChildren())
 	{
 		switch (chunk->GetType())
@@ -188,6 +193,7 @@ void Level::LoadP3D(const std::string& filename)
 			// was dropped outright -- and those are most of them (spawn points,
 			// car starts, race_finish...).
 			_locators.insert({loc->GetName(), loc->GetPosition()});
+			fileLocators[loc->GetName()] = loc->GetPosition();
 
 			// A car start's first data word is its heading as a float, in radians
 			// about +Y: sr2's grid reads 1.571, facing +X down the street the race
@@ -326,6 +332,36 @@ void Level::LoadP3D(const std::string& filename)
 		default: break;
 		}
 	}
+
+	range.entities[1] = _entities.size();
+	range.instances[1] = _instances.size();
+	range.composites[1] = _compositeModels.size();
+	range.billboards[1] = _billboardBatches.size();
+	_drawRanges[filename] = range;
+
+	const auto entry = fileLocators.find("InteriorEntryStart");
+	if (entry != fileLocators.end())
+	{
+		Interior interior {entry->second, entry->second, entry->second};
+		if (const auto origin = fileLocators.find("InteriorOrigin"); origin != fileLocators.end())
+			interior.origin = origin->second;
+		for (const auto& [name, position] : fileLocators)
+			if (name.size() > 5 && name.compare(name.size() - 5, 5, "_exit") == 0)
+				interior.exit = position;
+		_interiors[filename] = interior;
+		Log::Info("Level: interior {} -- in at ({:.1f}, {:.1f}, {:.1f}), out at ({:.1f}, {:.1f}, {:.1f})", filename,
+		          interior.entry.X, interior.entry.Y, interior.entry.Z, interior.exit.X, interior.exit.Y,
+		          interior.exit.Z);
+	}
+}
+
+bool Level::GetInterior(const std::string& file, Interior& interior) const
+{
+	const auto found = _interiors.find(file);
+	if (found == _interiors.end())
+		return false;
+	interior = found->second;
+	return true;
 }
 
 void Level::DynaLoadData(const std::string& dynaLoadData)
@@ -496,38 +532,62 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 	glDisable(GL_BLEND);
 	glEnable(GL_DEPTH_TEST);
 
-	for (const auto& ent : _entities) ent->Draw(*_worldShader, true);
+	// Everything, or only the one file's share of each list (SetDrawOnly).
+	const auto only = _drawRanges.find(_drawOnly);
+	const bool restricted = !_drawOnly.empty() && only != _drawRanges.end();
+	const auto shown = [&](std::size_t (DrawRange::*range)[2], std::size_t index) {
+		if (!restricted)
+			return true;
+		const std::size_t(&bounds)[2] = only->second.*range;
+		return index >= bounds[0] && index < bounds[1];
+	};
 
-	for (const auto& compositeModel : _compositeModels)
-		compositeModel->Draw(*_worldShader, viewProj, compositeModel->GetTransform(), true);
+	for (std::size_t i = 0; i < _entities.size(); ++i)
+		if (shown(&DrawRange::entities, i))
+			_entities[i]->Draw(*_worldShader, true);
+
+	for (std::size_t i = 0; i < _compositeModels.size(); ++i)
+		if (shown(&DrawRange::composites, i))
+			_compositeModels[i]->Draw(*_worldShader, viewProj, _compositeModels[i]->GetTransform(), true);
 
 	_billboardBatchShader->Bind();
 	_billboardBatchShader->SetUniformValue("viewProj", viewProj);
-	for (const auto& billboardBatch : _billboardBatches) billboardBatch->Draw(*_billboardBatchShader, true);
+	for (std::size_t i = 0; i < _billboardBatches.size(); ++i)
+		if (shown(&DrawRange::billboards, i))
+			_billboardBatches[i]->Draw(*_billboardBatchShader, true);
 
 	_worldInstancedShader->Bind();
 	_worldInstancedShader->SetUniformValue("viewProj", viewProj);
 
-	for (const auto& ent : _instances) ent->Draw(*_worldInstancedShader, true);
+	for (std::size_t i = 0; i < _instances.size(); ++i)
+		if (shown(&DrawRange::instances, i))
+			_instances[i]->Draw(*_worldInstancedShader, true);
 
 	glEnable(GL_BLEND);
 
 	_worldShader->Bind();
 	_worldShader->SetUniformValue("viewProj", viewProj);
 
-	for (const auto& ent : _entities) ent->Draw(*_worldShader, false);
+	for (std::size_t i = 0; i < _entities.size(); ++i)
+		if (shown(&DrawRange::entities, i))
+			_entities[i]->Draw(*_worldShader, false);
 
-	for (const auto& compositeModel : _compositeModels)
-		compositeModel->Draw(*_worldShader, viewProj, compositeModel->GetTransform(), false);
+	for (std::size_t i = 0; i < _compositeModels.size(); ++i)
+		if (shown(&DrawRange::composites, i))
+			_compositeModels[i]->Draw(*_worldShader, viewProj, _compositeModels[i]->GetTransform(), false);
 
 	_billboardBatchShader->Bind();
 	_billboardBatchShader->SetUniformValue("viewProj", viewProj);
-	for (const auto& billboardBatch : _billboardBatches) billboardBatch->Draw(*_billboardBatchShader, false);
+	for (std::size_t i = 0; i < _billboardBatches.size(); ++i)
+		if (shown(&DrawRange::billboards, i))
+			_billboardBatches[i]->Draw(*_billboardBatchShader, false);
 
 	_worldInstancedShader->Bind();
 	_worldInstancedShader->SetUniformValue("viewProj", viewProj);
 
-	for (const auto& ent : _instances) ent->Draw(*_worldInstancedShader, false);
+	for (std::size_t i = 0; i < _instances.size(); ++i)
+		if (shown(&DrawRange::instances, i))
+			_instances[i]->Draw(*_worldInstancedShader, false);
 }
 
 } // namespace Donut

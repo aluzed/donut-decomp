@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "Level.h"
 #include "UI/TextBible.h"
 
 #include <map>
@@ -98,6 +99,10 @@ public:
 	// extracted (art/chars/<name>_m.p3d). Placing one already there moves them.
 	void PlaceNpc(const std::string& name, const Vector3& position);
 	void ClearNpcs();
+	// The interior the player is in ("KwikEMart"), empty outdoors.
+	const std::string& GetInterior() const { return _interior; }
+	// Whether there is an interior behind the door of that name to go into.
+	bool CanEnterInterior(const std::string& name) const;
 	// The player's car damage meter, 100 when whole (the HUD's "CAR" bar).
 	float GetCarHealth() const { return _health; }
 	void AddShake(float amount) { _shakeAmount = std::max(_shakeAmount, amount); }
@@ -184,6 +189,18 @@ private:
 	// The game's phrase table, in the language --language picks (E by default).
 	TextBible _textBible;
 	std::map<std::string, std::unique_ptr<Character>> _npcs;
+
+	// Interiors. A door's trigger (a type 7 locator, carrying the interior's
+	// name) takes the player on foot inside; the interior's exit brings them
+	// back out in front of the door.
+	std::string _interior;
+	Level::Interior _interiorLayout;
+	Vector3 _interiorReturn;
+	// The exit only works once the player has stepped away from it: they come
+	// in standing next to it.
+	bool _interiorExitArmed = false;
+	void enterInterior(const Level::Trigger& door);
+	void updateInterior();
 	char _language = 'E';
 	// Tears down whatever mission is running and starts story mission `index`.
 	void startStoryMission(int index);

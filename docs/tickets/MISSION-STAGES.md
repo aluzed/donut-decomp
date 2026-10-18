@@ -37,7 +37,7 @@ Two commands made it worse:
   | objective | met when |
   |---|---|
   | `goto` | the player reaches `SetDestination`'s locator, as a one-checkpoint lap |
-  | `interior` | the same, at the interior's entrance locator (`<name>Entry`). Interiors are not loaded |
+  | `interior` | the player goes in through the door, on foot (GAME-014); the entrance is the HUD marker. A door with no interior behind it completes on arrival |
   | `race` | the player completes the laps (an opponent finishing first fails the mission) |
   | `getin` | the player is in a car |
   | `talkto` | the player comes within 4m of `SetTalkToTarget`'s NPC, where `AddNPC` put them |
@@ -47,7 +47,8 @@ Two commands made it worse:
   | `follow` | the target car, driven along the stage waypoints like a one-lap race, reaches the end. The `followdistance` condition (`SetFollowDistances`) fails the stage if the player falls further behind than its maximum |
   | `destroy` | the target car, fleeing along the stage waypoints, is rammed to 0 health. There is no car damage model, so a hit is judged from the gap: touching (under 5m) while closing faster than 4 m/s costs 3 points per m/s. The target reaching the end of its route has got away, and fails the stage |
   | `dump` | every item has been knocked out of the target vehicle (one per ram, dropped where it is) and picked up. The items' locators are placeholders 110m underground, so they are only names |
-  | `gooutside`, `fmv`, `buycar` | at once: there is no interior, movie or showroom to hold the player |
+  | `gooutside` | the player comes back out of the interior |
+  | `fmv`, `buycar` | at once: there is no movie or showroom to hold the player |
   | anything else | at once, with a warning, so it does not block the mission |
 
   When the last stage's objective is met, the mission is complete.
@@ -139,7 +140,7 @@ A completed mission still reloads from the top.
 
 ## Not done
 
-- NPCs as characters in the world (they are positions only), dialogue, interiors.
+- Dialogue. NPCs stand idle where placed, and only those whose model was extracted.
 - A target "getting away" in `destroy` has not been exercised:
   it goes through the same path as a `follow` target arriving, which has.
   The `coins` fee is waived until there is a coin purse.

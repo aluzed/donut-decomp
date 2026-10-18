@@ -339,10 +339,14 @@ void ScriptEngine::updateObjective(double dt)
 		Log::Info("ScriptEngine: coin fee of {} waived, there is no coin purse yet", _coinFee);
 		objectiveComplete();
 	}
-	else if (_objectiveType == "gooutside" || _objectiveType == "fmv" || _objectiveType == "buycar")
+	else if (_objectiveType == "gooutside")
 	{
-		// Nothing holds the player here: there are no interiors to be inside,
-		// no movies to sit through and no showroom.
+		if (_game.GetInterior().empty())
+			objectiveComplete();
+	}
+	else if (_objectiveType == "fmv" || _objectiveType == "buycar")
+	{
+		// Nothing holds the player here: no movies to sit through, no showroom.
 		objectiveComplete();
 	}
 	else if (_objectiveType == "timer")
@@ -402,8 +406,12 @@ void ScriptEngine::SetDestination(const std::string& locator, const std::string&
 	// An interior is reached through its entrance, whose locator carries the
 	// interior's name: SpringfieldElementary -> SpringfieldElementaryEntry.
 	Vector3 pos = _game.GetLevel().GetLocatorPosition(locator);
-	if (pos == Vector3::Zero && _objectiveType == "interior")
-		pos = _game.GetLevel().GetLocatorPosition(locator + "Entry");
+	if (_objectiveType == "interior")
+	{
+		_interiorTarget = locator;
+		if (pos == Vector3::Zero)
+			pos = _game.GetLevel().GetLocatorPosition(locator + "Entry");
+	}
 	if (pos == Vector3::Zero)
 	{
 		Log::Warn("ScriptEngine: destination '{}' not found", locator);
@@ -1339,6 +1347,13 @@ void ScriptEngine::NoTrafficForStage()
 	Log::Info("ScriptEngine: no traffic for this stage");
 }
 
+void ScriptEngine::OnInteriorChanged(const std::string& interior)
+{
+	_playerInterior = interior;
+	if (_objectiveType == "interior" && !interior.empty() && interior == _interiorTarget)
+		objectiveComplete();
+}
+
 void ScriptEngine::SetRaceLaps(int laps)
 {
 	if (laps < 1)
@@ -1536,6 +1551,13 @@ void ScriptEngine::LoadGameState()
 
 void ScriptEngine::AdvanceCheckpoint()
 {
+	// An interior's door is only a marker: the objective is met by going in
+	// (OnInteriorChanged), on foot. Reaching it used to complete it from the
+	// car, and the stage after -- talking to Lisa, inside -- was out of reach.
+	// Only a door with nothing behind it completes on arrival.
+	if (_objectiveType == "interior" && _game.CanEnterInterior(_interiorTarget))
+		return;
+
 	if (_currentCheckpoint < static_cast<int>(_checkpoints.size()))
 	{
 		_currentCheckpoint++;

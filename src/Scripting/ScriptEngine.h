@@ -180,6 +180,8 @@ public:
 	std::string GetObjectiveTargetLabel() const;
 	// A trigger volume the player has just entered or left (Level::UpdateTriggers).
 	void OnTrigger(const Level::Trigger& trigger, bool entered);
+	// The player has gone into an interior, or (empty) come back out.
+	void OnInteriorChanged(const std::string& interior);
 	// SetStageAIRaceCatchupParams(vehicle, distance, ahead, level, behind). The
 	// game's own race scripts pass e.g. (80, 0.6, 1.0, 2.0): read as a distance in
 	// metres and the speed factor with the AI that far ahead, level, and that far
@@ -264,6 +266,9 @@ private:
 	float _objectiveElapsed = 0.0f;
 	float _objectiveDuration = 0.0f;
 	bool _announceStageComplete = false;
+	// The interior an "interior" objective asks the player into.
+	std::string _interiorTarget;
+	std::string _playerInterior;
 	std::size_t _resetStage = 0;
 	bool _clockCountsUp = false;
 	float _parTime = 0.0f;

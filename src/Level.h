@@ -106,6 +106,24 @@ public:
 	// The heading a car-start locator faces, in radians about +Y (0 faces +Z,
 	// pi/2 faces +X). False for a locator that carries none.
 	bool GetLocatorHeading(const std::string& name, float& heading) const;
+
+	// An interior, as its own P3D file lays it out, somewhere under the map:
+	// where the player appears on coming in, and the spot that takes them back
+	// out. Interiors share locator names (every one has an InteriorEntryStart),
+	// so these are read per file rather than from the level-wide table.
+	struct Interior
+	{
+		Vector3 entry;
+		Vector3 exit;
+		// The room's middle (InteriorOrigin), to face on coming in.
+		Vector3 origin;
+	};
+	// By file name ("l1i01.p3d"); false when that file holds no interior.
+	bool GetInterior(const std::string& file, Interior& interior) const;
+	// Draw only what `file` loaded (an interior, while the player is in it), or
+	// everything again when empty. Inside, the rest of the level is the town
+	// overhead, seen from underneath.
+	void SetDrawOnly(const std::string& file) { _drawOnly = file; }
 	const std::vector<Path>& GetPaths() const { return _paths; }
 
 	// Named camera/animation splines. Spline chunks are nested inside the level
@@ -169,6 +187,19 @@ private:
 	std::set<std::string> _loadedP3Ds;
 	std::map<std::string, Vector3> _locators;
 	std::map<std::string, float> _locatorHeadings;
+	std::map<std::string, Interior> _interiors;
+
+	// What each file put in the draw lists, as [begin, end) index ranges, so a
+	// single file can be drawn on its own.
+	struct DrawRange
+	{
+		std::size_t entities[2];
+		std::size_t instances[2];
+		std::size_t composites[2];
+		std::size_t billboards[2];
+	};
+	std::map<std::string, DrawRange> _drawRanges;
+	std::string _drawOnly;
 };
 
 } // namespace Donut

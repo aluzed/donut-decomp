@@ -219,6 +219,10 @@ Game::Game(int argc, char** argv)
 	_level->LoadP3D("l1z4.p3d");
 	_level->LoadP3D("l1z6.p3d");
 	_level->LoadP3D("l1z7.p3d");
+	// Level 1's interiors live under the map (x ~ 500, y = -20); the doors take
+	// the player down to them.
+	for (const char* interior : {"l1i00.p3d", "l1i01.p3d", "l1i02.p3d"})
+		_level->LoadP3D(interior);
 
 	_level->DynaLoadData("l1z1.p3d;l1r1.p3d;l1r7.p3d;");
 	_pathGraph = std::make_unique<PathGraph>(*_level, *_worldPhysics);
@@ -399,6 +403,11 @@ void Game::LockMouse(bool lockMouse)
 
 void Game::runMissionScript()
 {
+	// A mission starts outdoors, wherever the last one left the player.
+	_interior.clear();
+	if (_level)
+		_level->SetDrawOnly({});
+
 	// The game splits each mission in two: <id>l.mfk loads its files and cars,
 	// <id>i.mfk sets it up. Given the set-up script, run the loader first.
 	const std::string suffix = "i.mfk";
@@ -510,6 +519,16 @@ void Game::runAutopilot(double dt)
 		return;
 	}
 
+	// Doors are walked through, not driven into.
+	if (objective == "interior" && _inVehicle && _activeVehicle)
+	{
+		Log::Info("Game: autopilot gets out of '{}'", _activeVehicle->GetName());
+		_inVehicle = false;
+		SetPlayerPosition(_activeVehicle->GetPosition() + Vector3(3.0f, 0.0f, 0.0f));
+		_activeVehicle = nullptr;
+		return;
+	}
+
 	Vector3 target;
 	if (!_scriptEngine->GetObjectiveTarget(target))
 		return;
@@ -518,6 +537,85 @@ void Game::runAutopilot(double dt)
 		_activeVehicle->Teleport(target, _activeVehicle->GetRotation());
 	else
 		SetPlayerPosition(target + Vector3(0.0f, 1.0f, 0.0f));
+}
+
+namespace
+{
+// Which file holds which interior is not in the data: the files name their
+// locators after it (int_ele_*, int_kwik_*, int_sh_*), and that is what this
+// table follows.
+const std::map<std::string, std::string>& level1Interiors()
+{
+	static const std::map<std::string, std::string> kInteriors {
+	    {"SpringfieldElementary", "l1i00.p3d"},
+	    {"KwikEMart", "l1i01.p3d"},
+	    {"SimpsonsHouse", "l1i02.p3d"},
+	};
+	return kInteriors;
+}
+} // namespace
+
+bool Game::CanEnterInterior(const std::string& name) const
+{
+	Level::Interior layout;
+	const auto file = level1Interiors().find(name);
+	return file != level1Interiors().end() && _level->GetInterior(file->second, layout);
+}
+
+void Game::enterInterior(const Level::Trigger& door)
+{
+	// On foot only, as in the game: a car does not go through a front door.
+	if (_inVehicle || !_interior.empty() || !_character)
+		return;
+
+	const auto file = level1Interiors().find(door.data);
+	if (file == level1Interiors().end() || !_level->GetInterior(file->second, _interiorLayout))
+	{
+		Log::Warn("Game: no interior loaded for door '{}' ({})", door.locator, door.data);
+		return;
+	}
+
+	// Come back out a few metres in front of the door, clear of its trigger, or
+	// stepping out would walk straight back in.
+	Vector3 away = _character->GetPosition() - door.position;
+	away.Y = 0.0f;
+	if (away.LengthSquared() < 0.01f)
+		away = Vector3(0.0f, 0.0f, 1.0f);
+	away.Normalize();
+	_interiorReturn = door.position + away * 4.0f;
+
+	_interior = door.data;
+	_interiorExitArmed = false;
+	Log::Info("Game: player goes into '{}'", _interior);
+	SetPlayerPosition(_interiorLayout.entry);
+	// Facing into the room: the camera kept the heading from outside, which
+	// for the school looked back out through the door at nothing.
+	const Vector3 inward = _interiorLayout.origin - _interiorLayout.entry;
+	if (inward.X * inward.X + inward.Z * inward.Z > 0.01f)
+		_camYaw = std::atan2(inward.X, inward.Z);
+	_level->SetDrawOnly(file->second);
+	_scriptEngine->OnInteriorChanged(_interior);
+}
+
+void Game::updateInterior()
+{
+	if (_interior.empty() || !_character)
+		return;
+
+	const float toExit = (_character->GetPosition() - _interiorLayout.exit).Length();
+	if (!_interiorExitArmed)
+	{
+		_interiorExitArmed = toExit > 2.5f;
+		return;
+	}
+	if (toExit > 1.5f)
+		return;
+
+	Log::Info("Game: player comes out of '{}'", _interior);
+	_interior.clear();
+	_level->SetDrawOnly({});
+	SetPlayerPosition(_interiorReturn);
+	_scriptEngine->OnInteriorChanged(_interior);
 }
 
 void Game::PlaceNpc(const std::string& name, const Vector3& position)
@@ -1004,6 +1102,8 @@ void Game::Run()
 				// top: losing m2's twelfth stage used to mean driving the first
 				// eleven again.
 				// A story mission won leads on to the next one.
+				_interior.clear();
+				_level->SetDrawOnly({});
 				if (!failed && _storyIndex >= 0 && _storyIndex + 1 < static_cast<int>(_story.size()))
 					startStoryMission(_storyIndex + 1);
 				else if (!failed || !_scriptEngine->RetryFromCheckpoint())
@@ -1121,7 +1221,12 @@ void Game::Run()
 			const Vector3 playerPos = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()
 			                                                       : _character->GetPosition();
 			for (const auto& event : _level->UpdateTriggers(playerPos))
+			{
 				_scriptEngine->OnTrigger(*event.trigger, event.entered);
+				if (event.entered && event.trigger->type == Level::LocatorType::InteriorEntrance)
+					enterInterior(*event.trigger);
+			}
+			updateInterior();
 			static double pedSpawnTimer = 0.0;
 			pedSpawnTimer += deltaTime;
 			if (pedSpawnTimer > 0.5)
