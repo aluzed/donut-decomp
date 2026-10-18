@@ -30,7 +30,9 @@ class WorldSphere
 public:
 	WorldSphere(const P3D::WorldSphere&);
 
-	void Draw(GL::ShaderProgram&, const Matrix4x4& viewProj, bool opaque) const;
+	// Its meshes with `shader`, its billboards (clouds, the sun's halo) with
+	// `billboardShader`, whose vertex layout they have.
+	void Draw(GL::ShaderProgram& shader, GL::ShaderProgram& billboardShader, const Matrix4x4& viewProj, bool opaque) const;
 	void Update(double deltatime);
 
 private:

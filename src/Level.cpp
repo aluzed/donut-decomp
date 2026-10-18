@@ -928,9 +928,9 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 	if (_worldSphere != nullptr)
 	{
 		glDisable(GL_BLEND);
-		_worldSphere->Draw(*_worldShader, viewProj, true);
+		_worldSphere->Draw(*_worldShader, *_billboardBatchShader, viewProj, true);
 		glEnable(GL_BLEND);
-		_worldSphere->Draw(*_worldShader, viewProj, false);
+		_worldSphere->Draw(*_worldShader, *_billboardBatchShader, viewProj, false);
 	}
 
 	glDisable(GL_BLEND);

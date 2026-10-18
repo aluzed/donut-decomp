@@ -71,7 +71,8 @@ WorldSphere::WorldSphere(const P3D::WorldSphere& worldSphere): _name(worldSphere
 	// Lens Flare
 }
 
-void WorldSphere::Draw(GL::ShaderProgram& shader, const Matrix4x4& viewProj, bool opaque) const
+void WorldSphere::Draw(GL::ShaderProgram& shader, GL::ShaderProgram& billboardShader, const Matrix4x4& viewProj,
+                       bool opaque) const
 {
 	for (auto const& prop : _props)
 	{
@@ -80,10 +81,15 @@ void WorldSphere::Draw(GL::ShaderProgram& shader, const Matrix4x4& viewProj, boo
 		prop.mesh->Draw(shader, opaque);
 	}
 
-	for (auto const& billboard : _billboardBatches)
-		billboard->Draw(shader, opaque);
-
 	shader.SetUniformValue("viewProj", viewProj);
+
+	// Drawn with the world's shader, whose vertex layout is not theirs, they
+	// were scattered translucent panels across the sky.
+	billboardShader.Bind();
+	billboardShader.SetUniformValue("viewProj", viewProj);
+	for (auto const& billboard : _billboardBatches)
+		billboard->Draw(billboardShader, opaque);
+	shader.Bind();
 }
 
 void WorldSphere::Update(double deltatime)

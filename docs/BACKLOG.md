@@ -114,7 +114,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 |---|---|---|---|---|
 | RENDER-006 | 🟡 | P1 | AnimObjectWrapper: fill `_shaders`/`_textures` | `Render/CompositeModel.h`: still empty; drawing goes through the ResourceManager by name |
 | RENDER-007 | ⬜ | P2 | `CompositeDrawable` methods | declared only |
-| RENDER-011 | ⬜ | P2 | WorldSphere billboards (lens flare, sun halo) | commented out in `WorldSphere.cpp` |
+| RENDER-011 | 🟡 | P2 | WorldSphere billboards (lens flare, sun halo) | Drawn with the billboard program, not the world's (whose vertex layout is not theirs): the sun's warm halo shows (2026-10-19). The sky's meshes still look like scattered pale panels, with or without their animation; lens flares not done |
 | RENDER-014 | ⬜ | P2 | Multi-UV (channel 1 = lightmap) | needed by RENDER-015 |
 | RENDER-015 | ⬜ | P2 | Lightmaps, static lighting | after RENDER-014 |
 | RENDER-008 | 🧩 | P2 | LOD and spatial culling | § C.3 |
