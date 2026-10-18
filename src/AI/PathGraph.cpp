@@ -3,8 +3,10 @@
 #include "AI/PathGraph.h"
 #include "Core/Log.h"
 #include "Level.h"
+#include "Physics/WorldPhysics.h"
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <map>
 #include <queue>
@@ -17,10 +19,18 @@ namespace
 // road chain has a node every ~8m, so a loop that runs beside a road has one
 // within a few metres; 30m only bridges the gap where a loop leaves the road.
 constexpr float kRoadSnapDistance = 30.0f;
+
+// How far a road node may be moved up or down onto the surface. A slab node is
+// the centroid of a flat quad, and a road is not flat: over the crest of a hill
+// a 72m slab's centroid sits on the chord, 1.7m under the tarmac on M1race.
+// Large enough to cover that, small enough that the probe never reaches an
+// overpass above or a street below -- neither is closer than a deck's
+// clearance, which is well over this.
+constexpr float kSurfaceSearch = 3.0f;
 } // namespace
 
 
-PathGraph::PathGraph(const Level& level)
+PathGraph::PathGraph(const Level& level, const WorldPhysics& physics)
 {
 	const auto& paths = level.GetPaths();
 
@@ -91,6 +101,27 @@ PathGraph::PathGraph(const Level& level)
 	// drove the first one straight into the side of a building.
 	int roadEdges = 0, segmentNodes = 0, bareRoads = 0, longLinks = 0, longEndLinks = 0;
 	float longestLink = 0.0f;
+
+	// The road data places each node on a flat idealisation of the road; the car
+	// drives on the collision mesh. Where they disagree the node is the one that
+	// is wrong -- and a buried node is not harmless, because a stuck opponent is
+	// put back *on* a waypoint, which then puts it inside the road.
+	int snapped = 0, unsnapped = 0;
+	float largestShift = 0.0f;
+	const auto snapToSurface = [&](Vector3& position) {
+		float surfaceY = 0.0f;
+		if (!physics.FindGroundHeight(position, kSurfaceSearch, kSurfaceSearch, surfaceY))
+		{
+			++unsnapped;
+			return;
+		}
+		largestShift = std::max(largestShift, std::abs(surfaceY - position.Y));
+		position.Y = surfaceY;
+		++snapped;
+	};
+	for (const auto& [name, index] : intersectionNodes)
+		snapToSurface(_nodes[index].position);
+
 	const auto link = [&](int a, int b, bool junctionEnd) {
 		_nodes[a].neighbors.push_back(b);
 		_nodes[b].neighbors.push_back(a);
@@ -151,6 +182,8 @@ PathGraph::PathGraph(const Level& level)
 		{
 			Node node;
 			node.position = point;
+			node.shortcut = road.shortcut;
+			snapToSurface(node.position);
 			const int index = static_cast<int>(_nodes.size());
 			_nodes.push_back(node);
 			++segmentNodes;
@@ -195,6 +228,9 @@ PathGraph::PathGraph(const Level& level)
 	// the line between them still runs down the road.
 	Log::Info("PathGraph: {} links longer than 25m ({} of them onto a junction or a stitched path node), longest {:.0f}m",
 	          longLinks, longEndLinks, longestLink);
+	Log::Info("PathGraph: {} road nodes dropped onto the road surface, moved by up to {:.1f}m; {} found none within "
+	          "{:.0f}m and kept the road data's height",
+	          snapped, largestShift, unsnapped, kSurfaceSearch);
 	if (level.GetUnresolvedRoadTiles() > 0)
 		Log::Warn("PathGraph: {} road segments name a RoadDataSegment that never loaded", level.GetUnresolvedRoadTiles());
 	if (bareRoads > 0)
@@ -349,6 +385,9 @@ int PathGraph::FindNearestRoadNode(const Vector3& position) const
 	float bestDist = 1e10f;
 	for (size_t i = _firstRoadNode; i < _nodes.size(); ++i)
 	{
+		// FindRoute will not leave a shortcut node, so never start or end on one.
+		if (_nodes[i].shortcut)
+			continue;
 		const float d = (_nodes[i].position - position).LengthSquared();
 		if (d < bestDist)
 		{
@@ -416,7 +455,7 @@ std::vector<Vector3> PathGraph::FindRoute(const Vector3& from, const Vector3& to
 
 		for (int n : _nodes[current].neighbors)
 		{
-			if (!IsRoadNode(n))
+			if (!IsRoadNode(n) || _nodes[n].shortcut)
 				continue;
 
 			const float step = (_nodes[current].position - _nodes[n].position).Length();

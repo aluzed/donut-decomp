@@ -10,6 +10,7 @@ namespace Donut
 {
 
 class Level;
+class WorldPhysics;
 
 class PathGraph
 {
@@ -18,9 +19,14 @@ public:
 	{
 		Vector3 position;
 		std::vector<int> neighbors;
+		// Part of a shortcut road (see Level::RoadLink). FindRoute does not
+		// travel these.
+		bool shortcut = false;
 	};
 
-	PathGraph(const Level& level);
+	// `physics` must already hold the level's collision: road nodes are dropped
+	// onto the surface they describe (see snapToSurface in the .cpp).
+	PathGraph(const Level& level, const WorldPhysics& physics);
 
 	const std::vector<Node>& GetNodes() const { return _nodes; }
 
@@ -36,6 +42,9 @@ public:
 	// verges, and A* took them as shortcuts because they are closer together than
 	// road tiles, which put the race line into a wall. Traffic still steers by the
 	// whole graph through GetNextNode.
+	//
+	// Shortcut roads are left out for the same reason: they cut through car parks,
+	// over kerbs and down retaining walls.
 	std::vector<Vector3> FindRoute(const Vector3& from, const Vector3& to) const;
 	int FindNearestNode(const Vector3& position) const;
 	int FindNearestRoadNode(const Vector3& position) const;

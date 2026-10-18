@@ -240,22 +240,50 @@ et une poursuite pure qui vise 16 m devant coupe les virages. Remise en piste, l
 voiture atteint ensuite le waypoint 116 sur 126.
 
 
-Le premier est le plus instructif : un nœud de dalle dont le Y place la ligne médiane sous la
-surface roulante. C'est très probablement le même défaut que celui déjà soupçonné dans
-AI-RACE (« sur la route et à moitié enfoncée dedans »), et il touche le placement des
-`RoadSegment`, pas le routage.
+## The two route defects were a centroid and two car parks (2026-10-18)
 
-Deux pistes, dans cet ordre :
+Both remaining static defects are fixed; the circuit now validates end to end.
 
-1. **Valider chaque tronçon du circuit contre le sol au moment où il est composé** — un
-   raycast vers le bas à chaque point, et un raycast horizontal à hauteur de pare-chocs entre
-   deux points consécutifs. Cela transforme « l'IA se coince quelque part » en une liste de
-   points fautifs, ce qui est le diagnostic dont la suite a besoin.
-2. **Recaler le Y des nœuds de dalle sur la surface roulante** plutôt que sur le centroïde du
-   quadrilatère, qui n'est la bonne hauteur que si la dalle est plate et à l'endroit.
+**Slab nodes now sit on the surface.** A slab node is the centroid of a flat quad, and the
+road is not flat. Point 17 sits on `z2pCubeShape88`, a single slab 72m long and 4.4m wide.
+It is planar from y=4.23 to y=2.64, while the tarmac over it humps up to 5.37: the
+centroid is on the chord, 1.7m under the crest. A vertical scan found **one** surface
+above the point and nothing else, so this is not an overpass. `PathGraph` now drops every
+road node (junctions and slab nodes) onto the collision surface within ±3m:
+1006 nodes moved by up to 2.7m; 4 found nothing within 3m and kept the road data's height.
+This also explains the AI-RACE observation of the car "on the road and half sunk into it":
+a stuck opponent is put back *on* a waypoint, and that waypoint was inside the road.
 
-`RaceOpponent` sait contourner ces trois endroits (voir AI-RACE), ce qui permet de mesurer le
-reste, mais un tour « bouclé » l'est donc avec des tronçons sautés.
+**The route crossed two car parks.** With every node on the surface, two blocks remained.
+The scan identified the collision object, and a top-down screenshot showed each place:
+
+| place | object hit | what it is |
+|---|---|---|
+| leg 17->18, z=-338 | `Box` from `krustyBurgerShape` (l1z2), 47.8 x 2 x 0.3m | the fence closing a car park, running across the 4.4m lane the route took |
+| legs 56->57 / 69->70 | terrain trimesh, rising 1.8 -> 4.5m then dropping to 1.3m | a raised car park ending in a brick retaining wall |
+
+The box is not mis-oriented. Its axes and extents match the convention of its fifteen
+sibling boxes, and it meets the short return at x=241 at a corner. Those boxes outline
+the enclosure.
+
+Both places lie on **shortcut roads**. The `Road` chunk's byte the codegen calls `noReset` is
+set on exactly 16 of L1's 99 roads, and these are the ones with `maxCars = 0` and a non-zero
+byte before it (15-23; 0 on every street). That byte layout is a shortcut with a difficulty
+value. `Level::RoadLink::shortcut` now carries it, and `FindRoute` /
+`FindNearestRoadNode` skip shortcut nodes. The shortcut roads stay in the graph, so traffic
+and connectivity are unchanged.
+
+Result on M1race: **186 points, 1861m, mean gap 10m, longest 29m** (was 126 points, 1621m,
+longest 46m), and `validateCircuit` reports no hole, no buried point, no wall.
+
+Measured over a full 140s run, the opponent no longer wedges anywhere along the route. It
+reaches waypoint 177 of 186 before the 120s stage timer restarts the mission; the circuit is
+15% longer. What remains is driving, not routing (AI-RACE):
+
+- the known fall off the embankment before waypoint 5 (twice: once per mission start);
+- a 12s stall at waypoint 96, the U-turn at the far race node (`race_finish`,
+  (10.5, 0.5, -623.8)): the car swings wide into a wall at x=14.5 (normal -X) and is
+  eventually skipped past it. The route is an out-and-back, so it turns 180 degrees there.
 
 ## Critères d'acceptation
 - [x] Un `PathFollower` autonome existe et ne dépend que de `PathGraph` + état d'agent.
@@ -264,6 +292,7 @@ reste, mais un tour « bouclé » l'est donc avec des tronçons sautés.
 - [x] Le contrôleur est réutilisable par un autre agent — `RaceOpponent` l'utilise (AI-RACE).
 - [x] Le graphe est connexe (1 composante, 100 % des nœuds) et suit la forme des routes
       (pas moyen 13 m contre 51 m), et le réseau routier l'est aussi à lui seul.
-- [ ] Un itinéraire composé est roulable de bout en bout — **non** : trois endroits
-      traversent la géométrie ou le vide (voir ci-dessus).
+- [x] Un itinéraire composé est roulable de bout en bout — `validateCircuit` passes on
+      M1race once nodes are dropped onto the surface and shortcut roads are not routed
+      (2026-10-18, see above).
 - [ ] Aucun lien du réseau routier ne dépasse la largeur d'une rue — **95 dépassent 25 m**.

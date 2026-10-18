@@ -255,7 +255,13 @@ void Level::LoadP3D(const std::string& filename)
 				                    centre.X * t[0][2] + centre.Y * t[1][2] + centre.Z * t[2][2] + t[3][2]);
 			}
 
-			_roads.push_back(RoadLink {road->GetStartIntersection(), road->GetEndIntersection(), std::move(points)});
+			// The codegen calls the flag byte `noReset`, but on L1 it is set on
+			// exactly the 16 roads that carry no cars and a non-zero difficulty
+			// byte (15-23, where streets have 0) -- the layout of a shortcut. The
+			// other 83 have it clear.
+			const bool shortcut = road->GetNoReset() != 0;
+			_roads.push_back(
+			    RoadLink {road->GetStartIntersection(), road->GetEndIntersection(), std::move(points), shortcut});
 
 			break;
 		}

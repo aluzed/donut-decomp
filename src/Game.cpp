@@ -206,7 +206,7 @@ Game::Game(int argc, char** argv)
 	_level->LoadP3D("l1z7.p3d");
 
 	_level->DynaLoadData("l1z1.p3d;l1r1.p3d;l1r7.p3d;");
-	_pathGraph = std::make_unique<PathGraph>(*_level);
+	_pathGraph = std::make_unique<PathGraph>(*_level, *_worldPhysics);
 	_trafficManager = std::make_unique<TrafficManager>(*_level, *_lineRenderer, *_pathGraph);
 	_pedestrianManager = std::make_unique<PedestrianManager>(*_worldPhysics);
 	_collectibleManager = std::make_unique<CollectibleManager>(*_level, *_lineRenderer);

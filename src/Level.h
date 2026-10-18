@@ -74,11 +74,16 @@ public:
 	// chain of RoadSegment children, one every ~8m, whose transforms trace the
 	// road's actual shape. Without them a route between two junctions 118m apart
 	// is a straight line through whatever buildings stand in the way.
+	//
+	// Some roads are shortcuts: cuts through car parks and forecourts, which carry
+	// no traffic and come with a difficulty value. They are not streets -- the two on M1race's route cross a raised car park
+	// that ends in a 3m retaining wall, and a car park closed off by a fence.
 	struct RoadLink
 	{
 		std::string start;
 		std::string end;
 		std::vector<Vector3> points;
+		bool shortcut = false;
 	};
 	const std::map<std::string, Vector3>& GetIntersections() const { return _intersections; }
 	const std::vector<RoadLink>& GetRoads() const { return _roads; }

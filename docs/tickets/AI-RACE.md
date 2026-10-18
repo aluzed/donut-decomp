@@ -349,6 +349,14 @@ L'adversaire les contourne — 2 sauts de waypoints par tour, plus les remises a
 c'est ce qui permet enfin de mesurer le reste. Mais tant qu'ils sont là, le tour est bouclé
 avec des tronçons sautés, et **la vraie correction est côté tracé** : voir AI-PATH.
 
+> **Update 2026-10-18:** the route defects listed above are gone (AI-PATH). Waypoints 18-19
+> were a slab centroid 1.7m under a hump plus a car-park fence, and 57-70 a raised car park.
+> Both lay on shortcut roads, which are no longer routed. On the new 186-point circuit the
+> opponent does not wedge on the route. Two driving defects remain: the fall before
+> waypoint 5, and a 12s stall at the U-turn at waypoint 96, where it swings wide into a
+> wall. `kEngineAcceleration` can now be revisited, since the time limit is now what stops
+> the lap (177/186 at 120s on a lap 15% longer).
+
 ### La force moteur n'est plus bloquée par l'IA, mais reste à 0,83
 
 | `kEngineAcceleration` | waypoint atteint | tour bouclé |
