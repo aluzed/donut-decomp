@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Math/Vector3.h"
+#include <set>
 #include <string>
 #include <vector>
 
@@ -65,7 +66,10 @@ private:
 	std::vector<Card> _cards;
 	void loadCards();
 	void saveCards() const;
-	Mesh* _coinModel = nullptr; // the coin model, once committed
+	// The resource manager's geometry `name`, committed on first use; null when
+	// it is not loaded.
+	Mesh* committed(const std::string& name);
+	std::set<Mesh*> _committed;
 };
 
 } // namespace Donut

@@ -226,6 +226,29 @@ Game::Game(int argc, char** argv)
 		_level->LoadP3D(interior);
 	// The mission art shared by the whole level: the coin, among others.
 	_level->LoadP3D("missions/level01/level.p3d");
+	// The collector card's model, from the shared card art. Only its geometry,
+	// shaders and textures: the rest is the pick-up effect's billboards and
+	// particles, which nothing here plays.
+	if (FileSystem::exists("./art/cards.p3d"))
+	{
+		const P3D::P3DFile cards("./art/cards.p3d");
+		for (const auto& chunk : cards.GetRoot().GetChildren())
+		{
+			switch (chunk->GetType())
+			{
+			case P3D::ChunkType::Shader: _resourceManager->LoadShader(*P3D::Shader::Load(*chunk)); break;
+			case P3D::ChunkType::Texture: _resourceManager->LoadTexture(*P3D::Texture::Load(*chunk)); break;
+			case P3D::ChunkType::Geometry:
+			{
+				const auto geometry = P3D::Geometry::Load(*chunk);
+				Log::Info("Game: card model '{}'", geometry->GetName());
+				_resourceManager->LoadGeometry(*geometry);
+				break;
+			}
+			default: break;
+			}
+		}
+	}
 
 	_level->DynaLoadData("l1z1.p3d;l1r1.p3d;l1r7.p3d;");
 	_pathGraph = std::make_unique<PathGraph>(*_level, *_worldPhysics);

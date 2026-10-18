@@ -65,7 +65,10 @@ Walking (or driving) within 3m of one finds it for good: found cards are written
 `--autopilot` finds nothing. Verified by standing on `card11`: found, 1/7, and still found
 (and gone) on the next run.
 
-A card is a billboard group in `cards.p3d` (`card11_bb1Shape`, `card_collect`...) which is
-not drawn yet; a turning blue frame marks it meanwhile.
+A card is drawn, turning, with the one card geometry in `cards.p3d` (`card11_geoShapeh`),
+whose shaders, textures and geometries are loaded at start-up; the rest of that file is the
+pick-up effect (billboards, particles), not played. Without the file, a blue frame marks the
+card. Not confirmed on screen yet: `card11`, the one looked for, stands 3m up, in Bart's
+treehouse, out of the chase camera's sight.
 
 Gags are still to do.

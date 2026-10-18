@@ -141,24 +141,32 @@ void CollectibleManager::Update(const Vector3& playerPos, float collectRadius)
 
 void CollectibleManager::Draw(GL::ShaderProgram& worldShader, const Matrix4x4& viewProj, float time)
 {
-	// A card is a billboard group in cards.p3d, which nothing here draws yet:
-	// a turning blue frame marks it.
+	// The card turns where it stands, as the game's does; a blue frame marks it
+	// when its model (cards.p3d) is not there.
 	const Quaternion cardSpin = Quaternion::MakeFromEuler(Vector3(0.0f, time * 2.0f, 0.0f));
-	for (const auto& card : _cards)
-		if (!card.found)
-			_lineRenderer.DrawBox(card.position, cardSpin, Vector3(-0.3f, -0.45f, -0.02f), Vector3(0.3f, 0.45f, 0.02f),
-			                      Vector4(0.4f, 0.7f, 1.0f, 1.0f));
+	if (Mesh* card = committed("card11_geoShapeh"))
+	{
+		worldShader.Bind();
+		for (const bool opaque : {true, false})
+			for (const auto& c : _cards)
+			{
+				if (c.found)
+					continue;
+				worldShader.SetUniformValue("viewProj", viewProj * Matrix4x4::MakeTranslate(c.position) * Matrix4x4(cardSpin));
+				card->Draw(worldShader, opaque);
+			}
+	}
+	else
+	{
+		for (const auto& c : _cards)
+			if (!c.found)
+				_lineRenderer.DrawBox(c.position, cardSpin, Vector3(-0.3f, -0.45f, -0.02f), Vector3(0.3f, 0.45f, 0.02f),
+				                      Vector4(0.4f, 0.7f, 1.0f, 1.0f));
+	}
 
 	// SetCoinDrawable names it in every level script; it lives in the mission
 	// art's level.p3d.
-	Mesh* coin = Game::GetInstance().GetResourceManager().GetGeometry("coinShape_000");
-	if (coin && coin != _coinModel)
-	{
-		// A geometry is only uploaded when it is first drawn.
-		coin->Commit();
-		_coinModel = coin;
-	}
-	if (coin)
+	if (Mesh* coin = committed("coinShape_000"))
 	{
 		const Matrix4x4 spin(Quaternion::MakeFromEuler(Vector3(0.0f, time * 3.0f, 0.0f)));
 		worldShader.Bind();
@@ -186,6 +194,16 @@ void CollectibleManager::Draw(GL::ShaderProgram& worldShader, const Matrix4x4& v
 			Vector3(0.2f, 0.2f, 0.2f),
 			Vector4(1.0f, 0.84f, 0.0f, 1.0f));
 	}
+}
+
+Mesh* CollectibleManager::committed(const std::string& name)
+{
+	// A geometry is only uploaded when it is first drawn: Mesh::Draw on one never
+	// committed binds a null vertex binding.
+	Mesh* mesh = Game::GetInstance().GetResourceManager().GetGeometry(name);
+	if (mesh && _committed.insert(mesh).second)
+		mesh->Commit();
+	return mesh;
 }
 
 void CollectibleManager::Reset()
