@@ -585,6 +585,16 @@ std::string ScriptEngine::GetFailureHint() const
 	return _failureHint.empty() ? std::string() : _game.GetTextBible().Get(_failureHint);
 }
 
+std::string ScriptEngine::GetFailureReason() const
+{
+	// Each hint is filed under its failure: MISSION_FAILED_TIME_OUT_HINT1 is
+	// advice on MISSION_FAILED_TIME_OUT.
+	const std::size_t hint = _failureHint.rfind("_HINT");
+	if (hint == std::string::npos)
+		return {};
+	return _game.GetTextBible().Get(_failureHint.substr(0, hint));
+}
+
 std::string ScriptEngine::GetMissionTitle(bool info) const
 {
 	// The phrase table numbers level 1's missions 0-12: the story's m0-m7, then

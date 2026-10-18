@@ -1790,11 +1790,15 @@ void Game::Run()
 
 			if (_gameState == GameState::MissionFailed)
 			{
-				const std::string& failed = _textBible.Get("MISSION_FAILED");
-				sprites.DrawText(font, failed.empty() ? "MISSION FAILED!" : failed,
-					Vector2((viewportWidth / 2.0f) - 100, viewportHeight / 2.0f - 20),
+				const std::string& term = _textBible.Get("MISSION_FAILED");
+				const std::string failed = term.empty() ? "MISSION FAILED!" : term;
+				sprites.DrawText(font, failed, Vector2(centredTextX(font, failed, viewportWidth), viewportHeight / 2.0f - 20),
 					Vector4(1.0f, 0.2f, 0.2f, 1.0f));
-				// And why, as the game's advice for it.
+				// Why, and the game's advice for it.
+				const std::string reason = _scriptEngine->GetFailureReason();
+				if (!reason.empty())
+					sprites.DrawText(font, reason, Vector2(centredTextX(font, reason, viewportWidth), viewportHeight / 2.0f + 10),
+					                 Vector4(1.0f, 0.6f, 0.6f, 1.0f));
 				const std::string hint = _scriptEngine->GetFailureHint();
 				if (!hint.empty())
 					sprites.DrawText(font, hint, Vector2(centredTextX(font, hint, viewportWidth), viewportHeight / 2.0f + 40),
@@ -1802,7 +1806,7 @@ void Game::Run()
 				int nextIn = 5 - static_cast<int>(_missionCompleteTimer);
 				std::string nextText = fmt::format("Retrying in {}...", nextIn);
 				sprites.DrawText(font, nextText,
-					Vector2((viewportWidth / 2.0f) - 60, viewportHeight / 2.0f + 10),
+					Vector2((viewportWidth / 2.0f) - 60, viewportHeight / 2.0f + 70),
 					Vector4(0.6f, 0.6f, 0.6f, 1.0f));
 			}
 		}

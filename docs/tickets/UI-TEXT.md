@@ -26,6 +26,11 @@ place of the objective's type: m1 opens on "COLLECT LISA'S SCIENCE PROJECT", or 
 `--language F` "TROUVEZ LE PROJET SCIENTIFIQUE DE LISA". The frontend's FrontendMultiText,
 which is this ticket, is still to do; the phrase table is what it will read from.
 
+The failure screen says, in the game's words, what went wrong and what to do about it: each
+failure is filed with a hint term (`MISSION_FAILED_VEHICLE_DAMAGE_HINT1`), and the term
+before `_HINT` is the reason itself ("You destroyed your vehicle."). Checked on sr2 with the
+car's health forced to 0: "MISSION FAILED!", the reason, the E-brake hint, then the retry.
+
 ## Critères d'acceptation
 - [ ] `FrontendMultiText` rendu avec position et alignement corrects (cohérents avec les sprites).
 - [ ] Le texte utilise la `TextureFont` chargée depuis le P3D frontend.

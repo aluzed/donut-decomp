@@ -116,6 +116,8 @@ public:
 	std::string GetMissionTitle(bool info = false) const;
 	// The advice for the last failure, in the game's words.
 	std::string GetFailureHint() const;
+	// What went wrong, in the game's words ("You destroyed your vehicle.").
+	std::string GetFailureReason() const;
 	// How long the mission has taken, measured.
 	float GetMissionTime() const { return _missionElapsed; }
 	// The player's start as the mission placed it, if it did.
