@@ -1562,7 +1562,18 @@ void Game::playGag(Gag& gag)
 		_coins += gag.coins;
 		saveCoins();
 	}
-	gag.played = true;
+	if (!gag.played)
+	{
+		// Found: the count, as the card's title is shown, with the game's own
+		// word for them.
+		gag.played = true;
+		const auto found = std::count_if(_gags.begin(), _gags.end(), [](const Gag& g) { return g.played; });
+		const std::string& word = _textBible.Get("GAGS");
+		_cardMessage = fmt::format("{} {}/{}", word.empty() ? "Gags" : word, found, _gags.size());
+		if (static_cast<std::size_t>(found) == _gags.size())
+			_cardMessage += " - " + _textBible.Get("GAGS_COMPLETE");
+		_cardMessageUntil = _elapsedSeconds + 3.0;
+	}
 }
 
 bool Game::useGag()

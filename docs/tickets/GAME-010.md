@@ -106,5 +106,8 @@ on each of level 1's 33 in turn, all but one found their sound (`gag_loot`, whic
 does not have). Each gag's model (`art/nis/gags/gag_bbq.p3d`) stands where `GagSetPosition`
 puts it, in its rest pose: seen, the barbecue by the Simpsons' door. Not done: the
 model's animation (its `GagController`) played when the gag is triggered;
-`GagSetInterior`, `GagSetPersist`, `GagSetCycle`, the camera shakes and movies; a count
-of the gags found.
+`GagSetInterior`, `GagSetPersist`, `GagSetCycle`, the camera shakes and movies; keeping
+the gags found from one session to the next.
+
+A gag found for the first time shows the count for 3s, "Gags 3/12" (the phrase table's
+`GAGS`), and "LEVEL GAGS COMPLETE!" (`GAGS_COMPLETE`) with the last. Seen in Moe's.
