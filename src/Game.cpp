@@ -2194,7 +2194,7 @@ void Game::Run()
 			HudState hud;
 			hud.viewportWidth = static_cast<float>(viewportWidth);
 			hud.viewportHeight = static_cast<float>(viewportHeight);
-			hud.fps = static_cast<int>(timer.GetFps());
+			hud.fps = _clean ? 0 : static_cast<int>(timer.GetFps());
 			hud.health = _health;
 			hud.inVehicle = _inVehicle;
 			hud.boost = intent.boostHeld ? 0.0f : 1.0f; // placeholder, see UI-HUD

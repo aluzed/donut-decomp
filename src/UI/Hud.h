@@ -24,7 +24,7 @@ struct HudState
 	float viewportWidth = 0.0f;
 	float viewportHeight = 0.0f;
 
-	int fps = 0;
+	int fps = 0; // 0 hides it
 
 	// player / vehicle condition
 	float health = 100.0f;   // 0..100

@@ -197,7 +197,8 @@ void Hud::Draw(SpriteBatch& sprites, const Font* font, const HudState& state)
 {
 	const float line = lineHeight(font);
 
-	drawShadowedText(sprites, font, fmt::format("{} fps", state.fps), Vector2(kMargin, kMargin), kGold);
+	if (state.fps > 0)
+		drawShadowedText(sprites, font, fmt::format("{} fps", state.fps), Vector2(kMargin, kMargin), kGold);
 
 	// --- condition bars, bottom left; each stacks above the previous one ---
 	const float barX = kMargin;
