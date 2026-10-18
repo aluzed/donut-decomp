@@ -234,10 +234,11 @@ void Hud::Draw(SpriteBatch& sprites, const Font* font, const HudState& state)
 			topY += line;
 		}
 
-		if (state.totalLaps > 1)
+		if (state.totalLaps > 1 || state.raceField > 1)
 		{
-			std::string text = fmt::format("Lap {}/{}   CP {}/{}", state.lap + 1, state.totalLaps, state.checkpoint,
-			                               state.totalCheckpoints);
+			// A one-lap race (run start to finish) has no lap count to show.
+			std::string text = state.totalLaps > 1 ? fmt::format("Lap {}/{}   ", state.lap + 1, state.totalLaps) : "";
+			text += fmt::format("CP {}/{}", state.checkpoint, state.totalCheckpoints);
 			if (state.raceField > 1)
 			{
 				static const char* const kSuffix[] = {"th", "st", "nd", "rd"};

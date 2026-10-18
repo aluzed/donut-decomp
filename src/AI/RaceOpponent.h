@@ -20,7 +20,9 @@ class Vehicle;
 class RaceOpponent
 {
 public:
-	RaceOpponent(Vehicle& vehicle, std::vector<Vector3> circuit);
+	// `open`: the route runs start to finish rather than round a loop. The car
+	// stops once it reaches the end, which counts as its one lap.
+	RaceOpponent(Vehicle& vehicle, std::vector<Vector3> circuit, bool open = false);
 
 	// `playerProgress` is how far the player is round the race *in laps*; pass a
 	// negative value to disable rubber-banding.
@@ -93,6 +95,7 @@ private:
 	Vector3 _lastWedgePosition = Vector3(1.0e6f, 0.0f, 1.0e6f);
 	float _lastWedgeProgress = 0.0f;
 	double _logTimer = 0.0;
+	bool _open = false;
 	bool _hasCatchup = false;
 	Catchup _catchup {};
 	// Length of the circuit once round, to turn a deficit in laps into metres.

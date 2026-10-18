@@ -18,6 +18,7 @@ AddStage(1);
 	AddNPC("snake","m1_snake");
 	AddStageVehicle("snake_v","m1_snake_carstart","race","Missions/level01/M1race.con","snake");
 	AddStageWaypoint("m1_AI_path1");
+	SetRaceLaps(2);
 
 CloseStage();
 

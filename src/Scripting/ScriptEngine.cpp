@@ -356,7 +356,12 @@ void ScriptEngine::AddStageVehicle(const std::string& car, const std::string& lo
 
 	// A "race" stage vehicle is an opponent's. Its driver comes with the circuit,
 	// in buildRaceCircuit.
-	if (behaviour == "race")
+	//
+	// "evade" and "target" race too, when the stage is a race: sr3 enters
+	// honor_v as "evade" and the bus as "target" alongside a "race" minivan,
+	// all three on the same catch-up curves. buildRaceCircuit only gives them
+	// drivers for a race objective.
+	if (behaviour == "race" || behaviour == "evade" || behaviour == "target")
 		_raceVehicles.push_back(&vehicle);
 }
 
@@ -416,7 +421,9 @@ void ScriptEngine::buildRaceCircuit()
 	// And only when the mission gives too few waypoints to make a loop of their
 	// own. sr2 names eight; adding the grid to them put a detour through the
 	// parked opponents into every lap.
-	if (!_raceVehicles.empty() && !_raceCarNeedsPlacement && _stageWaypoints.size() < 2)
+	//
+	// A race run start to finish (sr3) starts from the grid whatever.
+	if (!_raceVehicles.empty() && !_raceCarNeedsPlacement && (_stageWaypoints.size() < 2 || raceIsOpen()))
 		nodes.push_back(_raceVehicles.front()->GetPosition());
 	nodes.insert(nodes.end(), _stageWaypoints.begin(), _stageWaypoints.end());
 
@@ -460,12 +467,18 @@ void ScriptEngine::buildRaceCircuit()
 		          i, nodes[i].X, nodes[i].Y, nodes[i].Z, anchor, offset, graph.GetComponent(anchor));
 	}
 
+	// Round the loop, or for a race run start to finish, up to the last node
+	// and no further: sr3's route came out 4966m with a 765m leg back from the
+	// finish to the start that nobody drives.
+	const std::size_t legs = raceIsOpen() ? nodes.size() - 1 : nodes.size();
 	for (size_t i = 0; i < nodes.size(); ++i)
 	{
 		const Vector3& from = nodes[i];
 		const Vector3& to = nodes[(i + 1) % nodes.size()];
 
 		circuit.push_back(from);
+		if (i >= legs)
+			break;
 
 		const auto leg = graph.FindRoute(from, to);
 		Log::Info("ScriptEngine: leg {}->{} spans {:.1f}m as the crow flies, routed through {} nodes", i,
@@ -493,7 +506,8 @@ void ScriptEngine::buildRaceCircuit()
 	// between them.
 	float total = 0.0f, longest = 0.0f;
 	std::size_t longestAt = 0;
-	for (std::size_t i = 0; i < _racePath.size(); ++i)
+	const std::size_t gaps = raceIsOpen() ? _racePath.size() - 1 : _racePath.size();
+	for (std::size_t i = 0; i < gaps; ++i)
 	{
 		const float gap = (_racePath[(i + 1) % _racePath.size()] - _racePath[i]).Length();
 		total += gap;
@@ -503,8 +517,8 @@ void ScriptEngine::buildRaceCircuit()
 			longestAt = i;
 		}
 	}
-	Log::Info("ScriptEngine: circuit is {:.0f}m round, mean gap {:.0f}m, longest {:.0f}m at point {}", total,
-	          total / static_cast<float>(_racePath.size()), longest, longestAt);
+	Log::Info("ScriptEngine: {} is {:.0f}m, mean gap {:.0f}m, longest {:.0f}m at point {}",
+	          raceIsOpen() ? "route" : "circuit", total, total / static_cast<float>(gaps), longest, longestAt);
 
 	validateCircuit();
 
@@ -512,9 +526,11 @@ void ScriptEngine::buildRaceCircuit()
 	// car actually is, and it is about to move.
 	placeRaceCarOnCircuit();
 
+	if (_objectiveType != "race")
+		return;
 	for (Vehicle* vehicle : _raceVehicles)
 	{
-		auto opponent = std::make_unique<RaceOpponent>(*vehicle, _racePath);
+		auto opponent = std::make_unique<RaceOpponent>(*vehicle, _racePath, raceIsOpen());
 		const auto catchup = _raceCatchups.find(vehicle->GetName());
 		if (catchup != _raceCatchups.end())
 			opponent->SetCatchup(catchup->second);
@@ -546,6 +562,9 @@ void ScriptEngine::validateCircuit() const
 	// perfectly flat and the node sits at the tile centre, so a few centimetres of
 	// slack is normal; half a metre is not.
 	constexpr float buriedBy = 0.5f;
+	// Room between a road and a deck over it for the deck to be a bridge: more
+	// than a car's height.
+	constexpr float kDeckClearance = 3.0f;
 	// Above this, the point hangs in the air rather than resting on a road.
 	constexpr float floatingBy = 2.0f;
 	// Where a bumper sweeps: clear of the road surface and a kerb, low enough that
@@ -572,7 +591,13 @@ void ScriptEngine::validateCircuit() const
 		}
 
 		const float gap = groundY - here.Y;
-		if (gap > buriedBy)
+		// A surface far overhead is a bridge or an overpass, not a buried point
+		// -- sr3 runs under several, 12 to 25m up. It is only a defect when there
+		// is no road under the point itself.
+		float underY = 0.0f;
+		const bool roadUnder =
+		    physics.FindGroundHeight(here, buriedBy, buriedBy, underY, true) && groundY - underY > kDeckClearance;
+		if (gap > buriedBy && !roadUnder)
 		{
 			++buried;
 			Log::Warn("ScriptEngine: circuit point {} ({:.1f}, {:.1f}, {:.1f}) sits {:.1f}m under the surface at "
@@ -593,7 +618,8 @@ void ScriptEngine::validateCircuit() const
 	// first run of this check reported no holes at all while the opponent still
 	// fell to y=-22: the floor it fell through was between two sampled points,
 	// never under one.
-	for (std::size_t i = 0; i < _racePath.size(); ++i)
+	const std::size_t legs = raceIsOpen() ? _racePath.size() - 1 : _racePath.size();
+	for (std::size_t i = 0; i < legs; ++i)
 	{
 		const Vector3& here = _racePath[i];
 		const Vector3& next = _racePath[(i + 1) % _racePath.size()];
@@ -690,7 +716,7 @@ void ScriptEngine::AddObjective(const std::string& type)
 	_currentCheckpoint = 0;
 	_currentLap = 0;
 	_totalLaps = kDefaultRaceLaps;
-	_opponentFinished = false;
+	_raceDecided = false;
 	_checkpointsFromCollectibles = false;
 	_checkpoints.clear();
 	_racePath.clear();
@@ -894,9 +920,9 @@ void ScriptEngine::UpdateAI(double dt)
 		// A race is lost when an opponent finishes it first. Without this the
 		// only way to lose was the stage timer, and a player who was simply
 		// beaten kept racing an opponent that had long since gone round again.
-		if (!_opponentFinished && _stageTimeRemaining > 0.0f && opponent->Laps() >= _totalLaps)
+		if (!_raceDecided && opponent->Laps() >= _totalLaps)
 		{
-			_opponentFinished = true;
+			_raceDecided = true;
 			Log::Info("ScriptEngine: '{}' finished all {} laps first - mission failed!",
 			          opponent->GetVehicle().GetName(), _totalLaps);
 			_stageTimeRemaining = -1.0f;
@@ -989,6 +1015,7 @@ void ScriptEngine::SetObjTargetVehicle(const std::string& target)
 
 void ScriptEngine::ShowStageComplete()
 {
+	_raceDecided = true;
 	float elapsed = _initialStageTime - _stageTimeRemaining;
 	_isNewRecord = false;
 	if (elapsed < _bestTime)

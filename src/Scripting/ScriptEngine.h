@@ -175,11 +175,15 @@ private:
 	int _currentCheckpoint = 0;
 	int _currentLap = 0;
 	// Laps when the mission does not say; SetRaceLaps overrides it per objective.
-	static constexpr int kDefaultRaceLaps = 2;
+	// One, as for sr3, which names no lap count and runs from the grid to a
+	// finish line rather than round a loop.
+	static constexpr int kDefaultRaceLaps = 1;
+	// A single-lap race is run start to finish, not round a circuit.
+	bool raceIsOpen() const { return _totalLaps == 1; }
 	int _totalLaps = kDefaultRaceLaps;
-	// Set once the opponent has crossed the line for the last time, so the loss
-	// is declared once.
-	bool _opponentFinished = false;
+	// Set once the race has a result -- the player or an opponent home first --
+	// so it is declared once. The stage clock cannot say: sr3 has none.
+	bool _raceDecided = false;
 	// Whether _checkpoints came from the objective's own collectibles rather than
 	// the level path AddObjective falls back on.
 	bool _checkpointsFromCollectibles = false;

@@ -94,6 +94,29 @@ Then, the same day, the player's side:
 Not done: the `position` condition as such. An opponent finishing first already fails the
 race, which is what `SetConditionPosition(1)` asks for.
 
+## The other two level 1 races (2026-10-18)
+
+- **sr1**, the time trial (5 laps, 95s, no opponents), runs as written: player in the car,
+  five checkpoints, timer.
+- **sr3** is run **start to finish**, not round a loop. It names no lap count, and its
+  last checkpoint is `sr3_finish`. The default lap count is now **1**, and a one-lap race
+  is an open route: the grid, then the waypoints, and no leg back. That leg made the circuit
+  4966m; the route is 2804m. An opponent that reaches the end of it has finished, and pulls
+  up. M1race, which relied on the old default of 2, now says `SetRaceLaps(2)`.
+- sr3 enters its cars as **"evade"** (honor_v), **"target"** (the bus) and **"race"**
+  (the minivan), all on catch-up curves. In a race objective, all three behaviours race.
+- **The circuit probe knows a bridge from a burial.** A surface far above a point only
+  counts against it when there is no road just under the point. sr3 passes under several
+  decks 12 to 25m up, all of which it had flagged.
+- **Rubber-banding no longer saps the engine.** A "behind" factor above 1 still adds force.
+  "Ahead" (0.6) now only lowers the speed the car aims at: as a force cut, it left sr3's
+  bus too weak to climb the hill out of the start.
+- **The race is decided once, by whoever finishes first**, with its own flag rather than a
+  running stage clock (sr3 has none).
+
+sr3 with an idle player: honor_v 174.3s, minivanA 180.5s, both clean. The bus (2500kg,
+gas 3.5) still wedges several times on the way.
+
 ## Critères d'acceptation
 - [ ] Un `.con` de course représentatif s'exécute avec 0 avertissement « unimplemented command ».
 - [x] `SetRaceLaps` change effectivement le nombre de tours requis pour terminer (player and opponent alike).

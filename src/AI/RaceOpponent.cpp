@@ -168,8 +168,9 @@ float loopLength(const std::vector<Vector3>& points)
 }
 } // namespace
 
-RaceOpponent::RaceOpponent(Vehicle& vehicle, std::vector<Vector3> circuit)
-    : _vehicle(vehicle), _path(circuit), _circuitMetres(loopLength(circuit)), _lastPosition(vehicle.GetPosition())
+RaceOpponent::RaceOpponent(Vehicle& vehicle, std::vector<Vector3> circuit, bool open)
+    : _vehicle(vehicle), _path(circuit), _open(open), _circuitMetres(loopLength(circuit)),
+      _lastPosition(vehicle.GetPosition())
 {
 	Log::Info("RaceOpponent: driving '{}' around {} waypoints", _vehicle.GetName(), _path.Count());
 	startFromHere(std::move(circuit));
@@ -199,7 +200,9 @@ void RaceOpponent::startFromHere(std::vector<Vector3> circuit)
 	// nearest point but counting from 0 scored the 9s from the grid to the first
 	// waypoint as a lap. The grid is the line.
 	_path.SetWaypoints(circuit);
-	if (circuit.empty())
+	// A route run start to finish starts where it starts: it already begins at
+	// the grid, and joining it further on would skip the race.
+	if (circuit.empty() || _open)
 		return;
 	_path.SnapToNearest(_vehicle.GetPosition());
 	const std::size_t start = _path.Index();
@@ -213,6 +216,13 @@ void RaceOpponent::Update(double dt, float playerProgress)
 {
 	if (_path.Empty())
 		return;
+
+	// Past the finish of a race run start to finish: pull up and stay there.
+	if (_open && _path.Laps() >= 1)
+	{
+		_vehicle.ApplyInput(0.0f, 0.0f, 1.0f, 1.0f);
+		return;
+	}
 
 	const Vector3 position = _vehicle.GetPosition();
 
@@ -414,7 +424,11 @@ void RaceOpponent::Update(double dt, float playerProgress)
 		_stuckTravel = 0.0f;
 	}
 
-	_vehicle.ApplyInput(throttle, steer, brake, _boost);
+	// Rubber-banding holds a car back through the speed it aims at, never
+	// through its engine: under x1 the boost also cut the force, and sr3's bus
+	// -- 2500kg on gas 3.5, held at x0.6 while ahead of an idle player -- was
+	// left with 1.6 m/s^2 and could not climb the hill out of the start.
+	_vehicle.ApplyInput(throttle, steer, brake, _boost > 1.0f ? _boost : 1.0f);
 
 	// Whether the opponent is making progress is the whole question for AI-RACE,
 	// and a car wedged against a wall looks identical to one driving from the
