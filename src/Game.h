@@ -212,6 +212,7 @@ private:
 	// InitLevelPlayerVehicle: Homer and the family sedan on level 1, Bart and
 	// the Honor Roller on level 2.
 	std::string _playerCharacter = "homer";
+	float _fallOffY = -50.0f;
 	std::string _playerCarModel = "famil_v";
 	// The player's walk and idle, whatever the character's prefix
 	// ("hom_loco_walk", "brt_loco_walk").

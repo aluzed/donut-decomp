@@ -779,6 +779,16 @@ void Game::loadLevel()
 	// The mission art shared by the whole level: the coin, among others.
 	_level->LoadP3D(fmt::format("missions/{}/level.p3d", levelDirectory()));
 	_pathGraph = std::make_unique<PathGraph>(*_level, *_worldPhysics);
+	// Fallen off the map: well below the lowest road. A fixed -50 suited level
+	// 1, but level 3's lower town lies at -68, and the player standing there
+	// was "respawned" over and over.
+	{
+		float lowest = 0.0f;
+		for (const auto& node : _pathGraph->GetNodes())
+			lowest = std::min(lowest, node.position.Y);
+		_fallOffY = std::min(-50.0f, lowest - 40.0f);
+		Log::Info("Game: level {} falls off below y = {:.0f}", _levelNumber, _fallOffY);
+	}
 	_trafficManager = std::make_unique<TrafficManager>(*_level, *_lineRenderer, *_pathGraph);
 	_trafficManager->LoadModels(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
 	_pedestrianManager = std::make_unique<PedestrianManager>(*_worldPhysics);
@@ -1461,7 +1471,7 @@ void Game::Run()
 			}
 		}
 
-		if (_character && _character->GetPosition().Y < -50.0f)
+		if (_character && _character->GetPosition().Y < _fallOffY)
 		{
 			Log::Warn("Game: player fell off the map, respawning...");
 			_health -= 20.0f;
@@ -1469,7 +1479,7 @@ void Game::Run()
 			SetPlayerPosition(_lastSafePos);
 		}
 
-		if (_activeVehicle && _inVehicle && _activeVehicle->GetPosition().Y < -50.0f)
+		if (_activeVehicle && _inVehicle && _activeVehicle->GetPosition().Y < _fallOffY)
 		{
 			Log::Warn("Game: vehicle fell off the map, exiting...");
 			_inVehicle = false;

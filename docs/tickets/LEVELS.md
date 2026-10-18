@@ -96,6 +96,10 @@ beyond the above:
   75 km/h the car gains 40m between two looks, past level 4 m1's 120m follow distance.
   It now catches up beyond 60m.
 - A missing shader was reported every frame it was asked for; once now.
+- "Fallen off the map" was anything below y = -50. Level 3's lower town lies at -68: the
+  player sent to talk to Milhouse there was respawned, again and again, and m2 never got
+  past him. The line is now 40m below the level's lowest road (-50 at the highest): -120
+  on level 3. Its m2, m3 and m4 then play through.
 
 ## Not done
 
