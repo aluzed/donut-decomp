@@ -95,7 +95,7 @@ void GameCommands::CloseStage(int32_t param0 /*= 0*/)
 }
 void GameCommands::RESET_TO_HERE(int32_t param0 /*= 0*/)
 {
-	Log::Info("RESET_TO_HERE: checkpoint {}", param0);
+	Game::GetInstance().GetScriptEngine().ResetToHere();
 }
 void GameCommands::SetHUDIcon(const std::string& param0)
 {

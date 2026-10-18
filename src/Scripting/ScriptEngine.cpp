@@ -57,6 +57,9 @@ void ScriptEngine::SelectMission(const std::string& id)
 	_playerCar = nullptr;
 	_stageScripts.clear();
 	_recordingStage = false;
+	_resetStage = 0;
+	_playerCarLocator.clear();
+	_playerStartsInCar = false;
 	_npcPositions.clear();
 	_stageWaypoints.clear();
 	for (auto& v : _missionVehicles)
@@ -96,6 +99,8 @@ void ScriptEngine::SetMissionResetPlayerInCar(const std::string& locator)
 
 	// "In car": at the wheel of their own car, there. m0 opens on getting into it
 	// and was left standing beside nothing.
+	_playerCarLocator = locator;
+	_playerStartsInCar = true;
 	PlacePlayerCar("current", locator);
 	PutPlayerInCar();
 }
@@ -115,7 +120,11 @@ void ScriptEngine::SetMissionResetPlayerOutCar(const std::string& locator, const
 	// m0, m2, m3 and bm1 all open on "getin" the player's own car, which nothing
 	// had put in the world: they could not get past their first stage.
 	if (!carLocator.empty() && _playerCar == nullptr)
+	{
+		_playerCarLocator = carLocator;
+		_playerStartsInCar = false;
 		PlacePlayerCar("current", carLocator);
+	}
 }
 
 void ScriptEngine::SetDynaLoadData(const std::string& zones)
@@ -377,6 +386,29 @@ void ScriptEngine::missionFailed(const std::string& reason)
 	_game.SetState(GameState::MissionFailed);
 }
 
+void ScriptEngine::ResetToHere()
+{
+	_resetStage = _stageCursor;
+}
+
+bool ScriptEngine::RetryFromCheckpoint()
+{
+	if (!_missionActive || _stageScripts.empty())
+		return false;
+
+	Log::Info("ScriptEngine: retrying '{}' from stage {}/{}", _missionId, _resetStage + 1, _stageScripts.size());
+	if (_hasPlayerStart)
+		_game.SetPlayerPosition(_playerStart);
+	if (_playerCar != nullptr && !_playerCarLocator.empty())
+	{
+		PlacePlayerCar(_playerCar->GetName(), _playerCarLocator);
+		if (_playerStartsInCar)
+			PutPlayerInCar();
+	}
+	beginStage(_resetStage);
+	return true;
+}
+
 void ScriptEngine::AnnounceStageComplete()
 {
 	_announceStageComplete = true;
@@ -386,6 +418,9 @@ void ScriptEngine::CleanupMission()
 {
 	_stageScripts.clear();
 	_recordingStage = false;
+	_resetStage = 0;
+	_playerCarLocator.clear();
+	_playerStartsInCar = false;
 	_npcPositions.clear();
 	_raceOpponents.clear();
 	_raceVehicles.clear();
@@ -546,6 +581,20 @@ void ScriptEngine::PutPlayerInCar()
 
 Vehicle& ScriptEngine::spawnVehicle(const std::string& car, const std::string& locator, const Vector3& pos)
 {
+	float heading = 0.0f;
+	const bool faces = _game.GetLevel().GetLocatorHeading(locator, heading);
+
+	// A stage played again (a retry) declares its cars again: move the one that
+	// is already there rather than build a second.
+	for (auto& existing : _missionVehicles)
+	{
+		if (existing->GetName() != car)
+			continue;
+		existing->Teleport(pos, faces ? Quaternion(Vector3(0.0f, 1.0f, 0.0f), heading) : existing->GetRotation());
+		_activeVehicle = existing.get();
+		return *existing;
+	}
+
 	auto vehicle = std::make_unique<Vehicle>(car);
 	std::string modelPath = "art/cars/" + car + ".p3d";
 	if (!FileSystem::exists(modelPath))
@@ -556,8 +605,7 @@ Vehicle& ScriptEngine::spawnVehicle(const std::string& car, const std::string& l
 
 	// Every car used to spawn facing +Z whatever its locator said, so sr2's grid
 	// sat across the street it had to start down.
-	float heading = 0.0f;
-	if (_game.GetLevel().GetLocatorHeading(locator, heading))
+	if (faces)
 		vehicle->Teleport(pos, Quaternion(Vector3(0.0f, 1.0f, 0.0f), heading));
 
 	_activeVehicle = vehicle.get();

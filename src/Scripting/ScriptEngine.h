@@ -131,6 +131,12 @@ public:
 	// The script's ShowStageComplete(): announce the stage when it is done. It
 	// does not complete anything itself.
 	void AnnounceStageComplete();
+	// RESET_TO_HERE: a failed mission is retried from this stage.
+	void ResetToHere();
+	// After a failure: the player back at the mission's start, and the stage
+	// last marked RESET_TO_HERE played again. False when there is no mission to
+	// retry, and the caller should reload it instead.
+	bool RetryFromCheckpoint();
 	// A way to fail the stage. "outofvehicle" (out of the car longer than
 	// SetCondTime) and "damage" (the car's health down to SetCondMinHealth) are
 	// watched; "timeout" is the stage clock; "race"/"position" are the race's own
@@ -228,6 +234,11 @@ private:
 	float _objectiveElapsed = 0.0f;
 	float _objectiveDuration = 0.0f;
 	bool _announceStageComplete = false;
+	std::size_t _resetStage = 0;
+	// Where the mission's reset commands put the player's car, and whether the
+	// player starts at its wheel.
+	std::string _playerCarLocator;
+	bool _playerStartsInCar = false;
 
 	struct Condition
 	{

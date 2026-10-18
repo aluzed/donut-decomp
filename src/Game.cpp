@@ -887,16 +887,23 @@ void Game::Run()
 			_missionCompleteTimer += deltaTime;
 			if (_missionCompleteTimer > 5.0)
 			{
+				const bool failed = _gameState == GameState::MissionFailed;
 				_gameState = GameState::InGame;
 				_missionCompleteTimer = 0.0;
-				_scriptEngine->CleanupMission();
-				if (_collectibleManager) _collectibleManager->SpawnOnPath();
 				if (_inVehicle)
 				{
 					_inVehicle = false;
 					_activeVehicle = nullptr;
 				}
-				runMissionScript();
+				// A failure is retried from the last RESET_TO_HERE, not from the
+				// top: losing m2's twelfth stage used to mean driving the first
+				// eleven again.
+				if (!failed || !_scriptEngine->RetryFromCheckpoint())
+				{
+					_scriptEngine->CleanupMission();
+					if (_collectibleManager) _collectibleManager->SpawnOnPath();
+					runMissionScript();
+				}
 			}
 		}
 

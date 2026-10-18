@@ -76,10 +76,10 @@ end and restart. Here is the last stage met, and what was skipped on the way:
 | m1 | 6 | end, 4 cycles | — |
 | m2 | 12 | end, 2 cycles | — |
 | m3 | 4 | end, 8 cycles | `destroy` |
-| m4 | 4 | end, 5 cycles | `delivery` |
-| m5 | 6 | end, 5 cycles | `follow`, `gooutside` |
-| m6 | 4 | end, 4 cycles | `dump` |
-| m7 | 3 | end, 2 cycles | — |
+| m4 | 4 | end, 6 cycles | `delivery` |
+| m5 | 6 | end, 6 cycles | `follow`, `gooutside` |
+| m6 | 4 | end, 5 cycles | `dump` |
+| m7 | 3 | end, 3 cycles | — |
 | bm1 | 7 | end, 5 cycles | `delivery` |
 | sr2 | 2 | end | — |
 | gr1 | 2 | fails on its `coins` stage's clock | `coins` |
@@ -99,9 +99,18 @@ What it took beyond the sequencer:
   its own roof, and was dropped from 1.3m up. Vehicle ground searches now see only static
   geometry.
 
+## Retrying from RESET_TO_HERE
+
+`RESET_TO_HERE` marks its stage as the retry point. After a failure, `Game` asks
+`ScriptEngine::RetryFromCheckpoint` instead of reloading the mission: the player and their car
+go back to where the mission's reset commands put them, and the marked stage is played again.
+A stage played again declares its cars again, so `spawnVehicle` moves a car that already
+exists rather than building a second one. gr1, failing on its clock, retried 7 times in 70s
+on a single load with a single car; M1race picks up its race again after the timer.
+A completed mission still reloads from the top.
+
 ## Not done
 
 - The `followdistance` condition.
 - NPCs as characters in the world (they are positions only), dialogue, interiors.
 - `delivery`, `coins`, `destroy`, `dump`, `follow`, `fmv`, `buycar` objectives are skipped.
-- Resetting to `RESET_TO_HERE` on failure: a failed mission restarts from the beginning.
