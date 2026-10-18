@@ -9,8 +9,10 @@
 #include <BulletCollision/CollisionDispatch/btGhostObject.h>
 #include <BulletCollision/CollisionShapes/btBox2dShape.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <LinearMath/btDefaultMotionState.h>
 
 #include <cstdint>
+#include <functional>
 
 namespace Donut
 {
@@ -132,6 +134,23 @@ btCollisionObject* WorldPhysics::addStaticBody(btCollisionShape* shape, const bt
 	// ground, so vehicles had no suspension and no traction and sank through
 	// the world -- while the character, which sweeps the world directly, was
 	// unaffected.
+	if (_kinematicSink)
+	{
+		// Moved by hand each frame, through its motion state.
+		auto motionState = std::make_unique<btDefaultMotionState>(transform);
+		btRigidBody::btRigidBodyConstructionInfo info(0.0f, motionState.get(), shape, btVector3(0, 0, 0));
+		auto* body = new btRigidBody(info);
+		body->setCollisionFlags(body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+		body->setActivationState(DISABLE_DEACTIVATION);
+		_dynamicsWorld->addRigidBody(body);
+		_allocatedCollisionObjects.push_back(body);
+		_motionStates.push_back(std::move(motionState));
+		Matrix4x4 rest = Matrix4x4(BulletCast<Quaternion>(transform.getRotation()));
+		rest = Matrix4x4::MakeTranslate(BulletCast<Vector3>(transform.getOrigin())) * rest;
+		_kinematicSink->push_back({body, rest, _kinematicOwner});
+		return body;
+	}
+
 	btRigidBody::btRigidBodyConstructionInfo info(0.0f, nullptr, shape, btVector3(0, 0, 0));
 	info.m_startWorldTransform = transform;
 
@@ -141,6 +160,35 @@ btCollisionObject* WorldPhysics::addStaticBody(btCollisionShape* shape, const bt
 
 	_allocatedCollisionObjects.push_back(body);
 	return body;
+}
+
+std::vector<WorldPhysics::KinematicVolume> WorldPhysics::AddKinematicVolumes(const P3D::CollisionVolume& volume)
+{
+	std::vector<KinematicVolume> volumes;
+	std::function<void(const P3D::CollisionVolume&)> add = [&](const P3D::CollisionVolume& v) {
+		if (v.GetNumSubVolumes() > 0)
+		{
+			for (const auto& sub : v.GetSubVolumes())
+				add(*sub);
+			return;
+		}
+		_kinematicSink = &volumes;
+		_kinematicOwner = v.GetOwnerIndex();
+		AddCollisionVolume(v);
+		_kinematicSink = nullptr;
+	};
+	add(volume);
+	return volumes;
+}
+
+void WorldPhysics::MoveKinematic(btRigidBody* body, const Matrix4x4& transform) const
+{
+	btTransform t;
+	t.setIdentity();
+	t.setOrigin(BulletCast<btVector3>(transform.Translation()));
+	t.setRotation(BulletCast<btQuaternion>(transform.ToQuat().Normal()));
+	body->getMotionState()->setWorldTransform(t);
+	body->setWorldTransform(t);
 }
 
 void WorldPhysics::AddIntersect(const P3D::Intersect& intersect)

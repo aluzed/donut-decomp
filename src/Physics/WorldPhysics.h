@@ -2,12 +2,16 @@
 
 #pragma once
 
+#include "Core/Math/Matrix4x4.h"
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
 #include <BulletCollision/CollisionDispatch/btDefaultCollisionConfiguration.h>
 #include <CharacterController.h>
 #include <Physics/BulletDebugDraw.h>
 
 #include <cstdint>
+
+class btRigidBody;
+class btMotionState;
 
 namespace Donut
 {
@@ -53,6 +57,20 @@ public:
 	void AddP3DCylinder(const P3D::CollisionCylinder&);
 	void AddP3DFence(const P3D::Fence&);
 
+	// A collision volume that moves (an animated object's: the power plant's
+	// platforms): a kinematic body, where the volume stands in the file, and
+	// which of the collision object's owners it belongs to.
+	struct KinematicVolume
+	{
+		btRigidBody* body;
+		Matrix4x4 rest;
+		int owner;
+	};
+	// Every leaf volume of `volume` as a kinematic body.
+	std::vector<KinematicVolume> AddKinematicVolumes(const P3D::CollisionVolume& volume);
+	// Moves one, to `transform` (rotation and translation only).
+	void MoveKinematic(btRigidBody* body, const Matrix4x4& transform) const;
+
 	// Adds `shape` as static (zero-mass) rigid body geometry; see the note in the
 	// implementation for why a bare btCollisionObject is not enough.
 	class btCollisionObject* addStaticBody(class btCollisionShape* shape, const class btTransform& transform);
@@ -93,6 +111,11 @@ private:
 
 	// allocated objects for cleanup
 	std::vector<btCollisionObject*> _allocatedCollisionObjects;
+	std::vector<std::unique_ptr<btMotionState>> _motionStates;
+	// While AddKinematicVolumes runs, addStaticBody makes kinematic bodies and
+	// lists them here.
+	std::vector<KinematicVolume>* _kinematicSink = nullptr;
+	int _kinematicOwner = -1;
 	std::vector<std::vector<uint32_t>*> _allocatedIndexArrays;
 	std::vector<std::vector<Vector3>*> _allocatedVertexArrays;
 };

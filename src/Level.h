@@ -6,12 +6,15 @@
 #include "Core/Math/Vector3.h"
 
 #include <map>
+#include "Core/Math/Matrix4x4.h"
 #include "Render/TextureAnimation.h"
 #include <memory>
 #include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+class btRigidBody;
 
 namespace Donut
 {
@@ -218,6 +221,18 @@ private:
 		Vector3 position;
 	};
 	std::vector<AnimatedObject> _animatedObjects;
+	// The collision of animated objects (AnimCollision: the power plant's
+	// platforms and fans): kinematic bodies following a joint of their object,
+	// at a fixed offset from it.
+	struct MovingVolume
+	{
+		btRigidBody* body;
+		std::size_t composite;
+		int joint;
+		Matrix4x4 offset;
+	};
+	std::vector<MovingVolume> _movingVolumes;
+	void moveVolumes();
 	// The level's texture animations (a river's water, a pool, an arcade
 	// screen), round and round, and the texture each shows now.
 	std::vector<std::pair<TextureAnimation, std::string>> _textureAnimations;

@@ -136,8 +136,29 @@ CompositeModel::CompositeModel(const ICompositeModel& provider)
 			const auto& transform = transforms[prop->GetSkeletonJoint()];
 			_props.push_back(DrawableProp {meshNames[prop->GetName()], transform, prop->GetSkeletonJoint(),
 			                               posable && !_jointNames.empty()});
+			if (posable && !_jointNames.empty())
+				_propJoints[propName] = static_cast<int>(prop->GetSkeletonJoint());
 		}
 	}
+}
+
+int CompositeModel::FindPropJoint(const std::string& prop) const
+{
+	const auto found = _propJoints.find(prop);
+	return found != _propJoints.end() ? found->second : -1;
+}
+
+int CompositeModel::FirstPropJoint() const
+{
+	for (const auto& prop : _props)
+		if (prop.posable)
+			return static_cast<int>(prop.joint);
+	return -1;
+}
+
+Matrix4x4 CompositeModel::GetJointTransform(int joint) const
+{
+	return joint >= 0 && joint < static_cast<int>(_jointGlobals.size()) ? _jointGlobals[joint] : Matrix4x4::Identity;
 }
 
 int CompositeModel::FindJoint(const std::string& name) const

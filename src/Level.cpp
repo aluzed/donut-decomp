@@ -186,6 +186,38 @@ void Level::LoadP3D(const std::string& filename)
 			// Their rest pose is not where they stand: the first frame places
 			// them (a switch's rest is the world's origin).
 			model->Pose(0.0f, false);
+
+			// Its collision, as kinematic bodies that move with it. A volume
+			// names its owner, a prop of the object: some are in that prop's own
+			// space (the beef boards' boxes, about the origin), others in the
+			// world's (the platforms', where the platform stands at its first
+			// frame, owned by a placeholder). Either way, it keeps the offset from
+			// its joint that it has now, at the first frame.
+			for (const auto& child : chunk->GetChildren())
+			{
+				if (!child->IsType(P3D::ChunkType::CollisionObject))
+					continue;
+				const auto collision = P3D::CollisionObject::Load(*child);
+				if (!collision->GetVolume())
+					continue;
+				std::vector<std::string> owners;
+				for (const auto& owner : collision->GetVolumeOwners())
+					for (const auto& ownerName : owner->GetNames())
+						owners.push_back(ownerName->GetName());
+				for (const auto& volume : Game::GetInstance().GetWorldPhysics().AddKinematicVolumes(*collision->GetVolume()))
+				{
+					int joint = volume.owner >= 0 && volume.owner < static_cast<int>(owners.size())
+					                ? model->FindPropJoint(owners[volume.owner])
+					                : -1;
+					if (joint < 0)
+						joint = model->FirstPropJoint();
+					const Matrix4x4 jointNow = model->GetTransform() * model->GetJointTransform(joint);
+					const Vector3 at = volume.rest.Translation();
+					const bool inWorld = (at - jointNow.Translation()).Length() < at.Length();
+					_movingVolumes.push_back(
+					    {volume.body, _compositeModels.size(), joint, inWorld ? jointNow.Inverse() * volume.rest : volume.rest});
+				}
+			}
 			_compositeModels.push_back(std::move(model));
 			break;
 		}
@@ -695,6 +727,16 @@ void Level::unloadRegion(const std::string& filename)
 	_loadedP3Ds.erase(filename);
 }
 
+void Level::moveVolumes()
+{
+	auto& physics = Game::GetInstance().GetWorldPhysics();
+	for (const auto& volume : _movingVolumes)
+	{
+		const CompositeModel& model = *_compositeModels[volume.composite];
+		physics.MoveKinematic(volume.body, model.GetTransform() * model.GetJointTransform(volume.joint) * volume.offset);
+	}
+}
+
 int Level::PlayAnimatedObject(const std::string& name)
 {
 	int started = 0;
@@ -757,6 +799,9 @@ void Level::Update(double deltatime)
 
 	// draws debug shit
 	_worldSphere->Update(deltatime);
+
+	// The animated objects' collision, where they now stand.
+	moveVolumes();
 }
 
 void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)

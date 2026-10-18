@@ -6,6 +6,7 @@
 #include "Render/Mesh.h"
 #include "ResourceManager.h"
 
+#include <map>
 #include <string>
 
 namespace Donut
@@ -101,6 +102,12 @@ public:
 	int FindJoint(const std::string& name) const;
 	Vector3 GetJointRestPosition(int joint) const;
 	void SetJointRotation(int joint, const Quaternion& rotation);
+	// The joint a prop hangs from, by the prop's name (a mesh's), or -1; the
+	// first posable prop's; and a joint's transform as posed now, in the model's
+	// space.
+	int FindPropJoint(const std::string& prop) const;
+	int FirstPropJoint() const;
+	Matrix4x4 GetJointTransform(int joint) const;
 
 private:
 	struct DrawableProp
@@ -122,6 +129,7 @@ private:
 	std::vector<int> _jointParents;
 	std::vector<Matrix4x4> _jointGlobals;
 	std::vector<Matrix4x4> _jointRotations;
+	std::map<std::string, int> _propJoints;
 	std::unique_ptr<SkinAnimation> _animation;
 
 	Matrix4x4 _transform = Matrix4x4::Identity;
