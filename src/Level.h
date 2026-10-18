@@ -5,6 +5,7 @@
 #include "Core/Math/Fwd.h"
 #include "Core/Math/Vector3.h"
 
+#include <functional>
 #include <map>
 #include "Core/Math/Matrix4x4.h"
 #include "Render/TextureAnimation.h"
@@ -232,6 +233,27 @@ private:
 		Matrix4x4 offset;
 	};
 	std::vector<MovingVolume> _movingVolumes;
+	// Billboards that belong to an animated object (a siren's lights): the
+	// object and the joint each hangs from, by batch.
+	struct AttachedBillboard
+	{
+		std::size_t composite;
+		int joint;
+	};
+	std::map<std::size_t, AttachedBillboard> _attachedBillboards;
+	// Billboards whose colour is animated (BQG_*: a siren flashing): which quad
+	// of which batch, and its colour from each key frame on.
+	struct BillboardAnimation
+	{
+		std::size_t batch;
+		int quad;
+		float frameRate;
+		float frameCount;
+		std::vector<std::pair<float, Vector4>> colors;
+		int shown = -1;
+	};
+	std::vector<BillboardAnimation> _billboardAnimations;
+	void drawBillboards(Matrix4x4& viewProj, bool opaque, const std::function<bool(std::size_t)>& shown);
 	void moveVolumes();
 	// The level's texture animations (a river's water, a pool, an arcade
 	// screen), round and round, and the texture each shows now.

@@ -5,6 +5,7 @@
 #include <cctype>
 #include <Core/File.h>
 #include <Core/Log.h>
+#include <Core/MemoryStream.h>
 #include <Entity.h>
 #include <Game.h>
 #include <Level.h>
@@ -149,6 +150,10 @@ void Level::LoadP3D(const std::string& filename)
 	DrawRange range {{_entities.size(), 0}, {_instances.size(), 0}, {_compositeModels.size(), 0},
 	                 {_billboardBatches.size(), 0}};
 
+	// Billboard colour animations, matched to their quads once the file is in.
+	std::vector<const P3D::P3DChunk*> fileBillboardAnimations;
+	const std::size_t fileBatchesFrom = _billboardBatches.size();
+
 	// What the animated objects name: the file's skeletons, meshes and
 	// animations, by name.
 	std::map<std::string, const P3D::P3DChunk*> fileSkeletons, fileGeometries, fileAnimations;
@@ -169,12 +174,26 @@ void Level::LoadP3D(const std::string& filename)
 		case P3D::ChunkType::Animation:
 			if (auto animation = TextureAnimation::FromChunk(*chunk))
 				_textureAnimations.emplace_back(std::move(*animation), std::string());
+			else
+				fileBillboardAnimations.push_back(chunk.get());
 			break;
 		case P3D::ChunkType::Anim:
 		case P3D::ChunkType::AnimCollision:
 		{
 			auto model = std::make_unique<CompositeModel>(
 			    CompositeModel_Anim(*chunk, fileSkeletons, fileGeometries, fileAnimations));
+			// Its billboards (a siren's lights, an arrow): quads about the
+			// origin, each group drawn where the joint it hangs from is.
+			for (const auto& child : chunk->GetChildren())
+				if (child->IsType(P3D::ChunkType::BillboardQuadGroup))
+				{
+					const auto group = P3D::BillboardQuadGroup::Load(*child);
+					const int joint = model->FindPropJoint(group->GetName());
+					if (joint < 0)
+						continue;
+					_attachedBillboards[_billboardBatches.size()] = {_compositeModels.size(), joint};
+					_billboardBatches.push_back(std::make_unique<BillboardBatch>(*group));
+				}
 			const std::string name = readLPString(chunk->GetData(), 0);
 			// Doorbells and light switches wait to be worked; the rest -- the
 			// windmill, signs, rivers, the power plant's platforms -- go round.
@@ -537,6 +556,48 @@ void Level::LoadP3D(const std::string& filename)
 		}
 	}
 
+	// "BQG_l2z4_sirensShape19": one group per quad, named after it, whose colour
+	// channel ("CLR": version, param, key count, key frames u16, colours u32)
+	// flashes it.
+	for (const P3D::P3DChunk* chunk : fileBillboardAnimations)
+	{
+		MemoryStream stream(chunk->GetData());
+		stream.Read<uint32_t>();
+		stream.ReadLPString();
+		if (stream.ReadString(4).rfind("BQG", 0) != 0)
+			continue;
+		const float frameCount = stream.Read<float>();
+		const float frameRate = stream.Read<float>();
+		for (const auto& groups : chunk->GetChildren())
+			for (const auto& group : groups->GetChildren())
+			{
+				if (!group->IsType(P3D::ChunkType::AnimationGroup))
+					continue;
+				const std::string quadName = readLPString(group->GetData(), 4);
+				for (const auto& channel : group->GetChildren())
+				{
+					if (!channel->IsType(P3D::ChunkType::Color))
+						continue;
+					MemoryStream values(channel->GetData());
+					values.Read<uint32_t>();
+					values.ReadString(4);
+					const uint32_t count = values.Read<uint32_t>();
+					std::vector<uint16_t> frames(count);
+					for (auto& frame : frames)
+						frame = values.Read<uint16_t>();
+					BillboardAnimation animation {0, -1, frameRate, frameCount, {}};
+					for (const uint16_t frame : frames)
+						animation.colors.emplace_back(static_cast<float>(frame),
+						                              P3D::P3DUtil::ConvertColor(values.Read<uint32_t>()));
+					for (std::size_t b = fileBatchesFrom; b < _billboardBatches.size() && animation.quad < 0; ++b)
+						if ((animation.quad = _billboardBatches[b]->FindQuad(quadName)) >= 0)
+							animation.batch = b;
+					if (animation.quad >= 0 && !animation.colors.empty())
+						_billboardAnimations.push_back(std::move(animation));
+				}
+			}
+	}
+
 	range.entities[1] = _entities.size();
 	range.instances[1] = _instances.size();
 	range.composites[1] = _compositeModels.size();
@@ -737,6 +798,27 @@ void Level::moveVolumes()
 	}
 }
 
+void Level::drawBillboards(Matrix4x4& viewProj, bool opaque, const std::function<bool(std::size_t)>& shown)
+{
+	_billboardBatchShader->Bind();
+	for (std::size_t i = 0; i < _billboardBatches.size(); ++i)
+	{
+		if (!shown(i))
+			continue;
+		const auto attached = _attachedBillboards.find(i);
+		if (attached == _attachedBillboards.end())
+			_billboardBatchShader->SetUniformValue("viewProj", viewProj);
+		else
+		{
+			const CompositeModel& model = *_compositeModels[attached->second.composite];
+			_billboardBatchShader->SetUniformValue(
+			    "viewProj", viewProj * model.GetTransform() * model.GetJointTransform(attached->second.joint));
+		}
+		_billboardBatches[i]->Draw(*_billboardBatchShader, opaque);
+	}
+	_billboardBatchShader->SetUniformValue("viewProj", viewProj);
+}
+
 int Level::PlayAnimatedObject(const std::string& name)
 {
 	int started = 0;
@@ -800,6 +882,22 @@ void Level::Update(double deltatime)
 	// draws debug shit
 	_worldSphere->Update(deltatime);
 
+	// Flashing billboards.
+	for (auto& animation : _billboardAnimations)
+	{
+		const float frames = std::max(animation.frameCount, animation.colors.back().first + 1.0f);
+		const float frame = std::fmod(static_cast<float>(_animationTime) * animation.frameRate, frames);
+		int key = 0;
+		for (std::size_t k = 0; k < animation.colors.size(); ++k)
+			if (animation.colors[k].first <= frame)
+				key = static_cast<int>(k);
+		if (key != animation.shown)
+		{
+			_billboardBatches[animation.batch]->SetQuadColor(animation.quad, animation.colors[key].second);
+			animation.shown = key;
+		}
+	}
+
 	// The animated objects' collision, where they now stand.
 	moveVolumes();
 }
@@ -813,6 +911,17 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 	_worldShader->SetUniformValue("cameraPos", cameraPos);
 	_worldShader->SetUniformValue("lightmapIntensity", 0.0f);
 	_worldShader->SetUniformValue("lightmapTex", 1);
+	// The billboards' program shares the world's fragment shader, and its
+	// uniforms are its own: left at their defaults, lightmapIntensity 1 had each
+	// glow multiplied by a corner of its own texture (black), and an additive
+	// glow drawn black does not show.
+	_billboardBatchShader->Bind();
+	_billboardBatchShader->SetUniformValue("fogDensity", 0.0004f);
+	_billboardBatchShader->SetUniformValue("fogColor", Vector4(0.62f, 0.78f, 1.0f, 1.0f));
+	_billboardBatchShader->SetUniformValue("cameraPos", cameraPos);
+	_billboardBatchShader->SetUniformValue("lightmapIntensity", 0.0f);
+	_billboardBatchShader->SetUniformValue("lightmapTex", 1);
+	_worldShader->Bind();
 
 	glDisable(GL_DEPTH_TEST);
 
@@ -845,11 +954,7 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 		if (shown(&DrawRange::composites, i))
 			_compositeModels[i]->Draw(*_worldShader, viewProj, _compositeModels[i]->GetTransform(), true);
 
-	_billboardBatchShader->Bind();
-	_billboardBatchShader->SetUniformValue("viewProj", viewProj);
-	for (std::size_t i = 0; i < _billboardBatches.size(); ++i)
-		if (shown(&DrawRange::billboards, i))
-			_billboardBatches[i]->Draw(*_billboardBatchShader, true);
+	drawBillboards(viewProj, true, [&](std::size_t i) { return shown(&DrawRange::billboards, i); });
 
 	_worldInstancedShader->Bind();
 	_worldInstancedShader->SetUniformValue("viewProj", viewProj);
@@ -871,11 +976,7 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 		if (shown(&DrawRange::composites, i))
 			_compositeModels[i]->Draw(*_worldShader, viewProj, _compositeModels[i]->GetTransform(), false);
 
-	_billboardBatchShader->Bind();
-	_billboardBatchShader->SetUniformValue("viewProj", viewProj);
-	for (std::size_t i = 0; i < _billboardBatches.size(); ++i)
-		if (shown(&DrawRange::billboards, i))
-			_billboardBatches[i]->Draw(*_billboardBatchShader, false);
+	drawBillboards(viewProj, false, [&](std::size_t i) { return shown(&DrawRange::billboards, i); });
 
 	_worldInstancedShader->Bind();
 	_worldInstancedShader->SetUniformValue("viewProj", viewProj);

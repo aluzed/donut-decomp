@@ -12,6 +12,7 @@
 #include "ResourceManager.h"
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 
 namespace Donut
@@ -47,6 +48,8 @@ BillboardBatch::BillboardBatch(const P3D::BillboardQuadGroup& billboardQuadGroup
 
 	for (auto const& billboardQuad : billboardQuadGroup.GetQuads())
 	{
+		_quadNames.push_back(billboardQuad->GetName());
+		_colorOffsets.push_back(quadInstances.size() * sizeof(QuadInstance) + offsetof(QuadInstance, color));
 		quadInstances.push_back(QuadInstance {
 		    billboardQuad->GetTranslation(),
 		    Vector2(billboardQuad->GetWidth(), billboardQuad->GetHeight()),
@@ -60,7 +63,8 @@ BillboardBatch::BillboardBatch(const P3D::BillboardQuadGroup& billboardQuadGroup
 
 	_vertexBuffer = std::make_shared<GL::VertexBuffer>(quadVertices.data(), quadVertices.size(), vertStride);
 	_indexBuffer = std::make_shared<GL::IndexBuffer>(indices.data(), indices.size(), GL_UNSIGNED_INT);
-	_instanceBuffer = std::make_shared<GL::VertexBuffer>(quadInstances.data(), _numQuads, instanceStride);
+	// Dynamic: an animated quad's colour changes (SetQuadColor).
+	_instanceBuffer = std::make_shared<GL::VertexBuffer>(quadInstances.data(), _numQuads, instanceStride, GL_DYNAMIC_DRAW);
 
 	GL::ArrayElement vertexLayout[] = {
 	    GL::ArrayElement(_vertexBuffer.get(), 0, 2, GL::AE_FLOAT, vertStride, 0),
@@ -79,6 +83,20 @@ BillboardBatch::BillboardBatch(const P3D::BillboardQuadGroup& billboardQuadGroup
 	_shader = billboardQuadGroup.GetShader();
 	_zTest = billboardQuadGroup.GetZTest() == 1;
 	_zWrite = billboardQuadGroup.GetZWrite() == 1;
+}
+
+int BillboardBatch::FindQuad(const std::string& name) const
+{
+	for (std::size_t i = 0; i < _quadNames.size(); ++i)
+		if (_quadNames[i] == name)
+			return static_cast<int>(i);
+	return -1;
+}
+
+void BillboardBatch::SetQuadColor(int quad, const Vector4& color)
+{
+	if (quad >= 0 && quad < static_cast<int>(_colorOffsets.size()))
+		_instanceBuffer->UpdateBuffer(&color, _colorOffsets[quad], sizeof(Vector4));
 }
 
 void BillboardBatch::Draw(GL::ShaderProgram& shader, bool opaque)

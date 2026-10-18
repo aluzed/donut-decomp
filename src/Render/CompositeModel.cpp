@@ -131,7 +131,13 @@ CompositeModel::CompositeModel(const ICompositeModel& provider)
 		{
 			const auto& propName = prop->GetName();
 			if (meshNames.find(propName) == meshNames.end())
+			{
+				// Not a mesh: a billboard group, drawn by the level where this
+				// joint is.
+				if (posable && !_jointNames.empty())
+					_propJoints[propName] = static_cast<int>(prop->GetSkeletonJoint());
 				continue;
+			}
 
 			const auto& transform = transforms[prop->GetSkeletonJoint()];
 			_props.push_back(DrawableProp {meshNames[prop->GetName()], transform, prop->GetSkeletonJoint(),
