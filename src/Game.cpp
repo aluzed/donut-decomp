@@ -641,6 +641,16 @@ void Game::updateCarDamage()
 					if ((car.position - position).Length() < 6.0f)
 					{
 						_hitAndRun->Add(15.0f, "rammed the traffic");
+						// Its driver has something to say about it.
+						static const std::vector<std::string> shouts = [this] {
+							std::vector<std::string> lines;
+							for (const auto& line : _audioManager->FindSounds("crash_"))
+								if (line.rfind("traffic", 0) == 0)
+									lines.push_back(line);
+							return lines;
+						}();
+						if (!shouts.empty())
+							_audioManager->PlayAudio(shouts[static_cast<std::size_t>(rand()) % shouts.size()], car.grounded);
 						break;
 					}
 		}
