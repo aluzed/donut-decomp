@@ -181,6 +181,7 @@ Game::Game(int argc, char** argv)
 	_audioManager = std::make_unique<AudioManager>();
 	_resourceManager = std::make_unique<ResourceManager>();
 	_scriptEngine = std::make_unique<ScriptEngine>(*this);
+	_scriptEngine->SetRecordsEnabled(!_autopilot);
 
 	if (FileSystem::exists("./assets/audio/ambience/ambience.rcf"))
 		_audioManager->LoadRCF("./assets/audio/ambience/ambience.rcf");

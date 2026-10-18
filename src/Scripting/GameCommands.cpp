@@ -237,7 +237,10 @@ void GameCommands::AddBehaviour(const std::string& param0, const std::string& pa
 void GameCommands::SetActorRotationSpeed(const std::string& param0, const std::string& param1) {}
 void GameCommands::SetAnimatedCameraName(const std::string& param0) {}
 void GameCommands::SetAnimCamMulticontName(const std::string& param0) {}
-void GameCommands::SetCoinFee(int32_t param0) {}
+void GameCommands::SetCoinFee(int32_t param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCoinFee(param0);
+}
 void GameCommands::PutMFPlayerInCar(int32_t param0 /*= 0*/)
 {
 	Game::GetInstance().GetScriptEngine().PutPlayerInCar();
@@ -250,9 +253,15 @@ void GameCommands::AddToCountdownSequence(const std::string& param0, int32_t par
 {
 	Game::GetInstance().GetScriptEngine().AddToCountdownSequence(param0, param1);
 }
-void GameCommands::UseElapsedTime(int32_t param0 /*= 0*/) {}
+void GameCommands::UseElapsedTime(int32_t param0 /*= 0*/)
+{
+	Game::GetInstance().GetScriptEngine().UseElapsedTime();
+}
 void GameCommands::SetRaceEnteryFee(int32_t param0) {}
-void GameCommands::SetParTime(int32_t param0) {}
+void GameCommands::SetParTime(int32_t param0)
+{
+	Game::GetInstance().GetScriptEngine().SetParTime(static_cast<float>(param0));
+}
 void GameCommands::SetCondMinHealth(float param0)
 {
 	Game::GetInstance().GetScriptEngine().SetCondMinHealth(param0);

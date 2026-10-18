@@ -156,6 +156,7 @@ void ScriptEngine::CloseMission()
 	// the script re-ran, and it looped forever with no vehicle ever reachable.
 	// Completion belongs to gameplay -- see objectiveComplete.
 	Log::Info("ScriptEngine: mission '{}' loaded, {} stage(s)", _missionId, _stageScripts.size());
+	_missionElapsed = 0.0f;
 	if (!_stageScripts.empty())
 		beginStage(0);
 }
@@ -189,6 +190,9 @@ void ScriptEngine::beginStage(std::size_t index)
 	_raceDecided = false;
 	_conditions.clear();
 	_outOfVehicleSeconds = 0.0f;
+	_clockCountsUp = false;
+	_parTime = 0.0f;
+	_coinFee = 0;
 
 	for (const auto& statement : _stageScripts[index])
 		Commands::RunLine(statement);
@@ -271,6 +275,14 @@ void ScriptEngine::updateObjective(double dt)
 		}
 		if (_pickups.empty())
 			objectiveComplete();
+	}
+	else if (_objectiveType == "coins")
+	{
+		// Paying to enter. There is no coin economy yet -- the street holds ten
+		// coins and gr1 asks twenty -- so the fee is waived rather than left to
+		// block the race behind it for good.
+		Log::Info("ScriptEngine: coin fee of {} waived, there is no coin purse yet", _coinFee);
+		objectiveComplete();
 	}
 	else if (_objectiveType == "gooutside" || _objectiveType == "fmv" || _objectiveType == "buycar")
 	{
@@ -446,6 +458,21 @@ std::string ScriptEngine::GetObjectiveText() const
 	return _objectiveType;
 }
 
+void ScriptEngine::UseElapsedTime()
+{
+	_clockCountsUp = true;
+}
+
+void ScriptEngine::SetParTime(float seconds)
+{
+	_parTime = seconds;
+}
+
+void ScriptEngine::SetCoinFee(int coins)
+{
+	_coinFee = coins;
+}
+
 void ScriptEngine::AnnounceStageComplete()
 {
 	_announceStageComplete = true;
@@ -506,6 +533,8 @@ void ScriptEngine::Update(double dt)
 	if (!_missionActive)
 		return;
 
+	if (_game.GetState() == GameState::InGame)
+		_missionElapsed += static_cast<float>(dt);
 	updateObjective(dt);
 	updateConditions(dt);
 
@@ -522,6 +551,14 @@ void ScriptEngine::Update(double dt)
 			_game.SetState(GameState::MissionFailed);
 			return;
 		}
+	}
+
+	if (_clockCountsUp)
+	{
+		_stageTimeRemaining += static_cast<float>(dt);
+		if (_parTime > 0.0f && _stageTimeRemaining > _parTime)
+			missionFailed(fmt::format("over the par time of {:.0f}s", _parTime));
+		return;
 	}
 
 	_stageTimeRemaining -= static_cast<float>(dt);
@@ -1371,9 +1408,11 @@ void ScriptEngine::SetObjTargetVehicle(const std::string& target)
 void ScriptEngine::missionComplete()
 {
 	_raceDecided = true;
-	float elapsed = _initialStageTime - _stageTimeRemaining;
+	// Measured, not derived from the stage clock: gr1's counts up from 1s, and
+	// the old "initial minus remaining" came out at -8.6s -- a new record, saved.
+	const float elapsed = _missionElapsed;
 	_isNewRecord = false;
-	if (elapsed < _bestTime)
+	if (_recordsEnabled && elapsed < _bestTime)
 	{
 		_bestTime = elapsed;
 		_isNewRecord = true;

@@ -136,6 +136,15 @@ public:
 	void AnnounceStageComplete();
 	// RESET_TO_HERE: a failed mission is retried from this stage.
 	void ResetToHere();
+	// The stage clock counts up from SetStageTime instead of down (gr1's race
+	// against the clock), and SetParTime is the time not to exceed.
+	void UseElapsedTime();
+	void SetParTime(float seconds);
+	// A "coins" objective's entry fee.
+	void SetCoinFee(int coins);
+	// Whether a finished mission may set a best time. --autopilot turns it off:
+	// teleporting through a mission in seconds is not a record.
+	void SetRecordsEnabled(bool enabled) { _recordsEnabled = enabled; }
 	// After a failure: the player back at the mission's start, and the stage
 	// last marked RESET_TO_HERE played again. False when there is no mission to
 	// retry, and the caller should reload it instead.
@@ -238,6 +247,13 @@ private:
 	float _objectiveDuration = 0.0f;
 	bool _announceStageComplete = false;
 	std::size_t _resetStage = 0;
+	bool _clockCountsUp = false;
+	float _parTime = 0.0f;
+	int _coinFee = 0;
+	bool _recordsEnabled = true;
+	// Time since the mission's first stage began, for its completion time. The
+	// stage clock cannot give it: it counts down, or up, or is not running.
+	float _missionElapsed = 0.0f;
 	// Where the mission's reset commands put the player's car, and whether the
 	// player starts at its wheel.
 	std::string _playerCarLocator;

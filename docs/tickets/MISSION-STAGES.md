@@ -84,7 +84,7 @@ end and restart. Here is the last stage met, and what was skipped on the way:
 | m7 | 3 | end, 3 cycles | — |
 | bm1 | 7 | end, 5 cycles | — (5 boxes, then 12 Tomacco) |
 | sr2 | 2 | end | — |
-| gr1 | 2 | fails on its `coins` stage's clock | `coins` |
+| gr1 | 2 | end (after the fixes below) | `coins` fee waived |
 | d1 | 1 | — | its locators are not loaded |
 
 What it took beyond the sequencer:
@@ -101,6 +101,22 @@ What it took beyond the sequencer:
   its own roof, and was dropped from 1.3m up. Vehicle ground searches now see only static
   geometry.
 
+## gr1, the race against the clock
+
+gr1 failed the instant its race began. It sets `SetStageTime(1)` and then `UseElapsedTime()`, a
+clock that counts **up**, with `SetParTime(195)` as the time not to exceed. The clock counted
+down from 1s instead. `UseElapsedTime` and `SetParTime` now do what they say: the stage clock
+counts up, and running over par fails the stage.
+
+Its first stage, `coins`, charges a 20-coin entry fee (`SetCoinFee`). There is no coin purse
+yet, and the street holds ten coins, so the fee is waived, with a log line saying so,
+rather than blocking the race for good.
+
+The completion time was "initial stage time minus remaining", which means nothing for a clock
+counting up or a stage with none: gr1 finished in **-8.6s**, a new best time, saved to
+`donut_save.dat`. The mission's time is now measured from its first stage, and `--autopilot`
+runs set no records (teleporting through a mission is not a record).
+
 ## Retrying from RESET_TO_HERE
 
 `RESET_TO_HERE` marks its stage as the retry point. After a failure, `Game` asks
@@ -115,5 +131,5 @@ A completed mission still reloads from the top.
 
 - The `followdistance` condition.
 - NPCs as characters in the world (they are positions only), dialogue, interiors.
-- `coins`, `destroy`, `dump` and `follow` objectives are skipped: they need the coin purse, AI car
-  damage and moving NPCs.
+- `destroy`, `dump` and `follow` objectives are skipped: they need AI car damage and moving NPCs.
+  The `coins` fee is waived until there is a coin purse.
