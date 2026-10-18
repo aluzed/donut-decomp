@@ -763,6 +763,11 @@ void Game::PlaceNpc(const std::string& name, const Vector3& position)
 		auto npc = std::make_unique<Character>(name);
 		npc->LoadModel(name);
 		npc->LoadAnimations(name);
+		// Like the pedestrians, a character extracted without animations borrows
+		// Apu's, whose skeleton the adult models share; Barney stood in his
+		// bind pose, arms out.
+		if (npc->GetAnimations().empty())
+			npc->LoadAnimations("apu");
 		// Standing about: the first idle in the set, if it has one.
 		for (const auto& [anim, data] : npc->GetAnimations())
 			if (anim.find("idle") != std::string::npos)
