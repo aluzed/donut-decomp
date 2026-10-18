@@ -165,8 +165,11 @@ void Hud::drawRadar(SpriteBatch& sprites, const Font* font, const HudState& stat
 	drawRect(sprites, origin, Vector2(size, size), kPanel);
 
 	const float scale = state.radarRange > 0.0f ? (size * 0.5f) / state.radarRange : 0.0f;
-	const float cs = std::cos(-state.playerHeading);
-	const float sn = std::sin(-state.playerHeading);
+	// The player's right is (cos h, -sin h) and forward (sin h, cos h) for a
+	// heading h, yaw from +Z. It was rotated by -h, which put what lay ahead
+	// behind the arrow.
+	const float cs = std::cos(state.playerHeading);
+	const float sn = std::sin(state.playerHeading);
 
 	auto plot = [&](const Vector2& worldXZ, const Vector2& blipSize, const Vector4& colour) {
 		const Vector2 rel = worldXZ - state.playerXZ;
@@ -179,6 +182,8 @@ void Hud::drawRadar(SpriteBatch& sprites, const Font* font, const HudState& stat
 		drawRect(sprites, p - blipSize * 0.5f, blipSize, colour);
 	};
 
+	// The roads, as their nodes.
+	for (const auto& road : state.roadPoints) plot(road, Vector2(2.0f, 2.0f), Vector4(0.6f, 0.6f, 0.65f, 0.8f));
 	for (const auto& blip : state.checkpointBlips) plot(blip, Vector2(5.0f, 5.0f), Vector4(1.0f, 1.0f, 1.0f, 0.5f));
 	for (const auto& blip : state.missionBlips) plot(blip, Vector2(6.0f, 6.0f), Vector4(0.2f, 1.0f, 1.0f, 1.0f));
 	for (const auto& blip : state.policeBlips) plot(blip, Vector2(6.0f, 6.0f), Vector4(1.0f, 0.2f, 0.2f, 1.0f));

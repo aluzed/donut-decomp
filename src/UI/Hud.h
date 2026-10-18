@@ -63,6 +63,7 @@ struct HudState
 	float playerHeading = 0.0f; // radians, 0 = +Z
 	std::vector<Vector2> missionBlips;
 	std::vector<Vector2> policeBlips;
+	std::vector<Vector2> roadPoints; // the road network's nodes in range
 	std::vector<Vector2> checkpointBlips; // upcoming checkpoints, in order
 	bool hasNextCheckpoint = false;
 	Vector2 nextCheckpointXZ;

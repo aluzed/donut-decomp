@@ -2288,7 +2288,16 @@ void Game::Run()
 			                              ? _activeVehicle->GetPosition()
 			                              : (_character ? _character->GetPosition() : Vector3::Zero);
 			hud.playerXZ = Vector2(playerPos.X, playerPos.Z);
-			hud.playerHeading = _camYaw;
+			// The way the player faces: the car's heading at the wheel (it used
+			// to be the on-foot camera's, whatever the car did).
+			hud.playerHeading = _inVehicle && _activeVehicle ? _activeVehicle->GetRotation().Yaw() : _camYaw;
+			if (_pathGraph)
+				for (const auto& node : _pathGraph->GetNodes())
+				{
+					const float dx = node.position.X - playerPos.X, dz = node.position.Z - playerPos.Z;
+					if (!node.shortcut && dx * dx + dz * dz < hud.radarRange * hud.radarRange * 2.0f)
+						hud.roadPoints.emplace_back(node.position.X, node.position.Z);
+				}
 
 			if (_inVehicle)
 			{
