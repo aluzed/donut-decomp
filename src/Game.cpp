@@ -480,6 +480,23 @@ void Game::runAutopilot(double dt)
 		return;
 	}
 
+	// Tailing a car is done from behind it, and only when it is getting away:
+	// dropping the player's car onto the target every two seconds rammed it
+	// off its route.
+	if (const Vehicle* followed = _scriptEngine->GetFollowTarget())
+	{
+		const Vector3 me = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : _character->GetPosition();
+		if ((followed->GetPosition() - me).Length() < 100.0f)
+			return;
+		const Vector3 behind = followed->GetPosition() - followed->GetRotation() * Vector3::Forward * 25.0f;
+		Log::Info("Game: autopilot catches up with '{}'", followed->GetName());
+		if (_inVehicle && _activeVehicle)
+			_activeVehicle->Teleport(behind, followed->GetRotation());
+		else
+			SetPlayerPosition(behind + Vector3(0.0f, 1.0f, 0.0f));
+		return;
+	}
+
 	Vector3 target;
 	if (!_scriptEngine->GetObjectiveTarget(target))
 		return;

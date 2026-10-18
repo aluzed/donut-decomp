@@ -312,7 +312,10 @@ void GameCommands::StageStartMusicEvent(const std::string& param0) {}
 void GameCommands::AllowMissionAbort(const std::string& param0) {}
 void GameCommands::MustActionTrigger(int32_t param0 /*= 0*/) {}
 void GameCommands::SetStageAITargetCatchupParams(const std::string& param0, int32_t param1, int32_t param2) {}
-void GameCommands::SetFollowDistances(int32_t param0, int32_t param1) {}
+void GameCommands::SetFollowDistances(int32_t param0, int32_t param1)
+{
+	Game::GetInstance().GetScriptEngine().SetFollowDistances(static_cast<float>(param0), static_cast<float>(param1));
+}
 void GameCommands::SetFadeOut(float param0) {}
 void GameCommands::StayInBlack(int32_t param0 /*= 0*/) {}
 void GameCommands::AddStageCharacter(const std::string& param0, const std::string& param1, const std::string& param2,

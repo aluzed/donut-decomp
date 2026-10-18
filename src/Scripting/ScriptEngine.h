@@ -160,10 +160,17 @@ public:
 	void AddCondition(const std::string& type);
 	void SetCondTime(int milliseconds);
 	void SetCondMinHealth(float health);
+	// "followdistance": how far the player may fall behind the car they follow.
+	void SetFollowDistances(float minimum, float maximum);
 	// Where the current objective wants the player: the next checkpoint or
 	// destination, or whoever they are to talk to. For --autopilot.
 	bool GetObjectiveTarget(Vector3& position) const;
 	bool ObjectiveWantsCar() const { return _objectiveType == "getin"; }
+	// The car a "follow" objective is following, if any.
+	const Vehicle* GetFollowTarget() const
+	{
+		return _objectiveType == "follow" && !_raceOpponents.empty() ? &_raceOpponents.front()->GetVehicle() : nullptr;
+	}
 	// What GetObjectiveTarget points at, for the HUD.
 	std::string GetObjectiveTargetLabel() const;
 	// A trigger volume the player has just entered or left (Level::UpdateTriggers).
@@ -271,6 +278,7 @@ private:
 		std::string type;
 		float seconds = 0.0f;
 		float minHealth = 0.0f;
+		float maxDistance = 0.0f;
 	};
 	std::vector<Condition> _conditions;
 	// A "delivery": items to pick up, in any order. Taken ones are removed.

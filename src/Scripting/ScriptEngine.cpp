@@ -277,6 +277,16 @@ void ScriptEngine::updateObjective(double dt)
 		if (_pickups.empty())
 			objectiveComplete();
 	}
+	else if (_objectiveType == "follow")
+	{
+		// Met in UpdateAI, when the target arrives. With nobody to follow it
+		// cannot be met at all.
+		if (_raceOpponents.empty())
+		{
+			Log::Warn("ScriptEngine: nothing to follow, skipping");
+			objectiveComplete();
+		}
+	}
 	else if (_objectiveType == "coins")
 	{
 		// Paying to enter. There is no coin economy yet -- the street holds ten
@@ -361,6 +371,11 @@ bool ScriptEngine::GetObjectiveTarget(Vector3& position) const
 		position = _checkpoints[_currentCheckpoint];
 		return true;
 	}
+	if (_objectiveType == "follow" && !_raceOpponents.empty())
+	{
+		position = _raceOpponents.front()->GetVehicle().GetPosition();
+		return true;
+	}
 	if (_objectiveType == "delivery" && !_pickups.empty())
 	{
 		// The nearest one: they can be taken in any order.
@@ -391,6 +406,12 @@ void ScriptEngine::SetCondTime(int milliseconds)
 		_conditions.back().seconds = static_cast<float>(milliseconds) / 1000.0f;
 }
 
+void ScriptEngine::SetFollowDistances(float minimum, float maximum)
+{
+	if (!_conditions.empty())
+		_conditions.back().maxDistance = maximum;
+}
+
 void ScriptEngine::SetCondMinHealth(float health)
 {
 	if (!_conditions.empty())
@@ -403,6 +424,7 @@ void ScriptEngine::updateConditions(double dt)
 		return;
 
 	const bool inCar = _game.GetPlayerVehicle() != nullptr;
+	const Vector3 player = inCar ? _game.GetPlayerVehicle()->GetPosition() : _game.GetPlayerPosition();
 	_outOfVehicleSeconds = inCar ? 0.0f : _outOfVehicleSeconds + static_cast<float>(dt);
 
 	for (const auto& condition : _conditions)
@@ -413,6 +435,12 @@ void ScriptEngine::updateConditions(double dt)
 		    _outOfVehicleSeconds > condition.seconds)
 		{
 			missionFailed(fmt::format("out of the car for more than {:.0f}s", condition.seconds));
+			return;
+		}
+		if (condition.type == "followdistance" && condition.maxDistance > 0.0f && !_raceOpponents.empty() &&
+		    (_raceOpponents.front()->GetVehicle().GetPosition() - player).Length() > condition.maxDistance)
+		{
+			missionFailed(fmt::format("lost the car being followed (over {:.0f}m)", condition.maxDistance));
 			return;
 		}
 		// The car's health is a 0-100 meter; the scripts give a fraction.
@@ -497,6 +525,8 @@ std::string ScriptEngine::GetObjectiveTargetLabel() const
 		return "Next checkpoint";
 	if (_objectiveType == "delivery")
 		return "Nearest item";
+	if (_objectiveType == "follow")
+		return "Target";
 	if (_objectiveType == "talkto")
 		return "Talk to " + _talkToTarget;
 	return "Destination";
@@ -951,7 +981,9 @@ void ScriptEngine::buildRaceCircuit()
 	// car actually is, and it is about to move.
 	placeRaceCarOnCircuit();
 
-	if (_objectiveType != "race")
+	// A "follow" drives its target the same way: m5's van runs its waypoints
+	// and the player has to keep up.
+	if (_objectiveType != "race" && _objectiveType != "follow")
 		return;
 	for (Vehicle* vehicle : _raceVehicles)
 	{
@@ -1341,6 +1373,14 @@ void ScriptEngine::UpdateAI(double dt)
 		// A race is lost when an opponent finishes it first. Without this the
 		// only way to lose was the stage timer, and a player who was simply
 		// beaten kept racing an opponent that had long since gone round again.
+		// The car being followed has got where it was going: that is the follow
+		// done, not a race lost.
+		if (_objectiveType == "follow" && opponent->Laps() >= _totalLaps)
+		{
+			objectiveComplete();
+			return;
+		}
+
 		if (!_raceDecided && opponent->Laps() >= _totalLaps)
 		{
 			_raceDecided = true;

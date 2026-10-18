@@ -44,6 +44,7 @@ Two commands made it worse:
   | `dialogue` | 3s pass. There is no dialogue system |
   | `timer` | `SetDurationTime` seconds pass |
   | `delivery` | every `AddCollectible` item has been picked up (within 4m), in any order; the HUD shows "delivery 3/9" |
+  | `follow` | the target car, driven along the stage waypoints like a one-lap race, reaches the end. The `followdistance` condition (`SetFollowDistances`) fails the stage if the player falls further behind than its maximum |
   | `gooutside`, `fmv`, `buycar` | at once: there is no interior, movie or showroom to hold the player |
   | anything else | at once, with a warning, so it does not block the mission |
 
@@ -79,7 +80,7 @@ end and restart. Here is the last stage met, and what was skipped on the way:
 | m2 | 12 | end, 2 cycles | — |
 | m3 | 4 | end, 8 cycles | `destroy` |
 | m4 | 4 | end, 6 cycles | — (nine power boxes picked up) |
-| m5 | 6 | end, 6 cycles | `follow` |
+| m5 | 6 | end | — (the van is followed for 181s) |
 | m6 | 4 | end, 5 cycles | `dump` |
 | m7 | 3 | end, 3 cycles | — |
 | bm1 | 7 | end, 5 cycles | — (5 boxes, then 12 Tomacco) |
@@ -136,7 +137,6 @@ A completed mission still reloads from the top.
 
 ## Not done
 
-- The `followdistance` condition.
 - NPCs as characters in the world (they are positions only), dialogue, interiors.
-- `destroy`, `dump` and `follow` objectives are skipped: they need AI car damage and moving NPCs.
+- `destroy` and `dump` objectives are skipped: they need AI car damage.
   The `coins` fee is waived until there is a coin purse.
