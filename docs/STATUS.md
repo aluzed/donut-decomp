@@ -54,7 +54,7 @@ into a playable arcade racing game.
 
 ### AI
 - **PathGraph**: Road network from level Path data, nearest-neighbor graph
-- **Traffic**: 12 cars cruising the roads, choosing their way at junctions; they stop short of a car in their way (they are kinematic, and pushed through it)
+- **Traffic**: 12 cars cruising the roads, choosing their way at junctions; they stop short of a car in their way (they are kinematic, and pushed through it) or of the player on foot, and sound their horn when kept waiting
 - **Race Opponents**: any number, driving real vehicles over a circuit routed through
   the road network (shortcuts excluded); speed profile, hairpins and three-point turns,
   mission catch-up curves; loops or start-to-finish routes (AI-RACE, SCRIPT-D)
