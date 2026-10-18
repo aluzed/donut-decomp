@@ -24,6 +24,8 @@ struct Pedestrian
 	bool active;
 	// Which of the pre-built bodies walks this pedestrian, or -1 for none.
 	int body = -1;
+	// Knocked flying by a car: seconds in the air, or -1 walking.
+	float flying = -1.0f;
 };
 
 class PedestrianManager
@@ -46,7 +48,7 @@ public:
 
 	// The pedestrians within `radius` of a car going through them: they are
 	// taken off the street (there is no knock-down animation) and counted.
-	int KnockDown(const Vector3& position, float radius);
+	int KnockDown(const Vector3& position, float radius, const Vector3& carVelocity = Vector3::Zero);
 
 private:
 	void despawnFar(float despawnRadius, const Vector3& playerPosition);

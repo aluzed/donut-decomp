@@ -62,6 +62,25 @@ void PedestrianManager::Update(double deltaTime, const Vector3& playerPosition)
 	{
 		if (!p.active) continue;
 
+		if (p.flying >= 0.0f)
+		{
+			// Through the air, turning over, for a moment; then off the street.
+			p.flying += static_cast<float>(deltaTime);
+			p.velocity.Y -= 9.8f * static_cast<float>(deltaTime);
+			p.position += p.velocity * static_cast<float>(deltaTime);
+			if (p.flying > 1.6f)
+				p.active = false;
+			if (p.body >= 0)
+			{
+				Character& body = *_bodies[p.body];
+				body.SetPosition(p.position);
+				body.SetRotation(Quaternion::MakeFromEuler(
+				    Vector3(p.flying * 9.0f, std::atan2(p.velocity.X, p.velocity.Z) + 3.14159265f, 0.0f)));
+				body.Update(deltaTime);
+			}
+			continue;
+		}
+
 		p.targetTimer -= static_cast<float>(deltaTime);
 
 		Vector3 toTarget = p.targetDirection - p.position;
@@ -175,18 +194,21 @@ void PedestrianManager::DrawBodies(const Matrix4x4& viewProj, GL::ShaderProgram&
 			_bodies[p.body]->Draw(viewProj, skinShader, resources);
 }
 
-int PedestrianManager::KnockDown(const Vector3& position, float radius)
+int PedestrianManager::KnockDown(const Vector3& position, float radius, const Vector3& carVelocity)
 {
 	int hit = 0;
 	for (auto& pedestrian : _pedestrians)
 	{
-		if (!pedestrian.active)
+		if (!pedestrian.active || pedestrian.flying >= 0.0f)
 			continue;
 		Vector3 d = pedestrian.position - position;
 		d.Y = 0.0f;
 		if (d.LengthSquared() < radius * radius)
 		{
-			pedestrian.active = false;
+			// Sent flying the way the car was going, and up; they are gone
+			// when they land.
+			pedestrian.flying = 0.0f;
+			pedestrian.velocity = Vector3(carVelocity.X * 0.8f, 6.0f, carVelocity.Z * 0.8f);
 			++hit;
 		}
 	}

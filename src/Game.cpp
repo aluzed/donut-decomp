@@ -661,7 +661,7 @@ void Game::updateHitAndRun(double dt)
 
 	// People run down: a car going through them at more than walking pace.
 	if (driving && std::abs(speed) > 15.0f && _pedestrianManager && _interior.empty())
-		if (const int hit = _pedestrianManager->KnockDown(player, 2.2f); hit > 0)
+		if (const int hit = _pedestrianManager->KnockDown(player, 2.2f, _activeVehicle->GetVelocity()); hit > 0)
 		{
 			_hitAndRun->Add(25.0f * static_cast<float>(hit), hit == 1 ? "ran someone down" : "ran people down");
 			AddShake(0.4f);

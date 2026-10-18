@@ -36,8 +36,9 @@ failed.
 
 ## Not done
 
-- People are taken off the street when hit; there is no knock-down. They do cry out: one of
-  the 33 generic passers-by's "hit by a car" lines (`generic_*\p_hitbyc_*.rsd`), at random.
+- Someone hit is knocked flying: thrown the way the car was going and up, turning over,
+  and gone after 1.6s (no ragdoll). They cry out: one of the 33 generic passers-by's "hit
+  by a car" lines (`generic_*\p_hitbyc_*.rsd`), at random.
 - `DisableHitAndRun()` (the street races' stages) now switches it off for the stage, meter
   and police with it: filled by hand on sr2, the meter was emptied and nobody came; on m2
   the police came. `SetHitNRun`, `ResetHitAndRun` and the meter commands are still empty. The old `ChaseManager` is left as it was.
