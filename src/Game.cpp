@@ -645,6 +645,17 @@ void Game::updateHitAndRun(double dt)
 		{
 			_hitAndRun->Add(25.0f * static_cast<float>(hit), hit == 1 ? "ran someone down" : "ran people down");
 			AddShake(0.4f);
+			// And they say so: one of the generic passers-by's "hit by a car"
+			// lines (generic_male_1\p_hitbyc_mn1_01.rsd...).
+			static const std::vector<std::string> cries = [this] {
+				std::vector<std::string> lines;
+				for (const auto& line : _audioManager->FindSounds("\\p_hitbyc_"))
+					if (line.rfind("generic_", 0) == 0)
+						lines.push_back(line);
+				return lines;
+			}();
+			if (!cries.empty())
+				_audioManager->PlayAudio(cries[static_cast<std::size_t>(rand()) % cries.size()]);
 		}
 
 	switch (_hitAndRun->Update(dt, player, speed, !driving, *_worldPhysics, *_pathGraph))

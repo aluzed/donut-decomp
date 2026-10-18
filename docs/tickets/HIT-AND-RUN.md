@@ -36,7 +36,8 @@ failed.
 
 ## Not done
 
-- People are taken off the street when hit; there is no knock-down.
+- People are taken off the street when hit; there is no knock-down. They do cry out: one of
+  the 33 generic passers-by's "hit by a car" lines (`generic_*\p_hitbyc_*.rsd`), at random.
 - Mission scripts' `SetHitNRun`, `DisableHitAndRun`, `ResetHitAndRun` and the meter
   commands are still empty. The old `ChaseManager` is left as it was.
 - No siren, no "BUSTED" screen of its own: the mission-failed screen says it.
