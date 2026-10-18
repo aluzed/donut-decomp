@@ -51,3 +51,20 @@ inside a hedge.
 - [ ] The player's car is seen from the chase camera at sr2's grid. The car is there
       (-201.5, -2.2, -261.6) and the camera's line of sight to it is clear by raycast, but the
       captured frame shows grass where it should be. Unresolved.
+
+## The yaw that was in degrees (2026-10-18, later)
+
+`Quaternion::Euler()` returns **degrees**, and folds any heading past 90 degrees back into
+[-90, 90] with X and Z flipped to 180. Three places took its Y as a yaw in radians: the
+chase camera (offset and look direction), the on-foot turn toward the walking direction,
+and the traffic's steering. A car heading 0.5 rad gave the camera a yaw of 28.6 rad. They
+now use `Quaternion::Yaw()`, the heading of +Z by `atan2`, checked against `MakeFromEuler`
+for 0, 0.5, pi/2, 2.5 and -2.5.
+
+The chase camera also looks **at the car** from wherever it ends up, rather than along the
+car's heading at a fixed pitch, so a camera pulled in by the level still frames the car.
+
+The sr2 grid is still not solved, but narrowed: the car camera runs, stands 12m behind the
+car on its heading and looks at it, and the frame shows a lawn bank with a tree where the
+car is. The static raycast from the car to the camera is clear, so the bank that is drawn
+there is not in the collision, or not where it is drawn. That is what to look at next.

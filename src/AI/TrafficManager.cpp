@@ -115,7 +115,7 @@ void TrafficManager::Update(double dt)
 		float steer = seekSteer(car.position, target, car.rotation, car.maxSpeed, 2.5f);
 		float speed = arrivalSpeed(car.position, target, car.maxSpeed, 15.0f);
 
-		float yaw = car.rotation.Euler().Y;
+		float yaw = car.rotation.Yaw();
 		yaw += steer * static_cast<float>(dt);
 		car.rotation = Quaternion::MakeFromEuler(Vector3(0, yaw, 0));
 

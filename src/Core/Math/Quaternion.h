@@ -62,6 +62,10 @@ public:
 	Vector3 GetZAxis() const;
 
 	static Quaternion MakeFromEuler(const Vector3& euler);
+	// The heading, in radians about +Y, that MakeFromEuler(0, yaw, 0) turns +Z
+	// to. Not Euler().Y, which is in degrees and folds headings past 90 degrees
+	// back into [-90, 90] (with X and Z flipped to 180 to make up for it).
+	float Yaw() const;
 
 	std::string ToString() const;
 };

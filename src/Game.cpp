@@ -1011,7 +1011,7 @@ void Game::Run()
 				ctrl.setWalkDirection(BulletCast<btVector3>(worldMove * 5.0f));
 
 				float targetYaw = atan2f(worldMove.X, worldMove.Z);
-				float curYaw = _character->GetRotation().Euler().Y;
+				float curYaw = _character->GetRotation().Yaw();
 				float delta = targetYaw - curYaw;
 				while (delta > 3.14159265f) delta -= 6.28318531f;
 				while (delta < -3.14159265f) delta += 6.28318531f;
@@ -1105,15 +1105,25 @@ void Game::Run()
 			// bumps, and rotating the offset by the full orientation swung the
 			// camera under the terrain. The look rotation below already takes
 			// yaw alone.
-			const Quaternion vehYaw = Quaternion::MakeFromEuler(Vector3(0.0f, vehRot.Euler().Y, 0.0f));
+			// Euler().Y was taken here for the yaw, but it is in degrees and folds
+			// past 90: the camera stood behind only a car heading straight down +Z.
+			const Quaternion vehYaw = Quaternion::MakeFromEuler(Vector3(0.0f, vehRot.Yaw(), 0.0f));
 			Vector3 targetPos = camTarget + vehYaw * Vector3(0, 3.0f, -12.0f);
 
 			float lerpFactor = 1.0f - exp(-8.0f * static_cast<float>(deltaTime));
 			if (_smoothCamPos == Vector3::Zero) _smoothCamPos = targetPos;
 			_smoothCamPos = _smoothCamPos + (targetPos - _smoothCamPos) * lerpFactor;
 
-			_camera->SetPosition(unoccludedCameraPosition(camTarget, _smoothCamPos));
-			_camera->SetQuaternion(Quaternion::MakeFromEuler(Vector3(-0.2f, vehRot.Euler().Y, 0)));
+			// Looking at the car from wherever the camera ended up. A fixed pitch
+			// along the car's heading lost it whenever the level pulled the camera
+			// in: at sr2's grid, with the lawn behind, it sat 2m above the car and
+			// looked out over it.
+			const Vector3 cameraPos = unoccludedCameraPosition(camTarget, _smoothCamPos);
+			const Vector3 toCar = camTarget - cameraPos;
+			const float flat = std::sqrt(toCar.X * toCar.X + toCar.Z * toCar.Z);
+			const float yaw = flat > 0.5f ? atan2f(toCar.X, toCar.Z) : vehRot.Yaw();
+			_camera->SetPosition(cameraPos);
+			_camera->SetQuaternion(Quaternion::MakeFromEuler(Vector3(atan2f(toCar.Y, std::max(flat, 0.5f)), yaw, 0)));
 		}
 		else if (_character)
 		{

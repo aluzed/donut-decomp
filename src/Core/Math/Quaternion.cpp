@@ -234,6 +234,12 @@ Quaternion Quaternion::MakeFromEuler(const Vector3& euler)
 		cx * cy * cz + sx * sy * sz);
 }
 
+float Quaternion::Yaw() const
+{
+	const Vector3 forward = *this * Vector3::Forward;
+	return atan2f(forward.X, forward.Z);
+}
+
 Vector3 Quaternion::Euler() const
 {
 	Matrix3x3 m;
