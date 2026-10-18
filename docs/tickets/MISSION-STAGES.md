@@ -128,6 +128,10 @@ m0, and each mission won leads on to the next, through m7. `--story` starts ther
 the menu. `--autostart --autopilot --story`: m0 to m7 in a single 200s session, no crash.
 Without the scripts, "New Game" plays the test mission as before.
 
+Each story mission won is recorded in `donut_progress.dat` (gitignored, separate from the
+best-time save), and the main menu then offers **Continue** from the next one. `--autopilot`
+runs record nothing.
+
 ## Retrying from RESET_TO_HERE
 
 `RESET_TO_HERE` marks its stage as the retry point. After a failure, `Game` asks

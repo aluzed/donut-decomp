@@ -10,6 +10,7 @@
 #include "Core/Math/Math.h"
 #include "FreeCamera.h"
 #include <cctype>
+#include <fstream>
 #include "FrontendProject.h"
 #include "Game/CollectibleManager.h"
 #include "Game/GameInput.h"
@@ -306,6 +307,14 @@ Game::Game(int argc, char** argv)
 		startStoryMission(0);
 
 	_mainMenu = std::make_unique<GameMenu>();
+	// Picking up the story where it was left, when it was.
+	if (const int progress = loadStoryProgress(); progress > 0 && progress < static_cast<int>(_story.size()))
+	{
+		_mainMenu->AddButton("Continue", 0, 0, 200, 40, [this, progress]() {
+			startStoryMission(progress);
+			_gameState = GameState::InGame;
+		});
+	}
 	_mainMenu->AddButton("New Game", 0, 0, 200, 40, [this]() {
 		if (!_story.empty())
 			startStoryMission(0);
@@ -468,6 +477,26 @@ void Game::startStoryMission(int index)
 	Vector3 start;
 	if (_scriptEngine->GetPlayerStart(start))
 		SetPlayerPosition(start);
+}
+
+int Game::loadStoryProgress() const
+{
+	std::ifstream file("donut_progress.dat");
+	int next = 0;
+	if (!(file >> next) || next < 0)
+		return 0;
+	return next;
+}
+
+void Game::saveStoryProgress(int next) const
+{
+	// An unattended run proves the missions play through; it has not won them.
+	if (_autopilot)
+		return;
+	std::ofstream file("donut_progress.dat");
+	if (file.good())
+		file << next << "\n";
+	Log::Info("Game: story progress saved, next mission {}", next + 1);
 }
 
 void Game::runAutopilot(double dt)
@@ -1104,6 +1133,8 @@ void Game::Run()
 				// A story mission won leads on to the next one.
 				_interior.clear();
 				_level->SetDrawOnly({});
+				if (!failed && _storyIndex >= 0)
+					saveStoryProgress(_storyIndex + 1);
 				if (!failed && _storyIndex >= 0 && _storyIndex + 1 < static_cast<int>(_story.size()))
 					startStoryMission(_storyIndex + 1);
 				else if (!failed || !_scriptEngine->RetryFromCheckpoint())

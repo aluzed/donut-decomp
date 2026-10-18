@@ -204,6 +204,10 @@ private:
 	char _language = 'E';
 	// Tears down whatever mission is running and starts story mission `index`.
 	void startStoryMission(int index);
+	// The story mission to continue from, kept in donut_progress.dat: the one
+	// after the last won. 0 when there is none.
+	int loadStoryProgress() const;
+	void saveStoryProgress(int next) const;
 	// `wanted`, or the nearest point to `subject` on the way to it that the level
 	// does not hide `subject` from.
 	Vector3 unoccludedCameraPosition(const Vector3& subject, const Vector3& wanted) const;

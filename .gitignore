@@ -28,6 +28,7 @@
 
 # save data
 donut_save.dat
+donut_progress.dat
 
 # runtime-generated control bindings
 keymap.conf
