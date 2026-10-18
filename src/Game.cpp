@@ -338,6 +338,20 @@ Game::Game(int argc, char** argv)
 			startStoryMission(0);
 		_gameState = GameState::InGame;
 	});
+	// Any level the scripts were copied for, from its story's start.
+	for (int level = 2; level <= 7; ++level)
+	{
+		if (!levelAvailable(level))
+			continue;
+		const std::string& name = _textBible.Get(fmt::format("LEVEL_{}", level));
+		_mainMenu->AddButton(name.empty() ? fmt::format("Level {}", level) : name, 0, 0, 200, 40, [this, level]() {
+			if (_levelNumber != level)
+				switchLevel(level);
+			if (!_story.empty())
+				startStoryMission(0);
+			_gameState = GameState::InGame;
+		});
+	}
 	_mainMenu->AddButton("Quit", 0, 0, 200, 40, [this]() {
 		SDL_Event quitEvent;
 		quitEvent.type = SDL_QUIT;

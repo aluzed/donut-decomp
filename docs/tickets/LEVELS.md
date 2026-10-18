@@ -87,6 +87,9 @@ next one, with its own player. `donut_progress.dat` holds the mission and the le
 ("3 2": level 2's fourth mission), so Continue starts on the right level; a file written
 before holds only the mission, read as level 1's. New Game always starts on level 1.
 
+The main menu lists every level whose scripts are there ("LEVEL 2" to "LEVEL 7", the
+phrase table's names), each starting that level's story.
+
 `--from <k>` starts `--story` at the level's k-th mission, to reach the end of a level
 without playing all of it. `--story --from 7 --autopilot`: level 1's m7 won, level 2
 loaded, Bart standing outside the Try-N-Save on m1, which plays through, then m2.
