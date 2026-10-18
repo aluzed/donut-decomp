@@ -56,7 +56,8 @@ Two commands made it worse:
 - Checkpoints, and so `goto`, are reached **on foot** as well as by car.
 - `ShowStageComplete()` only flags the announcement. `AddStage` takes non-numeric labels.
 - **`--autopilot`** moves the player onto each objective in turn, two seconds apart, and into a
-  car for a `getin`. It exists to run a whole mission unattended.
+  car for a `getin`, and out of it for an `interior` or a `talkto`. It exists to run a whole
+mission unattended.
 
 ## A crash it uncovered
 
@@ -144,6 +145,7 @@ A completed mission still reloads from the top.
 
 ## Not done
 
-- Dialogue. NPCs stand idle where placed, and only those whose model was extracted.
+- Dialogue. NPCs stand where placed, turning to face a player on foot within 10m, and only
+  those whose model was extracted; they have no animation, so they hold the bind pose.
 - A target "getting away" in `destroy` has not been exercised:
   it goes through the same path as a `follow` target arriving, which has.
