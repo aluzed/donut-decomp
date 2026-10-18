@@ -40,6 +40,8 @@ class FreeCamera;
 class Character;
 class ScriptEngine;
 class Vehicle;
+class CompositeModel;
+class SceneSkins;
 class TrafficManager;
 class PathGraph;
 class PedestrianManager;
@@ -259,12 +261,17 @@ private:
 		// Its model, as it stands before it plays (art/nis/gags/), where
 		// GagSetPosition puts it. Not animated.
 		std::shared_ptr<CompositeModel> drawable;
+		// The characters it holds, if any (Homer on the couch).
+		std::shared_ptr<SceneSkins> skins;
 		Vector3 placed;
 		// GagSetCycle: "cycle" plays round and round; "single" plays once when
 		// triggered and stays as it ends; "reset" plays once and goes back.
 		std::string cycle;
 		// When it was last triggered, < 0 when it stands at rest.
 		double animStartedAt = -1.0;
+		// GagSetRandom: one of the gags sharing its trigger is picked each time
+		// (the Simpsons' couch has six, from Grandpa walking in to Lisa).
+		bool random = false;
 		std::string sound;
 		bool byHand = false;
 		Vector3 position;

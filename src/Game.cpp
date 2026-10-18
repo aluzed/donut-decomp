@@ -28,6 +28,7 @@
 #include "RCL/RCFFile.h"
 #include "RCL/RSDFile.h"
 #include "Render/CompositeModel.h"
+#include "Render/SceneSkins.h"
 #include "Render/Font.h"
 #include "Render/LineRenderer.h"
 #include "Render/OpenGL/FrameBuffer.h"
@@ -1509,6 +1510,8 @@ void Game::loadGags()
 			                      static_cast<float>(std::atof(args[2].c_str())));
 		else if (command == "GagSetSound" && !args.empty())
 			gag->sound = args[0];
+		else if (command == "GagSetRandom" && !args.empty())
+			gag->random = std::atoi(args[0].c_str()) != 0;
 		else if (command == "GagSetCycle" && !args.empty())
 			gag->cycle = args[0];
 		else if (command == "GagSetCameraShake")
@@ -1540,7 +1543,10 @@ void Game::loadGags()
 				// A model of its own: an animated one is posed gag by gag.
 				const std::string file = "art/nis/gags/" + gag->model;
 				if (gag->placed != Vector3::Zero && FileSystem::exists(file))
+				{
 					gag->drawable = CompositeModel::LoadP3D(file);
+					gag->skins = SceneSkins::Load(file);
+				}
 				gag->played = found.count(gagId(*gag)) > 0;
 				_gags.push_back(*gag);
 			}
@@ -1628,6 +1634,14 @@ void Game::drawGags(const Matrix4x4& viewProjection)
 	{
 		if (!gag.drawable || (gag.placed - _camera->GetPosition()).Length() > 150.0f)
 			continue;
+		// A scene with characters in it is seen only while it plays: Grandpa
+		// walks in, says his piece and is gone.
+		if (gag.skins && gag.drawable->IsAnimated())
+		{
+			const double played = (_elapsedSeconds - gag.animStartedAt) * gag.drawable->GetAnimationFrameRate();
+			if (gag.animStartedAt < 0.0 || (gag.cycle != "cycle" && played >= gag.drawable->GetAnimationFrames()))
+				continue;
+		}
 		if (gag.drawable->IsAnimated())
 		{
 			const float rate = gag.drawable->GetAnimationFrameRate();
@@ -1647,9 +1661,17 @@ void Game::drawGags(const Matrix4x4& viewProjection)
 				}
 			}
 			gag.drawable->Pose(frame, gag.cycle == "cycle");
+			if (gag.skins)
+				gag.skins->Pose(frame, gag.cycle == "cycle");
 		}
+		const Matrix4x4 model = Matrix4x4::MakeTranslate(gag.placed);
 		for (const bool opaque : {true, false})
-			gag.drawable->Draw(worldShader, viewProjection, Matrix4x4::MakeTranslate(gag.placed), opaque);
+			gag.drawable->Draw(worldShader, viewProjection, model, opaque);
+		if (gag.skins)
+		{
+			glDisable(GL_CULL_FACE); // skinned characters, as for the player
+			gag.skins->Draw(viewProjection, model, *_skinShaderProgram);
+		}
 	}
 }
 
@@ -1679,7 +1701,23 @@ void Game::updateGags()
 		const bool inside = (gag.position - me).Length() < gag.radius;
 		// Once on the way in, and not again for a few seconds.
 		if (_gagsPrimed && inside && !gag.inside && _elapsedSeconds - gag.lastPlayed > 5.0)
-			playGag(gag);
+		{
+			// Of the random gags on this trigger, one plays; the others are
+			// counted as walked into, so that they wait for the next time.
+			std::vector<Gag*> shared;
+			if (gag.random)
+				for (auto& other : _gags)
+					if (other.random && !other.byHand && (other.position - gag.position).Length() < 0.1f &&
+					    std::abs(other.radius - gag.radius) < 0.01f)
+					{
+						shared.push_back(&other);
+						other.inside = true;
+					}
+			Gag& picked = shared.empty() ? gag : *shared[static_cast<std::size_t>(rand()) % shared.size()];
+			playGag(picked);
+			for (Gag* other : shared)
+				other->lastPlayed = _elapsedSeconds;
+		}
 		gag.inside = inside;
 	}
 	_gagsPrimed = true;

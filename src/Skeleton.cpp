@@ -35,14 +35,14 @@ void Skeleton::ResetPose()
 	updateJoints();
 }
 
-void Skeleton::UpdatePose(SkinAnimation& animation, double time)
+void Skeleton::UpdatePose(SkinAnimation& animation, double time, bool loop)
 {
 	time *= animation.GetFrameRate();
 
 	_joints[0].pose = Matrix4x4::Identity;
 
 	for (auto i = 0; i < _joints.size(); i++)
-		_joints[i].pose = _joints[_joints[i].parent].pose * animation.Evaluate(i, static_cast<float>(time));
+		_joints[i].pose = _joints[_joints[i].parent].pose * animation.Evaluate(i, static_cast<float>(time), loop);
 
 	updateJoints();
 }

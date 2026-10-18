@@ -129,5 +129,10 @@ not the `TEX_*` texture animations the same files carry) when triggered, by its
 `GagSetCycle`: "cycle" plays round and round, "single" once, staying as it ends, "reset"
 once, then back to its rest. Each gag has a model of its own, posed frame by frame
 (`CompositeModel::Pose`). Checked: level 1's swing set, standing, topples over and stays
-down. Not done: the characters many gags hold (Homer on the couch, Nelson): they are
-skins, which `CompositeModel` does not draw, so they are not seen at all.
+down. 
+The characters many gags hold (Grandpa walking into the Simpsons' living room, Nelson at
+the Kwik-E-Mart) are skins bound to the scene's skeleton: `SceneSkins` loads them with
+the scene's pose animation and draws them with the characters' shader. Such a scene is
+seen only while it plays. Gags with `GagSetRandom(1)` on one trigger take turns: one of
+them, picked at random, plays (the couch has six). Checked: Grandpa walks in, mouth open,
+then hand to his head, and is gone when his gag ends; the room is empty at rest.

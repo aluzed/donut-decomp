@@ -42,7 +42,8 @@ public:
 	Skeleton(const P3D::Skeleton& skeleton);
 
 	void ResetPose();
-	void UpdatePose(SkinAnimation& animation, double time);
+	// `time` in seconds; with `loop` false, a time past the end holds the last frame.
+	void UpdatePose(SkinAnimation& animation, double time, bool loop = true);
 
 	const std::string& GetName() { return _name; }
 	const std::vector<Joint>& GetJoints() const { return _joints; }

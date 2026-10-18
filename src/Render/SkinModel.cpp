@@ -95,6 +95,8 @@ void SkinModel::Draw()
 	for (auto const& primGroup : _primGroups)
 	{
 		auto const& shader = Game::GetInstance().GetResourceManager().GetShader(primGroup.shaderName);
+		if (shader == nullptr)
+			continue;
 		shader->Bind(0);
 
 		glDrawElements(primGroup.mode, primGroup.indicesCount, _indexBuffer->GetType(),
