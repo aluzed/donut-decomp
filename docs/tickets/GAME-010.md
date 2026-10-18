@@ -1,6 +1,6 @@
 # GAME-010 — Système de collectibles (pièces, 7 cartes, ~50 gags) avec état persistant
 
-- **Status:** TODO
+- **Status:** PARTIAL (2026-10-18: coins)
 - **Priority:** P2
 - **Module:** Game
 - **Depends on:** REGR-001
@@ -30,3 +30,22 @@ Aucune catégorie (cartes, gags) ni persistance n'existe.
 - [ ] Le HUD affiche les compteurs par catégorie.
 - [ ] L'ensemble des IDs collectés est exposé pour sérialisation (GAME-011).
 - [ ] Le jeu compile et reste jouable.
+
+## Coins (2026-10-18)
+
+- **Where they lie.** The level's own coins: one per coin locator (type 14), in every file
+  loaded. Level 1 has 177 of them. `Level::GetCoinPositions`; the scatter along the longest
+  path stays as a fallback for a level without any.
+- **Picking up** runs every frame, from the car when the player drives: once every half
+  second, a car at speed went straight past them.
+- **The purse.** Every coin picked up goes into it, and it is kept across sessions in
+  `donut_coins.dat` (gitignored). The HUD shows the purse. The coins are laid out again on
+  each mission load, as the game's come back when a zone reloads.
+- **Spending.** A `coins` objective (`SetCoinFee`, gr1's 20-coin entry) is met as soon as
+  the purse holds the fee, which is then taken; the objective line shows "12/20" until
+  then. `--autopilot` runs neither earn nor pay: they are let in for free.
+
+Verified: a purse of 25 pays gr1's fee and leaves 5; a purse of 3 holds the mission at its
+first stage; walking onto a coin adds it to the purse and the file.
+
+Cards and gags are still to do.

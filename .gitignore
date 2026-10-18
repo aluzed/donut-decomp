@@ -39,3 +39,4 @@ keymap.conf
 # original CD archives (see docs/ASSETS.md) - never commit these
 *.7z
 *.iso
+donut_coins.dat

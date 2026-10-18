@@ -308,6 +308,9 @@ Game::Game(int argc, char** argv)
 	if (_startStory && !_story.empty())
 		startStoryMission(0);
 
+	if (std::ifstream coins("donut_coins.dat"); !(coins >> _coins) || _coins < 0)
+		_coins = 0;
+
 	_mainMenu = std::make_unique<GameMenu>();
 	// Picking up the story where it was left, when it was.
 	if (const int progress = loadStoryProgress(); progress > 0 && progress < static_cast<int>(_story.size()))
@@ -502,6 +505,25 @@ void Game::saveStoryProgress(int next) const
 	if (file.good())
 		file << next << "\n";
 	Log::Info("Game: story progress saved, next mission {}", next + 1);
+}
+
+bool Game::SpendCoins(int amount)
+{
+	if (amount > _coins)
+		return false;
+	_coins -= amount;
+	saveCoins();
+	return true;
+}
+
+void Game::saveCoins() const
+{
+	// Coins an unattended run walks into were not earned either.
+	if (_autopilot)
+		return;
+	std::ofstream file("donut_coins.dat");
+	if (file.good())
+		file << _coins << "\n";
 }
 
 void Game::runAutopilot(double dt)
@@ -1276,8 +1298,19 @@ void Game::Run()
 				pedSpawnTimer = 0.0;
 				if (_pedestrianManager && _interior.empty())
 					_pedestrianManager->Spawn(_character->GetPosition(), 40.0f);
-				if (_collectibleManager)
-					_collectibleManager->Update(_character->GetPosition(), 3.0f);
+			}
+			// Coins every frame: a car at 30 m/s is past one in a tenth of a second.
+			if (_collectibleManager)
+			{
+				const Vector3 collector = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()
+				                                                      : _character->GetPosition();
+				_collectibleManager->Update(collector, 3.0f);
+				if (const int fresh = _collectibleManager->TakeNewlyCollected(); fresh > 0)
+				{
+					_coins += fresh;
+					saveCoins();
+					Log::Debug("Game: {} coin(s) picked up, {} in the purse", fresh, _coins);
+				}
 			}
 		}
 		if (simulate)
@@ -1551,8 +1584,8 @@ void Game::Run()
 
 			if (_collectibleManager)
 			{
-				hud.coins = _collectibleManager->GetCollected();
-				hud.coinsTotal = _collectibleManager->GetTotalAvailable();
+				hud.coins = _coins;
+				hud.coinsTotal = 0;
 			}
 			hud.cardsTotal = 7; // collection itself is GAME-010
 

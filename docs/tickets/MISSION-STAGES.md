@@ -48,7 +48,8 @@ Two commands made it worse:
   | `destroy` | the target car, fleeing along the stage waypoints, is rammed to 0 health. There is no car damage model, so a hit is judged from the gap: touching (under 5m) while closing faster than 4 m/s costs 3 points per m/s. The target reaching the end of its route has got away, and fails the stage |
   | `dump` | every item has been knocked out of the target vehicle (one per ram, dropped where it is) and picked up. The items' locators are placeholders 110m underground, so they are only names |
   | `gooutside` | the player comes back out of the interior |
-  | `fmv`, `buycar` | at once: there is no movie or showroom to hold the player |
+  | `coins` | the purse holds `SetCoinFee`'s fee, which is taken (GAME-010) |
+| `fmv`, `buycar` | at once: there is no movie or showroom to hold the player |
   | anything else | at once, with a warning, so it does not block the mission |
 
   When the last stage's objective is met, the mission is complete.
@@ -88,7 +89,7 @@ end and restart. Here is the last stage met, and what was skipped on the way:
 | m7 | 3 | end, 3 cycles | — |
 | bm1 | 7 | end, 5 cycles | — (5 boxes, then 12 Tomacco) |
 | sr2 | 2 | end | — |
-| gr1 | 2 | end (after the fixes below) | `coins` fee waived |
+| gr1 | 2 | end (after the fixes below) | `coins` fee waived for `--autopilot` |
 | d1 | 1 | — | its locators are not loaded |
 
 What it took beyond the sequencer:
@@ -112,9 +113,8 @@ clock that counts **up**, with `SetParTime(195)` as the time not to exceed. The 
 down from 1s instead. `UseElapsedTime` and `SetParTime` now do what they say: the stage clock
 counts up, and running over par fails the stage.
 
-Its first stage, `coins`, charges a 20-coin entry fee (`SetCoinFee`). There is no coin purse
-yet, and the street holds ten coins, so the fee is waived, with a log line saying so,
-rather than blocking the race for good.
+Its first stage, `coins`, charges a 20-coin entry fee (`SetCoinFee`). It is paid from the
+player's coin purse (GAME-010) once that holds enough; `--autopilot` is let in for free.
 
 The completion time was "initial stage time minus remaining", which means nothing for a clock
 counting up or a stage with none: gr1 finished in **-8.6s**, a new best time, saved to
@@ -147,4 +147,3 @@ A completed mission still reloads from the top.
 - Dialogue. NPCs stand idle where placed, and only those whose model was extracted.
 - A target "getting away" in `destroy` has not been exercised:
   it goes through the same path as a `follow` target arriving, which has.
-  The `coins` fee is waived until there is a coin purse.

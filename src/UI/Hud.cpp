@@ -104,7 +104,7 @@ float Hud::drawCollectibles(SpriteBatch& sprites, const Font* font, const HudSta
 	// The icons are flat coloured tiles standing in for the frontend sprites;
 	// pulling the real artwork belongs to UI-TEXT / GAME-010.
 	drawRect(sprites, Vector2(x, y + iconY), Vector2(icon, icon), kGold);
-	drawShadowedText(sprites, font, fmt::format("{}/{}", state.coins, state.coinsTotal),
+	drawShadowedText(sprites, font, state.coinsTotal > 0 ? fmt::format("{}/{}", state.coins, state.coinsTotal) : fmt::format("{}", state.coins),
 	                 Vector2(x + icon + 10.0f, y), kGold);
 	y += line;
 

@@ -333,11 +333,19 @@ void ScriptEngine::updateObjective(double dt)
 	}
 	else if (_objectiveType == "coins")
 	{
-		// Paying to enter. There is no coin economy yet -- the street holds ten
-		// coins and gr1 asks twenty -- so the fee is waived rather than left to
-		// block the race behind it for good.
-		Log::Info("ScriptEngine: coin fee of {} waived, there is no coin purse yet", _coinFee);
-		objectiveComplete();
+		// Paying to enter: met the moment the purse holds the fee, which is then
+		// taken. Until then the player goes and picks up the level's coins.
+		// --autopilot does not collect coins, so it is let in for free.
+		if (_game.SpendCoins(_coinFee))
+		{
+			Log::Info("ScriptEngine: paid the {}-coin fee, {} left", _coinFee, _game.GetCoins());
+			objectiveComplete();
+		}
+		else if (_game.IsAutopilot())
+		{
+			Log::Info("ScriptEngine: coin fee of {} waived for --autopilot", _coinFee);
+			objectiveComplete();
+		}
 	}
 	else if (_objectiveType == "gooutside")
 	{
@@ -607,6 +615,8 @@ std::string ScriptEngine::GetObjectiveText() const
 	}
 	if ((_objectiveType == "delivery" || _objectiveType == "dump") && _pickupsTotal > 0)
 		text += fmt::format(" {}/{}", _pickupsTotal - _pickups.size() - _dumpQueue.size(), _pickupsTotal);
+	if (_objectiveType == "coins" && _coinFee > 0)
+		text += fmt::format(" {}/{}", std::min(_game.GetCoins(), _coinFee), _coinFee);
 	if (_objectiveType == "destroy")
 		text += fmt::format(" ({:.0f}%)", _targetHealth > 0.0f ? _targetHealth : 0.0f);
 	return text;

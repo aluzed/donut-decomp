@@ -18,6 +18,13 @@ public:
 	void Update(const Vector3& playerPos, float collectRadius);
 	void Draw();
 	int GetCollected() const { return _collected; }
+	// Coins picked up since the last call, for the purse.
+	int TakeNewlyCollected()
+	{
+		const int fresh = _unclaimed;
+		_unclaimed = 0;
+		return fresh;
+	}
 	int GetTotalAvailable() const { return static_cast<int>(_positions.size()); }
 	void Reset();
 	bool AllCollected() const { return _collected >= static_cast<int>(_positions.size()); }
@@ -34,6 +41,7 @@ private:
 	std::vector<Coin> _coins;
 	std::vector<Vector3> _positions;
 	int _collected = 0;
+	int _unclaimed = 0;
 };
 
 } // namespace Donut

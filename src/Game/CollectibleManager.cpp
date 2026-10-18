@@ -8,6 +8,7 @@
 #include "Game.h"
 #include "Level.h"
 #include "Render/LineRenderer.h"
+#include "Core/Log.h"
 
 #include <algorithm>
 #include <random>
@@ -22,6 +23,24 @@ CollectibleManager::CollectibleManager(Level& level, LineRenderer& lineRenderer)
 
 void CollectibleManager::SpawnOnPath()
 {
+	// The level's own coins, where it has them; a scatter along the longest
+	// path otherwise.
+	const auto& placed = _level.GetCoinPositions();
+	if (!placed.empty())
+	{
+		_positions.clear();
+		_coins.clear();
+		for (Vector3 pos : placed)
+		{
+			pos.Y += 0.5f;
+			_positions.push_back(pos);
+			_coins.push_back({pos, false});
+		}
+		_collected = 0;
+		Log::Info("CollectibleManager: {} coins placed by the level", _coins.size());
+		return;
+	}
+
 	const auto& paths = _level.GetPaths();
 	if (paths.empty()) return;
 
@@ -62,6 +81,7 @@ void CollectibleManager::Update(const Vector3& playerPos, float collectRadius)
 		{
 			coin.collected = true;
 			_collected++;
+			_unclaimed++;
 			Game::GetInstance().GetAudioManager().PlayRaw(
 				SoundGenerator::Chirp(800, 1200, 0.15f, 44100), 44100, 1, 16);
 		}

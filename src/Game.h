@@ -105,6 +105,11 @@ public:
 	bool CanEnterInterior(const std::string& name) const;
 	// The player's car damage meter, 100 when whole (the HUD's "CAR" bar).
 	float GetCarHealth() const { return _health; }
+	// The player's coins, kept across sessions in donut_coins.dat.
+	int GetCoins() const { return _coins; }
+	// Takes `amount` from the purse; false, taking nothing, if it holds less.
+	bool SpendCoins(int amount);
+	bool IsAutopilot() const { return _autopilot; }
 	void AddShake(float amount) { _shakeAmount = std::max(_shakeAmount, amount); }
 
 	static Game& GetInstance() { return *instance; }
@@ -210,6 +215,8 @@ private:
 	// after the last won. 0 when there is none.
 	int loadStoryProgress() const;
 	void saveStoryProgress(int next) const;
+	int _coins = 0;
+	void saveCoins() const;
 	// `wanted`, or the nearest point to `subject` on the way to it that the level
 	// does not hide `subject` from.
 	Vector3 unoccludedCameraPosition(const Vector3& subject, const Vector3& wanted) const;

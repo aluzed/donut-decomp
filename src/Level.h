@@ -106,6 +106,8 @@ public:
 	// The heading a car-start locator faces, in radians about +Y (0 faces +Z,
 	// pi/2 faces +X). False for a locator that carries none.
 	bool GetLocatorHeading(const std::string& name, float& heading) const;
+	// Where the level's own coins lie: one per coin locator, in every file loaded.
+	const std::vector<Vector3>& GetCoinPositions() const { return _coinPositions; }
 
 	// An interior, as its own P3D file lays it out, somewhere under the map:
 	// where the player appears on coming in, and the spot that takes them back
@@ -187,6 +189,7 @@ private:
 	std::set<std::string> _loadedP3Ds;
 	std::map<std::string, Vector3> _locators;
 	std::map<std::string, float> _locatorHeadings;
+	std::vector<Vector3> _coinPositions;
 	std::map<std::string, Interior> _interiors;
 
 	// What each file put in the draw lists, as [begin, end) index ranges, so a

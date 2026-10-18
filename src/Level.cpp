@@ -205,6 +205,8 @@ void Level::LoadP3D(const std::string& filename)
 				std::memcpy(&heading, &word, sizeof(heading));
 				_locatorHeadings.insert({loc->GetName(), heading});
 			}
+			if (static_cast<LocatorType>(loc->GetType()) == LocatorType::Coin)
+				_coinPositions.push_back(loc->GetPosition());
 			Log::Debug("Level: locator '{}' at ({:.1f}, {:.1f}, {:.1f})", loc->GetName(), loc->GetPosition().X,
 			           loc->GetPosition().Y, loc->GetPosition().Z);
 
