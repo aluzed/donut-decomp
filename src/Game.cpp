@@ -2289,8 +2289,11 @@ void Game::Run()
 		if (traffic)
 		{
 			std::vector<Vector3> obstacles;
-			if (_activeVehicle)
+			// The player on foot too: the traffic waits for them to cross.
+			if (_inVehicle && _activeVehicle)
 				obstacles.push_back(_activeVehicle->GetPosition());
+			else if (_character)
+				obstacles.push_back(_character->GetPosition());
 			if (const Vehicle* parked = _scriptEngine->GetPlayerCar(); parked && parked != _activeVehicle)
 				obstacles.push_back(parked->GetPosition());
 			for (const auto& vehicle : _scriptEngine->GetMissionVehicles())
