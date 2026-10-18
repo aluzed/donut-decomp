@@ -316,7 +316,10 @@ Game::Game(int argc, char** argv)
 	if (const StoryProgress progress = loadStoryProgress();
 	    (progress.level > 1 || progress.mission > 0) && levelAvailable(progress.level))
 	{
-		_mainMenu->AddButton("Continue", 0, 0, 200, 40, [this, progress]() {
+		// Says where: "Continue - LEVEL 2".
+		const std::string& level = _textBible.Get(fmt::format("LEVEL_{}", progress.level));
+		const std::string label = level.empty() ? "Continue" : "Continue - " + level;
+		_mainMenu->AddButton(label, 0, 0, 200, 40, [this, progress]() {
 			if (progress.level != _levelNumber)
 				switchLevel(progress.level);
 			if (progress.mission < static_cast<int>(_story.size()))
