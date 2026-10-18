@@ -1459,7 +1459,18 @@ void Game::Run()
 		if (_character != nullptr)
 			_character->Update(deltaTime);
 		for (auto& [name, npc] : _npcs)
+		{
+			// Someone the player walks up to turns to face them. The model faces
+			// -Z, hence the half turn.
+			if (_character && !_inVehicle)
+			{
+				const Vector3 toPlayer = _character->GetPosition() - npc->GetPosition();
+				if (toPlayer.X * toPlayer.X + toPlayer.Z * toPlayer.Z < 100.0f)
+					npc->SetRotation(Quaternion::MakeFromEuler(
+					    Vector3(0.0f, std::atan2(toPlayer.X, toPlayer.Z) + 3.14159265f, 0.0f)));
+			}
 			npc->Update(deltaTime);
+		}
 
 		ImGui::Render();
 
