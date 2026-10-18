@@ -41,7 +41,7 @@ Two commands made it worse:
   | `race` | the player completes the laps (an opponent finishing first fails the mission) |
   | `getin` | the player is in a car |
   | `talkto` | the player comes within 4m of `SetTalkToTarget`'s NPC, where `AddNPC` put them |
-  | `dialogue` | 3s pass. There is no dialogue system |
+  | `dialogue` | the conversation (`SetConversation`) has been spoken, line after line, in the game's recorded voices (`conversations\c_<conv>_<n>_...rsd`); 3s pass when none is found |
   | `timer` | `SetDurationTime` seconds pass |
   | `delivery` | every `AddCollectible` item has been picked up (within 4m), in any order; the HUD shows "delivery 3/9" |
   | `follow` | the target car, driven along the stage waypoints like a one-lap race, reaches the end. The `followdistance` condition (`SetFollowDistances`) fails the stage if the player falls further behind than its maximum -- once the player has had the car within it: level 5 m4's Wiggum sets off 300m from the player, and the stage failed as it began. A car that reaches its end without ever having been caught up with fails it too |
@@ -151,9 +151,12 @@ A completed mission still reloads from the top.
 
 ## Not done
 
-- Dialogue. NPCs stand where placed, turning to face a player on foot within 10m; one
-  without animations borrows Apu's idle. (Lisa and the rest of the cast were thought not
-  extracted: they were, the local `art/` copy was incomplete.)
+- `destroyboss` and `pickupitem` objectives: met at once with a warning ("not
+  implemented"), each seen 8 times over the 2026-10-18 validation runs of all seven levels.
+
+- Subtitles and lip sync for the conversations: the lines are heard, not shown, and the
+  speakers do not move their lips. NPCs stand where placed, turning to face a player on
+  foot within 10m; one without animations borrows Apu's idle.
 - A target "getting away" in `destroy` has not been exercised:
   it goes through the same path as a `follow` target arriving, which has.
 
