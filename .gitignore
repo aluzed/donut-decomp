@@ -22,6 +22,9 @@
 # must not hand them one. Extract it locally, see docs/ASSETS.md.
 /art/
 
+# Car tuning scripts come off the CD too (Scripts/cars), see docs/ASSETS.md
+/scripts/cars/
+
 # save data
 donut_save.dat
 

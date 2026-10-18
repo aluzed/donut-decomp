@@ -40,7 +40,10 @@ public:
 	// in front of it. Null until CreatePhysicsBody has run.
 	class WorldPhysics* GetPhysics() const { return _physicsWorld; }
 
-	void SetMass(float mass) { _mass = mass; }
+	// Takes effect on the physics body too when it already exists.
+	void SetMass(float mass);
+	// The car script's engine strength, as the game data gives it: 2 to 11, 4.5
+	// for the family sedan. Read relative to kReferenceGasScale.
 	void SetGasScale(float scale) { _gasScale = scale; }
 	void SetTopSpeedKmh(float speed) { _topSpeedKmh = speed; }
 	void SetTireGrip(float grip) { _tireGrip = grip; }
@@ -66,7 +69,11 @@ private:
 
 	class WorldPhysics* _physicsWorld = nullptr;
 	float _mass = 1500.0f;
-	float _gasScale = 1.0f;
+	// The gas scale kEngineAcceleration was tuned on -- snake_v's, the M1race
+	// opponent -- so that car keeps exactly the acceleration it was measured at,
+	// and a car with no script drives like it.
+	static constexpr float kReferenceGasScale = 8.0f;
+	float _gasScale = kReferenceGasScale;
 	float _topSpeedKmh = 180.0f;
 	float _tireGrip = 1.0f;
 	float _suspensionLimit = 0.3f;

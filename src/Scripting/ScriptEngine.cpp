@@ -226,6 +226,7 @@ void ScriptEngine::InitLevelPlayerVehicle(const std::string& car, const std::str
 	if (!FileSystem::exists(modelPath))
 		modelPath = "art/cars/famil_v.p3d";
 	vehicle->LoadModel(modelPath);
+	applyCarScript(*vehicle);
 	vehicle->CreatePhysicsBody(_game.GetWorldPhysics(), pos);
 	_activeVehicle = vehicle.get();
 
@@ -269,6 +270,7 @@ void ScriptEngine::AddStageVehicle(const std::string& car, const std::string& lo
 	if (!FileSystem::exists(modelPath))
 		modelPath = "art/cars/famil_v.p3d";
 	vehicle->LoadModel(modelPath);
+	applyCarScript(*vehicle);
 	vehicle->CreatePhysicsBody(_game.GetWorldPhysics(), pos);
 	_activeVehicle = vehicle.get();
 
@@ -278,6 +280,26 @@ void ScriptEngine::AddStageVehicle(const std::string& car, const std::string& lo
 		_raceOpponent = std::make_unique<RaceOpponent>(*vehicle, _racePath);
 
 	_missionVehicles.push_back(std::move(vehicle));
+}
+
+// Every car has a tuning script of its own -- scripts/cars/<car>.con, copied off
+// the CD with the rest of the scripts -- that sets its mass, engine and top speed
+// with the same commands a mission uses on its "current" vehicle. Run it with the
+// new car as that vehicle, before its physics body exists, so the body is built
+// with the car's own mass. Without it every car in the game was the same car.
+void ScriptEngine::applyCarScript(Vehicle& vehicle)
+{
+	const std::string path = "scripts/cars/" + vehicle.GetName() + ".con";
+	if (!FileSystem::exists(path))
+	{
+		Log::Warn("ScriptEngine: no tuning script for '{}' ({}), it drives on defaults", vehicle.GetName(), path);
+		return;
+	}
+
+	Vehicle* const previous = _activeVehicle;
+	_activeVehicle = &vehicle;
+	RunFile(path);
+	_activeVehicle = previous;
 }
 
 void ScriptEngine::SetMass(float mass) { if (_activeVehicle) _activeVehicle->SetMass(mass); }

@@ -30,6 +30,7 @@ art/
     └── ambience.rcf, soundfx.rcf, carsound.rcf, nis.rcf, scripts.rcf
 
 scripts/Missions/level01/*.con   # Mission scripts       (in the repo)
+scripts/cars/*.con               # Car tuning scripts    (off the CD, gitignored)
 assets/shaders/                  # Shaders, via the `shaders` symlink (in the repo)
 ```
 
@@ -77,6 +78,11 @@ cp -a files/extracted/Art/.              art/
 cp -a files/extracted/Sound/*.rcf        art/audio/
 cp -a files/extracted/Sound/sound        art/audio/
 cp -a files/extracted/Music1/*.rcf files/extracted/Music2/*.rcf art/audio/music/
+
+# Each car's tuning (mass, engine, top speed). Also gitignored. Without these
+# every car drives on the same defaults, and the engine warns once per car.
+mkdir -p scripts/cars
+cp -a files/extracted/Scripts/cars/*.con scripts/cars/
 
 # DIALOGF.RCF sits in the clear on CD1, outside the cabinets
 mkdir -p art/audio/dialog

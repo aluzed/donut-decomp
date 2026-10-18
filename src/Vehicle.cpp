@@ -97,7 +97,10 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 	btCollisionShape* chassisShape = new btBoxShape(btVector3(0.9f, 0.4f, 2.2f));
 	btDefaultMotionState* motionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), pos));
 
-	btScalar mass = 1200.0f;
+	// The car script's mass, not one figure for every car: they run from 250kg to
+	// 8000kg. Engine force scales with it, so acceleration does not change; what
+	// does is how the car carries itself through a collision.
+	btScalar mass = _mass;
 	btVector3 inertia(0, 0, 0);
 	chassisShape->calculateLocalInertia(mass, inertia);
 
@@ -135,8 +138,9 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 	physics.GetDynamicsWorld()->addAction(_rayVehicle.get());
 	_physicsWorld = &physics;
 
-	Log::Info("Vehicle: physics body created for '{}' at ({:.1f}, {:.1f}, {:.1f}), ground {:.1f}", _name, position.X,
-	          spawnY, position.Z, groundY);
+	Log::Info("Vehicle: physics body created for '{}' at ({:.1f}, {:.1f}, {:.1f}), ground {:.1f} -- {:.0f}kg, gas "
+	          "scale {:.1f}, top speed {:.0f} km/h",
+	          _name, position.X, spawnY, position.Z, groundY, _mass, _gasScale, _topSpeedKmh);
 }
 
 void Vehicle::Teleport(const Vector3& position, const Quaternion& rotation)
@@ -199,6 +203,19 @@ void Vehicle::Update(double dt)
 		_model->SetTransform(Matrix4x4::MakeTranslate(_position) * Matrix4x4(_rotation));
 }
 
+void Vehicle::SetMass(float mass)
+{
+	_mass = mass;
+	if (!_rayVehicle)
+		return;
+
+	btRigidBody* chassis = _rayVehicle->getRigidBody();
+	btVector3 inertia(0, 0, 0);
+	chassis->getCollisionShape()->calculateLocalInertia(mass, inertia);
+	chassis->setMassProps(mass, inertia);
+	chassis->updateInertiaTensor();
+}
+
 void Vehicle::SetEngineForce(float force)
 {
 	if (!_rayVehicle) return;
@@ -227,11 +244,9 @@ void Vehicle::ApplyInput(float throttle, float steer, float brake, float boost)
 	// throttle 0 and brake 1, which just stops a car that is already stopped, so
 	// nothing wedged against anything ever got free.
 
-	// Engine force from the mass it has to move, rather than a flat 1000N. That
-	// constant gave a 1200kg chassis 0.83 m/s^2, so every car in the game -- the
-	// player's included -- ran out of acceleration against its own drag at about
-	// 56 km/h no matter how long the straight was, and _topSpeedKmh was never
-	// reached, or even consulted.
+	// Engine force from the mass it has to move, rather than a flat 1000N, scaled by
+	// the car's own gas scale; and cut at the car's own top speed, which nothing
+	// else enforces -- the model has no drag (see kEngineAcceleration).
 	if (GetSpeedKmh() >= _topSpeedKmh * boost)
 		throttle = throttle > 0.0f ? 0.0f : throttle;
 
@@ -239,7 +254,7 @@ void Vehicle::ApplyInput(float throttle, float steer, float brake, float boost)
 	                       ? 1.0f / _rayVehicle->getRigidBody()->getInvMass()
 	                       : _mass;
 
-	const float force = throttle * _gasScale * mass * kEngineAcceleration * boost;
+	const float force = throttle * (_gasScale / kReferenceGasScale) * mass * kEngineAcceleration * boost;
 	SetEngineForce(force);
 
 	// Speed-sensitive steering. Half a radian of lock is right at walking pace and
