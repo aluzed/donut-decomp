@@ -1263,16 +1263,19 @@ void Game::Run()
 					enterInterior(*event.trigger);
 			}
 			updateInterior();
+			// Pedestrians walk every frame; only their arrivals are spaced out.
+			// Update used to run once every half second with one frame's time,
+			// so they moved, and walked, about thirty times too slowly. Nobody
+			// walks about inside an interior.
 			static double pedSpawnTimer = 0.0;
 			pedSpawnTimer += deltaTime;
+			if (_pedestrianManager && _interior.empty())
+				_pedestrianManager->Update(deltaTime, _character->GetPosition());
 			if (pedSpawnTimer > 0.5)
 			{
 				pedSpawnTimer = 0.0;
-				if (_pedestrianManager)
-				{
+				if (_pedestrianManager && _interior.empty())
 					_pedestrianManager->Spawn(_character->GetPosition(), 40.0f);
-					_pedestrianManager->Update(deltaTime, _character->GetPosition());
-				}
 				if (_collectibleManager)
 					_collectibleManager->Update(_character->GetPosition(), 3.0f);
 			}
@@ -1476,7 +1479,7 @@ void Game::Run()
 
 		// Traffic with a model is drawn as itself in either view; the debug view
 		// (on by default) otherwise shows the traffic only as wire boxes.
-		if (!_scriptEngine->IsTrafficSuppressed())
+		if (!_scriptEngine->IsTrafficSuppressed() && _interior.empty())
 		{
 			_trafficManager->DrawModels(_level->GetWorldShader(), viewProjection);
 			if (!_showDebug)
@@ -1485,7 +1488,7 @@ void Game::Run()
 
 		// Pedestrians with a body are drawn as people in either view, like the
 		// traffic; the rest are capsules outside the debug view.
-		if (_pedestrianManager)
+		if (_pedestrianManager && _interior.empty())
 		{
 			if (!_showDebug)
 				_pedestrianManager->Draw(*_meshShader, *_playerMesh, viewProjection);
