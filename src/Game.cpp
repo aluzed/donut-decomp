@@ -2214,6 +2214,24 @@ void Game::Run()
 			SetPlayerPosition(_lastSafePos);
 		}
 
+		if (_activeVehicle && _inVehicle && _activeVehicle->GetPosition().Y < _fallOffY && _safeCar == _activeVehicle)
+		{
+			const int node = _pathGraph ? _pathGraph->FindNearestRoadNode(_safeCarPos) : -1;
+			const Vector3 road = node >= 0 ? _pathGraph->GetNodes()[node].position : _safeCarPos;
+			Log::Warn("Game: vehicle fell off the map, put back on the road at ({:.1f}, {:.1f}, {:.1f})", road.X, road.Y,
+			          road.Z);
+			_activeVehicle->Teleport(road, Quaternion::MakeFromEuler(Vector3(0.0f, _safeCarYaw, 0.0f)));
+			// Known safe again only once it is back on its wheels.
+			_safeCar = nullptr;
+		}
+		else if (_activeVehicle && _inVehicle && !_activeVehicle->IsAirborne() &&
+		         _activeVehicle->GetPosition().Y > _fallOffY)
+		{
+			_safeCar = _activeVehicle;
+			_safeCarPos = _activeVehicle->GetPosition();
+			_safeCarYaw = _activeVehicle->GetRotation().Yaw();
+		}
+
 		if (_activeVehicle && _inVehicle && _activeVehicle->GetPosition().Y < _fallOffY)
 		{
 			Log::Warn("Game: vehicle fell off the map, exiting...");

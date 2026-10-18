@@ -373,6 +373,13 @@ private:
 	float _camYaw = 0.0f;     // third-person camera orbit yaw (mouse-controlled)
 	float _camPitch = -0.2f;  // third-person camera orbit pitch (mouse-controlled; negative looks down)
 	Vector3 _lastSafePos = Vector3(220, 4.5f, -172);
+	// Where the car the player drives last had a wheel on the ground: a car
+	// that falls off the map is put back on the road nearest to it, rather
+	// than the player being set down on foot where they last walked -- level 6
+	// m2's follow lost its truck that way, 200m off at the mission's start.
+	const Vehicle* _safeCar = nullptr;
+	Vector3 _safeCarPos;
+	float _safeCarYaw = 0.0f;
 
 	bool _debugResourceManagerWindowOpen = false;
 	bool _debugLevelWindowOpen = false;
