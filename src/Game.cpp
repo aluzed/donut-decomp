@@ -965,8 +965,15 @@ void Game::runAutopilot(double dt)
 		for (const float back : {18.0f, 12.0f, 8.0f})
 		{
 			behind = followed->GetPosition() - followed->GetRotation() * Vector3::Forward * back;
+			// Not on top of the traffic: put down inside a traffic car's box, the
+			// player's car was thrown out at 55 m/s and off the map, and the
+			// car being followed was lost.
+			bool clear = true;
+			if (_trafficManager && !_scriptEngine->IsTrafficSuppressed())
+				for (const auto& car : _trafficManager->GetCars())
+					clear = clear && (car.position - behind).Length() > 6.0f;
 			float ground = 0.0f;
-			if (_worldPhysics->FindGroundHeight(behind, 5.0f, 5.0f, ground, true))
+			if (clear && _worldPhysics->FindGroundHeight(behind, 5.0f, 5.0f, ground, true))
 			{
 				grounded = true;
 				break;
