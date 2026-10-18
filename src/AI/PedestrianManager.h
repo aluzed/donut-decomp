@@ -44,6 +44,10 @@ public:
 	// as each pedestrian appeared would stall the frame.
 	void LoadModels(const std::string& levelScript);
 
+	// The pedestrians within `radius` of a car going through them: they are
+	// taken off the street (there is no knock-down animation) and counted.
+	int KnockDown(const Vector3& position, float radius);
+
 private:
 	void despawnFar(float despawnRadius, const Vector3& playerPosition);
 

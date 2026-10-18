@@ -142,6 +142,9 @@ private:
 	std::unique_ptr<PathGraph> _pathGraph;
 	std::unique_ptr<PedestrianManager> _pedestrianManager;
 	std::unique_ptr<CollectibleManager> _collectibleManager;
+	std::unique_ptr<class HitAndRun> _hitAndRun;
+	// Runs the Hit & Run meter: people run down, the police, busted.
+	void updateHitAndRun(double dt);
 	std::unique_ptr<GameInput> _gameInput;
 	std::unique_ptr<FrontendProject> _frontend;
 	std::unique_ptr<GL::ShaderProgram> _meshShader;

@@ -86,6 +86,12 @@ public:
 	void SetObjTargetVehicle(const std::string& target);
 	// How far a "losetail" objective wants the chasing car left behind, in metres.
 	void SetObjDistance(float metres) { _objectiveDistance = metres; }
+	// Fails the mission under way, if there is one still undecided.
+	void FailMission(const std::string& reason, const std::string& hint)
+	{
+		if (_missionActive && !_raceDecided)
+			missionFailed(reason, hint);
+	}
 
 	void RunFile(const std::string& path);
 

@@ -175,6 +175,24 @@ void PedestrianManager::DrawBodies(const Matrix4x4& viewProj, GL::ShaderProgram&
 			_bodies[p.body]->Draw(viewProj, skinShader, resources);
 }
 
+int PedestrianManager::KnockDown(const Vector3& position, float radius)
+{
+	int hit = 0;
+	for (auto& pedestrian : _pedestrians)
+	{
+		if (!pedestrian.active)
+			continue;
+		Vector3 d = pedestrian.position - position;
+		d.Y = 0.0f;
+		if (d.LengthSquared() < radius * radius)
+		{
+			pedestrian.active = false;
+			++hit;
+		}
+	}
+	return hit;
+}
+
 void PedestrianManager::despawnFar(float despawnRadius, const Vector3& playerPosition)
 {
 	auto it = _pedestrians.begin();

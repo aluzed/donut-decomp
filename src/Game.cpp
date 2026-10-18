@@ -17,6 +17,7 @@
 #include "Input/Input.h"
 #include "Input/Keymap.h"
 #include "AI/PathGraph.h"
+#include "Game/HitAndRun.h"
 #include "AI/PedestrianManager.h"
 #include "AI/TrafficManager.h"
 #include "Level.h"
@@ -369,6 +370,7 @@ Game::~Game()
 	//
 	// Everything holding a physics reference goes first, the world last.
 	_scriptEngine.reset(); // mission vehicles and the race opponent
+	_hitAndRun.reset();    // the police car
 	_character.reset();    // its CharacterController unregisters an action
 	_npcs.clear();         // NPCs and pedestrians are Characters too
 	_pedestrianManager.reset();
@@ -547,6 +549,7 @@ void Game::switchLevel(int level)
 	_activeVehicle = nullptr;
 	_interior.clear();
 	ClearNpcs();
+	_hitAndRun.reset();
 	_pedestrianManager.reset();
 	_trafficManager.reset();
 	_collectibleManager.reset();
@@ -604,11 +607,57 @@ void Game::updateCarDamage()
 			// A low falling thud, for want of the game's crash sounds.
 			_audioManager->PlayRaw(SoundGenerator::Chirp(140.0f, 50.0f, 0.25f, 44100), 44100, 1, 16);
 			Log::Info("Game: impact, {:.1f} m/s lost, -{:.0f} health, {:.0f} left", flat, damage, _health);
+			// Ramming the traffic is a Hit & Run offence.
+			if (_hitAndRun && _trafficManager && !_scriptEngine->IsTrafficSuppressed())
+				for (const auto& car : _trafficManager->GetCars())
+					if ((car.position - position).Length() < 6.0f)
+					{
+						_hitAndRun->Add(15.0f, "rammed the traffic");
+						break;
+					}
 		}
 	}
 	_damageVehicle = _activeVehicle;
 	_damageVelocity = velocity;
 	_damagePosition = position;
+}
+
+void Game::updateHitAndRun(double dt)
+{
+	// Indoors the police wait.
+	if (!_hitAndRun || !_character || !_interior.empty())
+		return;
+	const bool driving = _inVehicle && _activeVehicle;
+	const Vector3 player = driving ? _activeVehicle->GetPosition() : _character->GetPosition();
+	const float speed = driving ? _activeVehicle->GetSpeedKmh() : 0.0f;
+
+	// People run down: a car going through them at more than walking pace.
+	if (driving && std::abs(speed) > 15.0f && _pedestrianManager && _interior.empty())
+		if (const int hit = _pedestrianManager->KnockDown(player, 2.2f); hit > 0)
+		{
+			_hitAndRun->Add(25.0f * static_cast<float>(hit), hit == 1 ? "ran someone down" : "ran people down");
+			AddShake(0.4f);
+		}
+
+	switch (_hitAndRun->Update(dt, player, speed, !driving, *_worldPhysics, *_pathGraph))
+	{
+	case HitAndRun::Event::ChaseStarted:
+		_audioManager->PlayRaw(SoundGenerator::Chirp(700.0f, 1400.0f, 0.6f, 44100), 44100, 1, 16);
+		break;
+	case HitAndRun::Event::Busted:
+	{
+		// The fine is the game's 50 coins, or what the purse holds; a mission
+		// under way is failed.
+		const int fine = std::min(_coins, 50);
+		if (fine > 0)
+			SpendCoins(fine);
+		Log::Info("Game: busted, fined {} coins", fine);
+		_hitAndRun->Reset();
+		_scriptEngine->FailMission("busted by the police", "MISSION_FAILED_HIT_N_RUN_HINT1");
+		break;
+	}
+	default: break;
+	}
 }
 
 bool Game::SpendCoins(int amount)
@@ -733,6 +782,18 @@ void Game::loadLevel()
 	_pedestrianManager->LoadModels(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
 	_collectibleManager = std::make_unique<CollectibleManager>(*_level, *_lineRenderer);
 	_collectibleManager->SpawnOnPath();
+
+	// Hit & Run: the level's police car (CreateChaseManager) and how fast the
+	// meter drains (SetHitAndRunDecay), both from leveli.mfk.
+	{
+		const auto cops = levelScriptCalls("CreateChaseManager", "leveli.mfk");
+		float decay = 1.0f;
+		std::ifstream script(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
+		for (std::string line; std::getline(script, line);)
+			if (const std::size_t at = line.find("SetHitAndRunDecay("); at != std::string::npos)
+				decay = static_cast<float>(std::atof(line.c_str() + at + 18));
+		_hitAndRun = std::make_unique<HitAndRun>(cops.empty() ? "cPolice" : cops.front(), decay);
+	}
 
 	// The story is the level script's AddMission list, in order, when the
 	// scripts have been copied off the CD. Without them "New Game" plays the
@@ -1329,7 +1390,11 @@ void Game::Run()
 
 		_audioManager->Update();
 		if (simulate)
+		{
 			updateCarDamage();
+			if (_gameState == GameState::InGame)
+				updateHitAndRun(deltaTime);
+		}
 
 		if (_shakeAmount > 0.0f)
 		{
@@ -1774,6 +1839,13 @@ void Game::Run()
 				viewProjection, Vector4(1.0f, 0.2f, 0.2f, 1.0f));
 		}
 
+		if (_hitAndRun && _hitAndRun->GetCop() && _interior.empty())
+		{
+			GL::ShaderProgram& worldShader = _level->GetWorldShader();
+			_hitAndRun->GetCop()->Draw(viewProjection, worldShader, true);
+			_hitAndRun->GetCop()->Draw(viewProjection, worldShader, false);
+		}
+
 		if (_scriptEngine->IsMissionActive())
 		{
 			auto* chase = _scriptEngine->GetChaseManager();
@@ -1869,6 +1941,13 @@ void Game::Run()
 				}
 			}
 
+			if (_hitAndRun && (_hitAndRun->GetMeter() > 0.0f || _hitAndRun->IsChasing()))
+			{
+				hud.chaseActive = true;
+				hud.heat = _hitAndRun->GetMeter() / 10.0f;
+				if (const Vehicle* cop = _hitAndRun->GetCop())
+					hud.policeBlips.emplace_back(cop->GetPosition().X, cop->GetPosition().Z);
+			}
 			auto* chase = _scriptEngine->GetChaseManager();
 			if (chase != nullptr && chase->IsActive())
 			{
