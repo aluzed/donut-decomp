@@ -54,6 +54,7 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <sstream>
 #include <cstdlib>
 #include <string>
@@ -1153,6 +1154,7 @@ void Game::loadLevel()
 				_story.push_back(path);
 		}
 	}
+	loadGags();
 	// The Warp menu's places, AddTeleportDest("name", x, y, z, "zones").
 	{
 		std::ifstream script(fmt::format("scripts/{}/level.mfk", levelDirectory()));
@@ -1445,6 +1447,136 @@ bool Game::ringDoorbell()
 	return false;
 }
 
+void Game::loadGags()
+{
+	_gags.clear();
+	std::ifstream script(fmt::format("scripts/{}/level.mfk", levelDirectory()));
+	if (!script)
+		return;
+	std::optional<Gag> gag;
+	int unplaced = 0;
+	for (std::string line; std::getline(script, line);)
+	{
+		if (const std::size_t comment = line.find("//"); comment != std::string::npos)
+			line.erase(comment);
+		const std::size_t open = line.find('(');
+		const std::size_t close = line.rfind(')');
+		if (open == std::string::npos || close == std::string::npos || close < open)
+			continue;
+		std::string command = line.substr(0, open);
+		command.erase(0, command.find_first_not_of(" \t"));
+		command.erase(command.find_last_not_of(" \t") + 1);
+		// The arguments, unquoted and trimmed.
+		std::vector<std::string> args;
+		std::stringstream list(line.substr(open + 1, close - open - 1));
+		for (std::string arg; std::getline(list, arg, ',');)
+		{
+			arg.erase(std::remove(arg.begin(), arg.end(), '"'), arg.end());
+			arg.erase(0, arg.find_first_not_of(" \t"));
+			arg.erase(arg.find_last_not_of(" \t") + 1);
+			args.push_back(arg);
+		}
+
+		if (command == "GagBegin")
+		{
+			gag.emplace();
+			gag->model = args.empty() ? "" : args[0];
+		}
+		else if (!gag)
+			continue;
+		else if (command == "GagSetSound" && !args.empty())
+			gag->sound = args[0];
+		else if (command == "GagSetCoins" && !args.empty())
+			gag->coins = std::atoi(args[0].c_str());
+		else if (command == "GagSetTrigger" && args.size() == 3)
+		{
+			// ("action", PickleTrig, 1.5): a locator of the level's.
+			gag->byHand = args[0] == "action";
+			gag->position = _level->GetLocatorPosition(args[1]);
+			gag->radius = static_cast<float>(std::atof(args[2].c_str()));
+			if (gag->position == Vector3::Zero)
+				gag->sound.clear(), ++unplaced;
+		}
+		else if (command == "GagSetTrigger" && args.size() == 5)
+		{
+			// ("touch", x, y, z, radius).
+			gag->byHand = args[0] == "action";
+			gag->position = Vector3(static_cast<float>(std::atof(args[1].c_str())),
+			                        static_cast<float>(std::atof(args[2].c_str())),
+			                        static_cast<float>(std::atof(args[3].c_str())));
+			gag->radius = static_cast<float>(std::atof(args[4].c_str()));
+		}
+		else if (command == "GagEnd")
+		{
+			if (!gag->sound.empty())
+				_gags.push_back(*gag);
+			gag.reset();
+		}
+	}
+	Log::Info("Game: {} gag(s) in the level, {} whose trigger locator is not loaded", _gags.size(), unplaced);
+}
+
+void Game::playGag(Gag& gag)
+{
+	// "gag_jasp" is interactive_props\gag_jasp_01.rsd to _03, "gag_s1"
+	// nis\gag_s1.rsd: one of them, from the English set (the other languages
+	// have folders of their own).
+	std::vector<std::string> sounds;
+	for (const auto& sound : _audioManager->FindSounds("\\" + gag.sound))
+	{
+		const std::size_t slash = sound.rfind('\\');
+		const std::size_t folder = sound.rfind('\\', slash - 1);
+		const std::string parent = sound.substr(folder + 1, slash - folder - 1);
+		const std::string rest = sound.substr(slash + 1 + gag.sound.size());
+		const bool numbered = rest.size() > 1 && rest[0] == '_' && std::isdigit(static_cast<unsigned char>(rest[1]));
+		if (parent != "french" && parent != "german" && parent != "spanish" && (rest[0] == '.' || numbered))
+			sounds.push_back(sound);
+	}
+	if (!sounds.empty())
+		_audioManager->QueueDialogue(sounds[static_cast<std::size_t>(rand()) % sounds.size()],
+		                             AudioManager::DialoguePriority::Gameplay);
+	gag.lastPlayed = _elapsedSeconds;
+	Log::Info("Game: gag '{}' ({}), {} sound(s){}", gag.model, gag.sound, sounds.size(),
+	          !gag.played && gag.coins > 0 ? fmt::format(", {} coin(s)", gag.coins) : "");
+	if (!gag.played && gag.coins > 0)
+	{
+		_coins += gag.coins;
+		saveCoins();
+	}
+	gag.played = true;
+}
+
+bool Game::useGag()
+{
+	if (!_character || _inVehicle)
+		return false;
+	const Vector3 me = _character->GetPosition();
+	for (auto& gag : _gags)
+		if (gag.byHand && (gag.position - me).Length() < gag.radius + 1.0f)
+		{
+			playGag(gag);
+			return true;
+		}
+	return false;
+}
+
+void Game::updateGags()
+{
+	if (!_character)
+		return;
+	const Vector3 me = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : _character->GetPosition();
+	for (auto& gag : _gags)
+	{
+		if (gag.byHand)
+			continue;
+		const bool inside = (gag.position - me).Length() < gag.radius;
+		// Once on the way in, and not again for a few seconds.
+		if (inside && !gag.inside && _elapsedSeconds - gag.lastPlayed > 5.0)
+			playGag(gag);
+		gag.inside = inside;
+	}
+}
+
 bool Game::usePhoneBooth()
 {
 	if (!_character || _inVehicle)
@@ -1654,7 +1786,7 @@ void Game::Run()
 			charMove += Vector3::Right * intent.moveRight;
 
 			// A phone booth answers the action button before anything else.
-			if (intent.interact && (usePhoneBooth() || ringDoorbell() || startBonusMission()))
+			if (intent.interact && (usePhoneBooth() || ringDoorbell() || useGag() || startBonusMission()))
 				intent.interact = false;
 
 			if (intent.interact)
@@ -2160,6 +2292,7 @@ void Game::Run()
 				Log::Info("Game: a wrench, the car is repaired ({:.0f} -> 100)", _health);
 				_health = 100.0f;
 			}
+			updateGags();
 			if (_collectibleManager)
 			{
 				const Vector3 collector = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()

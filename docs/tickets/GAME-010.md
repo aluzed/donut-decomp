@@ -95,3 +95,14 @@ FOOTBALL"; the seventh of a level adds "LEVEL CARDS COLLECTED!".
 **Doorbells** (`Doorbell` action locators, `[DB_quimby | quimby_switch6 | Doorbell]`): the
 action button at one, on foot, rings, and the resident named in the first string answers in
 one of their recorded `w_doorbell` lines. Checked at Mayor Quimby's (5 lines).
+
+**Gags** (`level.mfk`'s `GagBegin` ... `GagEnd`, 33 on level 1, 12 on level 2): each has a
+sound (`GagSetSound`), a trigger (`GagSetTrigger("touch", x, y, z, radius)`, walked or
+driven into, or `("action", locator, radius)`, the action button on foot) and often a coin
+(`GagSetCoins`). Triggered, a gag plays one of its sounds (`interactive_props\gag_jasp_01`
+to `_03`, `nis\gag_s1`: the English set) and pays its coins the first time in the session.
+A touch gag plays again on the way back in, no more than every 5s. Checked: the player put
+on each of level 1's 33 in turn, all but one found their sound (`gag_loot`, which the data
+does not have). Not done: the gag's own animated model (`gag_jar.p3d`), drawn and played;
+`GagSetInterior`, `GagSetPersist`, `GagSetCycle`, the camera shakes and movies; a count
+of the gags found.

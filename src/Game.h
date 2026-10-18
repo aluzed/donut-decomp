@@ -101,6 +101,8 @@ public:
 	// At a door with a bell, on foot: whoever lives there answers, in one of
 	// their recorded lines. False away from one.
 	bool ringDoorbell();
+	// At a gag worked by hand, on foot: it plays. False away from one.
+	bool useGag();
 	const TextBible& GetTextBible() const { return _textBible; }
 	// A mission's NPC, standing at `position`, when their model has been
 	// extracted (art/chars/<name>_m.p3d). Placing one already there moves them.
@@ -248,6 +250,25 @@ private:
 	std::string _walkAnimation, _idleAnimation;
 	// The debug Warp menu: the level script's AddTeleportDest places.
 	std::vector<std::pair<std::string, Vector3>> _teleports;
+	// The level's interactive gags (level.mfk's GagBegin ... GagEnd): Moe's
+	// pickle jar, the Simpsons' couch. Each plays its sound when walked into
+	// ("touch") or worked by hand ("action"), and pays its coins the first time.
+	struct Gag
+	{
+		std::string model;
+		std::string sound;
+		bool byHand = false;
+		Vector3 position;
+		float radius = 1.0f;
+		int coins = 0;
+		bool played = false;
+		bool inside = false;
+		double lastPlayed = -100.0;
+	};
+	std::vector<Gag> _gags;
+	void loadGags();
+	void playGag(Gag& gag);
+	void updateGags();
 	// When the running mission was loaded, for its title card.
 	double _missionLoadedAt = 0.0;
 	// The game's phrase table, in the language --language picks (E by default).
