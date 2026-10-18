@@ -398,6 +398,7 @@ Game::~Game()
 	_character.reset();    // its CharacterController unregisters an action
 	_npcs.clear();         // NPCs and pedestrians are Characters too
 	_ambientNpcs.clear();
+	_bonusGivers.clear();
 	_pedestrianManager.reset();
 	_level.reset();        // static level geometry
 	_worldPhysics.reset();
@@ -575,6 +576,7 @@ void Game::switchLevel(int level)
 	_interior.clear();
 	ClearNpcs();
 	_ambientNpcs.clear();
+	_bonusGivers.clear();
 	_hitAndRun.reset();
 	_pedestrianManager.reset();
 	_trafficManager.reset();
@@ -1002,6 +1004,41 @@ void Game::loadLevel()
 		Log::Info("Game: {} people about level {}", _ambientNpcs.size(), _levelNumber);
 	}
 
+	// Who offers the street races and the bonus mission:
+	// AddNPCCharacterBonusMission("milhouse", "npd", "sr1_mhouse_sd", "sr1", ...).
+	_bonusGivers.clear();
+	_bonusReturn = -1;
+	{
+		std::ifstream script(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
+		for (std::string line; std::getline(script, line);)
+		{
+			const std::size_t at = line.find("AddNPCCharacterBonusMission(");
+			const std::size_t comment = line.find("//");
+			if (at == std::string::npos || (comment != std::string::npos && comment < at))
+				continue;
+			std::vector<std::string> args;
+			for (std::size_t q = line.find('"', at); q != std::string::npos && args.size() < 4; q = line.find('"', q + 1))
+			{
+				const std::size_t end = line.find('"', q + 1);
+				if (end == std::string::npos)
+					break;
+				args.push_back(line.substr(q + 1, end - q - 1));
+				q = end;
+			}
+			if (args.size() < 4)
+				continue;
+			const Vector3 spot = _level->GetLocatorPosition(args[2]);
+			if (spot == Vector3::Zero ||
+			    !FileSystem::exists(fmt::format("scripts/{}/{}i.mfk", levelDirectory(), args[3])))
+				continue;
+			BonusGiver giver {args[3], spot, makeNpc(args[0])};
+			if (giver.npc)
+				giver.npc->SetPosition(spot);
+			_bonusGivers.push_back(std::move(giver));
+		}
+		Log::Info("Game: {} street races and bonus missions on offer", _bonusGivers.size());
+	}
+
 	// The level's music. The game chains short segments by a music script
 	// (l<n>_music.rms) that is not read here; the segments of the level's own
 	// set play in order instead: Homer's tubas on level 1, Lisa's on 3, Marge's
@@ -1290,6 +1327,40 @@ void Game::ClearNpcs()
 	_npcs.clear();
 }
 
+const Game::BonusGiver* Game::bonusGiverNear() const
+{
+	if (!_character || _inVehicle || !_interior.empty() || _bonusReturn >= 0)
+		return nullptr;
+	for (const auto& giver : _bonusGivers)
+	{
+		const Vector3 gap = giver.position - _character->GetPosition();
+		if (gap.X * gap.X + gap.Z * gap.Z < 9.0f && std::abs(gap.Y) < 3.0f)
+			return &giver;
+	}
+	return nullptr;
+}
+
+bool Game::startBonusMission()
+{
+	// The story mission under way is left, to be taken up again from its start
+	// once this one is over, won or not.
+	const BonusGiver* giver = bonusGiverNear();
+	if (!giver || _storyIndex < 0)
+		return false;
+	_bonusReturn = _storyIndex;
+	_storyIndex = -1;
+	_missionScript = fmt::format("scripts/{}/{}i.mfk", levelDirectory(), giver->mission);
+	Log::Info("Game: bonus mission '{}', the story waits at mission {}", giver->mission, _bonusReturn + 1);
+	_scriptEngine->CleanupMission();
+	if (_collectibleManager)
+		_collectibleManager->SpawnOnPath();
+	runMissionScript();
+	Vector3 start;
+	if (_scriptEngine->GetPlayerStart(start))
+		SetPlayerPosition(start);
+	return true;
+}
+
 bool Game::ringDoorbell()
 {
 	if (!_character || _inVehicle)
@@ -1523,7 +1594,7 @@ void Game::Run()
 			charMove += Vector3::Right * intent.moveRight;
 
 			// A phone booth answers the action button before anything else.
-			if (intent.interact && (usePhoneBooth() || ringDoorbell()))
+			if (intent.interact && (usePhoneBooth() || ringDoorbell() || startBonusMission()))
 				intent.interact = false;
 
 			if (intent.interact)
@@ -1807,35 +1878,48 @@ void Game::Run()
 				// A story mission won leads on to the next one.
 				_interior.clear();
 				_level->SetDrawOnly({});
-				// The level's last won leads on to the next level.
-				const bool levelWon = !failed && _storyIndex >= 0 && _storyIndex + 1 >= static_cast<int>(_story.size());
-				if (levelWon && levelAvailable(_levelNumber + 1))
+				// A bonus mission over, won or lost: back to the story where it was.
+				const bool bonusOver = _bonusReturn >= 0 && (!failed || !_scriptEngine->RetryFromCheckpoint());
+				if (bonusOver)
 				{
-					saveStoryProgress(_levelNumber + 1, 0);
-					switchLevel(_levelNumber + 1);
-					if (!_story.empty())
-						startStoryMission(0);
+					const int resume = _bonusReturn;
+					_bonusReturn = -1;
+					startStoryMission(resume);
 				}
-				else if (levelWon)
-				{
-					// The last level's last mission: the story is over. It used to
-					// replay that mission, for ever.
-					Log::Info("Game: the story is over, level {} won", _levelNumber);
-					_scriptEngine->CleanupMission();
-					_gameState = GameState::MainMenu;
-				}
-				else if (!failed && _storyIndex >= 0 && _storyIndex + 1 < static_cast<int>(_story.size()))
-				{
-					saveStoryProgress(_levelNumber, _storyIndex + 1);
-					startStoryMission(_storyIndex + 1);
-				}
-				else if (failed && _scriptEngine->RetryFromCheckpoint())
-					_health = 100.0f;
+				else if (_bonusReturn >= 0)
+					_health = 100.0f; // retried from its checkpoint, just above
 				else
 				{
-					_scriptEngine->CleanupMission();
-					if (_collectibleManager) _collectibleManager->SpawnOnPath();
-					runMissionScript();
+					// The level's last won leads on to the next level.
+					const bool levelWon = !failed && _storyIndex >= 0 && _storyIndex + 1 >= static_cast<int>(_story.size());
+					if (levelWon && levelAvailable(_levelNumber + 1))
+					{
+						saveStoryProgress(_levelNumber + 1, 0);
+						switchLevel(_levelNumber + 1);
+						if (!_story.empty())
+							startStoryMission(0);
+					}
+					else if (levelWon)
+					{
+						// The last level's last mission: the story is over. It used to
+						// replay that mission, for ever.
+						Log::Info("Game: the story is over, level {} won", _levelNumber);
+						_scriptEngine->CleanupMission();
+						_gameState = GameState::MainMenu;
+					}
+					else if (!failed && _storyIndex >= 0 && _storyIndex + 1 < static_cast<int>(_story.size()))
+					{
+						saveStoryProgress(_levelNumber, _storyIndex + 1);
+						startStoryMission(_storyIndex + 1);
+					}
+					else if (failed && _scriptEngine->RetryFromCheckpoint())
+						_health = 100.0f;
+					else
+					{
+						_scriptEngine->CleanupMission();
+						if (_collectibleManager) _collectibleManager->SpawnOnPath();
+						runMissionScript();
+					}
 				}
 			}
 		}
@@ -2140,6 +2224,18 @@ void Game::Run()
 					_audioManager->QueueDialogue(lines[static_cast<std::size_t>(rand()) % lines.size()],
 					                             AudioManager::DialoguePriority::Gameplay);
 			}
+		for (auto& giver : _bonusGivers)
+			if (giver.npc)
+			{
+				if (_character)
+				{
+					const Vector3 toPlayer = _character->GetPosition() - giver.position;
+					if (toPlayer.X * toPlayer.X + toPlayer.Z * toPlayer.Z < 100.0f)
+						giver.npc->SetRotation(Quaternion::MakeFromEuler(
+						    Vector3(0.0f, std::atan2(toPlayer.X, toPlayer.Z) + 3.14159265f, 0.0f)));
+				}
+				giver.npc->Update(deltaTime);
+			}
 		for (auto* people : {&_npcs, &_ambientNpcs})
 		for (auto& [name, npc] : *people)
 		{
@@ -2208,6 +2304,10 @@ void Game::Run()
 		for (auto& [name, npc] : _ambientNpcs)
 			if (_npcs.find(name) == _npcs.end())
 				npc->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
+		if (_bonusReturn < 0)
+			for (auto& giver : _bonusGivers)
+				if (giver.npc)
+					giver.npc->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
 		glEnable(GL_CULL_FACE);
 
 		if (_scriptEngine->IsMissionActive())
@@ -2351,6 +2451,13 @@ void Game::Run()
 					hud.bannerColour = Vector4(0.4f, 0.7f, 1.0f, 1.0f);
 				}
 				hud.coinsTotal = 0;
+			}
+			// A race or bonus mission on offer, at hand.
+			if (const BonusGiver* giver = bonusGiverNear())
+			{
+				const std::string& title = _textBible.Get(fmt::format("MISSION_TITLE_L{}_M{}", _levelNumber,
+				    giver->mission == "sr1" ? 8 : giver->mission == "sr2" ? 9 : giver->mission == "sr3" ? 10 : giver->mission == "gr1" ? 11 : 12));
+				hud.hints.push_back(fmt::format("E: {}", title.empty() ? giver->mission : title));
 			}
 			hud.cardsTotal = 7;
 			if (_collectibleManager)

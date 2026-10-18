@@ -87,6 +87,14 @@ next one, with its own player. `donut_progress.dat` holds the mission and the le
 ("3 2": level 2's fourth mission), so Continue starts on the right level; a file written
 before holds only the mission, read as level 1's. New Game always starts on level 1.
 
+**Street races and bonus missions.** `leveli.mfk`'s `AddNPCCharacterBonusMission("milhouse",
+"npd", "sr1_mhouse_sd", "sr1", ...)` stands the one who offers each (Milhouse, Nelson,
+Ralph, Louie, Cletus on level 1) at their spot, turning to face the player. Walking up,
+the HUD offers it ("E: Race 1: Time Trial"); the action button leaves the story mission
+under way and plays theirs, and once it is over, won or lost, the story takes up the
+mission it left from its start. Checked: sr1 started from Milhouse by the trailer park,
+won under the autopilot, and the story went back to its first mission.
+
 The main menu lists every level whose scripts are there ("LEVEL 2" to "LEVEL 7", the
 phrase table's names), each starting that level's story.
 

@@ -257,6 +257,20 @@ private:
 	// Apu behind his counter, Ralph, the Moleman...). One a mission has placed
 	// as its own NPC is not shown twice.
 	std::map<std::string, std::unique_ptr<Character>> _ambientNpcs;
+	// Who offers the level's street races and bonus mission, where, and which
+	// (leveli.mfk's AddNPCCharacterBonusMission: Milhouse, sr1, by the school).
+	struct BonusGiver
+	{
+		std::string mission;
+		Vector3 position;
+		std::unique_ptr<Character> npc;
+	};
+	std::vector<BonusGiver> _bonusGivers;
+	// Playing a giver's mission: the story mission to go back to after it.
+	int _bonusReturn = -1;
+	// The giver within reach of a player on foot, or null.
+	const BonusGiver* bonusGiverNear() const;
+	bool startBonusMission();
 	// A character to stand in the scene, idling; null without a model or body.
 	std::unique_ptr<Character> makeNpc(const std::string& name) const;
 
