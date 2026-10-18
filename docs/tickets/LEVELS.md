@@ -114,6 +114,9 @@ things on the way:
 - A character file that is a skeleton alone (`npd`, `nps`, `ndr`, the generic drivers)
   crashed the game when a mission placed it (MISSION-STAGES).
 
+The first mission's title card names the level ("LEVEL 2 - Detention Deficit Disorder",
+from the phrase table's `LEVEL_2`), and the last one's results say "Level Complete".
+
 ## Not done
 
 - Nothing left out any more. The old lamps name their mesh after the instance

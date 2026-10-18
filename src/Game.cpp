@@ -2022,6 +2022,10 @@ void Game::Run()
 					hud.banner = _scriptEngine->GetMissionTitle();
 					hud.bannerColour = Vector4(1.0f, 0.84f, 0.0f, 1.0f);
 					hud.bannerDetail = _scriptEngine->GetMissionTitle(true);
+					// A level's first story mission also says which level this is.
+					if (_storyIndex == 0)
+						if (const std::string& level = _textBible.Get(fmt::format("LEVEL_{}", _levelNumber)); !level.empty())
+							hud.banner = level + " - " + hud.banner;
 				}
 				hud.countdown = _scriptEngine->GetCountdownText();
 				hud.objective = _scriptEngine->GetObjectiveText();
@@ -2174,6 +2178,14 @@ void Game::Run()
 				sprites.DrawText(font, complete.empty() ? "MISSION COMPLETE!" : complete,
 					Vector2((viewportWidth / 2.0f) - 100, viewportHeight / 2.0f - 50),
 					Vector4(1.0f, 0.84f, 0.0f, 1.0f));
+				// The level's last story mission: the level is won too.
+				if (_storyIndex >= 0 && _storyIndex + 1 == static_cast<int>(_story.size()))
+				{
+					const std::string& level = _textBible.Get("LEVEL_COMPLETE");
+					const std::string text = level.empty() ? "Level Complete" : level;
+					sprites.DrawText(font, text, Vector2(centredTextX(font, text, viewportWidth), viewportHeight / 2.0f - 90),
+					                 Vector4(1.0f, 0.5f, 0.1f, 1.0f));
+				}
 
 				const float elapsed = _scriptEngine->GetMissionTime();
 				std::string stats = fmt::format("Time: {:.1f}s", elapsed);
