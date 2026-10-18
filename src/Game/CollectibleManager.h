@@ -45,6 +45,13 @@ public:
 	// when one was just taken.
 	bool TakeWrench(const Vector3& carPosition);
 	int GetCardsTotal() const { return static_cast<int>(_cards.size()); }
+	// The locator name of a card just found ("card13"), once; empty otherwise.
+	std::string TakeFoundCard()
+	{
+		std::string found;
+		found.swap(_justFound);
+		return found;
+	}
 	bool AllCollected() const { return _collected >= static_cast<int>(_positions.size()); }
 
 private:
@@ -68,6 +75,7 @@ private:
 		bool found;
 	};
 	std::vector<Card> _cards;
+	std::string _justFound;
 	struct Wrench
 	{
 		Vector3 position;

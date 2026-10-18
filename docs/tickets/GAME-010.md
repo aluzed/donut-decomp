@@ -87,3 +87,7 @@ Only the first was read. `Level::Trigger::action` now holds the third.
 - **Phone booths** (`SummonVehiclePhone`): the action button at a booth, on foot, brings
   the player's car (the one the mission gave them; there is no garage yet) to the nearest
   road, repaired, with the player at the wheel. Checked at R1P2 on level 1 m2.
+
+A card found shows its title for 4s, from the phrase table: `CARD_TITLE_nn`, numbered per
+level from (level - 1) x 8, the eighth of each level a bonus card. `card11` is "HOME MADE
+FOOTBALL"; the seventh of a level adds "LEVEL CARDS COLLECTED!".

@@ -1726,6 +1726,20 @@ void Game::Run()
 				if (_pedestrianManager && _interior.empty())
 					_pedestrianManager->Spawn(_character->GetPosition(), 40.0f);
 			}
+			// A card found: its title, from the phrase table, which numbers each
+			// level's cards from (level - 1) * 8, the eighth being a bonus card.
+			if (_collectibleManager)
+				if (const std::string card = _collectibleManager->TakeFoundCard(); card.size() == 6)
+				{
+					const int index = (card[4] - '1') * 8 + (card[5] - '1');
+					_cardMessage = _textBible.Get(fmt::format("CARD_TITLE_{:02}", index));
+					if (_collectibleManager->GetCardsFound() == _collectibleManager->GetCardsTotal())
+					{
+						const std::string& all = _textBible.Get("CARD_LEVEL_COMPLETE");
+						_cardMessage += _cardMessage.empty() ? all : " - " + all;
+					}
+					_cardMessageUntil = _elapsedSeconds + 4.0;
+				}
 			// Coins every frame: a car at 30 m/s is past one in a tenth of a second.
 			if (_collectibleManager && _inVehicle && _activeVehicle &&
 			    _collectibleManager->TakeWrench(_activeVehicle->GetPosition()))
@@ -2041,6 +2055,11 @@ void Game::Run()
 			if (_collectibleManager)
 			{
 				hud.coins = _coins;
+				if (!_cardMessage.empty() && _elapsedSeconds < _cardMessageUntil && hud.banner.empty())
+				{
+					hud.banner = _cardMessage;
+					hud.bannerColour = Vector4(0.4f, 0.7f, 1.0f, 1.0f);
+				}
 				hud.coinsTotal = 0;
 			}
 			hud.cardsTotal = 7;

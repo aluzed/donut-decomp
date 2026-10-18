@@ -142,6 +142,7 @@ void CollectibleManager::Update(const Vector3& playerPos, float collectRadius)
 		if (card.found || (card.position - playerPos).Length() >= collectRadius)
 			continue;
 		card.found = true;
+		_justFound = card.id.substr(0, card.id.find(' '));
 		Log::Info("CollectibleManager: card '{}' found, {}/{}", card.id, GetCardsFound(), GetCardsTotal());
 		Game::GetInstance().GetAudioManager().PlayRaw(
 			SoundGenerator::Chirp(600, 1800, 0.4f, 44100), 44100, 1, 16);

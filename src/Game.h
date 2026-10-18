@@ -266,6 +266,9 @@ private:
 	// Whether level `level`'s scripts were copied off the CD.
 	bool levelAvailable(int level) const;
 	int _coins = 0;
+	// A found card's title, shown for a while ("CRAB JUICE").
+	std::string _cardMessage;
+	double _cardMessageUntil = 0.0;
 	// The view rotation for a camera looking along heading `yaw` (radians about
 	// +Y, 0 is +Z), tipped `pitchDown` radians below the horizon.
 	static Quaternion cameraLooking(float pitchDown, float yaw);
