@@ -341,7 +341,10 @@ void GameCommands::SetStageAIRaceCatchupParams(const std::string& param0, int32_
 	Game::GetInstance().GetScriptEngine().SetStageAIRaceCatchupParams(param0, static_cast<float>(param1), param2,
 	                                                                    param3, param4);
 }
-void GameCommands::DisableHitAndRun(int32_t param0 /*= 0*/) {}
+void GameCommands::DisableHitAndRun(int32_t param0 /*= 0*/)
+{
+	Game::GetInstance().GetScriptEngine().DisableHitAndRun();
+}
 void GameCommands::NoTrafficForStage(int32_t param0 /*= 0*/)
 {
 	Game::GetInstance().GetScriptEngine().NoTrafficForStage();

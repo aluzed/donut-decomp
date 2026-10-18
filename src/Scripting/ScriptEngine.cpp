@@ -178,6 +178,7 @@ void ScriptEngine::beginStage(std::size_t index)
 	_followInRange = false;
 	_conversation.clear();
 	_conversationQueued = false;
+	_hitAndRunOff = false;
 	_racePath.clear();
 	_checkpoints.clear();
 	_currentCheckpoint = 0;

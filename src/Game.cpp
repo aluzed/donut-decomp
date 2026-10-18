@@ -641,6 +641,13 @@ void Game::updateHitAndRun(double dt)
 	// level 4 run they rammed the traffic into a police chase.
 	if (!_hitAndRun || !_character || !_interior.empty() || _autopilot)
 		return;
+	// A street race's stage: no meter, no police (DisableHitAndRun).
+	if (_scriptEngine->IsHitAndRunOff())
+	{
+		if (_hitAndRun->GetMeter() > 0.0f || _hitAndRun->IsChasing())
+			_hitAndRun->Reset();
+		return;
+	}
 	const bool driving = _inVehicle && _activeVehicle;
 	const Vector3 player = driving ? _activeVehicle->GetPosition() : _character->GetPosition();
 	const float speed = driving ? _activeVehicle->GetSpeedKmh() : 0.0f;

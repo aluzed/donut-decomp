@@ -87,6 +87,9 @@ public:
 	// How far a "losetail" objective wants the chasing car left behind, in metres.
 	void SetObjDistance(float metres) { _objectiveDistance = metres; }
 	void SetConversation(const std::string& name) { _conversation = name; }
+	// The street races switch the police off for their stage.
+	void DisableHitAndRun() { _hitAndRunOff = true; }
+	bool IsHitAndRunOff() const { return _missionActive && _hitAndRunOff; }
 	// Fails the mission under way, if there is one still undecided.
 	void FailMission(const std::string& reason, const std::string& hint)
 	{
@@ -372,6 +375,7 @@ private:
 	// and whether its lines have been queued.
 	std::string _conversation;
 	bool _conversationQueued = false;
+	bool _hitAndRunOff = false;
 	// The lines of `_conversation` for this mission, in order.
 	std::vector<std::string> conversationLines() const;
 	// The player has had the car being followed within the follow distance.
