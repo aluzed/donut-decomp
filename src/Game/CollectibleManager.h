@@ -8,6 +8,12 @@ namespace Donut
 
 class Level;
 class LineRenderer;
+class Matrix4x4;
+class Mesh;
+namespace GL
+{
+class ShaderProgram;
+}
 
 class CollectibleManager
 {
@@ -16,7 +22,9 @@ public:
 
 	void SpawnOnPath();
 	void Update(const Vector3& playerPos, float collectRadius);
-	void Draw();
+	// The coins as the game's spinning coin model, with the level's world shader;
+	// as wire boxes when the model is not loaded.
+	void Draw(GL::ShaderProgram& worldShader, const Matrix4x4& viewProj, float time);
 	int GetCollected() const { return _collected; }
 	// Coins picked up since the last call, for the purse.
 	int TakeNewlyCollected()
@@ -42,6 +50,7 @@ private:
 	std::vector<Vector3> _positions;
 	int _collected = 0;
 	int _unclaimed = 0;
+	Mesh* _coinModel = nullptr; // the coin model, once committed
 };
 
 } // namespace Donut

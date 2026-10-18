@@ -8,6 +8,10 @@
 #include "Game.h"
 #include "Level.h"
 #include "Render/LineRenderer.h"
+#include "Render/Mesh.h"
+#include "Render/OpenGL/ShaderProgram.h"
+#include "ResourceManager.h"
+#include "Core/Math/Matrix4x4.h"
 #include "Core/Log.h"
 
 #include <algorithm>
@@ -88,8 +92,32 @@ void CollectibleManager::Update(const Vector3& playerPos, float collectRadius)
 	}
 }
 
-void CollectibleManager::Draw()
+void CollectibleManager::Draw(GL::ShaderProgram& worldShader, const Matrix4x4& viewProj, float time)
 {
+	// SetCoinDrawable names it in every level script; it lives in the mission
+	// art's level.p3d.
+	Mesh* coin = Game::GetInstance().GetResourceManager().GetGeometry("coinShape_000");
+	if (coin && coin != _coinModel)
+	{
+		// A geometry is only uploaded when it is first drawn.
+		coin->Commit();
+		_coinModel = coin;
+	}
+	if (coin)
+	{
+		const Matrix4x4 spin(Quaternion::MakeFromEuler(Vector3(0.0f, time * 3.0f, 0.0f)));
+		worldShader.Bind();
+		for (const bool opaque : {true, false})
+			for (const auto& c : _coins)
+			{
+				if (c.collected)
+					continue;
+				worldShader.SetUniformValue("viewProj", viewProj * Matrix4x4::MakeTranslate(c.position) * spin);
+				coin->Draw(worldShader, opaque);
+			}
+		return;
+	}
+
 	for (const auto& coin : _coins)
 	{
 		if (coin.collected) continue;

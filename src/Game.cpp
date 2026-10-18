@@ -224,6 +224,8 @@ Game::Game(int argc, char** argv)
 	// the player down to them.
 	for (const char* interior : {"l1i00.p3d", "l1i01.p3d", "l1i02.p3d"})
 		_level->LoadP3D(interior);
+	// The mission art shared by the whole level: the coin, among others.
+	_level->LoadP3D("missions/level01/level.p3d");
 
 	_level->DynaLoadData("l1z1.p3d;l1r1.p3d;l1r7.p3d;");
 	_pathGraph = std::make_unique<PathGraph>(*_level, *_worldPhysics);
@@ -1531,7 +1533,7 @@ void Game::Run()
 		}
 
 		if (_collectibleManager)
-			_collectibleManager->Draw();
+			_collectibleManager->Draw(_level->GetWorldShader(), viewProjection, static_cast<float>(_elapsedSeconds));
 
 		if (_scriptEngine->IsMissionActive() && !_scriptEngine->GetCheckpoints().empty())
 		{

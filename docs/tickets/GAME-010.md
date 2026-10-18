@@ -48,4 +48,10 @@ Aucune catégorie (cartes, gags) ni persistance n'existe.
 Verified: a purse of 25 pays gr1's fee and leaves 5; a purse of 3 holds the mission at its
 first stage; walking onto a coin adds it to the purse and the file.
 
+- **Their look.** Every level script names `coinShape_000` as the coin drawable; it is in
+  `art/missions/level01/level.p3d`, which the game now loads with the level. The coins are
+  drawn with it, spinning, with the level's world shader; the gold wire boxes remain only
+  when the model is missing. A geometry from the resource manager must be committed before
+  it is drawn, or `Mesh::Draw` binds a null vertex binding and crashes.
+
 Cards and gags are still to do.
