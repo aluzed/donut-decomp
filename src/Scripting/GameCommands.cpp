@@ -384,8 +384,14 @@ void GameCommands::AddFlyingActorByLocator(const std::string& param0, const std:
                                            const std::string& param3)
 {
 }
-void GameCommands::AddCollectibleStateProp(const std::string& param0, const std::string& param1, int32_t param2) {}
-void GameCommands::SetPickupTarget(const std::string& param0) {}
+void GameCommands::AddCollectibleStateProp(const std::string& param0, const std::string& param1, int32_t param2)
+{
+	Game::GetInstance().GetScriptEngine().AddCollectibleStateProp(param0, param1);
+}
+void GameCommands::SetPickupTarget(const std::string& param0)
+{
+	Game::GetInstance().GetScriptEngine().SetPickupTarget(param0);
+}
 void GameCommands::SetObjTargetBoss(const std::string& param0) {}
 void GameCommands::AllowRockOut(int32_t param0 /*= 0*/) {}
 void GameCommands::ShowHUD(const std::string& param0) {}

@@ -148,6 +148,10 @@ public:
 	void SetRaceLaps(int laps);
 	// Objective set-up commands.
 	void SetDestination(const std::string& locator, const std::string& type);
+	// A prop to be picked up (level 7's bomb barrel), standing at a locator:
+	// a "pickupitem" objective is met by reaching it, as a "goto" is.
+	void AddCollectibleStateProp(const std::string& prop, const std::string& locator) { _stateProps[prop] = locator; }
+	void SetPickupTarget(const std::string& prop);
 	void SetTalkToTarget(const std::string& npc);
 	void SetDurationTime(float seconds);
 	// Brings a car declared earlier into this stage's action ("race", "evade",
@@ -380,6 +384,7 @@ private:
 	std::vector<std::string> conversationLines() const;
 	// The player has had the car being followed within the follow distance.
 	bool _followInRange = false;
+	std::map<std::string, std::string> _stateProps;
 	// Catch-up curves by car name, held until that car's driver exists.
 	std::map<std::string, RaceOpponent::Catchup> _raceCatchups;
 	// Where the mission puts the player, for when the character is created after

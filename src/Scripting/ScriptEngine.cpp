@@ -421,7 +421,8 @@ void ScriptEngine::updateObjective(double dt)
 		// to the Kwik-E-Mart's door and through it before this stage begins).
 		objectiveComplete();
 	}
-	else if (_objectiveType == "race" || _objectiveType == "goto" || _objectiveType == "interior")
+	else if (_objectiveType == "race" || _objectiveType == "goto" || _objectiveType == "interior" ||
+	         _objectiveType == "pickupitem")
 	{
 		// Met through the checkpoints (AdvanceCheckpoint). One with nowhere to go
 		// cannot be met at all, so do not let it hold the mission up.
@@ -487,6 +488,17 @@ void ScriptEngine::SetDestination(const std::string& locator, const std::string&
 	_destination = pos;
 	_hasDestination = true;
 	Log::Info("ScriptEngine: destination '{}' ({}) at ({:.1f}, {:.1f}, {:.1f})", locator, type, pos.X, pos.Y, pos.Z);
+}
+
+void ScriptEngine::SetPickupTarget(const std::string& prop)
+{
+	const auto found = _stateProps.find(prop);
+	if (found == _stateProps.end())
+	{
+		Log::Warn("ScriptEngine: pickup target '{}' was not placed", prop);
+		return;
+	}
+	SetDestination(found->second, "pickup");
 }
 
 void ScriptEngine::SetTalkToTarget(const std::string& npc)

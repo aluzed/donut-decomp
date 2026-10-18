@@ -48,6 +48,7 @@ Two commands made it worse:
   | `destroy` | the target car, fleeing along the stage waypoints, is rammed to 0 health. There is no car damage model, so a hit is judged from the gap: touching (under 5m) while closing faster than 4 m/s costs 3 points per m/s. The target reaching the end of its route has got away, and fails the stage |
   | `dump` | every item has been knocked out of the target vehicle (one per ram, dropped where it is) and picked up. The items' locators are placeholders 110m underground, so they are only names |
   | `losetail` | the car on the player's tail is `SetObjDistance` metres behind (150 by default). A car activated as `chase` is driven along the roads to the player, its route drawn again as the player moves on; one more than 80m off when activated is first brought to the road 40m behind the player, the game's own chase script not being run. `--autopilot` makes for a road beyond that distance, straight away from it |
+  | `pickupitem` | the player reaches the prop `SetPickupTarget` names, where `AddCollectibleStateProp` stood it (level 7's bomb barrel, `m3_barrel_1`), as a `goto`. The prop itself is not drawn, nor carried afterwards (`keepbarrel`) |
   | `gooutside` | the player comes back out of the interior |
   | `coins` | the purse holds `SetCoinFee`'s fee, which is taken (GAME-010) |
 | `buycar` | the purse holds the car's price (`scripts/rewards.mfk`'s `BindReward ... "forsale", level, cost`: the Plow King is 150), which is taken; the car is the player's "current" from then on, until the level ends. Owned already, at once. `--autopilot` is given it |
@@ -151,8 +152,9 @@ A completed mission still reloads from the top.
 
 ## Not done
 
-- `destroyboss` and `pickupitem` objectives: met at once with a warning ("not
-  implemented"), each seen 8 times over the 2026-10-18 validation runs of all seven levels.
+- `destroyboss` objectives: met at once with a warning ("not implemented"), seen 8 times
+  over the 2026-10-18 validation runs of all seven levels. A barrel named by a mission
+  that did not place it (level 7 m5, m7) leaves `pickupitem` with nowhere to go, skipped.
 
 - Subtitles and lip sync for the conversations: the lines are heard, not shown, and the
   speakers do not move their lips. NPCs stand where placed, turning to face a player on
