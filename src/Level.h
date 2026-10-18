@@ -194,6 +194,9 @@ private:
 	std::unique_ptr<GL::ShaderProgram> _billboardBatchShader;
 
 	std::vector<std::unique_ptr<CompositeModel>> _compositeModels;
+	// Those of them that play an animation of their own, round and round.
+	std::vector<std::size_t> _animatedComposites;
+	double _animationTime = 0.0;
 
 	std::vector<Path> _paths;
 	std::map<std::string, std::vector<Vector3>> _splines;

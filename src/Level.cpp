@@ -27,6 +27,77 @@
 namespace Donut
 {
 
+namespace
+{
+// A length-prefixed string at `offset` of a chunk's data.
+std::string readLPString(const std::vector<uint8_t>& data, std::size_t offset)
+{
+	if (offset >= data.size())
+		return {};
+	const std::size_t length = std::min<std::size_t>(data[offset], data.size() - offset - 1);
+	std::string text(reinterpret_cast<const char*>(data.data()) + offset + 1, length);
+	return text.substr(0, text.find('\0'));
+}
+
+// An animated level object (`Anim`, `AnimCollision`: the windmill, the power
+// plant's platforms): its composite drawable, plus what it names from the
+// file around it -- the skeleton, the meshes of its props, and the pose
+// animation its frame controller plays.
+class CompositeModel_Anim: public ICompositeModel
+{
+public:
+	CompositeModel_Anim(const P3D::P3DChunk& anim, const std::map<std::string, const P3D::P3DChunk*>& skeletons,
+	                    const std::map<std::string, const P3D::P3DChunk*>& geometries,
+	                    const std::map<std::string, const P3D::P3DChunk*>& animations)
+	{
+		for (const auto& child : anim.GetChildren())
+		{
+			if (child->IsType(P3D::ChunkType::CompositeDrawable))
+				_drawables.push_back(P3D::CompositeDrawable::Load(*child));
+			// version, name, type ("PTRN" or "EFX\0"), frame offset, then the
+			// hierarchy and the animation by name.
+			else if (child->IsType(P3D::ChunkType::FrameController))
+			{
+				const auto& data = child->GetData();
+				const std::string name = readLPString(data, 4);
+				const std::size_t typeAt = 4 + 1 + data[4];
+				if (typeAt + 8 >= data.size() || std::memcmp(data.data() + typeAt, "PTRN", 4) != 0)
+					continue;
+				const std::size_t hierarchyAt = typeAt + 8;
+				const std::string animation = readLPString(data, hierarchyAt + 1 + data[hierarchyAt]);
+				if (const auto found = animations.find(animation); found != animations.end() && _animations.empty())
+					_animations.push_back(P3D::Animation::Load(*found->second));
+			}
+		}
+		for (const auto& drawable : _drawables)
+		{
+			if (const auto found = skeletons.find(drawable->GetSkeletonName()); found != skeletons.end())
+				_skeletons.push_back(P3D::Skeleton::Load(*found->second));
+			if (const auto& props = drawable->GetPropList())
+				for (const auto& prop : props->GetProps())
+					if (const auto found = geometries.find(prop->GetName()); found != geometries.end())
+						_meshes.push_back(P3D::Geometry::Load(*found->second));
+		}
+	}
+
+	const std::vector<std::unique_ptr<P3D::CompositeDrawable>>& GetDrawables() const override { return _drawables; }
+	const std::vector<std::unique_ptr<P3D::Skeleton>>& GetSkeletons() const override { return _skeletons; }
+	const std::vector<std::unique_ptr<P3D::Geometry>>& GetMeshes() const override { return _meshes; }
+	const std::vector<std::unique_ptr<P3D::Shader>>& GetShaders() const override { return _shaders; }
+	const std::vector<std::unique_ptr<P3D::Texture>>& GetTextures() const override { return _textures; }
+	const std::vector<std::unique_ptr<P3D::Animation>>& GetAnimations() const override { return _animations; }
+
+private:
+	std::vector<std::unique_ptr<P3D::CompositeDrawable>> _drawables;
+	std::vector<std::unique_ptr<P3D::Skeleton>> _skeletons;
+	std::vector<std::unique_ptr<P3D::Geometry>> _meshes;
+	// The file's own shaders and textures are loaded as the level is.
+	std::vector<std::unique_ptr<P3D::Shader>> _shaders;
+	std::vector<std::unique_ptr<P3D::Texture>> _textures;
+	std::vector<std::unique_ptr<P3D::Animation>> _animations;
+};
+} // namespace
+
 Level::Level()
 {
 	const auto worldVertSrc = File::ReadAll("shaders/world.vert");
@@ -78,10 +149,42 @@ void Level::LoadP3D(const std::string& filename)
 	DrawRange range {{_entities.size(), 0}, {_instances.size(), 0}, {_compositeModels.size(), 0},
 	                 {_billboardBatches.size(), 0}};
 
+	// What the animated objects name: the file's skeletons, meshes and
+	// animations, by name.
+	std::map<std::string, const P3D::P3DChunk*> fileSkeletons, fileGeometries, fileAnimations;
+	for (const auto& chunk : root.GetChildren())
+	{
+		if (chunk->IsType(P3D::ChunkType::Skeleton))
+			fileSkeletons[readLPString(chunk->GetData(), 0)] = chunk.get();
+		else if (chunk->IsType(P3D::ChunkType::Geometry))
+			fileGeometries[readLPString(chunk->GetData(), 0)] = chunk.get();
+		else if (chunk->IsType(P3D::ChunkType::Animation))
+			fileAnimations[readLPString(chunk->GetData(), 4)] = chunk.get();
+	}
+
 	for (const auto& chunk : root.GetChildren())
 	{
 		switch (chunk->GetType())
 		{
+		case P3D::ChunkType::Anim:
+		case P3D::ChunkType::AnimCollision:
+		{
+			auto model = std::make_unique<CompositeModel>(
+			    CompositeModel_Anim(*chunk, fileSkeletons, fileGeometries, fileAnimations));
+			const std::string name = readLPString(chunk->GetData(), 0);
+			// Doorbells and light switches wait to be worked; the rest -- the
+			// windmill, signs, rivers, the power plant's platforms -- go round.
+			std::string lower = name;
+			std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return std::tolower(c); });
+			const bool waits = lower.rfind("db_", 0) == 0 || lower.find("switch") != std::string::npos;
+			if (model->IsAnimated() && !waits)
+				_animatedComposites.push_back(_compositeModels.size());
+			// Their rest pose is not where they stand: the first frame places
+			// them (a switch's rest is the world's origin).
+			model->Pose(0.0f, false);
+			_compositeModels.push_back(std::move(model));
+			break;
+		}
 		case P3D::ChunkType::Shader: rm.LoadShader(*P3D::Shader::Load(*chunk)); break;
 		case P3D::ChunkType::Texture: rm.LoadTexture(*P3D::Texture::Load(*chunk)); break;
 		case P3D::ChunkType::Set: rm.LoadSet(*P3D::Set::Load(*chunk)); break;
@@ -578,6 +681,14 @@ void Level::unloadRegion(const std::string& filename)
 
 void Level::Update(double deltatime)
 {
+	// The level's animated objects, round and round at their own rate.
+	_animationTime += deltatime;
+	for (const std::size_t index : _animatedComposites)
+	{
+		auto& model = *_compositeModels[index];
+		model.Pose(static_cast<float>(_animationTime) * model.GetAnimationFrameRate(), true);
+	}
+
 	// draws debug shit
 	_worldSphere->Update(deltatime);
 }

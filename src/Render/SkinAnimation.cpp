@@ -90,8 +90,14 @@ std::unique_ptr<SkinAnimation> SkinAnimation::FromP3D(const P3D::Animation& p3dA
 		const auto* compressed = group ? group->GetCompressedQuaternionChannelsValue("ROT") : nullptr;
 		if (rotation)
 		{
+			// Stored w first, (w, x, y, z), and read into the struct in that
+			// order: the windmill's root, identity (-1, 0, 0, 0) on file, came
+			// out as half a turn about X and the whole thing upside down.
 			for (std::size_t i = 0; i < rotation->GetNumFrames(); ++i)
-				track->AddRotationKey(rotation->GetFrames()[i], rotation->GetValues()[i].Normal());
+			{
+				const Quaternion& stored = rotation->GetValues()[i];
+				track->AddRotationKey(rotation->GetFrames()[i], Quaternion(stored.Y, stored.Z, stored.W, stored.X).Normal());
+			}
 		}
 		else if (compressed)
 		{

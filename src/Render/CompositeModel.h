@@ -105,7 +105,7 @@ private:
 	std::vector<Matrix4x4> _jointGlobals;
 	std::unique_ptr<SkinAnimation> _animation;
 
-	Matrix4x4 _transform;
+	Matrix4x4 _transform = Matrix4x4::Identity;
 	std::vector<std::unique_ptr<Mesh>> _meshes;
 	std::vector<std::unique_ptr<BillboardBatch>> _billboards;
 	std::vector<DrawableProp> _props;

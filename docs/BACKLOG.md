@@ -91,7 +91,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 
 | ID | Status | Pri | Subject |
 |---|---|---|---|
-| P3D-004 | 🟡 | P1 | Animation controllers. Pose animations play on composite models (`CompositeModel::Pose`), Vector1/2/3 and (compressed) quaternion channels: gags animate. Gag scenes' characters too (`SceneSkins`). Missing: level props and doors (AnimObjectWrapper), `FrameController`/`MultiController` timing, texture animations |
+| P3D-004 | 🟡 | P1 | Animation controllers. Pose animations play on composite models (`CompositeModel::Pose`), Vector1/2/3 and (compressed) quaternion channels: gags animate. Gag scenes' characters too (`SceneSkins`). The level's `Anim` and `AnimCollision` objects, never loaded before (69 on level 1: windmill, signs, butterflies, rivers, the power plant's platforms and fans), are drawn and go round. Missing: doorbells and switches played when worked, the moving platforms' collision, `AnimDynamicPhysics` models' own animations, `FrameController`/`MultiController` timing, texture animations |
 | P3D-001 | ⬜ | P1 | Particle systems (8 chunks): smoke, fire, nitro |
 | P3D-006 | 🟡 | P1 | Entity variants: `AnimDynamicPhysicsWrapper` accepted and drawn (with or without its wrapper); `AnimCollision` still ignored |
 | P3D-008 | 🟡 | P1 | Spline / LocatorMatrix / SurfaceTypeList: layouts reversed and checked over 7892 occurrences, 13 camera rails exposed by name. `SurfaceTypeList` unused (→ PHYS-008) |
