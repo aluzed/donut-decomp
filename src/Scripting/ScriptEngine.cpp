@@ -52,6 +52,7 @@ void ScriptEngine::SelectMission(const std::string& id)
 	// behind in the physics world, dangling: the first run left a car falling
 	// forever, reaching Y = -440.
 	_raceOpponents.clear();
+	_chasers.clear();
 	_raceVehicles.clear();
 	_raceCatchups.clear();
 	_playerCar = nullptr;
@@ -170,9 +171,11 @@ void ScriptEngine::beginStage(std::size_t index)
 	// apart from the cars, which stay in the world (m1 parks Skinner's car in
 	// one stage and races it in the next).
 	_raceOpponents.clear();
+	_chasers.clear();
 	_raceVehicles.clear();
 	_raceCatchups.clear();
 	_stageWaypoints.clear();
+	_objectiveDistance = 0.0f;
 	_racePath.clear();
 	_checkpoints.clear();
 	_currentCheckpoint = 0;
@@ -348,6 +351,25 @@ void ScriptEngine::updateObjective(double dt)
 			objectiveComplete();
 		}
 	}
+	else if (_objectiveType == "losetail")
+	{
+		// Shaking off the car on the player's tail: met once it is the stage's
+		// distance behind. The stage clock is what fails it.
+		const Vehicle* tail = chasingTarget();
+		const Vector3 player =
+		    _game.GetPlayerVehicle() ? _game.GetPlayerVehicle()->GetPosition() : _game.GetPlayerPosition();
+		const float needed = _objectiveDistance > 0.0f ? _objectiveDistance : 150.0f;
+		if (tail == nullptr)
+		{
+			Log::Warn("ScriptEngine: nobody on the player's tail, skipping");
+			objectiveComplete();
+		}
+		else if ((tail->GetPosition() - player).Length() > needed)
+		{
+			Log::Info("ScriptEngine: '{}' shaken off, {:.0f}m behind", tail->GetName(), (tail->GetPosition() - player).Length());
+			objectiveComplete();
+		}
+	}
 	else if (_objectiveType == "gooutside")
 	{
 		if (_game.GetInterior().empty())
@@ -449,6 +471,28 @@ void ScriptEngine::ActivateVehicle(const std::string& name, const std::string& b
 			continue;
 		if (behaviour == "race" || behaviour == "evade" || behaviour == "target")
 			_raceVehicles.push_back(vehicle.get());
+		if (behaviour == "chase")
+		{
+			_chasers.push_back({vehicle.get()});
+			// The game's chase script (M1Chase.con and the like) has had the car
+			// on the player's heels during the stage before; nothing here runs
+			// it, so level 2 m1's Skinner set off 477m away, already "lost".
+			// Bring a car that far off to the road 40m behind the player.
+			const Vector3 player =
+			    _game.GetPlayerVehicle() ? _game.GetPlayerVehicle()->GetPosition() : _game.GetPlayerPosition();
+			if ((vehicle->GetPosition() - player).Length() > 80.0f)
+			{
+				Vector3 back = vehicle->GetPosition() - player;
+				back.Y = 0.0f;
+				back.Normalize();
+				const auto& graph = _game.GetPathGraph();
+				const int node = graph.FindNearestRoadNode(player + back * 40.0f);
+				const Vector3 spot = node >= 0 ? graph.GetNodes()[node].position : player + back * 40.0f;
+				const Vector3 toPlayer = player - spot;
+				vehicle->Teleport(spot, Quaternion::MakeFromEuler(Vector3(0.0f, std::atan2(toPlayer.X, toPlayer.Z), 0.0f)));
+				Log::Info("ScriptEngine: '{}' brought onto the player's tail", name);
+			}
+		}
 		Log::Info("ScriptEngine: vehicle '{}' activated as '{}'", name, behaviour);
 		return;
 	}
@@ -467,6 +511,22 @@ bool ScriptEngine::GetObjectiveTarget(Vector3& position) const
 	    !_raceOpponents.empty())
 	{
 		position = _raceOpponents.front()->GetVehicle().GetPosition();
+		return true;
+	}
+	// Somewhere on the roads well beyond the tail's reach, straight away from it.
+	if (const Vehicle* tail = _objectiveType == "losetail" ? chasingTarget() : nullptr)
+	{
+		const Vector3 player =
+		    _game.GetPlayerVehicle() ? _game.GetPlayerVehicle()->GetPosition() : _game.GetPlayerPosition();
+		Vector3 away = player - tail->GetPosition();
+		away.Y = 0.0f;
+		if (away.LengthSquared() < 0.01f)
+			away = Vector3(0.0f, 0.0f, 1.0f);
+		away.Normalize();
+		const float reach = (_objectiveDistance > 0.0f ? _objectiveDistance : 150.0f) + 60.0f;
+		const auto& graph = _game.GetPathGraph();
+		const int node = graph.FindNearestRoadNode(player + away * reach);
+		position = node >= 0 ? graph.GetNodes()[node].position : player + away * reach;
 		return true;
 	}
 	if ((_objectiveType == "delivery" || _objectiveType == "dump") && !_pickups.empty())
@@ -692,6 +752,7 @@ void ScriptEngine::CleanupMission()
 	_playerStartsInCar = false;
 	_npcPositions.clear();
 	_raceOpponents.clear();
+	_chasers.clear();
 	_raceVehicles.clear();
 	_raceCatchups.clear();
 	_playerCar = nullptr;
@@ -1516,8 +1577,46 @@ bool ScriptEngine::GetRacePosition(int& position, int& field) const
 	return true;
 }
 
+const Vehicle* ScriptEngine::chasingTarget() const
+{
+	for (const auto& chaser : _chasers)
+		if (chaser.vehicle->GetName() == _objectiveTarget)
+			return chaser.vehicle;
+	return _chasers.empty() ? nullptr : _chasers.front().vehicle;
+}
+
+void ScriptEngine::updateChasers(double dt)
+{
+	const Vector3 player = _game.GetPlayerVehicle() ? _game.GetPlayerVehicle()->GetPosition() : _game.GetPlayerPosition();
+	for (auto& chaser : _chasers)
+	{
+		if (_game.GetPlayerVehicle() == chaser.vehicle)
+			continue;
+		chaser.sinceRoute += dt;
+		// A new route when the player has moved on from where the last one
+		// ended, at most every two seconds: each one starts the driver afresh.
+		const bool stale = (player - chaser.routedTo).Length() > 20.0f && chaser.sinceRoute > 2.0;
+		if (!chaser.driver || stale)
+		{
+			std::vector<Vector3> route = _game.GetPathGraph().FindRoute(chaser.vehicle->GetPosition(), player);
+			if (route.empty())
+				route.push_back(chaser.vehicle->GetPosition());
+			route.push_back(player);
+			if (!chaser.driver)
+				chaser.driver = std::make_unique<RaceOpponent>(*chaser.vehicle, std::move(route), true);
+			else
+				chaser.driver->SetCircuit(std::move(route));
+			chaser.routedTo = player;
+			chaser.sinceRoute = 0.0;
+		}
+		chaser.driver->Update(dt, -1.0f);
+	}
+}
+
 void ScriptEngine::UpdateAI(double dt)
 {
+	if (!_chasers.empty() && !IsRaceHeld())
+		updateChasers(dt);
 	if (_raceOpponents.empty())
 		return;
 

@@ -47,6 +47,7 @@ Two commands made it worse:
   | `follow` | the target car, driven along the stage waypoints like a one-lap race, reaches the end. The `followdistance` condition (`SetFollowDistances`) fails the stage if the player falls further behind than its maximum |
   | `destroy` | the target car, fleeing along the stage waypoints, is rammed to 0 health. There is no car damage model, so a hit is judged from the gap: touching (under 5m) while closing faster than 4 m/s costs 3 points per m/s. The target reaching the end of its route has got away, and fails the stage |
   | `dump` | every item has been knocked out of the target vehicle (one per ram, dropped where it is) and picked up. The items' locators are placeholders 110m underground, so they are only names |
+  | `losetail` | the car on the player's tail is `SetObjDistance` metres behind (150 by default). A car activated as `chase` is driven along the roads to the player, its route drawn again as the player moves on; one more than 80m off when activated is first brought to the road 40m behind the player, the game's own chase script not being run. `--autopilot` makes for a road beyond that distance, straight away from it |
   | `gooutside` | the player comes back out of the interior |
   | `coins` | the purse holds `SetCoinFee`'s fee, which is taken (GAME-010) |
 | `fmv`, `buycar` | at once: there is no movie or showroom to hold the player |

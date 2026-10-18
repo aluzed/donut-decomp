@@ -353,7 +353,10 @@ void GameCommands::AddGagBinding(const std::string& param0, const std::string& p
 }
 void GameCommands::SetPostLevelFMV(const std::string& param0) {}
 void GameCommands::SetHitNRun(int32_t param0 /*= 0*/) {}
-void GameCommands::SetObjDistance(int32_t param0) {}
+void GameCommands::SetObjDistance(int32_t param0)
+{
+	Game::GetInstance().GetScriptEngine().SetObjDistance(static_cast<float>(param0));
+}
 void GameCommands::SetMusicState(const std::string& param0, const std::string& param1) {}
 void GameCommands::SetIrisWipe(float param0) {}
 void GameCommands::RemoveDriver(const std::string& param0) {}

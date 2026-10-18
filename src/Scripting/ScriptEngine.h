@@ -84,6 +84,8 @@ public:
 
 	void CloseObjective();
 	void SetObjTargetVehicle(const std::string& target);
+	// How far a "losetail" objective wants the chasing car left behind, in metres.
+	void SetObjDistance(float metres) { _objectiveDistance = metres; }
 
 	void RunFile(const std::string& path);
 
@@ -336,6 +338,20 @@ private:
 	// declare the cars before the race objective and its waypoints.
 	std::vector<Vehicle*> _raceVehicles;
 	std::vector<std::unique_ptr<RaceOpponent>> _raceOpponents;
+	// Cars activated to "chase" the player: driven along the roads to wherever
+	// the player is, the route drawn again as the player moves on.
+	struct Chaser
+	{
+		Vehicle* vehicle = nullptr;
+		std::unique_ptr<RaceOpponent> driver;
+		Vector3 routedTo;
+		double sinceRoute = 0.0;
+	};
+	std::vector<Chaser> _chasers;
+	void updateChasers(double dt);
+	// The chasing car the objective names, or the first; null when none.
+	const Vehicle* chasingTarget() const;
+	float _objectiveDistance = 0.0f;
 	// Catch-up curves by car name, held until that car's driver exists.
 	std::map<std::string, RaceOpponent::Catchup> _raceCatchups;
 	// Where the mission puts the player, for when the character is created after
