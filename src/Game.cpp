@@ -1021,7 +1021,9 @@ void Game::Run()
 				Vector3 worldMove = Quaternion::MakeFromEuler(Vector3(0.0f, _camYaw, 0.0f)) * charMove;
 				ctrl.setWalkDirection(BulletCast<btVector3>(worldMove * 5.0f));
 
-				float targetYaw = atan2f(worldMove.X, worldMove.Z);
+				// A character model faces -Z: unturned, Homer walked +Z backwards,
+				// showing the camera behind him his face.
+				float targetYaw = atan2f(worldMove.X, worldMove.Z) + 3.14159265f;
 				float curYaw = _character->GetRotation().Yaw();
 				float delta = targetYaw - curYaw;
 				while (delta > 3.14159265f) delta -= 6.28318531f;
