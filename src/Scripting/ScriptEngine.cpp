@@ -398,6 +398,12 @@ void ScriptEngine::updateObjective(double dt)
 		if (_game.BuyCar(_objectiveArgument))
 			objectiveComplete();
 	}
+	else if (_objectiveType == "buyskin")
+	{
+		// An outfit the next mission needs, bought and worn.
+		if (_game.BuySkin(_objectiveArgument))
+			objectiveComplete();
+	}
 	else if (_objectiveType == "fmv")
 	{
 		// Nothing holds the player here: no movies to sit through.
@@ -731,6 +737,9 @@ std::string ScriptEngine::GetObjectiveText() const
 	}
 	if ((_objectiveType == "delivery" || _objectiveType == "dump") && _pickupsTotal > 0)
 		text += fmt::format(" {}/{}", _pickupsTotal - _pickups.size() - _dumpQueue.size(), _pickupsTotal);
+	if (_objectiveType == "buyskin" && _game.SkinPrice(_objectiveArgument) > 0)
+		text += fmt::format(" {}/{}", std::min(_game.GetCoins(), _game.SkinPrice(_objectiveArgument)),
+		                    _game.SkinPrice(_objectiveArgument));
 	if (_objectiveType == "buycar" && _game.CarPrice(_objectiveArgument) > 0)
 		text += fmt::format(" {}/{}", std::min(_game.GetCoins(), _game.CarPrice(_objectiveArgument)),
 		                    _game.CarPrice(_objectiveArgument));

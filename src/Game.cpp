@@ -668,7 +668,7 @@ void Game::updateHitAndRun(double dt)
 	}
 }
 
-int Game::CarPrice(const std::string& car) const
+int Game::rewardPrice(const std::string& name, const std::string& type, std::string* file) const
 {
 	// BindReward( "plowk_v", "art\cars\plowk_v.p3d", "car", "forsale", 1, 150, "simpson" );
 	std::ifstream rewards("scripts/rewards.mfk");
@@ -677,14 +677,49 @@ int Game::CarPrice(const std::string& car) const
 		const std::size_t comment = line.find("//");
 		const std::size_t at = line.find("BindReward(");
 		if (at == std::string::npos || (comment != std::string::npos && comment < at) ||
-		    line.find("\"" + car + "\"") == std::string::npos || line.find("\"forsale\"") == std::string::npos)
+		    line.find("\"" + name + "\"") == std::string::npos || line.find("\"" + type + "\"") == std::string::npos ||
+		    line.find("\"forsale\"") == std::string::npos)
 			continue;
 		const std::size_t forsale = line.find("\"forsale\"");
 		int level = 0, cost = 0;
-		if (std::sscanf(line.c_str() + forsale + 9, " , %d , %d", &level, &cost) == 2)
-			return cost;
+		if (std::sscanf(line.c_str() + forsale + 9, " , %d , %d", &level, &cost) != 2)
+			continue;
+		if (file)
+		{
+			// The second string: "art\chars\m_pris_m.p3d".
+			const std::size_t open = line.find('"', line.find('"', line.find('"', at) + 1) + 1);
+			const std::size_t close = open == std::string::npos ? open : line.find('"', open + 1);
+			*file = close == std::string::npos ? std::string() : line.substr(open + 1, close - open - 1);
+		}
+		return cost;
 	}
 	return 0;
+}
+
+bool Game::BuySkin(const std::string& skin)
+{
+	std::string file;
+	const int price = rewardPrice(skin, "skin", &file);
+	if (!_ownedSkins.count(skin))
+	{
+		if (!_autopilot && price > 0 && !SpendCoins(price))
+			return false;
+		_ownedSkins.insert(skin);
+		Log::Info("Game: bought outfit '{}' for {} coins{}", skin, _autopilot ? 0 : price, _autopilot ? " (autopilot)" : "");
+	}
+	// Worn: "art\chars\m_pris_m.p3d" is model "m_pris", moving with the
+	// character's own animations.
+	const std::size_t slash = file.find_last_of("\\/");
+	std::string model = file.substr(slash == std::string::npos ? 0 : slash + 1);
+	if (model.size() > 6 && model.compare(model.size() - 6, 6, "_m.p3d") == 0)
+		model.resize(model.size() - 6);
+	if (_character && !_inVehicle && !model.empty() && FileSystem::exists(fmt::format("art/chars/{}_m.p3d", model)))
+	{
+		const Vector3 where = _character->GetPosition();
+		LoadModel(model, _playerCharacter);
+		SetPlayerPosition(where);
+	}
+	return true;
 }
 
 bool Game::BuyCar(const std::string& car)
@@ -931,6 +966,7 @@ void Game::loadLevel()
 	// A new level, its own car: what was bought on the last one stays there.
 	_currentCar.clear();
 	_ownedCars.clear();
+	_ownedSkins.clear();
 	for (const std::string& id : levelScriptCalls("AddMission"))
 	{
 		// Each mission is reached through its "Sunday drive", <id>sdi.mfk: go

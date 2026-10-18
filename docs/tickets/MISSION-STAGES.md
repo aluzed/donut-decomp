@@ -51,6 +51,7 @@ Two commands made it worse:
   | `gooutside` | the player comes back out of the interior |
   | `coins` | the purse holds `SetCoinFee`'s fee, which is taken (GAME-010) |
 | `buycar` | the purse holds the car's price (`scripts/rewards.mfk`'s `BindReward ... "forsale", level, cost`: the Plow King is 150), which is taken; the car is the player's "current" from then on, until the level ends. Owned already, at once. `--autopilot` is given it |
+  | `buyskin` | likewise for an outfit (`BindReward ... "skin", "forsale"`: Marge's prison clothes are 300), which the player then wears: `m_prison` is `m_pris_m.p3d`, moving with the character's own animations. Seen: Marge in her FLORIDA STATE jumpsuit at home. One frame, outdoors straight after a Sunday-drive purchase, showed the skeleton without the body; not understood yet |
   | `fmv` | at once: there is no movie to sit through |
   | anything else | at once, with a warning, so it does not block the mission |
 

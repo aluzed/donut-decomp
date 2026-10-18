@@ -121,7 +121,10 @@ public:
 	const std::string& GetPlayerCarModel() const { return _currentCar.empty() ? _playerCarModel : _currentCar; }
 	// What a car costs (rewards.mfk's BindReward ... "forsale" ..., cost), 0 when
 	// it is not for sale or unknown.
-	int CarPrice(const std::string& car) const;
+	int CarPrice(const std::string& car) const { return rewardPrice(car, "car"); }
+	int SkinPrice(const std::string& skin) const { return rewardPrice(skin, "skin"); }
+	// Buys outfit `skin` ("m_prison") like a car, and the player wears it.
+	bool BuySkin(const std::string& skin);
 	// Buys `car` if the purse holds its price, and drives it from then on. True
 	// once the player owns it (--autopilot is given it).
 	bool BuyCar(const std::string& car);
@@ -226,6 +229,10 @@ private:
 	std::string _playerCharacter = "homer";
 	float _fallOffY = -50.0f;
 	std::string _currentCar;
+	std::set<std::string> _ownedSkins;
+	// rewards.mfk's BindReward for `name` of `type` ("car", "skin") for sale:
+	// its cost, and the model file it names. 0 when there is none.
+	int rewardPrice(const std::string& name, const std::string& type, std::string* file = nullptr) const;
 	std::set<std::string> _ownedCars;
 	std::string _playerCarModel = "famil_v";
 	// The player's walk and idle, whatever the character's prefix
