@@ -651,8 +651,8 @@ void Game::runAutopilot(double dt)
 		return;
 	}
 
-	// Doors are walked through, not driven into.
-	if (objective == "interior" && _inVehicle && _activeVehicle)
+	// Doors are walked through, not driven into, and people walked up to.
+	if ((objective == "interior" || objective == "talkto") && _inVehicle && _activeVehicle)
 	{
 		Log::Info("Game: autopilot gets out of '{}'", _activeVehicle->GetName());
 		_inVehicle = false;
