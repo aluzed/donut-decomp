@@ -29,7 +29,11 @@ static float seekSteer(const Vector3& position, const Vector3& target, const Qua
 	desired.Normalize();
 	Vector3 forward = rotation * Vector3::Forward;
 	float dot = forward.X * desired.X + forward.Z * desired.Z;
-	float cross = forward.X * desired.Z - forward.Z * desired.X;
+	// Positive when the target is to the right, i.e. at a greater yaw (yaw is
+	// atan2(x, z), so turning from +Z towards +X increases it). It had the
+	// opposite sign, which went unnoticed while the yaw itself was read from
+	// Euler() in degrees: every car turned away from its next node.
+	float cross = forward.Z * desired.X - forward.X * desired.Z;
 
 	float steer = cross > 0.1f ? maxSteer : cross < -0.1f ? -maxSteer : cross * maxSteer;
 	if (dot < 0.0f) steer = steer > 0 ? maxSteer : -maxSteer;
