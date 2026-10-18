@@ -15,7 +15,18 @@ static constexpr btScalar kFenceHalfHeight = 100.0f;
 BulletFenceShape::BulletFenceShape(const btVector3& start, const btVector3& end, const btVector3& normal)
     : btConcaveShape(), m_start(start), m_end(end), m_normal(normal.normalized())
 {
-	m_shapeType = BroadphaseNativeTypes::STATIC_PLANE_PROXYTYPE;
+	// Bullet picks the collision algorithm, and some queries, by shape type alone,
+	// and casts the shape to match. STATIC_PLANE_PROXYTYPE -- used here until
+	// 2026-10 -- sends convex-vs-fence contacts to btConvexPlaneCollisionAlgorithm
+	// and convex sweeps down a btStaticPlaneShape path, both of which read this
+	// object as an infinite plane. Every fence was a half-space: a car that came
+	// within its bounding box was thrown out by up to 40m of "penetration", which
+	// is what launched the race opponent off the embankment before waypoint 5.
+	// CUSTOM_CONCAVE_SHAPE_TYPE is no better: it doubles as SDF_SHAPE_PROXYTYPE,
+	// which btConvexConcaveCollisionAlgorithm casts to btSdfCollisionShape. This
+	// type has no special case anywhere, so every path falls back to the generic
+	// concave handling, i.e. processAllTriangles below.
+	m_shapeType = BroadphaseNativeTypes::FAST_CONCAVE_MESH_PROXYTYPE;
 	m_localScaling.setValue(1, 1, 1);
 }
 

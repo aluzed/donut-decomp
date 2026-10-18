@@ -234,6 +234,9 @@ mais un **remblai de 24 m** dont la voiture est sortie. Elle allait à 53 km/h p
 de 96, visait un point de poursuite à 16 m et se trouvait déjà à 55 m de son waypoint : elle
 avait quitté la route avant de tomber.
 
+> **Corrected 2026-10-18:** not a driving defect either. The car was thrown off the road by
+> a fence collision that behaved as an infinite plane (see AI-RACE, 2026-10-18).
+
 C'est donc un défaut de conduite (AI-RACE), pas de tracé. Le profil de vitesse ne modélise
 que la courbure de la ligne médiane — ni la largeur de la chaussée, ni le bord du remblai —
 et une poursuite pure qui vise 16 m devant coupe les virages. Remise en piste, la même
@@ -280,7 +283,8 @@ Measured over a full 140s run, the opponent no longer wedges anywhere along the 
 reaches waypoint 177 of 186 before the 120s stage timer restarts the mission; the circuit is
 15% longer. What remains is driving, not routing (AI-RACE):
 
-- the known fall off the embankment before waypoint 5 (twice: once per mission start);
+- the known fall off the embankment before waypoint 5 (twice: once per mission start) --
+  **since found to be a physics bug, not driving**: see AI-RACE, 2026-10-18;
 - a 12s stall at waypoint 96, the U-turn at the far race node (`race_finish`,
   (10.5, 0.5, -623.8)): the car swings wide into a wall at x=14.5 (normal -X) and is
   eventually skipped past it. The route is an out-and-back, so it turns 180 degrees there.
