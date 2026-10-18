@@ -65,6 +65,8 @@ private:
 	double _stuckTimer = 0.0;
 	float _stuckTravel = 0.0f;
 	double _reverseTimer = 0.0;
+	// How long the car has sat still while turning round (see kTurnStallSeconds).
+	double _turnStallTimer = 0.0;
 	double _noProgressTimer = 0.0;
 	int _wedgeRepeats = 0;
 	Vector3 _lastWedgePosition = Vector3(1.0e6f, 0.0f, 1.0e6f);

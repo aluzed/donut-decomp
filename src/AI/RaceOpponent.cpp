@@ -115,6 +115,22 @@ constexpr float kPursuitMaxMetres = 30.0f;
 // may stray this far inside the route and no further.
 constexpr float kCorridorMetres = 3.0f;
 
+// How far off the car's nose the aim point may be before it has to slow to
+// corner speed whatever the profile says. The profile reads the route ahead; it
+// cannot know the car has already overshot a bend and is pointing the wrong way.
+// At the M1race hairpin it had, and full lock at 45 km/h is a turning circle
+// wider than the street.
+constexpr float kTurnAroundCos = 0.5f; // 60 degrees
+
+// Turning round where the street is narrower than the turning circle. At corner
+// speed the lock still gives a radius of about 8m, and M1race doubles back at
+// its start on a street narrower than 16m: the car turned 85 degrees and parked
+// its nose on the kerb. Once it is turning round (aim behind it) and has stopped
+// moving, back up on opposite lock straight away -- a three-point turn -- rather
+// than wait out kStuckWindowSeconds and count it as a wedge.
+constexpr double kTurnStallSeconds = 0.5;
+constexpr float kTurnStallKmh = 3.0f;
+
 // How far to the side of the leg it is driving the car may drift before it is
 // treated as having lost the route. Overshooting a corner leaves the next
 // waypoint behind and to the side, and seeking it in a straight line drives
@@ -258,7 +274,17 @@ void RaceOpponent::Update(double dt, float playerProgress)
 	}
 
 	// Drive to the speed the route ahead allows, not to a throttle position.
-	const float targetSpeed = targetSpeedKmh(_boost);
+	float targetSpeed = targetSpeedKmh(_boost);
+	bool turningRound = false;
+	{
+		Vector3 toAim = aim - position;
+		toAim.Y = 0.0f;
+		const Vector3 forward = _vehicle.GetRotation() * Vector3::Forward;
+		const float along = forward.X * toAim.X + forward.Z * toAim.Z;
+		if (toAim.LengthSquared() > 0.01f && along < kTurnAroundCos * toAim.Length() && targetSpeed > kCornerSpeedKmh)
+			targetSpeed = kCornerSpeedKmh;
+		turningRound = along < 0.0f;
+	}
 	const float error = targetSpeed - speed;
 
 	// Three states, not two. The old rule clamped the throttle up to kThrottleMin
@@ -288,6 +314,21 @@ void RaceOpponent::Update(double dt, float playerProgress)
 		// Back out with opposite lock; the next frames re-seek the waypoint.
 		_reverseTimer -= dt;
 		_vehicle.ApplyInput(kReverseThrottle, -steer, 0.0f, 1.0f);
+		return;
+	}
+
+	if (turningRound && std::fabs(speed) < kTurnStallKmh)
+		_turnStallTimer += dt;
+	else
+		_turnStallTimer = 0.0;
+	if (_turnStallTimer >= kTurnStallSeconds)
+	{
+		Log::Debug("RaceOpponent: '{}' cannot turn round in one at ({:.1f}, {:.1f}, {:.1f}), backing up", _vehicle.GetName(),
+		           position.X, position.Y, position.Z);
+		_turnStallTimer = 0.0;
+		_stuckTimer = 0.0;
+		_stuckTravel = 0.0f;
+		_reverseTimer = kReverseSeconds;
 		return;
 	}
 
@@ -360,10 +401,17 @@ float RaceOpponent::cornerRadius(std::ptrdiff_t offset) const
 	const float bc = std::sqrt(bcx * bcx + bcz * bcz);
 	const float ac = std::sqrt(acx * acx + acz * acz);
 
-	// Twice the triangle's area, and zero when the three are in line.
-	const float area2 = std::fabs(abx * bcz - abz * bcx);
-	if (area2 < 1.0e-3f || ab < 0.01f || bc < 0.01f)
+	if (ab < 0.01f || bc < 0.01f)
 		return kStraightRadius;
+
+	// Twice the triangle's area, and zero when the three are in line. In line is
+	// not the same as straight: a route that doubles back on itself -- M1race is an
+	// out-and-back, and turns round at the far race node with c == a -- is in line
+	// too, and it is the tightest bend there is. Taken as straight, the profile
+	// sent the car into that hairpin at 50 km/h and it swung wide into a wall.
+	const float area2 = std::fabs(abx * bcz - abz * bcx);
+	if (area2 < 1.0e-3f)
+		return (abx * bcx + abz * bcz) < 0.0f ? kMinCornerRadius : kStraightRadius;
 
 	const float radius = (ab * bc * ac) / (2.0f * area2);
 	return radius > kStraightRadius ? kStraightRadius : radius;

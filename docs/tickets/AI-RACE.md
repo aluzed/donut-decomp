@@ -357,6 +357,52 @@ avec des tronçons sautés, et **la vraie correction est côté tracé** : voir 
 > wall. `kEngineAcceleration` can now be revisited, since the time limit is now what stops
 > the lap (177/186 at 120s on a lap 15% longer).
 
+### The opponent laps clean (2026-10-18)
+
+Both remaining driving defects were fixed, and one of them was not about driving at all.
+
+**The fall before waypoint 5 was a fence collision.** A 4Hz trace showed the car on its
+line at 54 km/h, then 22m further on 0.25s later and 2.4m higher. It was thrown, not driven
+off. The contact manifolds at that moment held contacts between the chassis and a
+`DONUTFENCE` 37m away, with a penetration depth of **-40m**.
+
+`BulletFenceShape` declared itself `STATIC_PLANE_PROXYTYPE`. Bullet chooses the collision
+algorithm by shape type and casts the shape to match:
+- `btDefaultCollisionConfiguration` sends convex-vs-plane to `btConvexPlaneCollisionAlgorithm`;
+- `btCollisionWorld::objectQuerySingle` sends convex sweeps down a `btStaticPlaneShape` path.
+
+Both read the fence as an infinite plane. So every fence was a half-space for rigid bodies
+and sweeps, while rays still saw the segment, which is why no probe ever caught it. The
+shape is now `FAST_CONCAVE_MESH_PROXYTYPE`, which no Bullet path special-cases, so all of
+them use the generic concave handling (`processAllTriangles`).
+`CUSTOM_CONCAVE_SHAPE_TYPE` was not an option: it is also `SDF_SHAPE_PROXYTYPE`, which
+`btConvexConcaveCollisionAlgorithm` casts to `btSdfCollisionShape`. The fix affects every
+vehicle and every convex sweep in the game, not just the opponent.
+
+**The far hairpin.** M1race is an out-and-back, so it turns 180 degrees at both race nodes.
+Three fixes:
+
+1. `cornerRadius` took three points in line as a straight. A route that doubles back
+   (c == a) is in line too, and it is the tightest bend there is. It now returns
+   `kMinCornerRadius` when the legs point opposite ways. The profile had been aiming at
+   60 km/h into that hairpin.
+2. The profile cannot know the car has overshot. The return waypoints sit on the outbound
+   ones, so the car captured 93-95 in one go at 42 km/h and found its aim point behind it.
+   When the aim is more than 60 degrees off the nose, target speed drops to corner speed
+   (`kTurnAroundCos`).
+3. Even at 20 km/h the lock gives a radius of about 8m, wider than the street at the start
+   node. When the car is turning round (aim behind it) and has been still for 0.5s, it
+   backs up on opposite lock at once: a three-point turn. It does not wait 3s and count a
+   wedge.
+
+Result over a 140s run: **one full lap of the 186-point circuit (1861m) inside the 120s
+stage, with no fall, no skip, no wedge and no respawn**. The only manoeuvre is a single
+three-point turn at the start node, after the line. Mean logged speed is 53 km/h (was
+39), and it peaks at 80.
+
+Unrelated and unchanged: the idle player still logs "fell off the map" about ten times per
+run (CHARCTRL-FALL). It did so at the same rate before the fence fix.
+
 ### La force moteur n'est plus bloquée par l'IA, mais reste à 0,83
 
 | `kEngineAcceleration` | waypoint atteint | tour bouclé |
@@ -373,7 +419,7 @@ la voiture du joueur, qui plafonne elle aussi à ~56 km/h.
 ## Critères d'acceptation
 - [x] Un `RaceOpponent` suit le circuit en pilotant un `Vehicle` via `ApplyInput`.
 - [x] Le rubber-banding accélère l'adversaire distancé et le ralentit quand il est en tête, dans une plage bornée (observé à 0,85 en tête).
-- [x] L'adversaire termine un tour complet sans rester bloqué — **oui** : 122 waypoints sur 126 puis passage au tour 1, reproduit trois fois. Réserve : deux tronçons non roulables sont sautés d'office et trois chutes hors du monde sont rattrapées.
+- [x] L'adversaire termine un tour complet sans rester bloqué — **yes, clean (2026-10-18)**: 186 of 186 waypoints and on into lap 1, no skipped legs and no recovered falls (see above).
 - [x] L'adversaire ne sort plus du monde et ne reste plus bloqué indéfiniment (hors-tracé, chute et blocage sont tous rattrapés ; 0 chute et 0 remise d'office sur un tour complet).
-- [x] L'adversaire roule à une vitesse crédible (39 km/h de moyenne, jusqu'à 76) en freinant pour les virages, sur un profil de vitesse et non sur l'angle de braquage.
+- [x] L'adversaire roule à une vitesse crédible (53 km/h de moyenne, jusqu'à 80, as of 2026-10-18) en freinant pour les virages, sur un profil de vitesse et non sur l'angle de braquage.
 - [ ] SCRIPT-D peut instancier, démarrer et arrêter l'adversaire — `ScriptEngine` le crée et le détruit, mais les commandes `SCRIPT-D` elles-mêmes restent des stubs.
