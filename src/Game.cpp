@@ -2302,6 +2302,9 @@ void Game::Run()
 				obstacles.push_back(_hitAndRun->GetCop()->GetPosition());
 			_trafficManager->SetObstacles(std::move(obstacles));
 			_trafficManager->Update(deltaTime);
+			for (const auto& [model, position] : _trafficManager->TakeHonks())
+				if (const std::string horn = _audioManager->CarSoundFile(model, "_horn"); !horn.empty())
+					_audioManager->PlayAudio(horn, position);
 		}
 		if (traffic && _showDebug)
 			_trafficManager->Draw();

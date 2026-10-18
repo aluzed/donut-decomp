@@ -184,6 +184,11 @@ void TrafficManager::Update(double dt)
 			if (along > 0.0f && along < 9.0f && side < 2.5f && std::abs(to.Y) < 4.0f)
 				speed = 0.0f;
 		}
+		// Kept waiting, the driver leans on the horn: after 1.5s, then every 5s.
+		const float wasBlocked = car.blocked;
+		car.blocked = speed == 0.0f ? car.blocked + static_cast<float>(dt) : 0.0f;
+		if (car.model >= 0 && car.blocked >= 1.5f && std::fmod(wasBlocked + 3.5f, 5.0f) > std::fmod(car.blocked + 3.5f, 5.0f))
+			_honks.emplace_back(_modelNames[car.model], car.grounded);
 		car.position += forward * speed * static_cast<float>(dt);
 		// The roads rise and fall; the car follows the height of its way.
 		car.position.Y = target.Y;
@@ -241,6 +246,7 @@ void TrafficManager::LoadModels(const std::string& levelScript)
 		for (int i = 0; i < weight; ++i)
 			pool.push_back(static_cast<int>(_models.size()));
 		_models.push_back(std::move(model));
+		_modelNames.push_back(name);
 		Log::Info("TrafficManager: traffic model '{}' (weight {})", name, weight);
 	}
 

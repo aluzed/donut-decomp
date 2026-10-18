@@ -283,8 +283,18 @@ void AudioManager::PlayMusicPlaylist(std::vector<std::string> tracks)
 std::string AudioManager::CarSoundFile(const std::string& car, const std::string& suffix) const
 {
 	// create daSoundResourceData named famil { AddFilename ( "sound/carsound/familycar.rsd" 1.0 ) ...
-	const std::string script = "sound\\scripts\\" + car + ".spt";
-	const auto found = _sounds.find(script);
+	// The traffic's scripts are named in lower case with "_v" added:
+	// "minivanA" is minivana_v.spt.
+	std::string lower = car;
+	std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return std::tolower(c); });
+	auto found = _sounds.end();
+	std::string script;
+	for (const std::string& name : {car, car + "_v", lower, lower + "_v"})
+	{
+		script = "sound\\scripts\\" + name + ".spt";
+		if ((found = _sounds.find(script)) != _sounds.end())
+			break;
+	}
 	if (found == _sounds.end())
 		return {};
 	auto stream = found->second->GetFileStream(script);

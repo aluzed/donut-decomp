@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace Donut
@@ -37,6 +38,8 @@ public:
 		int model = -1;
 		// Where it is drawn and collides: on the ground under `position`.
 		Vector3 grounded;
+		// How long a car in its way has kept it stopped.
+		float blocked = 0.0f;
 	};
 
 	TrafficManager(Level& level, LineRenderer& lineRenderer, const PathGraph& graph);
@@ -59,6 +62,9 @@ public:
 	// kinematic body, of unlimited mass, and drove through them, throwing them
 	// tens of metres into the air.
 	void SetObstacles(std::vector<Vector3> obstacles) { _obstacles = std::move(obstacles); }
+	// The cars that have been kept waiting long enough to sound their horn
+	// since the last call: the model's name ("compactA") and where it is.
+	std::vector<std::pair<std::string, Vector3>> TakeHonks() { return std::exchange(_honks, {}); }
 
 private:
 	// The way on from `node`, coming from `from`: a neighbour other than the
@@ -71,6 +77,8 @@ private:
 	const PathGraph& _graph;
 	std::vector<TrafficCar> _cars;
 	std::vector<Vector3> _obstacles;
+	std::vector<std::pair<std::string, Vector3>> _honks;
+	std::vector<std::string> _modelNames;
 	std::vector<std::unique_ptr<CompositeModel>> _models;
 
 	// Each car is a kinematic box in the physics world, moved with it every
