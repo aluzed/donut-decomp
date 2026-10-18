@@ -9,6 +9,28 @@
 
 namespace Donut
 {
+namespace
+{
+// How far above a warp target to look for the ground it should stand on, and the
+// gap left under the capsule so it starts clear of it.
+constexpr float kWarpGroundSearch = 2.0f;
+constexpr float kWarpClearance = 0.05f;
+
+// A ray that ignores the character's own capsule.
+struct GroundRayCallback : btCollisionWorld::ClosestRayResultCallback
+{
+	const btCollisionObject* _self;
+	GroundRayCallback(const btVector3& from, const btVector3& to, const btCollisionObject* self)
+	    : ClosestRayResultCallback(from, to), _self(self) {}
+
+	btScalar addSingleResult(btCollisionWorld::LocalRayResult& rayResult, bool normalInWorldSpace) override
+	{
+		if (rayResult.m_collisionObject == _self)
+			return 1.0f;
+		return ClosestRayResultCallback::addSingleResult(rayResult, normalInWorldSpace);
+	}
+};
+} // namespace
 
 CharacterController::CharacterController(Character* character, WorldPhysics* physics)
     : _character(character), _worldPhysics(physics)
@@ -80,13 +102,36 @@ void CharacterController::setVelocityForTimeInterval(const btVector3& velocity, 
 
 void CharacterController::warp(const btVector3& origin)
 {
+	// A locator marks a spot on the ground, and the controller's position is the
+	// capsule's centre: warping straight onto one buried the lower half of the
+	// capsule in the road. stepDown's sweep then starts inside the terrain, Bullet
+	// reports no hit from inside, and the character drops through the world. The
+	// respawn guard put it back at the last "safe" spot -- recorded while it was
+	// sinking -- so after a mission restart it fell ten times in a row. Stand the
+	// capsule on whatever ground is under the target instead, and drop any fall
+	// speed carried over from before the warp.
+	btVector3 target = origin;
+	const btScalar halfExtent = _physShape->getHalfHeight() + _physShape->getRadius();
+	if (_worldPhysics)
+	{
+		const btVector3 from = origin + btVector3(0, kWarpGroundSearch, 0);
+		const btVector3 to = origin - btVector3(0, halfExtent + kWarpGroundSearch, 0);
+		GroundRayCallback ground(from, to, _physGhostObject.get());
+		_worldPhysics->GetDynamicsWorld()->rayTest(from, to, ground);
+		if (ground.hasHit() && origin.y() - halfExtent < ground.m_hitPointWorld.y() + kWarpClearance)
+			target.setY(ground.m_hitPointWorld.y() + halfExtent + kWarpClearance);
+	}
+
+	_verticalVelocity = 0.0f;
+	_verticalOffset = 0.0f;
+
 	btTransform transform;
 	transform.setIdentity();
-	transform.setOrigin(origin);
+	transform.setOrigin(target);
 
 	_physGhostObject->setWorldTransform(transform);
-	_position = BulletCast<Vector3>(origin);
-	_targetPosition = origin;
+	_position = BulletCast<Vector3>(target);
+	_targetPosition = target;
 }
 
 void CharacterController::preStep(btCollisionWorld* collisionWorld)
@@ -153,19 +198,6 @@ bool CharacterController::onGround() const
 	btVector3 from = pos + btVector3(0, 0.1f, 0);
 	btVector3 to = pos - btVector3(0, reach, 0);
 
-	struct GroundRayCallback : btCollisionWorld::ClosestRayResultCallback
-	{
-		const btCollisionObject* _self;
-		GroundRayCallback(const btVector3& from, const btVector3& to, const btCollisionObject* self)
-		    : ClosestRayResultCallback(from, to), _self(self) {}
-
-		btScalar addSingleResult(btCollisionWorld::LocalRayResult& rayResult, bool normalInWorldSpace) override
-		{
-			if (rayResult.m_collisionObject == _self)
-				return 1.0f;
-			return ClosestRayResultCallback::addSingleResult(rayResult, normalInWorldSpace);
-		}
-	};
 
 	GroundRayCallback rayCallback(from, to, _physGhostObject.get());
 

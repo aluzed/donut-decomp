@@ -86,6 +86,29 @@ Compteurs internes sur le même parcours de 60 s : balayage descendant `hit=3871
   du balayage descendant de 39 à 3, mais **n'est pas nécessaire** — le callback seul suffit.
   À garder en réserve comme durcissement.
 
+## Follow-up: falling after a teleport (2026-10-18)
+
+The "2 falls after the debug teleport (`T`)" in the table above were a second bug. It
+showed up in every unattended M1race run: once the stage timer restarts the mission, the
+idle player fell **10 times in a row** at `level1_homer_start`.
+
+- `SetPlayerPosition` warps the controller to a locator. A locator marks a spot **on the
+  ground**, and the controller's position is the **capsule centre**, so the lower half of
+  the capsule went into the road.
+- `stepDown` sweeps down from inside the terrain, Bullet reports no hit from there, and the
+  character drops through the world.
+- `_lastSafePos` had been recorded while it was sinking (y 3.4 under a locator at 3.6),
+  so every respawn put it back in the ground.
+
+The first mission start never showed it, because the character is created at
+(220, 4.5, -172), about a metre up, and the other callers of `SetPlayerPosition` add
++1m themselves.
+
+`CharacterController::warp` now stands the capsule on the ground under the target. It
+rays down from 2m above, ignoring its own capsule, and lifts the capsule only if it would
+intersect that ground. It also clears any fall speed carried over from before the warp.
+Over the same 140s run with a mission restart: **0** "fell off the map", against 10.
+
 ## Critères d'acceptation
 
 - [x] Marcher 60 s dans une direction quelconque n'émet **aucun** « fell off the map ».
