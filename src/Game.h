@@ -256,6 +256,10 @@ private:
 	struct Gag
 	{
 		std::string model;
+		// Its model, as it stands before it plays (art/nis/gags/), where
+		// GagSetPosition puts it. Not animated.
+		std::shared_ptr<CompositeModel> drawable;
+		Vector3 placed;
 		std::string sound;
 		bool byHand = false;
 		Vector3 position;

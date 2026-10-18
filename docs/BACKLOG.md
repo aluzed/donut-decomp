@@ -132,7 +132,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 | ID | Statut | Pri | Sujet | Note |
 |---|---|---|---|---|
 | GAME-003 | 🟡 | P1 | Machine d'état complète (splash→menu→levelselect→game→pause→result→credits) | menus déclarés non rendus |
-| GAME-010 | 🟡 | P2 | Collectibles (coins / cards 7 / gags ~50) + état persistant | coins from each level's coin locators, a purse in `donut_coins.dat` that pays fees, cars (buycar) and outfits (buyskin); each level's seven cards, found for good (`donut_cards.dat`), drawn with the card model, their titles shown; wrenches repair the car; phone booths send it; gags play their sounds and pay their coins (their animated models are not drawn) |
+| GAME-010 | 🟡 | P2 | Collectibles (coins / cards 7 / gags ~50) + état persistant | coins from each level's coin locators, a purse in `donut_coins.dat` that pays fees, cars (buycar) and outfits (buyskin); each level's seven cards, found for good (`donut_cards.dat`), drawn with the card model, their titles shown; wrenches repair the car; phone booths send it; gags play their sounds and pay their coins (their models stand still) |
 | LEVELS | 🟡 | P1 | Every level, not just level 1 | `--level n`, files and scripts read rather than written out, P3DZ decompression, a level after another in one session, the Sunday drives; every level's story plays through under `--autopilot` |
 | HIT-AND-RUN | 🟡 | P2 | The meter, the police, busted | people run down and the traffic rammed fill it; full, a police car drives after the player; caught, busted (50-coin fine, mission failed) |
 | GAME-011 | ⬜ | P2 | Save/Load complet (auj. best-time seul) | |

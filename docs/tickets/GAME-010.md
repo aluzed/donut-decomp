@@ -103,6 +103,8 @@ driven into, or `("action", locator, radius)`, the action button on foot) and of
 to `_03`, `nis\gag_s1`: the English set) and pays its coins the first time in the session.
 A touch gag plays again on the way back in, no more than every 5s. Checked: the player put
 on each of level 1's 33 in turn, all but one found their sound (`gag_loot`, which the data
-does not have). Not done: the gag's own animated model (`gag_jar.p3d`), drawn and played;
+does not have). Each gag's model (`art/nis/gags/gag_bbq.p3d`) stands where `GagSetPosition`
+puts it, in its rest pose: seen, the barbecue by the Simpsons' door. Not done: the
+model's animation (its `GagController`) played when the gag is triggered;
 `GagSetInterior`, `GagSetPersist`, `GagSetCycle`, the camera shakes and movies; a count
 of the gags found.

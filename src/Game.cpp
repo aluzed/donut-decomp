@@ -27,6 +27,7 @@
 #include "Physics/WorldPhysics.h"
 #include "RCL/RCFFile.h"
 #include "RCL/RSDFile.h"
+#include "Render/CompositeModel.h"
 #include "Render/Font.h"
 #include "Render/LineRenderer.h"
 #include "Render/OpenGL/FrameBuffer.h"
@@ -1484,6 +1485,12 @@ void Game::loadGags()
 		}
 		else if (!gag)
 			continue;
+		else if (command == "GagSetPosition" && args.size() == 1)
+			gag->placed = _level->GetLocatorPosition(args[0]);
+		else if (command == "GagSetPosition" && args.size() == 3)
+			gag->placed = Vector3(static_cast<float>(std::atof(args[0].c_str())),
+			                      static_cast<float>(std::atof(args[1].c_str())),
+			                      static_cast<float>(std::atof(args[2].c_str())));
 		else if (command == "GagSetSound" && !args.empty())
 			gag->sound = args[0];
 		else if (command == "GagSetCoins" && !args.empty())
@@ -1509,7 +1516,19 @@ void Game::loadGags()
 		else if (command == "GagEnd")
 		{
 			if (!gag->sound.empty())
+			{
+				// Several gags share a model: the Simpsons' couch has six.
+				static std::map<std::string, std::shared_ptr<CompositeModel>> models;
+				const std::string file = "art/nis/gags/" + gag->model;
+				if (gag->placed != Vector3::Zero && FileSystem::exists(file))
+				{
+					auto& model = models[file];
+					if (!model)
+						model = CompositeModel::LoadP3D(file);
+					gag->drawable = model;
+				}
 				_gags.push_back(*gag);
+			}
 			gag.reset();
 		}
 	}
@@ -2575,6 +2594,16 @@ void Game::Run()
 
 		if (_collectibleManager)
 			_collectibleManager->Draw(_level->GetWorldShader(), viewProjection, static_cast<float>(_elapsedSeconds));
+
+		// The gags, as they stand. One model drawn more than once is drawn at
+		// each place in turn.
+		{
+			GL::ShaderProgram& worldShader = _level->GetWorldShader();
+			for (const bool opaque : {true, false})
+				for (const auto& gag : _gags)
+					if (gag.drawable && (gag.placed - _camera->GetPosition()).Length() < 150.0f)
+						gag.drawable->Draw(worldShader, viewProjection, Matrix4x4::MakeTranslate(gag.placed), opaque);
+		}
 
 		if (_scriptEngine->IsMissionActive() && !_scriptEngine->GetCheckpoints().empty())
 		{
