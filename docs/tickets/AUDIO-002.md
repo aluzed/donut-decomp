@@ -54,3 +54,12 @@ the Squidport, Halloween, small rooms...), which the game picks by zone with a s
 (`ambience.rms`) not read here. Each level now plays one for its outdoors (level 1 the
 suburb by day, 2 the busy city, 3 the Squidport, 4 the suburb at night, 5 the city at
 night, 6 the Squidport at night, 7 Halloween), and a small room indoors, softly, looped.
+
+## The listener (2026-10-18)
+
+`AudioManager::SetListenerPosition` was never called: the listener sat at the world's
+origin, and every sound given a position (a traffic driver's shout, a mission sound) was
+heard from there, faint or not at all. The listener is now the camera, every frame. OpenAL
+takes right as forward x up; in this world +X is on the right looking down +Z (checked on
+the radar), so "up" is given as -Y for left and right to come out the right way round.
+Not heard.

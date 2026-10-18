@@ -1702,6 +1702,14 @@ void Game::Run()
 		if (simulate)
 			_worldPhysics->Update(static_cast<float>(deltaTime));
 
+		// The listener is the camera; it was never placed, and every sound given
+		// a position was heard from the world's origin, if at all. OpenAL takes
+		// right as forward x up; in this world +X is on the right looking down
+		// +Z, which takes "up" as -Y to come out the same way round.
+		{
+			const Vector3 forward = _camera->GetOrientation().Inverse() * Vector3::Forward;
+			_audioManager->SetListenerPosition(_camera->GetPosition(), forward, Vector3(0.0f, -1.0f, 0.0f));
+		}
 		_audioManager->Update();
 		// The place's background: the level's outdoors, or a small room indoors.
 		// The game picks it by zone with a script (ambience.rms) not read here.
