@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Core/Math/Vector3.h"
+#include "Level.h"
 #include "Vehicle.h"
 
 #include "AI/ChaseManager.h"
@@ -92,6 +93,8 @@ public:
 	int GetCurrentLap() const { return _currentLap; }
 	int GetTotalLaps() const { return _totalLaps; }
 	void SetRaceLaps(int laps);
+	// A trigger volume the player has just entered or left (Level::UpdateTriggers).
+	void OnTrigger(const Level::Trigger& trigger, bool entered);
 	// SetStageAIRaceCatchupParams(vehicle, distance, ahead, level, behind). The
 	// game's own race scripts pass e.g. (80, 0.6, 1.0, 2.0): read as a distance in
 	// metres and the speed factor with the AI that far ahead, level, and that far

@@ -902,17 +902,14 @@ void Game::Run()
 		// follow camera, plus stepUp/stepDown/onGround bugs) but the block was never restored.
 		if (_character != nullptr && _gameState == GameState::InGame)
 		{
-			if (_level->CheckTrigger(_character->GetPosition(), ""))
-			{
-				static std::string lastTrigger;
-				static double lastTriggerTime = 0;
-				lastTriggerTime += deltaTime;
-				if (lastTriggerTime > 2.0)
-				{
-					lastTriggerTime = 0;
-					Log::Info("Game: player entered trigger zone");
-				}
-			}
+			// Triggers fire on the transition, once, from wherever the player
+			// actually is -- the car, when driving. This used to log "entered
+			// trigger zone" every two seconds for as long as the player stood in
+			// one, without saying which.
+			const Vector3 playerPos = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()
+			                                                       : _character->GetPosition();
+			for (const auto& event : _level->UpdateTriggers(playerPos))
+				_scriptEngine->OnTrigger(*event.trigger, event.entered);
 			static double pedSpawnTimer = 0.0;
 			pedSpawnTimer += deltaTime;
 			if (pedSpawnTimer > 0.5)

@@ -143,7 +143,7 @@ Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants 
 ### LEVEL
 | ID | Statut | Pri | Sujet | Note |
 |---|---|---|---|---|
-| LEVEL-TRIG | 🟡 | P1 | Câbler triggers parsés → callbacks script (`ActivateTrigger`/`DeactivateTrigger`) | volumes déjà parsés (`Level.cpp:177`) |
+| LEVEL-TRIG | 🟡 | P1 | Câbler triggers parsés → callbacks script (`ActivateTrigger`/`DeactivateTrigger`) | 2026-10-18: enter/exit events, oriented boxes, locator type + data → `ScriptEngine::OnTrigger`; nothing acts on them yet |
 | LEVEL-STREAM | ⬜ | P1 | Streaming par distance (load/unload selon position joueur) | **absent** — pas de culling viewport |
 | LEVEL-FOG | ⬜ | P2 | Fog par zone depuis paramètres P3D | |
 

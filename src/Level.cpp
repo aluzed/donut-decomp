@@ -10,6 +10,8 @@
 #include <P3D/P3DFile.h>
 #include <Physics/WorldPhysics.h>
 #include <Render/BillboardBatch.h>
+
+#include <cmath>
 #include <Render/Font.h>
 #include <Render/LineRenderer.h>
 #include <Render/Mesh.h>
@@ -188,19 +190,45 @@ void Level::LoadP3D(const std::string& filename)
 			Log::Debug("Level: locator '{}' at ({:.1f}, {:.1f}, {:.1f})", loc->GetName(), loc->GetPosition().X,
 			           loc->GetPosition().Y, loc->GetPosition().Z);
 
-			const auto& triggers = loc->GetTriggers();
+			// The data is a run of 32-bit words; for the locators that carry text
+			// (dynamic zones, interior entrances, script locators) it starts with a
+			// NUL-terminated string.
+			std::string data;
+			for (uint32_t word : loc->GetData())
 			{
-				for (const auto& trigger : triggers)
+				bool end = false;
+				for (int byte = 0; byte < 4 && !end; ++byte)
 				{
-					Trigger tvol;
-					tvol.name = trigger->GetName();
-					tvol.position = Vector3(trigger->GetTransform().M[3][0],
-					                        trigger->GetTransform().M[3][1],
-					                        trigger->GetTransform().M[3][2]);
-					tvol.bounds = trigger->GetBounds();
-					tvol.isRect = trigger->GetIsRect() != 0;
-					_triggers.push_back(tvol);
+					const char c = static_cast<char>((word >> (8 * byte)) & 0xFF);
+					if (c == '\0' || static_cast<unsigned char>(c) < 32 || static_cast<unsigned char>(c) > 126)
+						end = true;
+					else
+						data += c;
 				}
+				if (end)
+					break;
+			}
+
+			for (const auto& trigger : loc->GetTriggers())
+			{
+				// Rows 0-2 are the volume's axes, row 3 its centre (the P3D
+				// convention, as for RoadSegment).
+				const Matrix4x4& m = trigger->GetTransform();
+				Trigger tvol;
+				tvol.name = trigger->GetName();
+				tvol.locator = loc->GetName();
+				tvol.type = static_cast<LocatorType>(loc->GetType());
+				tvol.data = data;
+				tvol.position = Vector3(m[3][0], m[3][1], m[3][2]);
+				for (int axis = 0; axis < 3; ++axis)
+				{
+					tvol.axes[axis] = Vector3(m[axis][0], m[axis][1], m[axis][2]);
+					tvol.axes[axis].Normalize();
+				}
+				tvol.bounds = trigger->GetBounds();
+				tvol.isRect = trigger->GetIsRect() != 0;
+				_triggers.push_back(tvol);
+				_insideTrigger.push_back(false);
 			}
 			break;
 		}
@@ -348,19 +376,39 @@ bool Level::CheckTrigger(const Vector3& pos, const std::string& name) const
 		if (!name.empty() && t.name.find(name) == std::string::npos)
 			continue;
 
-		Vector3 d = pos - t.position;
-		if (t.isRect)
-		{
-			if (fabs(d.X) <= t.bounds.X && fabs(d.Y) <= t.bounds.Y && fabs(d.Z) <= t.bounds.Z)
-				return true;
-		}
-		else
-		{
-			if (d.LengthSquared() <= t.bounds.X * t.bounds.X)
-				return true;
-		}
+		if (t.Contains(pos))
+			return true;
 	}
 	return false;
+}
+
+bool Level::Trigger::Contains(const Vector3& point) const
+{
+	const Vector3 d = point - position;
+	if (!isRect)
+		return d.LengthSquared() <= bounds.X * bounds.X;
+
+	// In the box's own frame. Comparing world-axis offsets, as this used to, is
+	// only right for a box that is not turned.
+	const float x = d.X * axes[0].X + d.Y * axes[0].Y + d.Z * axes[0].Z;
+	const float y = d.X * axes[1].X + d.Y * axes[1].Y + d.Z * axes[1].Z;
+	const float z = d.X * axes[2].X + d.Y * axes[2].Y + d.Z * axes[2].Z;
+	return std::fabs(x) <= bounds.X && std::fabs(y) <= bounds.Y && std::fabs(z) <= bounds.Z;
+}
+
+std::vector<Level::TriggerEvent> Level::UpdateTriggers(const Vector3& pos)
+{
+	std::vector<TriggerEvent> events;
+	for (std::size_t i = 0; i < _triggers.size(); ++i)
+	{
+		const bool inside = _triggers[i].Contains(pos);
+		if (inside != _insideTrigger[i])
+		{
+			_insideTrigger[i] = inside;
+			events.push_back({&_triggers[i], inside});
+		}
+	}
+	return events;
 }
 
 void Level::collectSplines(const P3D::P3DChunk& chunk)

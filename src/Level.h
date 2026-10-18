@@ -52,12 +52,51 @@ public:
 		std::vector<Vector3> points;
 	};
 
+	// What a trigger volume belongs to. The values are the game's locator types,
+	// confirmed against L1's data: dynamic-zone triggers carry a DynaLoad string
+	// ("l1z3.p3d:l1z4.p3d:..."), interior entrances the interior's name.
+	enum class LocatorType : uint32_t
+	{
+		Event = 0,
+		Script = 1,
+		Generic = 2,
+		CarStart = 3,
+		Spline = 4,
+		DynamicZone = 5,
+		Occlusion = 6,
+		InteriorEntrance = 7,
+		Directional = 8,
+		Action = 9,
+		Fov = 10,
+		BreakableCamera = 11,
+		StaticCamera = 12,
+		PedGroup = 13,
+		Coin = 14,
+	};
+
 	struct Trigger
 	{
 		std::string name;
+		// The locator the volume hangs off, its type, and the text at the head of
+		// its data (empty when it carries none).
+		std::string locator;
+		LocatorType type;
+		std::string data;
 		Vector3 position;
+		// The volume's own axes. Boxes are not all axis-aligned: L1's loader
+		// triggers sit at 90 and 45 degrees.
+		Vector3 axes[3];
+		// Half extents along those axes for a box, radius in X for a sphere.
 		Vector3 bounds;
 		bool isRect;
+
+		bool Contains(const Vector3& point) const;
+	};
+
+	struct TriggerEvent
+	{
+		const Trigger* trigger;
+		bool entered; // false: left
 	};
 
 	Vector3 GetLocatorPosition(const std::string& name) const;
@@ -91,6 +130,9 @@ public:
 	// the tile corner rather than its middle. Should be zero.
 	int GetUnresolvedRoadTiles() const { return _unresolvedRoadTiles; }
 	bool CheckTrigger(const Vector3& pos, const std::string& name) const;
+	// Tracks which volumes `pos` is inside and reports the changes since the
+	// last call: each entry and each exit once, not every frame it stays inside.
+	std::vector<TriggerEvent> UpdateTriggers(const Vector3& pos);
 
 private:
 	void collectSplines(const P3D::P3DChunk& chunk);
@@ -115,6 +157,8 @@ private:
 	std::map<std::string, Vector3> _roadTileCentres;
 	int _unresolvedRoadTiles = 0;
 	std::vector<Trigger> _triggers;
+	// Parallel to _triggers: whether the tracked position was inside each one.
+	std::vector<bool> _insideTrigger;
 	std::set<std::string> _loadedRegions;
 	std::set<std::string> _loadedP3Ds;
 	std::map<std::string, Vector3> _locators;

@@ -634,6 +634,16 @@ void ScriptEngine::AddObjective(const std::string& type)
 	}
 }
 
+void ScriptEngine::OnTrigger(const Level::Trigger& trigger, bool entered)
+{
+	// Nothing acts on these yet beyond reporting them: the dynamic-zone loaders
+	// would drive region streaming (LEVEL-STREAM) and the interior entrances
+	// GAME-014. Name the locator and what it carries, so the log says which.
+	Log::Debug("ScriptEngine: player {} '{}' (locator '{}', type {}{}{})", entered ? "entered" : "left", trigger.name,
+	           trigger.locator, static_cast<uint32_t>(trigger.type), trigger.data.empty() ? "" : ", data '",
+	           trigger.data.empty() ? "" : trigger.data + "'");
+}
+
 void ScriptEngine::SetRaceLaps(int laps)
 {
 	if (laps < 1)
