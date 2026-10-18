@@ -94,7 +94,9 @@ void PedestrianManager::Update(double deltaTime, const Vector3& playerPosition)
 			Character& body = *_bodies[p.body];
 			body.SetPosition(p.position);
 			if (p.velocity.LengthSquared() > 0.01f)
-				body.SetRotation(Quaternion::MakeFromEuler(Vector3(0.0f, std::atan2(p.velocity.X, p.velocity.Z), 0.0f)));
+				// Half a turn on: a character model faces -Z, as the player's does.
+				body.SetRotation(Quaternion::MakeFromEuler(
+				    Vector3(0.0f, std::atan2(p.velocity.X, p.velocity.Z) + 3.14159265f, 0.0f)));
 			body.Update(deltaTime);
 		}
 	}
