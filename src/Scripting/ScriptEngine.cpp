@@ -1662,15 +1662,25 @@ std::vector<std::string> ScriptEngine::conversationLines() const
 		mission = "b" + mission.substr(2);
 	else if (mission.rfind("sr", 0) == 0)
 		mission = "r" + mission.substr(2);
+	// Not every conversation names its mission: level 1 m1's "icecream" is
+	// c_icecream_1_convinit_mrg_l1.rsd, the tutorial's end in "_l1t1". The
+	// mission's own lines first; failing those, the level's.
 	const std::string tail = fmt::format("_l{}{}.rsd", _game.GetLevelNumber(), mission);
-	std::vector<std::pair<int, std::string>> numbered;
+	const std::string levelTail = fmt::format("_l{}", _game.GetLevelNumber());
+	std::vector<std::pair<int, std::string>> numbered, levelWide;
 	for (const auto& name : _game.GetAudioManager().FindSounds("\\c_" + _conversation + "_"))
 	{
-		if (name.size() < tail.size() || name.compare(name.size() - tail.size(), tail.size(), tail) != 0)
-			continue;
 		const std::size_t at = name.find("\\c_" + _conversation + "_") + 4 + _conversation.size();
-		numbered.emplace_back(std::atoi(name.c_str() + at), name);
+		const std::pair<int, std::string> line {std::atoi(name.c_str() + at), name};
+		if (name.size() >= tail.size() && name.compare(name.size() - tail.size(), tail.size(), tail) == 0)
+			numbered.push_back(line);
+		else if (const std::size_t last = name.rfind('_'); last != std::string::npos &&
+		         name.compare(last, levelTail.size(), levelTail) == 0 &&
+		         (last + levelTail.size() == name.size() - 4 || !std::isdigit(static_cast<unsigned char>(name[last + levelTail.size()]))))
+			levelWide.push_back(line);
 	}
+	if (numbered.empty())
+		numbered = std::move(levelWide);
 	std::sort(numbered.begin(), numbered.end());
 	std::vector<std::string> lines;
 	for (auto& [n, name] : numbered)

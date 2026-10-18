@@ -189,3 +189,12 @@ They are now placed with the level (9 on level 1, 6 on level 2, 4 on level 4, 6 
 mission has placed as its own is not shown twice. Seen: Ralph by the house next to the
 Simpsons'. Walked up to (within 4m, on foot), one says one of their recorded idle replies
 (`ralph\w_idlereply_*`, 16 of them), at most every 20s.
+
+## Conversations without a mission in their name (2026-10-19)
+
+The conversations were looked up as `c_<conv>_<n>_<kind>_<speaker>_l<level><mission>.rsd`
+only. Many do not name their mission: level 1 m1's "icecream" is
+`c_icecream_1_convinit_mrg_l1.rsd`, the tutorial's end in `_l1t1`. All of level 1's
+were found empty, and the dialogue stage went by in 3s of silence. The mission's own lines
+are taken first, failing those the level's. Checked: level 1's four, and those of levels
+2, 3, 5 and 7, now 1 to 9 lines each.
