@@ -696,6 +696,22 @@ void Game::runAutopilot(double dt)
 		return;
 	_autopilotTimer = 0.0;
 
+	// Chasing, ramming or racing is done at the wheel: a player left on foot by
+	// the stage before (a talkto) has their car brought round. Level 4 m1's
+	// dump was "rammed" on foot and timed out.
+	if (!_inVehicle && _character)
+	{
+		const std::string& wanted = _scriptEngine->GetObjectiveType();
+		Vehicle* car = _scriptEngine->GetPlayerCar();
+		if (car && (wanted == "follow" || wanted == "destroy" || wanted == "dump" || wanted == "race"))
+		{
+			Log::Info("Game: autopilot takes the wheel of '{}'", car->GetName());
+			car->Teleport(_character->GetPosition() + Vector3(2.5f, 0.0f, 0.0f), car->GetRotation());
+			PutPlayerInVehicle(car);
+			return;
+		}
+	}
+
 	if (_scriptEngine->ObjectiveWantsCar() && !_inVehicle && !_scriptEngine->GetMissionVehicles().empty())
 	{
 		Log::Info("Game: autopilot gets in '{}'", _scriptEngine->GetMissionVehicles().front()->GetName());

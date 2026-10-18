@@ -57,8 +57,10 @@ Two commands made it worse:
 - Checkpoints, and so `goto`, are reached **on foot** as well as by car.
 - `ShowStageComplete()` only flags the announcement. `AddStage` takes non-numeric labels.
 - **`--autopilot`** moves the player onto each objective in turn, two seconds apart, and into a
-  car for a `getin`, and out of it for an `interior` or a `talkto`. It exists to run a whole
-mission unattended.
+  car for a `getin`, and out of it for an `interior` or a `talkto`; left on foot by a
+`talkto` when the next stage is driving (`follow`, `destroy`, `dump`, `race`), it has the
+player's car brought round and takes the wheel (level 4 m1's dump was "rammed" on foot
+and timed out). It exists to run a whole mission unattended.
 
 ## A crash it uncovered
 
