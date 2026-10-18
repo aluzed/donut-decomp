@@ -270,11 +270,14 @@ void Hud::Draw(SpriteBatch& sprites, const Font* font, const HudState& state)
 	}
 
 	// --- centred call-outs ---
-	if (state.showGo)
+	if (!state.countdown.empty())
 	{
-		const float w = font != nullptr ? font->MeasureWidth("GO!") : 0.0f;
-		drawShadowedText(sprites, font, "GO!", Vector2((state.viewportWidth - w) * 0.5f, state.viewportHeight * 0.5f),
-		                 Vector4(0.2f, 1.0f, 0.2f, 1.0f));
+		// Green for the go, yellow for everything before it.
+		const bool go = state.countdown.rfind("GO", 0) == 0;
+		const float w = font != nullptr ? font->MeasureWidth(state.countdown) : 0.0f;
+		drawShadowedText(sprites, font, state.countdown,
+		                 Vector2((state.viewportWidth - w) * 0.5f, state.viewportHeight * 0.5f),
+		                 go ? Vector4(0.2f, 1.0f, 0.2f, 1.0f) : Vector4(1.0f, 0.85f, 0.1f, 1.0f));
 	}
 
 	if (!state.banner.empty())

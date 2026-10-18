@@ -30,6 +30,9 @@ public:
 	// its waypoints, which happens after the vehicle is created.
 	void SetCircuit(std::vector<Vector3> circuit);
 
+	// Sits on the line, brakes on, during the countdown.
+	void Hold();
+
 	float Progress() const { return _path.Progress(); }
 	float ProgressLaps() const { return _path.ProgressLaps(); }
 	int Laps() const { return _path.Laps(); }

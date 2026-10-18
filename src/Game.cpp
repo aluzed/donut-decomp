@@ -705,7 +705,11 @@ void Game::Run()
 					brake = 0.0f;
 				}
 
-				_activeVehicle->ApplyInput(throttle, steer, brake, boost);
+				// Held on the line, like the opponents, until the countdown says go.
+				if (_scriptEngine->IsMissionActive() && _scriptEngine->IsRaceHeld())
+					_activeVehicle->ApplyInput(0.0f, 0.0f, 1.0f, 1.0f);
+				else
+					_activeVehicle->ApplyInput(throttle, steer, brake, boost);
 			}
 		}
 
@@ -1202,7 +1206,7 @@ void Game::Run()
 			if (_scriptEngine->IsMissionActive())
 			{
 				hud.missionActive = true;
-				hud.showGo = _scriptEngine->GetGoTimer() > 0.0f;
+				hud.countdown = _scriptEngine->GetCountdownText();
 				hud.objective = _scriptEngine->GetObjectiveType();
 				hud.timeRemaining = _scriptEngine->GetStageTimeRemaining();
 				hud.lap = _scriptEngine->GetCurrentLap();

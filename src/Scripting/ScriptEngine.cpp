@@ -14,6 +14,7 @@
 #include "Scripting/Commands.h"
 #include "Vehicle.h"
 
+#include <cctype>
 #include <cmath>
 #include <fstream>
 
@@ -56,7 +57,8 @@ void ScriptEngine::SelectMission(const std::string& id)
 	for (auto& v : _missionVehicles)
 		v->DestroyPhysics(_game.GetWorldPhysics());
 	_missionVehicles.clear();
-	_goTimer = 1.5f;
+	_countdown.clear();
+	_countdownElapsed = 0.0f;
 	_stageTimeRemaining = -1.0f;
 
 	std::ifstream saveFile("donut_save.dat");
@@ -150,7 +152,8 @@ void ScriptEngine::CleanupMission()
 	_objectiveType.clear();
 	_objectiveTarget.clear();
 	_stageTimeRemaining = -1.0f;
-	_goTimer = 1.5f;
+	_countdown.clear();
+	_countdownElapsed = 0.0f;
 
 	// Tearing the mission down is what clears the active flag; CloseMission used
 	// to do it as a side effect of wrongly completing the mission, and without
@@ -170,9 +173,10 @@ void ScriptEngine::SetStageTime(float seconds)
 
 void ScriptEngine::Update(double dt)
 {
-	if (_goTimer > 0.0f)
+	// The stage clock starts when the countdown has run out.
+	if (_countdownElapsed < countdownLength())
 	{
-		_goTimer -= static_cast<float>(dt);
+		_countdownElapsed += static_cast<float>(dt);
 		return;
 	}
 
@@ -749,10 +753,75 @@ void ScriptEngine::SetStageAIRaceCatchupParams(const std::string& vehicle, float
 	_raceCatchups[vehicle] = {distance, ahead, level, behind};
 }
 
+const std::vector<ScriptEngine::CountdownStep>& ScriptEngine::countdownSteps() const
+{
+	// What every mission had before scripts could declare their own: "GO!" for
+	// 1.5s, holding nobody.
+	static const std::vector<CountdownStep> kDefault {{"GO!", 1.5f}};
+	return _countdown.empty() ? kDefault : _countdown;
+}
+
+float ScriptEngine::countdownLength() const
+{
+	float total = 0.0f;
+	for (const auto& step : countdownSteps())
+		total += step.seconds;
+	return total;
+}
+
+void ScriptEngine::StartCountdown(const std::string& name)
+{
+	Log::Info("ScriptEngine: countdown '{}'", name);
+	_countdown.clear();
+	_countdownElapsed = 0.0f;
+}
+
+void ScriptEngine::AddToCountdownSequence(const std::string& text, int milliseconds)
+{
+	_countdown.push_back({text, static_cast<float>(milliseconds) / 1000.0f});
+}
+
+std::string ScriptEngine::GetCountdownText() const
+{
+	float start = 0.0f;
+	for (const auto& step : countdownSteps())
+	{
+		if (_countdownElapsed < start + step.seconds)
+			return step.text;
+		start += step.seconds;
+	}
+	return {};
+}
+
+bool ScriptEngine::IsRaceHeld() const
+{
+	// The cars go on "GO" and not after it: sr2 shows it for 400ms, with the
+	// race already under way.
+	const auto& steps = countdownSteps();
+	float start = 0.0f;
+	for (std::size_t i = 0; i < steps.size(); ++i)
+	{
+		std::string upper = steps[i].text;
+		for (char& c : upper)
+			c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+		if (upper.rfind("GO", 0) == 0 || i + 1 == steps.size())
+			return _countdownElapsed < start;
+		start += steps[i].seconds;
+	}
+	return false;
+}
+
 void ScriptEngine::UpdateAI(double dt)
 {
 	if (_raceOpponents.empty())
 		return;
+
+	if (IsRaceHeld())
+	{
+		for (auto& opponent : _raceOpponents)
+			opponent->Hold();
+		return;
+	}
 
 	// In laps, so it is comparable with each opponent's own progress around a
 	// circuit that has a different number of points than the checkpoint list.

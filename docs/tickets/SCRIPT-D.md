@@ -85,7 +85,14 @@ Then, the same day, the player's side:
   sr2 gets its own seven (`sr2_waypoint1..6`, `sr2_waypoint8`) in place of six points
   spread over the level's longest path.
 
-Not done: the countdown and the `position` condition.
+- **The countdown.** `StartCountdown` / `AddToCountdownSequence` build the sequence
+  (sr2: "3" 800ms, "2" 600ms, "PSYCHE" 500ms, "1" 900ms, "GO" 400ms) and the HUD shows
+  each step. The opponents and the player's car are held, brakes on, until "GO". The stage
+  clock and the lap clocks start when the sequence ends. Without a countdown, a mission
+  gets the old bare "GO!" for 1.5s, holding nobody, so M1race is unchanged.
+
+Not done: the `position` condition as such. An opponent finishing first already fails the
+race, which is what `SetConditionPosition(1)` asks for.
 
 ## Critères d'acceptation
 - [ ] Un `.con` de course représentatif s'exécute avec 0 avertissement « unimplemented command ».

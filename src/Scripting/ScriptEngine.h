@@ -89,7 +89,15 @@ public:
 	bool IsMissionActive() const { return _missionActive; }
 	float GetStageTimeRemaining() const { return _stageTimeRemaining; }
 	float GetInitialStageTime() const { return _initialStageTime; }
-	float GetGoTimer() const { return _goTimer; }
+	// The race start: StartCountdown opens a sequence, AddToCountdownSequence adds
+	// a step ("3" for 800ms, "PSYCHE" for 500ms, "GO" ...). Text of the step on
+	// screen now, empty once the sequence has run.
+	void StartCountdown(const std::string& name);
+	void AddToCountdownSequence(const std::string& text, int milliseconds);
+	std::string GetCountdownText() const;
+	// True while the cars are held on the line: until the "GO" step, or the last
+	// step when there is no "GO".
+	bool IsRaceHeld() const;
 	const std::string& GetObjectiveType() const { return _objectiveType; }
 	// The player's start as the mission placed it, if it did.
 	bool GetPlayerStart(Vector3& position) const
@@ -127,7 +135,18 @@ private:
 	int _currentStage = -1;
 	float _stageTimeRemaining = -1.0f;
 	float _initialStageTime = 0.0f;
-	float _goTimer = 1.5f;
+	struct CountdownStep
+	{
+		std::string text;
+		float seconds;
+	};
+	// The mission's countdown; empty means the default, a bare "GO!".
+	std::vector<CountdownStep> _countdown;
+	// Time since the mission started, for walking the countdown.
+	float _countdownElapsed = 0.0f;
+	// The sequence in force: the mission's own or the default.
+	const std::vector<CountdownStep>& countdownSteps() const;
+	float countdownLength() const;
 	std::vector<std::unique_ptr<Vehicle>> _missionVehicles;
 	Vehicle* _activeVehicle = nullptr;
 	// The player's car for this mission, when the mission places one.

@@ -184,6 +184,14 @@ void RaceOpponent::SetCircuit(std::vector<Vector3> circuit)
 	_timedLap = _path.Laps();
 }
 
+void RaceOpponent::Hold()
+{
+	_vehicle.ApplyInput(0.0f, 0.0f, 1.0f, 1.0f);
+	_lastPosition = _vehicle.GetPosition();
+	// The lap clock starts with the race, not with the countdown.
+	_lapTimer = 0.0;
+}
+
 void RaceOpponent::startFromHere(std::vector<Vector3> circuit)
 {
 	// Join the circuit where the car is, and count laps from there. Starting at

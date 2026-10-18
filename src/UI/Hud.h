@@ -46,7 +46,8 @@ struct HudState
 
 	// mission
 	bool missionActive = false;
-	bool showGo = false;
+	// The countdown step on screen ("3", "PSYCHE", "GO"), empty when none.
+	std::string countdown;
 	std::string objective;
 	float timeRemaining = -1.0f; // < 0 when the stage is untimed
 	int lap = 0;

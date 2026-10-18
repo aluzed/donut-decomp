@@ -225,8 +225,14 @@ void GameCommands::PutMFPlayerInCar(int32_t param0 /*= 0*/)
 {
 	Game::GetInstance().GetScriptEngine().PutPlayerInCar();
 }
-void GameCommands::StartCountdown(const std::string& param0, const std::string& param1 /*= ""*/) {}
-void GameCommands::AddToCountdownSequence(const std::string& param0, int32_t param1) {}
+void GameCommands::StartCountdown(const std::string& param0, const std::string& param1 /*= ""*/)
+{
+	Game::GetInstance().GetScriptEngine().StartCountdown(param0);
+}
+void GameCommands::AddToCountdownSequence(const std::string& param0, int32_t param1)
+{
+	Game::GetInstance().GetScriptEngine().AddToCountdownSequence(param0, param1);
+}
 void GameCommands::UseElapsedTime(int32_t param0 /*= 0*/) {}
 void GameCommands::SetRaceEnteryFee(int32_t param0) {}
 void GameCommands::SetParTime(int32_t param0) {}
