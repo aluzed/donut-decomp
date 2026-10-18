@@ -412,6 +412,7 @@ void Game::LockMouse(bool lockMouse)
 
 void Game::runMissionScript()
 {
+	_missionLoadedAt = _elapsedSeconds;
 	// A mission starts outdoors, wherever the last one left the player.
 	_interior.clear();
 	if (_level)
@@ -1537,6 +1538,14 @@ void Game::Run()
 			if (_scriptEngine->IsMissionActive())
 			{
 				hud.missionActive = true;
+				// The mission's title card, for its first few seconds.
+				constexpr double kTitleCardSeconds = 4.0;
+				if (_gameState == GameState::InGame && _elapsedSeconds - _missionLoadedAt < kTitleCardSeconds)
+				{
+					hud.banner = _scriptEngine->GetMissionTitle();
+					hud.bannerColour = Vector4(1.0f, 0.84f, 0.0f, 1.0f);
+					hud.bannerDetail = _scriptEngine->GetMissionTitle(true);
+				}
 				hud.countdown = _scriptEngine->GetCountdownText();
 				hud.objective = _scriptEngine->GetObjectiveText();
 				hud.timeRemaining = _scriptEngine->GetStageTimeRemaining();
@@ -1676,11 +1685,13 @@ void Game::Run()
 						Vector4(1.0f, 0.84f, 0.0f, 1.0f));
 				}
 
-				sprites.DrawText(font, "STAGE COMPLETE!",
+				// In the game's words, when the phrase table is there.
+				const std::string& complete = _textBible.Get("MISSION_COMPLETE");
+				sprites.DrawText(font, complete.empty() ? "MISSION COMPLETE!" : complete,
 					Vector2((viewportWidth / 2.0f) - 100, viewportHeight / 2.0f - 50),
 					Vector4(1.0f, 0.84f, 0.0f, 1.0f));
 
-				float elapsed = _scriptEngine->GetInitialStageTime() - _scriptEngine->GetStageTimeRemaining();
+				const float elapsed = _scriptEngine->GetMissionTime();
 				std::string stats = fmt::format("Time: {:.1f}s", elapsed);
 				sprites.DrawText(font, stats,
 					Vector2((viewportWidth / 2.0f) - 50, viewportHeight / 2.0f - 10),
@@ -1696,7 +1707,7 @@ void Game::Run()
 				}
 
 				int nextIn = 5 - static_cast<int>(_missionCompleteTimer);
-				std::string nextText = fmt::format("Next race in {}...", nextIn);
+				std::string nextText = fmt::format("Next in {}...", nextIn);
 				sprites.DrawText(font, nextText,
 					Vector2((viewportWidth / 2.0f) - 60, viewportHeight / 2.0f + 40),
 					Vector4(0.6f, 0.6f, 0.6f, 1.0f));
@@ -1704,9 +1715,15 @@ void Game::Run()
 
 			if (_gameState == GameState::MissionFailed)
 			{
-				sprites.DrawText(font, "MISSION FAILED!",
+				const std::string& failed = _textBible.Get("MISSION_FAILED");
+				sprites.DrawText(font, failed.empty() ? "MISSION FAILED!" : failed,
 					Vector2((viewportWidth / 2.0f) - 100, viewportHeight / 2.0f - 20),
 					Vector4(1.0f, 0.2f, 0.2f, 1.0f));
+				// And why, as the game's advice for it.
+				const std::string hint = _scriptEngine->GetFailureHint();
+				if (!hint.empty())
+					sprites.DrawText(font, hint, Vector2(centredTextX(font, hint, viewportWidth), viewportHeight / 2.0f + 40),
+					                 Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 				int nextIn = 5 - static_cast<int>(_missionCompleteTimer);
 				std::string nextText = fmt::format("Retrying in {}...", nextIn);
 				sprites.DrawText(font, nextText,

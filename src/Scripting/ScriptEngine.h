@@ -111,6 +111,13 @@ public:
 	// ("COLLECT LISA'S SCIENCE PROJECT") or else "Objective: <type>", and how
 	// far along a delivery is ("... 3/9").
 	std::string GetObjectiveText() const;
+	// The mission's name and summary from the phrase table ("S-M-R-T", "RACE
+	// PRINCIPAL SKINNER TO THE SCHOOL..."), empty when it has none.
+	std::string GetMissionTitle(bool info = false) const;
+	// The advice for the last failure, in the game's words.
+	std::string GetFailureHint() const;
+	// How long the mission has taken, measured.
+	float GetMissionTime() const { return _missionElapsed; }
 	// The player's start as the mission placed it, if it did.
 	bool GetPlayerStart(Vector3& position) const
 	{
@@ -305,7 +312,9 @@ private:
 	// How long the player has been out of their car, for "outofvehicle".
 	float _outOfVehicleSeconds = 0.0f;
 	void updateConditions(double dt);
-	void missionFailed(const std::string& reason);
+	// `hint` names the phrase-table line the failure screen offers as advice.
+	void missionFailed(const std::string& reason, const std::string& hint = "");
+	std::string _failureHint;
 	float _bestTime = 999.0f;
 	bool _isNewRecord = false;
 	Vector3 _aiPosition;

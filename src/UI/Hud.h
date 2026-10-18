@@ -75,6 +75,8 @@ struct HudState
 	std::vector<std::string> hints;
 	Vector4 hintColour = Vector4(0.5f, 0.5f, 0.5f, 1.0f);
 	std::string banner; // centred call-out such as "BUSTED!"
+	// A second, smaller line under the banner (a mission's summary).
+	std::string bannerDetail;
 	Vector4 bannerColour = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
 };
 

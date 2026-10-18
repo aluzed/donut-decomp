@@ -2,6 +2,9 @@
 
 #include "UI/Hud.h"
 
+#include <sstream>
+#include <vector>
+
 #include "Render/Font.h"
 #include "Render/SpriteBatch.h"
 #include "Render/Texture.h"
@@ -294,6 +297,32 @@ void Hud::Draw(SpriteBatch& sprites, const Font* font, const HudState& state)
 		drawShadowedText(sprites, font, state.banner,
 		                 Vector2((state.viewportWidth - w) * 0.5f, state.viewportHeight * 0.5f - 40.0f),
 		                 state.bannerColour);
+	}
+
+	if (!state.bannerDetail.empty())
+	{
+		// Word-wrapped to most of the screen's width: the game's mission
+		// summaries run to a long sentence, which ran off both edges.
+		std::vector<std::string> lines(1);
+		std::stringstream words(state.bannerDetail);
+		std::string word;
+		const float maxWidth = state.viewportWidth * 0.85f;
+		while (words >> word)
+		{
+			const std::string candidate = lines.back().empty() ? word : lines.back() + " " + word;
+			if (font != nullptr && !lines.back().empty() && font->MeasureWidth(candidate) > maxWidth)
+				lines.push_back(word);
+			else
+				lines.back() = candidate;
+		}
+
+		float y = state.viewportHeight * 0.5f;
+		for (const auto& text : lines)
+		{
+			const float w = font != nullptr ? font->MeasureWidth(text) : 0.0f;
+			drawShadowedText(sprites, font, text, Vector2((state.viewportWidth - w) * 0.5f, y), kWhite);
+			y += font != nullptr ? font->GetHeight() + 6.0f : 22.0f;
+		}
 	}
 }
 

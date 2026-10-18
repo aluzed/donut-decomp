@@ -186,6 +186,8 @@ private:
 	int _storyIndex = -1;
 	// --story: start on the first story mission rather than the test mission.
 	bool _startStory = false;
+	// When the running mission was loaded, for its title card.
+	double _missionLoadedAt = 0.0;
 	// The game's phrase table, in the language --language picks (E by default).
 	TextBible _textBible;
 	std::map<std::string, std::unique_ptr<Character>> _npcs;

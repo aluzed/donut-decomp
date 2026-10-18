@@ -518,26 +518,29 @@ void ScriptEngine::updateConditions(double dt)
 		if (condition.type == "outofvehicle" && _playerCar != nullptr && condition.seconds > 0.0f &&
 		    _outOfVehicleSeconds > condition.seconds)
 		{
-			missionFailed(fmt::format("out of the car for more than {:.0f}s", condition.seconds));
+			missionFailed(fmt::format("out of the car for more than {:.0f}s", condition.seconds),
+			              "MISSION_FAILED_PLAYER_OUT_OF_VEHICLE_HINT1");
 			return;
 		}
 		if (condition.type == "followdistance" && condition.maxDistance > 0.0f && !_raceOpponents.empty() &&
 		    (_raceOpponents.front()->GetVehicle().GetPosition() - player).Length() > condition.maxDistance)
 		{
-			missionFailed(fmt::format("lost the car being followed (over {:.0f}m)", condition.maxDistance));
+			missionFailed(fmt::format("lost the car being followed (over {:.0f}m)", condition.maxDistance),
+			              "MISSION_FAILED_FOLLOW_DISTANCE_HINT1");
 			return;
 		}
 		// The car's health is a 0-100 meter; the scripts give a fraction.
 		if (condition.type == "damage" && inCar && _game.GetCarHealth() <= condition.minHealth * 100.0f)
 		{
-			missionFailed("the car is wrecked");
+			missionFailed("the car is wrecked", "MISSION_FAILED_VEHICLE_DAMAGE_HINT1");
 			return;
 		}
 	}
 }
 
-void ScriptEngine::missionFailed(const std::string& reason)
+void ScriptEngine::missionFailed(const std::string& reason, const std::string& hint)
 {
+	_failureHint = hint;
 	_raceDecided = true;
 	_stageTimeRemaining = -1.0f;
 	Log::Info("ScriptEngine: mission failed - {}", reason);
@@ -567,6 +570,25 @@ bool ScriptEngine::RetryFromCheckpoint()
 	}
 	beginStage(_resetStage);
 	return true;
+}
+
+std::string ScriptEngine::GetFailureHint() const
+{
+	return _failureHint.empty() ? std::string() : _game.GetTextBible().Get(_failureHint);
+}
+
+std::string ScriptEngine::GetMissionTitle(bool info) const
+{
+	// The phrase table numbers level 1's missions 0-12: the story's m0-m7, then
+	// the street races, the wager race and the bonus mission.
+	static const std::map<std::string, int> kNumbers {
+	    {"m0", 0}, {"m1", 1}, {"m2", 2}, {"m3", 3}, {"m4", 4}, {"m5", 5}, {"m6", 6},
+	    {"m7", 7}, {"sr1", 8}, {"sr2", 9}, {"sr3", 10}, {"gr1", 11}, {"bm1", 12},
+	};
+	const auto number = kNumbers.find(_missionId);
+	if (number == kNumbers.end())
+		return {};
+	return _game.GetTextBible().Get(fmt::format("MISSION_{}_L1_M{}", info ? "INFO" : "TITLE", number->second));
 }
 
 std::string ScriptEngine::GetObjectiveText() const
@@ -695,8 +717,7 @@ void ScriptEngine::Update(double dt)
 		_chaseManager->Update(dt, playerPos);
 		if (_chaseManager->IsBusted())
 		{
-			Log::Info("ScriptEngine: BUSTED!");
-			_game.SetState(GameState::MissionFailed);
+			missionFailed("busted", "MISSION_FAILED_HIT_N_RUN_HINT1");
 			return;
 		}
 	}
@@ -705,18 +726,14 @@ void ScriptEngine::Update(double dt)
 	{
 		_stageTimeRemaining += static_cast<float>(dt);
 		if (_parTime > 0.0f && _stageTimeRemaining > _parTime)
-			missionFailed(fmt::format("over the par time of {:.0f}s", _parTime));
+			missionFailed(fmt::format("over the par time of {:.0f}s", _parTime), "MISSION_FAILED_TIME_OUT_HINT1");
 		return;
 	}
 
 	_stageTimeRemaining -= static_cast<float>(dt);
 	if (_stageTimeRemaining <= 0.0f)
 	{
-		_stageTimeRemaining = 0.0f;
-		Log::Info("ScriptEngine: stage timer expired - mission failed!");
-		_game.AddShake(2.0f);
-		_game.GetAudioManager().PlayRaw(SoundGenerator::Beep(150, 0.5f), 22050, 1, 16);
-		_game.SetState(GameState::MissionFailed);
+		missionFailed("stage timer expired", "MISSION_FAILED_TIME_OUT_HINT1");
 	}
 }
 
@@ -1499,19 +1516,14 @@ void ScriptEngine::UpdateAI(double dt)
 		// A car to be destroyed that reaches the end of its route has got away.
 		if (_objectiveType == "destroy" && opponent->Laps() >= _totalLaps)
 		{
-			missionFailed(fmt::format("'{}' got away", opponent->GetVehicle().GetName()));
+			missionFailed(fmt::format("'{}' got away", opponent->GetVehicle().GetName()), "MISSION_FAILED_RACE_HINT1");
 			return;
 		}
 
 		if (!_raceDecided && opponent->Laps() >= _totalLaps)
 		{
-			_raceDecided = true;
-			Log::Info("ScriptEngine: '{}' finished all {} laps first - mission failed!",
-			          opponent->GetVehicle().GetName(), _totalLaps);
-			_stageTimeRemaining = -1.0f;
-			_game.AddShake(2.0f);
-			_game.GetAudioManager().PlayRaw(SoundGenerator::Beep(150, 0.5f), 22050, 1, 16);
-			_game.SetState(GameState::MissionFailed);
+			missionFailed(fmt::format("'{}' finished all {} laps first", opponent->GetVehicle().GetName(), _totalLaps),
+			              "MISSION_FAILED_POSITION_HINT1");
 		}
 	}
 
