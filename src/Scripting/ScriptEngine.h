@@ -72,7 +72,6 @@ public:
 
 	void SetHUDIcon(const std::string& icon);
 	void AddObjective(const std::string& type);
-	void ShowStageComplete();
 	void UpdateAI(double dt);
 	void ResetBestTime();
 	void SaveGameState();
@@ -120,6 +119,20 @@ public:
 	int GetCurrentLap() const { return _currentLap; }
 	int GetTotalLaps() const { return _totalLaps; }
 	void SetRaceLaps(int laps);
+	// Objective set-up commands.
+	void SetDestination(const std::string& locator, const std::string& type);
+	void SetTalkToTarget(const std::string& npc);
+	void SetDurationTime(float seconds);
+	// Brings a car declared earlier into this stage's action ("race", "evade",
+	// "target" race against the player).
+	void ActivateVehicle(const std::string& name, const std::string& behaviour);
+	// The script's ShowStageComplete(): announce the stage when it is done. It
+	// does not complete anything itself.
+	void AnnounceStageComplete();
+	// Where the current objective wants the player: the next checkpoint or
+	// destination, or whoever they are to talk to. For --autopilot.
+	bool GetObjectiveTarget(Vector3& position) const;
+	bool ObjectiveWantsCar() const { return _objectiveType == "getin"; }
 	// A trigger volume the player has just entered or left (Level::UpdateTriggers).
 	void OnTrigger(const Level::Trigger& trigger, bool entered);
 	// SetStageAIRaceCatchupParams(vehicle, distance, ahead, level, behind). The
@@ -140,11 +153,6 @@ private:
 	std::string _playerLocator;
 	std::vector<std::string> _zones;
 	int _currentStage = -1;
-	// The stage being played. There is no stage sequencing yet, so it is the
-	// first one the script declares; objectives declared for later stages are
-	// set aside rather than allowed to overwrite it.
-	int _playedStage = -1;
-	bool declaringPlayedStage() const { return _currentStage == _playedStage; }
 	float _stageTimeRemaining = -1.0f;
 	float _initialStageTime = 0.0f;
 	struct CountdownStep
@@ -188,6 +196,29 @@ private:
 	// the level path AddObjective falls back on.
 	bool _checkpointsFromCollectibles = false;
 	bool _noTraffic = false;
+
+	// Each stage's own commands, recorded as the script is read and run when the
+	// stage begins: a mission is a sequence of stages, and running every stage's
+	// commands at load time made the last one declared overwrite the rest.
+	// Commands outside any stage run as they are read.
+	std::vector<std::vector<std::string>> _stageScripts;
+	bool _recordingStage = false;
+	std::size_t _stageCursor = 0;
+	void beginStage(std::size_t index);
+	// The current stage's objective is met: on to the next stage, or the end.
+	void objectiveComplete();
+	void missionComplete();
+	// Watches the objectives that are not met by driving through checkpoints.
+	void updateObjective(double dt);
+
+	// The current objective's particulars.
+	bool _hasDestination = false;
+	Vector3 _destination;
+	std::string _talkToTarget;
+	std::map<std::string, Vector3> _npcPositions;
+	float _objectiveElapsed = 0.0f;
+	float _objectiveDuration = 0.0f;
+	bool _announceStageComplete = false;
 	float _bestTime = 999.0f;
 	bool _isNewRecord = false;
 	Vector3 _aiPosition;

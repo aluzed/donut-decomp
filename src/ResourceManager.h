@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace Donut
 {
@@ -56,6 +57,14 @@ protected:
 	std::unordered_map<std::string, std::unique_ptr<Shader>> _shaders;
 	std::unordered_map<std::string, std::unique_ptr<Mesh>> _geometries;
 	std::unordered_map<std::string, std::unique_ptr<Font>> _fonts;
+
+	// Resources a later load of the same name replaced. They are kept, not freed:
+	// shaders hold raw pointers to their textures and meshes to their shaders, so
+	// freeing the old one left them dangling. Reloading a car on a mission restart
+	// crashed the next frame in the sky's Texture::Bind.
+	std::vector<std::unique_ptr<Texture>> _retiredTextures;
+	std::vector<std::unique_ptr<Shader>> _retiredShaders;
+	std::vector<std::unique_ptr<Mesh>> _retiredGeometries;
 };
 
 } // namespace Donut

@@ -23,32 +23,44 @@ ResourceManager::~ResourceManager() = default;
 
 void ResourceManager::LoadTexture(const P3D::Texture& texture)
 {
-	if (_textures.find(texture.GetName()) != _textures.end())
+	if (const auto old = _textures.find(texture.GetName()); old != _textures.end())
+	{
 		Log::Warn("Texture {0} already loaded", texture.GetName());
+		_retiredTextures.push_back(std::move(old->second));
+	}
 
 	_textures[texture.GetName()] = std::make_unique<Texture>(texture);
 }
 
 void ResourceManager::LoadTexture(const P3D::Sprite& sprite)
 {
-	if (_textures.find(sprite.GetName()) != _textures.end())
+	if (const auto old = _textures.find(sprite.GetName()); old != _textures.end())
+	{
 		Log::Warn("Sprite {0} already loaded", sprite.GetName());
+		_retiredTextures.push_back(std::move(old->second));
+	}
 
 	_textures[sprite.GetName()] = std::make_unique<Texture>(sprite);
 }
 
 void ResourceManager::LoadShader(const P3D::Shader& shader)
 {
-	if (_shaders.find(shader.GetName()) != _shaders.end())
+	if (const auto old = _shaders.find(shader.GetName()); old != _shaders.end())
+	{
 		Log::Warn("Shader {0} already loaded", shader.GetName());
+		_retiredShaders.push_back(std::move(old->second));
+	}
 
 	_shaders[shader.GetName()] = std::make_unique<Shader>(shader);
 }
 
 void ResourceManager::LoadSet(const P3D::Set& set)
 {
-	if (_textures.find(set.GetName()) != _textures.end())
+	if (const auto old = _textures.find(set.GetName()); old != _textures.end())
+	{
 		Log::Warn("Set {0} already loaded", set.GetName());
+		_retiredTextures.push_back(std::move(old->second));
+	}
 
 	std::srand((uint32_t)std::time(0));
 	int idx = std::rand() % set.GetTextures().size();
@@ -57,14 +69,19 @@ void ResourceManager::LoadSet(const P3D::Set& set)
 
 void ResourceManager::LoadGeometry(const P3D::Geometry& geo)
 {
-	if (_geometries.find(geo.GetName()) != _geometries.end())
+	if (const auto old = _geometries.find(geo.GetName()); old != _geometries.end())
+	{
 		Log::Warn("Geometry {0} already loaded", geo.GetName());
+		_retiredGeometries.push_back(std::move(old->second));
+	}
 
 	_geometries[geo.GetName()] = std::make_unique<Mesh>(geo);
 }
 
 void ResourceManager::AddTexture(const std::string& name, std::unique_ptr<Texture> texture)
 {
+	if (const auto old = _textures.find(name); old != _textures.end())
+		_retiredTextures.push_back(std::move(old->second));
 	_textures[name] = std::move(texture);
 }
 

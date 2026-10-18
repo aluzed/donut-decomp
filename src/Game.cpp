@@ -130,6 +130,7 @@ Game::Game(int argc, char** argv)
 	//   --autostart          drop straight into the mission, no splash, no menu
 	//   --quit-after <secs>  close the window after that much wall time
 	//   --mission <script>   run that mission script instead of M1race.con
+	//   --autopilot          walk the player through each objective (testing)
 	for (int i = 1; i < argc; ++i)
 	{
 		const std::string_view arg = argv[i];
@@ -139,6 +140,8 @@ Game::Game(int argc, char** argv)
 			_quitAfterSeconds = std::atof(argv[++i]);
 		else if (arg == "--mission" && i + 1 < argc)
 			_missionScript = argv[++i];
+		else if (arg == "--autopilot")
+			_autopilot = true;
 	}
 
 	Commands::RunLine("HelloWorld();");
@@ -414,6 +417,35 @@ Vector3 Game::unoccludedCameraPosition(const Vector3& subject, const Vector3& wa
 	return subject + toCamera * (clear > 0.0f ? clear : 0.0f);
 }
 
+void Game::runAutopilot(double dt)
+{
+	if (!_scriptEngine->IsMissionActive() || _gameState != GameState::InGame)
+		return;
+
+	// Every two seconds, not every frame: each step should be seen to land, and
+	// a race's checkpoints are taken one at a time.
+	_autopilotTimer += dt;
+	if (_autopilotTimer < 2.0)
+		return;
+	_autopilotTimer = 0.0;
+
+	if (_scriptEngine->ObjectiveWantsCar() && !_inVehicle && !_scriptEngine->GetMissionVehicles().empty())
+	{
+		Log::Info("Game: autopilot gets in '{}'", _scriptEngine->GetMissionVehicles().front()->GetName());
+		PutPlayerInVehicle(_scriptEngine->GetMissionVehicles().front().get());
+		return;
+	}
+
+	Vector3 target;
+	if (!_scriptEngine->GetObjectiveTarget(target))
+		return;
+	Log::Info("Game: autopilot to ({:.1f}, {:.1f}, {:.1f})", target.X, target.Y, target.Z);
+	if (_inVehicle && _activeVehicle)
+		_activeVehicle->Teleport(target, _activeVehicle->GetRotation());
+	else
+		SetPlayerPosition(target + Vector3(0.0f, 1.0f, 0.0f));
+}
+
 void Game::PutPlayerInVehicle(Vehicle* vehicle)
 {
 	if (vehicle == nullptr)
@@ -674,20 +706,21 @@ void Game::Run()
 				_character->SetAnimation(desiredAnim);
 		}
 
+		// Checkpoints are reached on foot as well as at the wheel: a mission's
+		// "goto" is often a walk to a door.
+		if (_scriptEngine->IsMissionActive() && _character)
+		{
+			const Vector3 playerPos = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()
+			                                                       : _character->GetPosition();
+			const auto& checkpoints = _scriptEngine->GetCheckpoints();
+			const int current = _scriptEngine->GetCurrentCheckpoint();
+			if (current >= 0 && current < static_cast<int>(checkpoints.size()) &&
+			    (playerPos - checkpoints[current]).Length() < 5.0f)
+				_scriptEngine->AdvanceCheckpoint();
+		}
+
 		if (_inVehicle && _activeVehicle)
 		{
-			if (_scriptEngine->IsMissionActive())
-			{
-				const auto& checkpoints = _scriptEngine->GetCheckpoints();
-				int current = _scriptEngine->GetCurrentCheckpoint();
-				if (current >= 0 && current < static_cast<int>(checkpoints.size()))
-				{
-					float dist = (_activeVehicle->GetPosition() - checkpoints[current]).Length();
-					if (dist < 5.0f)
-						_scriptEngine->AdvanceCheckpoint();
-				}
-			}
-
 			if (intent.interact)
 			{
 				_inVehicle = false;
@@ -955,7 +988,11 @@ void Game::Run()
 		if (traffic && _showDebug)
 			_trafficManager->Draw();
 		if (simulate)
+		{
 			_scriptEngine->Update(deltaTime);
+			if (_autopilot)
+				runAutopilot(deltaTime);
+		}
 
 		// Re-enabled (REGR-001): db9c8db commented this out to isolate a crash on "press
 		// up"; 9860a4f fixed that same day (uninitialised Character::_rotation feeding the

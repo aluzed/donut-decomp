@@ -56,7 +56,17 @@ void GameCommands::UsePedGroup(int32_t param0)
 void GameCommands::AddStage(const std::string& param0 /*= ""*/, const std::string& param1 /*= ""*/,
                             const std::string& param2 /*= ""*/)
 {
-	Game::GetInstance().GetScriptEngine().AddStage(param0.empty() ? 0 : std::stoi(param0));
+	// The stage's number is a label, and some are not numbers at all: m1 ends on
+	// AddStage("final"), which std::stoi threw on.
+	int index = 0;
+	try
+	{
+		index = param0.empty() ? 0 : std::stoi(param0);
+	}
+	catch (const std::exception&)
+	{
+	}
+	Game::GetInstance().GetScriptEngine().AddStage(index);
 }
 void GameCommands::SetPresentationBitmap(const std::string& param0)
 {
@@ -104,19 +114,23 @@ void GameCommands::AddCondition(const std::string& param0, const std::string& pa
 void GameCommands::CloseCondition(int32_t param0 /*= 0*/) {}
 void GameCommands::ShowStageComplete(int32_t param0 /*= 0*/)
 {
-	Game::GetInstance().GetScriptEngine().ShowStageComplete();
+	Game::GetInstance().GetScriptEngine().AnnounceStageComplete();
 }
 void GameCommands::AddNPC(const std::string& param0, const std::string& param1, const std::string& param2 /*= ""*/)
 {
 	Game::GetInstance().GetScriptEngine().AddCharacter(param0, param1);
 }
-void GameCommands::SetDestination(const std::string& param0, const std::string& param1 /*= ""*/) {}
+void GameCommands::SetDestination(const std::string& param0, const std::string& param1 /*= ""*/)
+{
+	Game::GetInstance().GetScriptEngine().SetDestination(param0, param1);
+}
 void GameCommands::SetCollectibleEffect(const std::string& param0) {}
 void GameCommands::AddStageTime(int32_t param0) {}
 void GameCommands::AddObjectiveNPCWaypoint(const std::string& param0, const std::string& param1) {}
 void GameCommands::SetTalkToTarget(const std::string& param0, int32_t param1 /*= 0*/, float param2 /*= 0.0f*/,
                                    const std::string& param3 /*= ""*/)
 {
+	Game::GetInstance().GetScriptEngine().SetTalkToTarget(param0);
 }
 void GameCommands::SetDialogueInfo(const std::string& param0, const std::string& param1, const std::string& param2,
                                    int32_t param3)
@@ -269,7 +283,10 @@ void GameCommands::SetDialoguePositions(const std::string& param0, const std::st
                                         int32_t param3 /*= 0*/)
 {
 }
-void GameCommands::ActivateVehicle(const std::string& param0, const std::string& param1, const std::string& param2) {}
+void GameCommands::ActivateVehicle(const std::string& param0, const std::string& param1, const std::string& param2)
+{
+	Game::GetInstance().GetScriptEngine().ActivateVehicle(param0, param2);
+}
 void GameCommands::SetStageMusicAlwaysOn(int32_t param0 /*= 0*/) {}
 void GameCommands::SetNumValidFailureHints(int32_t param0) {}
 void GameCommands::SetVehicleAIParams(const std::string& param0, int32_t param1, int32_t param2) {}
@@ -284,7 +301,10 @@ void GameCommands::AddStageCharacter(const std::string& param0, const std::strin
                                      const std::string& param3, const std::string& param4)
 {
 }
-void GameCommands::SetDurationTime(float param0) {}
+void GameCommands::SetDurationTime(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetDurationTime(param0);
+}
 void GameCommands::SetFMVInfo(const std::string& param0, const std::string& param1 /*= ""*/) {}
 void GameCommands::SetForcedCar(int32_t param0 /*= 0*/) {}
 void GameCommands::SwapInDefaultCar(int32_t param0 /*= 0*/) {}

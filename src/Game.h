@@ -156,6 +156,11 @@ private:
 	double _quitAfterSeconds = 0.0; // 0 = run until the window is closed
 	// The mission script started and restarted; --mission overrides it.
 	std::string _missionScript = "scripts/Missions/level01/M1race.con";
+	// --autopilot: the player is moved onto each objective in turn, so a whole
+	// mission can be run unattended to check that its stages follow on.
+	bool _autopilot = false;
+	double _autopilotTimer = 0.0;
+	void runAutopilot(double dt);
 	// Runs _missionScript, preceded by its load script when it has one.
 	void runMissionScript();
 	// `wanted`, or the nearest point to `subject` on the way to it that the level

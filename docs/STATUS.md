@@ -118,6 +118,7 @@ cmake --build build -j$(nproc)
 | `--autostart` | Skip the splash and main menu, straight into the mission |
 | `--quit-after <secs>` | Close the window after that much wall time |
 | `--mission <script>` | Run that mission script instead of `M1race.con`. Given a game set-up script (`<id>i.mfk`), its loader (`<id>l.mfk`) runs first |
+| `--autopilot` | Move the player onto each objective in turn, to run a whole mission unattended |
 
 The last two make a run repeatable without a keyboard, which is how the race AI is measured
 over a whole 120-second mission:

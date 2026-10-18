@@ -6,6 +6,7 @@
 #include "AI/RaceOpponent.h"
 #include "Audio/AudioManager.h"
 #include "Audio/SoundGenerator.h"
+#include "Core/File.h"
 #include "Core/FileSystem.h"
 #include "Core/Log.h"
 #include "Game.h"
@@ -43,7 +44,6 @@ void ScriptEngine::SelectMission(const std::string& id)
 	_game.GetLevel().LoadP3D("missions/level01/" + id + ".p3d");
 
 	_currentStage = -1;
-	_playedStage = -1;
 	_noTraffic = false;
 	_zones.clear();
 
@@ -55,6 +55,9 @@ void ScriptEngine::SelectMission(const std::string& id)
 	_raceVehicles.clear();
 	_raceCatchups.clear();
 	_playerCar = nullptr;
+	_stageScripts.clear();
+	_recordingStage = false;
+	_npcPositions.clear();
 	_stageWaypoints.clear();
 	for (auto& v : _missionVehicles)
 		v->DestroyPhysics(_game.GetWorldPhysics());
@@ -113,8 +116,6 @@ void ScriptEngine::SetDynaLoadData(const std::string& zones)
 void ScriptEngine::AddStage(int index)
 {
 	_currentStage = index;
-	if (_playedStage < 0)
-		_playedStage = index;
 	Log::Info("ScriptEngine: stage {} begin", index);
 }
 
@@ -133,14 +134,192 @@ void ScriptEngine::CloseMission()
 	// meant every .con finished its own mission the instant it finished parsing:
 	// the race announced "STAGE COMPLETE! Time: 0.0s", the 5s retry timer fired,
 	// the script re-ran, and it looped forever with no vehicle ever reachable.
-	// Completion belongs to gameplay -- see AdvanceCheckpoint/ShowStageComplete.
+	// Completion belongs to gameplay -- see objectiveComplete.
+	Log::Info("ScriptEngine: mission '{}' loaded, {} stage(s)", _missionId, _stageScripts.size());
+	if (!_stageScripts.empty())
+		beginStage(0);
+}
+
+void ScriptEngine::beginStage(std::size_t index)
+{
+	_stageCursor = index;
+
+	// What a stage sets up is its own: the next one starts from a clean slate,
+	// apart from the cars, which stay in the world (m1 parks Skinner's car in
+	// one stage and races it in the next).
+	_raceOpponents.clear();
+	_raceVehicles.clear();
+	_raceCatchups.clear();
+	_stageWaypoints.clear();
+	_racePath.clear();
+	_checkpoints.clear();
+	_currentCheckpoint = 0;
+	_currentLap = 0;
+	_objectiveType.clear();
+	_hasDestination = false;
+	_talkToTarget.clear();
+	_objectiveElapsed = 0.0f;
+	_objectiveDuration = 0.0f;
+	_stageTimeRemaining = -1.0f;
+	_initialStageTime = 0.0f;
+	_countdown.clear();
+	_countdownElapsed = 0.0f;
+	_noTraffic = false;
+	_announceStageComplete = false;
+	_raceDecided = false;
+
+	for (const auto& statement : _stageScripts[index])
+		Commands::RunLine(statement);
+
+	// A destination is driven or walked to like a one-checkpoint, one-lap race,
+	// which is what AdvanceCheckpoint already completes.
+	if (_hasDestination && _objectiveType != "race")
+	{
+		_checkpoints = {_destination};
+		_totalLaps = 1;
+	}
+
 	buildRaceCircuit();
 
-	Log::Info("ScriptEngine: mission '{}' loaded, stage {} active", _missionId, _currentStage);
+	Log::Info("ScriptEngine: stage {}/{} begins, objective '{}'", index + 1, _stageScripts.size(), _objectiveType);
+}
+
+void ScriptEngine::objectiveComplete()
+{
+	Log::Info("ScriptEngine: stage {}/{} objective '{}' complete{}", _stageCursor + 1, _stageScripts.size(),
+	          _objectiveType, _announceStageComplete ? " -- STAGE COMPLETE" : "");
+	if (_announceStageComplete)
+		_game.GetAudioManager().PlayRaw(SoundGenerator::Chirp(500, 900, 0.25f), 22050, 1, 16);
+
+	if (_stageCursor + 1 < _stageScripts.size())
+		beginStage(_stageCursor + 1);
+	else
+		missionComplete();
+}
+
+void ScriptEngine::updateObjective(double dt)
+{
+	if (_game.GetState() != GameState::InGame || _objectiveType.empty())
+		return;
+
+	_objectiveElapsed += static_cast<float>(dt);
+	const Vector3 player = _game.GetPlayerVehicle() ? _game.GetPlayerVehicle()->GetPosition() : _game.GetPlayerPosition();
+
+	// How close the player has to come to whoever they are to talk to.
+	constexpr float kTalkToRange = 4.0f;
+	// There is no dialogue system: give the scene a moment, then move on.
+	constexpr float kDialogueSeconds = 3.0f;
+
+	if (_objectiveType == "getin")
+	{
+		if (_game.GetPlayerVehicle() != nullptr)
+			objectiveComplete();
+	}
+	else if (_objectiveType == "talkto")
+	{
+		const auto npc = _npcPositions.find(_talkToTarget);
+		if (npc == _npcPositions.end())
+		{
+			Log::Warn("ScriptEngine: nobody called '{}' to talk to, skipping", _talkToTarget);
+			objectiveComplete();
+		}
+		else if ((npc->second - player).Length() < kTalkToRange)
+			objectiveComplete();
+	}
+	else if (_objectiveType == "dialogue")
+	{
+		if (_objectiveElapsed >= kDialogueSeconds)
+			objectiveComplete();
+	}
+	else if (_objectiveType == "timer")
+	{
+		if (_objectiveElapsed >= _objectiveDuration)
+			objectiveComplete();
+	}
+	else if (_objectiveType == "race" || _objectiveType == "goto" || _objectiveType == "interior")
+	{
+		// Met through the checkpoints (AdvanceCheckpoint). One with nowhere to go
+		// cannot be met at all, so do not let it hold the mission up.
+		if (_checkpoints.empty())
+		{
+			Log::Warn("ScriptEngine: '{}' objective with no destination, skipping", _objectiveType);
+			objectiveComplete();
+		}
+	}
+	else
+	{
+		Log::Warn("ScriptEngine: '{}' objectives are not implemented, skipping", _objectiveType);
+		objectiveComplete();
+	}
+}
+
+void ScriptEngine::SetDestination(const std::string& locator, const std::string& type)
+{
+	// An interior is reached through its entrance, whose locator carries the
+	// interior's name: SpringfieldElementary -> SpringfieldElementaryEntry.
+	Vector3 pos = _game.GetLevel().GetLocatorPosition(locator);
+	if (pos == Vector3::Zero && _objectiveType == "interior")
+		pos = _game.GetLevel().GetLocatorPosition(locator + "Entry");
+	if (pos == Vector3::Zero)
+	{
+		Log::Warn("ScriptEngine: destination '{}' not found", locator);
+		return;
+	}
+	_destination = pos;
+	_hasDestination = true;
+	Log::Info("ScriptEngine: destination '{}' ({}) at ({:.1f}, {:.1f}, {:.1f})", locator, type, pos.X, pos.Y, pos.Z);
+}
+
+void ScriptEngine::SetTalkToTarget(const std::string& npc)
+{
+	_talkToTarget = npc;
+}
+
+void ScriptEngine::SetDurationTime(float seconds)
+{
+	_objectiveDuration = seconds;
+}
+
+void ScriptEngine::ActivateVehicle(const std::string& name, const std::string& behaviour)
+{
+	for (auto& vehicle : _missionVehicles)
+	{
+		if (vehicle->GetName() != name)
+			continue;
+		if (behaviour == "race" || behaviour == "evade" || behaviour == "target")
+			_raceVehicles.push_back(vehicle.get());
+		Log::Info("ScriptEngine: vehicle '{}' activated as '{}'", name, behaviour);
+		return;
+	}
+	Log::Warn("ScriptEngine: no vehicle '{}' to activate", name);
+}
+
+bool ScriptEngine::GetObjectiveTarget(Vector3& position) const
+{
+	if (_currentCheckpoint >= 0 && _currentCheckpoint < static_cast<int>(_checkpoints.size()))
+	{
+		position = _checkpoints[_currentCheckpoint];
+		return true;
+	}
+	const auto npc = _npcPositions.find(_talkToTarget);
+	if (_objectiveType == "talkto" && npc != _npcPositions.end())
+	{
+		position = npc->second;
+		return true;
+	}
+	return false;
+}
+
+void ScriptEngine::AnnounceStageComplete()
+{
+	_announceStageComplete = true;
 }
 
 void ScriptEngine::CleanupMission()
 {
+	_stageScripts.clear();
+	_recordingStage = false;
+	_npcPositions.clear();
 	_raceOpponents.clear();
 	_raceVehicles.clear();
 	_raceCatchups.clear();
@@ -164,7 +343,6 @@ void ScriptEngine::CleanupMission()
 	// this SelectMission's `if (_missionActive) return` would refuse to reload.
 	_missionActive = false;
 	_currentStage = -1;
-	_playedStage = -1;
 	_noTraffic = false;
 
 	Log::Info("ScriptEngine: mission cleaned up");
@@ -172,12 +350,6 @@ void ScriptEngine::CleanupMission()
 
 void ScriptEngine::SetStageTime(float seconds)
 {
-	if (!declaringPlayedStage())
-	{
-		Log::Debug("ScriptEngine: stage {} time {}s set aside, stage {} is the one played", _currentStage, seconds,
-		           _playedStage);
-		return;
-	}
 	_stageTimeRemaining = seconds;
 	_initialStageTime = seconds;
 	Log::Info("ScriptEngine: stage time = {}s", seconds);
@@ -192,7 +364,13 @@ void ScriptEngine::Update(double dt)
 		return;
 	}
 
-	if (!_missionActive || _stageTimeRemaining <= 0.0f) return;
+	if (!_missionActive)
+		return;
+
+	updateObjective(dt);
+
+	if (_stageTimeRemaining <= 0.0f)
+		return;
 
 	if (_chaseManager)
 	{
@@ -220,6 +398,11 @@ void ScriptEngine::Update(double dt)
 void ScriptEngine::AddCharacter(const std::string& name, const std::string& locator)
 {
 	Log::Info("ScriptEngine: add character '{}' at '{}'", name, locator);
+	// Where to find them for a "talkto". There is no NPC to walk about yet, so
+	// they are where the mission puts them.
+	const Vector3 pos = _game.GetLevel().GetLocatorPosition(locator);
+	if (pos != Vector3::Zero)
+		_npcPositions[name] = pos;
 	if (name == "homer")
 		_game.LoadModel("homer", "homer");
 }
@@ -248,7 +431,7 @@ void ScriptEngine::PlacePlayerCar(const std::string& car, const std::string& loc
 
 void ScriptEngine::AddCollectible(const std::string& locator, const std::string& type)
 {
-	if (_objectiveType != "race" || !declaringPlayedStage())
+	if (_objectiveType != "race")
 	{
 		Log::Debug("ScriptEngine: collectible '{}' ({}) outside a race, not handled", locator, type);
 		return;
@@ -703,16 +886,10 @@ void ScriptEngine::SetHUDIcon(const std::string& icon)
 
 void ScriptEngine::AddObjective(const std::string& type)
 {
-	// sr2's stage 1 is the dialogue after the race. Read in the same pass as the
-	// race, it reset the laps to 2 and cleared all seven checkpoints.
-	if (!declaringPlayedStage())
-	{
-		Log::Info("ScriptEngine: stage {} objective '{}' set aside, stage {} is the one played", _currentStage, type,
-		          _playedStage);
-		return;
-	}
-
 	_objectiveType = type;
+	_hasDestination = false;
+	_talkToTarget.clear();
+	_objectiveElapsed = 0.0f;
 	_currentCheckpoint = 0;
 	_currentLap = 0;
 	_totalLaps = kDefaultRaceLaps;
@@ -784,16 +961,12 @@ void ScriptEngine::OnTrigger(const Level::Trigger& trigger, bool entered)
 
 void ScriptEngine::NoTrafficForStage()
 {
-	if (!declaringPlayedStage())
-		return;
 	_noTraffic = true;
 	Log::Info("ScriptEngine: no traffic for this stage");
 }
 
 void ScriptEngine::SetRaceLaps(int laps)
 {
-	if (!declaringPlayedStage())
-		return;
 	if (laps < 1)
 	{
 		Log::Warn("ScriptEngine: SetRaceLaps({}) ignored, keeping {}", laps, _totalLaps);
@@ -814,8 +987,12 @@ const std::vector<ScriptEngine::CountdownStep>& ScriptEngine::countdownSteps() c
 {
 	// What every mission had before scripts could declare their own: "GO!" for
 	// 1.5s, holding nobody.
+	// And only for a race: a walk to the next door needs no "GO!".
 	static const std::vector<CountdownStep> kDefault {{"GO!", 1.5f}};
-	return _countdown.empty() ? kDefault : _countdown;
+	static const std::vector<CountdownStep> kNone;
+	if (!_countdown.empty())
+		return _countdown;
+	return _objectiveType == "race" ? kDefault : kNone;
 }
 
 float ScriptEngine::countdownLength() const
@@ -982,7 +1159,7 @@ void ScriptEngine::AdvanceCheckpoint()
 			if (_currentLap >= _totalLaps)
 			{
 				audio.PlayRaw(SoundGenerator::Chirp(400, 1200, 0.3f), 22050, 1, 16);
-				ShowStageComplete();
+				objectiveComplete();
 				return;
 			}
 			else
@@ -1013,7 +1190,7 @@ void ScriptEngine::SetObjTargetVehicle(const std::string& target)
 	Log::Info("ScriptEngine: objective target vehicle = '{}'", target);
 }
 
-void ScriptEngine::ShowStageComplete()
+void ScriptEngine::missionComplete()
 {
 	_raceDecided = true;
 	float elapsed = _initialStageTime - _stageTimeRemaining;
@@ -1057,7 +1234,48 @@ void ScriptEngine::CreateChaseManager(const std::string& copCar, const std::stri
 void ScriptEngine::RunFile(const std::string& path)
 {
 	Log::Info("ScriptEngine: running {}", path);
-	Commands::RunScript(path);
+	if (!FileSystem::exists(path))
+	{
+		Log::Warn("Script not found: {}", path);
+		return;
+	}
+
+	// Statement by statement, as Commands::RunScript splits them, so each can be
+	// routed: a stage's are kept for when the stage begins, the rest run now.
+	File file;
+	file.Open(path, FileMode::Read);
+	while (file.Position() < file.Size())
+	{
+		const std::string line = file.ReadLine();
+		std::size_t pos = 0;
+		while (pos < line.size())
+		{
+			const std::size_t end = line.find(");", pos);
+			const std::string statement = end == std::string::npos ? line.substr(pos) : line.substr(pos, end - pos + 2);
+			pos = end == std::string::npos ? line.size() : end + 2;
+
+			std::string name = statement.substr(0, statement.find('('));
+			name.erase(0, name.find_first_not_of(" \t"));
+			name.erase(name.find_last_not_of(" \t") + 1);
+
+			if (name == "AddStage")
+			{
+				_stageScripts.push_back({statement});
+				_recordingStage = true;
+			}
+			else if (_recordingStage)
+			{
+				_stageScripts.back().push_back(statement);
+				if (name == "CloseStage")
+					_recordingStage = false;
+			}
+			else
+			{
+				Commands::RunLine(statement);
+			}
+		}
+	}
+	file.Close();
 }
 
 } // namespace Donut
