@@ -120,3 +120,7 @@ A gag found for the first time shows the count for 3s, "Gags 3/12" (the phrase t
 `GAGS`), and "LEVEL GAGS COMPLETE!" (`GAGS_COMPLETE`) with the last. Seen in Moe's.
 A gag with `GagSetCameraShake` (the power plant's meltdown) shakes the view when it plays,
 at full strength: what its three numbers measure is not known.
+
+A touch gag the player starts the level standing in is not "walked into": levels 4 and 7
+put the player in the Simpsons' house inside two of them, which played and counted as found
+the moment the level loaded.
