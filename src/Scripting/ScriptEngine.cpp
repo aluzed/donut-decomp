@@ -192,6 +192,7 @@ void ScriptEngine::beginStage(std::size_t index)
 	_outOfVehicleSeconds = 0.0f;
 	_clockCountsUp = false;
 	_parTime = 0.0f;
+	_stageMessage = -1;
 	_coinFee = 0;
 
 	for (const auto& statement : _stageScripts[index])
@@ -458,9 +459,21 @@ bool ScriptEngine::RetryFromCheckpoint()
 
 std::string ScriptEngine::GetObjectiveText() const
 {
+	// What the game itself says ("COLLECT LISA'S SCIENCE PROJECT"), when the
+	// stage names its line and the phrase table has it; the objective's type
+	// otherwise.
+	if (_objectiveType.empty())
+		return {};
+	std::string text = "Objective: " + _objectiveType;
+	if (_stageMessage >= 0)
+	{
+		const std::string& phrase = _game.GetTextBible().Get(fmt::format("MISSION_OBJECTIVE_{}", _stageMessage));
+		if (!phrase.empty())
+			text = phrase;
+	}
 	if (_objectiveType == "delivery" && _pickupsTotal > 0)
-		return fmt::format("{} {}/{}", _objectiveType, _pickupsTotal - _pickups.size(), _pickupsTotal);
-	return _objectiveType;
+		text += fmt::format(" {}/{}", _pickupsTotal - _pickups.size(), _pickupsTotal);
+	return text;
 }
 
 void ScriptEngine::UseElapsedTime()

@@ -228,7 +228,7 @@ void Hud::Draw(SpriteBatch& sprites, const Font* font, const HudState& state)
 	{
 		if (!state.objective.empty())
 		{
-			const std::string text = fmt::format("Objective: {}", state.objective);
+			const std::string& text = state.objective;
 			const float w = font != nullptr ? font->MeasureWidth(text) : 0.0f;
 			drawShadowedText(sprites, font, text, Vector2((state.viewportWidth - w) * 0.5f, topY), kGold);
 			topY += line;

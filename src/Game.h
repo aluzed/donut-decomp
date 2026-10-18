@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "UI/TextBible.h"
+
 #include "Core/Math/Fwd.h"
 #include "Core/Math/Vector3.h"
 
@@ -89,6 +91,7 @@ public:
 	const Vehicle* GetPlayerVehicle() const { return _inVehicle ? _activeVehicle : nullptr; }
 	// Seats the player at the wheel of `vehicle`, as getting in by hand does.
 	void PutPlayerInVehicle(Vehicle* vehicle);
+	const TextBible& GetTextBible() const { return _textBible; }
 	// The player's car damage meter, 100 when whole (the HUD's "CAR" bar).
 	float GetCarHealth() const { return _health; }
 	void AddShake(float amount) { _shakeAmount = std::max(_shakeAmount, amount); }
@@ -172,6 +175,9 @@ private:
 	int _storyIndex = -1;
 	// --story: start on the first story mission rather than the test mission.
 	bool _startStory = false;
+	// The game's phrase table, in the language --language picks (E by default).
+	TextBible _textBible;
+	char _language = 'E';
 	// Tears down whatever mission is running and starts story mission `index`.
 	void startStoryMission(int index);
 	// `wanted`, or the nearest point to `subject` on the way to it that the level

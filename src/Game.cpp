@@ -9,6 +9,7 @@
 #include "Core/FpsTimer.h"
 #include "Core/Math/Math.h"
 #include "FreeCamera.h"
+#include <cctype>
 #include "FrontendProject.h"
 #include "Game/CollectibleManager.h"
 #include "Game/GameInput.h"
@@ -132,6 +133,7 @@ Game::Game(int argc, char** argv)
 	//   --mission <script>   run that mission script instead of M1race.con
 	//   --autopilot          walk the player through each objective (testing)
 	//   --story              play level 1's story missions, in order, from m0
+	//   --language <E|F|G|I|S>  language of the game's own text (English)
 	for (int i = 1; i < argc; ++i)
 	{
 		const std::string_view arg = argv[i];
@@ -145,6 +147,8 @@ Game::Game(int argc, char** argv)
 			_autopilot = true;
 		else if (arg == "--story")
 			_startStory = true;
+		else if (arg == "--language" && i + 1 < argc)
+			_language = static_cast<char>(std::toupper(static_cast<unsigned char>(argv[++i][0])));
 	}
 
 	Commands::RunLine("HelloWorld();");
@@ -183,6 +187,7 @@ Game::Game(int argc, char** argv)
 	// init sub classes
 	_audioManager = std::make_unique<AudioManager>();
 	_resourceManager = std::make_unique<ResourceManager>();
+	_textBible.Load("art/frontend/scrooby2/resource/txtbible/srr2.txt", _language);
 	_scriptEngine = std::make_unique<ScriptEngine>(*this);
 	_scriptEngine->SetRecordsEnabled(!_autopilot);
 

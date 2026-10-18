@@ -107,8 +107,9 @@ public:
 	void NoTrafficForStage();
 	bool IsTrafficSuppressed() const { return _missionActive && _noTraffic; }
 	const std::string& GetObjectiveType() const { return _objectiveType; }
-	// The objective as the HUD shows it: its type, and how far along a
-	// delivery is ("delivery 3/9").
+	// The objective as the HUD shows it: the game's own line for the stage
+	// ("COLLECT LISA'S SCIENCE PROJECT") or else "Objective: <type>", and how
+	// far along a delivery is ("... 3/9").
 	std::string GetObjectiveText() const;
 	// The player's start as the mission placed it, if it did.
 	bool GetPlayerStart(Vector3& position) const
@@ -145,6 +146,9 @@ public:
 	// Whether a finished mission may set a best time. --autopilot turns it off:
 	// teleporting through a mission in seconds is not a record.
 	void SetRecordsEnabled(bool enabled) { _recordsEnabled = enabled; }
+	// The stage's line in the game's phrase table (MISSION_OBJECTIVE_<index>),
+	// what the HUD tells the player to do.
+	void SetStageMessageIndex(int index) { _stageMessage = index; }
 	// After a failure: the player back at the mission's start, and the stage
 	// last marked RESET_TO_HERE played again. False when there is no mission to
 	// retry, and the caller should reload it instead.
@@ -253,6 +257,7 @@ private:
 	float _parTime = 0.0f;
 	int _coinFee = 0;
 	bool _recordsEnabled = true;
+	int _stageMessage = -1;
 	// Time since the mission's first stage began, for its completion time. The
 	// stage clock cannot give it: it counts down, or up, or is not running.
 	float _missionElapsed = 0.0f;

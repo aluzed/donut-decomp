@@ -74,7 +74,7 @@ void GameCommands::SetPresentationBitmap(const std::string& param0)
 }
 void GameCommands::SetStageMessageIndex(int32_t param0, const std::string& param1 /*= ""*/)
 {
-	Log::Info("StageMessageIndex: {} ({})", param0, param1);
+	Game::GetInstance().GetScriptEngine().SetStageMessageIndex(param0);
 }
 void GameCommands::AddObjective(const std::string& param0, const std::string& param1 /*= ""*/,
                                 const std::string& param2 /*= ""*/)
