@@ -392,6 +392,28 @@ void Game::runMissionScript()
 	_scriptEngine->RunFile(_missionScript);
 }
 
+Vector3 Game::unoccludedCameraPosition(const Vector3& subject, const Vector3& wanted) const
+{
+	// A follow camera at a fixed offset goes wherever the offset puts it: on
+	// sr2's grid that was the middle of a tree, and half the screen was trunk.
+	// If the level stands between the subject and the camera, bring the camera
+	// in to just this side of it. Only static geometry counts -- a car passing
+	// behind must not yank the view.
+	constexpr float kCameraStandOff = 0.4f;
+	Vector3 toCamera = wanted - subject;
+	const float distance = toCamera.Length();
+	if (!_worldPhysics || distance < 0.01f)
+		return wanted;
+	toCamera = toCamera / distance;
+
+	Vector3 hit, normal;
+	if (!_worldPhysics->CastRay(subject, toCamera, distance, hit, normal, true))
+		return wanted;
+
+	const float clear = (hit - subject).Length() - kCameraStandOff;
+	return subject + toCamera * (clear > 0.0f ? clear : 0.0f);
+}
+
 void Game::PutPlayerInVehicle(Vehicle* vehicle)
 {
 	if (vehicle == nullptr)
@@ -733,7 +755,7 @@ void Game::Run()
 			if (_smoothCamPos == Vector3::Zero) _smoothCamPos = targetPos;
 			_smoothCamPos = _smoothCamPos + (targetPos - _smoothCamPos) * lerpFactor;
 
-			_camera->SetPosition(_smoothCamPos);
+			_camera->SetPosition(unoccludedCameraPosition(camTarget, _smoothCamPos));
 			_camera->SetQuaternion(Quaternion::MakeFromEuler(Vector3(-0.2f, vehRot.Euler().Y, 0)));
 		}
 		else if (_character)
@@ -752,7 +774,7 @@ void Game::Run()
 			if (_smoothCamPos == Vector3::Zero) _smoothCamPos = targetPos;
 			_smoothCamPos = _smoothCamPos + (targetPos - _smoothCamPos) * lerpFactor;
 
-			_camera->SetPosition(_smoothCamPos);
+			_camera->SetPosition(unoccludedCameraPosition(lookAt, _smoothCamPos));
 			_camera->SetQuaternion(camRot);
 		}
 		//_camera->SetPosition(cameraTransform.Translation());
@@ -783,7 +805,7 @@ void Game::Run()
 				}
 			}
 
-			if (_trafficManager)
+			if (_trafficManager && !_scriptEngine->IsTrafficSuppressed())
 			{
 				for (const auto& tc : _trafficManager->GetCars())
 				{
@@ -925,15 +947,13 @@ void Game::Run()
 			}
 		}
 		_level->Update(deltaTime);
-		if (_showDebug)
-		{
+		// A stage that asks for no traffic gets empty streets: neither moved,
+		// drawn nor run into.
+		const bool traffic = !_scriptEngine->IsTrafficSuppressed();
+		if (traffic)
 			_trafficManager->Update(deltaTime);
+		if (traffic && _showDebug)
 			_trafficManager->Draw();
-		}
-		else
-		{
-			_trafficManager->Update(deltaTime);
-		}
 		if (simulate)
 			_scriptEngine->Update(deltaTime);
 
@@ -1111,7 +1131,19 @@ void Game::Run()
 			{
 				v->Update(deltaTime);
 				if (v->HasModel())
-					v->Draw(viewProjection, *_skinShaderProgram, false);
+				{
+					// A car is a CompositeModel of plain P3D Meshes -- position,
+					// uv, lightmap uv, colour -- so it takes the world shader, as
+					// the level's own composite props do. It was drawn with the
+					// skinning shader, which reads normals and bone weights the
+					// mesh never supplies: the vertices came out degenerate and
+					// smeared triangles out from the middle of the screen. And only
+					// the translucent pass was drawn, so the car itself never
+					// appeared.
+					GL::ShaderProgram& worldShader = _level->GetWorldShader();
+					v->Draw(viewProjection, worldShader, true);
+					v->Draw(viewProjection, worldShader, false);
+				}
 				else
 				{
 					_carMesh->Draw(*_meshShader,
@@ -1138,7 +1170,7 @@ void Game::Run()
 			}
 		}
 
-		if (!_showDebug)
+		if (!_showDebug && !_scriptEngine->IsTrafficSuppressed())
 			_trafficManager->DrawSolid(*_carMesh, *_meshShader, viewProjection);
 
 		if (!_showDebug && _pedestrianManager)
@@ -1211,6 +1243,8 @@ void Game::Run()
 				hud.timeRemaining = _scriptEngine->GetStageTimeRemaining();
 				hud.lap = _scriptEngine->GetCurrentLap();
 				hud.totalLaps = _scriptEngine->GetTotalLaps();
+				if (!_scriptEngine->GetRacePosition(hud.racePosition, hud.raceField))
+					hud.racePosition = hud.raceField = 0;
 				hud.checkpoint = _scriptEngine->GetCurrentCheckpoint();
 				hud.totalCheckpoints = static_cast<int>(_scriptEngine->GetCheckpoints().size());
 

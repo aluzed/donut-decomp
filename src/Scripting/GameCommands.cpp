@@ -300,7 +300,10 @@ void GameCommands::SetStageAIRaceCatchupParams(const std::string& param0, int32_
 	                                                                    param3, param4);
 }
 void GameCommands::DisableHitAndRun(int32_t param0 /*= 0*/) {}
-void GameCommands::NoTrafficForStage(int32_t param0 /*= 0*/) {}
+void GameCommands::NoTrafficForStage(int32_t param0 /*= 0*/)
+{
+	Game::GetInstance().GetScriptEngine().NoTrafficForStage();
+}
 void GameCommands::SetConditionPosition(int32_t param0) {}
 void GameCommands::AddSafeZone(const std::string& param0, int32_t param1) {}
 void GameCommands::AddGagBinding(const std::string& param0, const std::string& param1, const std::string& param2,

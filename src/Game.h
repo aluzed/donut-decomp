@@ -158,6 +158,9 @@ private:
 	std::string _missionScript = "scripts/Missions/level01/M1race.con";
 	// Runs _missionScript, preceded by its load script when it has one.
 	void runMissionScript();
+	// `wanted`, or the nearest point to `subject` on the way to it that the level
+	// does not hide `subject` from.
+	Vector3 unoccludedCameraPosition(const Vector3& subject, const Vector3& wanted) const;
 	double _elapsedSeconds = 0.0;
 
 	bool _inVehicle = false;

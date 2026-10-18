@@ -236,8 +236,15 @@ void Hud::Draw(SpriteBatch& sprites, const Font* font, const HudState& state)
 
 		if (state.totalLaps > 1)
 		{
-			const std::string text = fmt::format("Lap {}/{}   CP {}/{}", state.lap + 1, state.totalLaps,
-			                                     state.checkpoint, state.totalCheckpoints);
+			std::string text = fmt::format("Lap {}/{}   CP {}/{}", state.lap + 1, state.totalLaps, state.checkpoint,
+			                               state.totalCheckpoints);
+			if (state.raceField > 1)
+			{
+				static const char* const kSuffix[] = {"th", "st", "nd", "rd"};
+				const int p = state.racePosition;
+				const char* suffix = (p % 100 >= 11 && p % 100 <= 13) || p % 10 > 3 ? kSuffix[0] : kSuffix[p % 10];
+				text += fmt::format("   {}{} / {}", p, suffix, state.raceField);
+			}
 			const float w = font != nullptr ? font->MeasureWidth(text) : 0.0f;
 			drawShadowedText(sprites, font, text, Vector2((state.viewportWidth - w) * 0.5f, topY),
 			                 Vector4(0.2f, 1.0f, 1.0f, 1.0f));

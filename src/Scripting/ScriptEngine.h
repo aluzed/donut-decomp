@@ -98,6 +98,13 @@ public:
 	// True while the cars are held on the line: until the "GO" step, or the last
 	// step when there is no "GO".
 	bool IsRaceHeld() const;
+	// The player's place in the race, 1 for the lead, out of `field` cars. False
+	// when there is nobody to race against.
+	bool GetRacePosition(int& position, int& field) const;
+	// NoTrafficForStage: the played stage runs with the streets clear (every
+	// street race asks for it).
+	void NoTrafficForStage();
+	bool IsTrafficSuppressed() const { return _missionActive && _noTraffic; }
 	const std::string& GetObjectiveType() const { return _objectiveType; }
 	// The player's start as the mission placed it, if it did.
 	bool GetPlayerStart(Vector3& position) const
@@ -133,6 +140,11 @@ private:
 	std::string _playerLocator;
 	std::vector<std::string> _zones;
 	int _currentStage = -1;
+	// The stage being played. There is no stage sequencing yet, so it is the
+	// first one the script declares; objectives declared for later stages are
+	// set aside rather than allowed to overwrite it.
+	int _playedStage = -1;
+	bool declaringPlayedStage() const { return _currentStage == _playedStage; }
 	float _stageTimeRemaining = -1.0f;
 	float _initialStageTime = 0.0f;
 	struct CountdownStep
@@ -147,6 +159,8 @@ private:
 	// The sequence in force: the mission's own or the default.
 	const std::vector<CountdownStep>& countdownSteps() const;
 	float countdownLength() const;
+	// How far the player is round the race, in laps, from the checkpoints passed.
+	float playerRaceLaps() const;
 	std::vector<std::unique_ptr<Vehicle>> _missionVehicles;
 	Vehicle* _activeVehicle = nullptr;
 	// The player's car for this mission, when the mission places one.
@@ -169,6 +183,7 @@ private:
 	// Whether _checkpoints came from the objective's own collectibles rather than
 	// the level path AddObjective falls back on.
 	bool _checkpointsFromCollectibles = false;
+	bool _noTraffic = false;
 	float _bestTime = 999.0f;
 	bool _isNewRecord = false;
 	Vector3 _aiPosition;

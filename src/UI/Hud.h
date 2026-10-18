@@ -52,6 +52,9 @@ struct HudState
 	float timeRemaining = -1.0f; // < 0 when the stage is untimed
 	int lap = 0;
 	int totalLaps = 0;
+	// Place in the race and the number of cars in it; 0 when not racing anyone.
+	int racePosition = 0;
+	int raceField = 0;
 	int checkpoint = 0;
 	int totalCheckpoints = 0;
 

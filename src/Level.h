@@ -40,6 +40,9 @@ public:
 
 	void Update(double deltatime);
 	void Draw(Matrix4x4& viewProj, const Vector3& cameraPos = Vector3::Zero);
+	// The shader the level's own meshes are drawn with, uniforms as Draw left
+	// them -- what any other P3D Mesh (a car's, say) has to be drawn with too.
+	GL::ShaderProgram& GetWorldShader() const { return *_worldShader; }
 	void LoadP3D(const std::string& filename);
 
 	void DynaLoadData(const std::string& dynaLoadData);

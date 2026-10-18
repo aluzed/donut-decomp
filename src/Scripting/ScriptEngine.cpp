@@ -43,6 +43,8 @@ void ScriptEngine::SelectMission(const std::string& id)
 	_game.GetLevel().LoadP3D("missions/level01/" + id + ".p3d");
 
 	_currentStage = -1;
+	_playedStage = -1;
+	_noTraffic = false;
 	_zones.clear();
 
 	// Any vehicle still here was never torn down (CleanupMission is what does
@@ -111,6 +113,8 @@ void ScriptEngine::SetDynaLoadData(const std::string& zones)
 void ScriptEngine::AddStage(int index)
 {
 	_currentStage = index;
+	if (_playedStage < 0)
+		_playedStage = index;
 	Log::Info("ScriptEngine: stage {} begin", index);
 }
 
@@ -160,12 +164,20 @@ void ScriptEngine::CleanupMission()
 	// this SelectMission's `if (_missionActive) return` would refuse to reload.
 	_missionActive = false;
 	_currentStage = -1;
+	_playedStage = -1;
+	_noTraffic = false;
 
 	Log::Info("ScriptEngine: mission cleaned up");
 }
 
 void ScriptEngine::SetStageTime(float seconds)
 {
+	if (!declaringPlayedStage())
+	{
+		Log::Debug("ScriptEngine: stage {} time {}s set aside, stage {} is the one played", _currentStage, seconds,
+		           _playedStage);
+		return;
+	}
 	_stageTimeRemaining = seconds;
 	_initialStageTime = seconds;
 	Log::Info("ScriptEngine: stage time = {}s", seconds);
@@ -236,7 +248,7 @@ void ScriptEngine::PlacePlayerCar(const std::string& car, const std::string& loc
 
 void ScriptEngine::AddCollectible(const std::string& locator, const std::string& type)
 {
-	if (_objectiveType != "race")
+	if (_objectiveType != "race" || !declaringPlayedStage())
 	{
 		Log::Debug("ScriptEngine: collectible '{}' ({}) outside a race, not handled", locator, type);
 		return;
@@ -665,6 +677,15 @@ void ScriptEngine::SetHUDIcon(const std::string& icon)
 
 void ScriptEngine::AddObjective(const std::string& type)
 {
+	// sr2's stage 1 is the dialogue after the race. Read in the same pass as the
+	// race, it reset the laps to 2 and cleared all seven checkpoints.
+	if (!declaringPlayedStage())
+	{
+		Log::Info("ScriptEngine: stage {} objective '{}' set aside, stage {} is the one played", _currentStage, type,
+		          _playedStage);
+		return;
+	}
+
 	_objectiveType = type;
 	_currentCheckpoint = 0;
 	_currentLap = 0;
@@ -735,8 +756,18 @@ void ScriptEngine::OnTrigger(const Level::Trigger& trigger, bool entered)
 	           trigger.data.empty() ? "" : trigger.data + "'");
 }
 
+void ScriptEngine::NoTrafficForStage()
+{
+	if (!declaringPlayedStage())
+		return;
+	_noTraffic = true;
+	Log::Info("ScriptEngine: no traffic for this stage");
+}
+
 void ScriptEngine::SetRaceLaps(int laps)
 {
+	if (!declaringPlayedStage())
+		return;
 	if (laps < 1)
 	{
 		Log::Warn("ScriptEngine: SetRaceLaps({}) ignored, keeping {}", laps, _totalLaps);
@@ -811,6 +842,32 @@ bool ScriptEngine::IsRaceHeld() const
 	return false;
 }
 
+float ScriptEngine::playerRaceLaps() const
+{
+	// In laps, so it is comparable with each opponent's own progress around a
+	// circuit that has a different number of points than the checkpoint list.
+	if (_checkpoints.empty())
+		return static_cast<float>(_currentLap);
+	return static_cast<float>(_currentLap) +
+	       static_cast<float>(_currentCheckpoint) / static_cast<float>(_checkpoints.size());
+}
+
+bool ScriptEngine::GetRacePosition(int& position, int& field) const
+{
+	if (_raceOpponents.empty())
+		return false;
+
+	// Checkpoints are coarse -- sr2 has seven a lap -- so the player only gains a
+	// place on passing one. Good enough to read at a glance, which is its job.
+	const float player = playerRaceLaps();
+	position = 1;
+	for (const auto& opponent : _raceOpponents)
+		if (opponent->ProgressLaps() > player)
+			++position;
+	field = static_cast<int>(_raceOpponents.size()) + 1;
+	return true;
+}
+
 void ScriptEngine::UpdateAI(double dt)
 {
 	if (_raceOpponents.empty())
@@ -823,12 +880,7 @@ void ScriptEngine::UpdateAI(double dt)
 		return;
 	}
 
-	// In laps, so it is comparable with each opponent's own progress around a
-	// circuit that has a different number of points than the checkpoint list.
-	const float playerLaps =
-	    _checkpoints.empty()
-	        ? static_cast<float>(_currentLap)
-	        : static_cast<float>(_currentLap) + static_cast<float>(_currentCheckpoint) / static_cast<float>(_checkpoints.size());
+	const float playerLaps = playerRaceLaps();
 
 	for (auto& opponent : _raceOpponents)
 	{
@@ -922,8 +974,11 @@ void ScriptEngine::AdvanceCheckpoint()
 
 void ScriptEngine::CloseObjective()
 {
-	Log::Info("ScriptEngine: objective '{}' completed", _objectiveType);
-	_objectiveType.clear();
+	// Ends the objective's declaration, as CloseStage and CloseMission end
+	// theirs; it is not the objective being met. Clearing the type here left
+	// every game race script without an objective (and the HUD without its
+	// "Objective: race") the moment the block was read.
+	Log::Info("ScriptEngine: objective '{}' declared", _objectiveType);
 }
 
 void ScriptEngine::SetObjTargetVehicle(const std::string& target)
