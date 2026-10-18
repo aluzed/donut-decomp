@@ -1,280 +1,282 @@
-# donut — Backlog (source de vérité unique)
+# donut — Backlog (single source of truth)
 
-> **Ce fichier remplace** les 11 fichiers de tickets fragmentés et leurs **3 générations
-> de numérotation contradictoires** : les `TICKETS_*.md` par module (G1), `MICRO_TICKETS.md`
-> (G2) et `TICKETS_RESTANTS.md` (G3). Les anciens IDs sont mappés en bas (§ Crosswalk).
+> This file replaces the 11 fragmented ticket files and their **3 contradictory numbering
+> schemes**: the per-module `TICKETS_*.md` (G1), `MICRO_TICKETS.md` (G2) and
+> `TICKETS_RESTANTS.md` (G3). Old IDs are mapped at the bottom (§ E).
 >
-> Numérotation canonique = préfixes par module (G1), les plus granulaires et seuls à porter
-> des pointeurs `fichier:ligne`.
+> Canonical IDs are the per-module prefixes (G1). Detailed tickets live in `docs/tickets/`.
 >
-> **Statuts vérifiés contre le code** (audit src/, 2026-06-23), pas contre les anciennes docs.
+> **Statuses checked against the code** (last full pass: 2026-10-18), not against older docs.
 
-## Légende
+## Legend
 
-| Statut | Sens |
-|--------|------|
-| ✅ DONE | Implémenté et câblé, vérifié dans le code |
-| 🟡 PARTIAL | Squelette présent, pièces manquantes (détaillées) |
-| ⬜ TODO | Absent / commenté / stub vide |
-| 🧩 EPIC | Trop gros — éclaté en sous-tickets plus bas |
+| Status | Meaning |
+|--------|---------|
+| ✅ DONE | Implemented and wired in, checked in the code |
+| 🟡 PARTIAL | Works, with the missing pieces listed |
+| ⬜ TODO | Absent, commented out or an empty stub |
+| 🧩 EPIC | Too big: split into sub-tickets below (§ C) |
 
----
+## Where things stand (2026-10-18)
 
-## A. Clôturés — déjà livrés (ne pas refaire)
+Every level (1 to 7) loads from the game's own files, and the whole story plays through
+from level 1 to the end of level 7 under `--autopilot`, with no crash over runs of ~22
+minutes per level. What is missing is mostly **presentation** (animated props, the game's
+real menus, subtitles, particles, lighting) and **scale** (streaming, culling).
 
-Vérifié dans le code. Ces tickets étaient marqués « ouverts / P0 bloquants » dans les anciennes docs mais sont **faits**.
-
-| Ancien ID(s) | Sujet | Preuve |
+| | § B tickets | § C epic sub-tickets |
 |---|---|---|
-| RENDER-001/004/005 (G1) | Skeletal animation (`Track::Evaluate`, lerp/slerp, `UpdatePose`, upload GPU) | `Render/SkinAnimation.cpp:13-21`, `.h:41-82`; `Character.cpp:108-122` |
-| RENDER-002/003 (G1) | `LineRenderer::DrawBox` (3 variantes + AABBox) | `LineRenderer.cpp:82-135` |
-| RENDER-010 (G1) | Fog world/skin | STATUS + shaders |
-| CORE-001..010 (G1) | Bugs math Vector2/4, Matrix3x3 Inverse, Quaternion Euler | shippé (cf. STATUS) — confirmé indirectement (anim/caméra fonctionnent) |
-| CORE-013 (G1) — partie RZ | Décompression RZ | RZ OK (P3DZ reste, cf. P3D-016) |
-| PHYS-001 (G1) | `stepSimulation` actif | physique tourne |
-| PHYS-002 (G1) | CharacterController complet (jump, onGround, stepUp/Down, sweep) | `CharacterController.cpp:67-475` |
-| **CHARCTRL-004 (G3)** | stepUp = convex sweep test | **fait** : `CharacterController.cpp:311-347` (le « ticket critique » G3 est clos) |
-| PHYS-003 (G1) | Collisions statiques intégrées au monde | `Level.cpp` (volumes câblés) |
-| PHYS-007 (G1) | Véhicule `btRaycastVehicle` (4 roues, suspension, boost ×3, jump) | `Vehicle.cpp:32-146`; `Game.cpp:425-525` |
-| GAME-004 (G1) | Contrôles personnage 3e pers. (move/jump/interact/enter-exit) | `Game.cpp:459-510` |
-| GAME-006 (G1) | Caméra follow + orbite souris + freecam | `Game.cpp:403-554`; `FreeCamera.cpp` |
-| GAME-013 (G1) | Parsing DynaLoadData | `Level.cpp:227-251` |
-| SCRIPT-001/002/003 (G1) | ScriptEngine + machine d'état mission (Select→AddStage→Close) | `Scripting/ScriptEngine.cpp:1-420` |
-| GAME-007 (G1), POLICE-* (G2), AI-004 (G3) | Traffic AI, ChaseManager (heat, busted) | `AI/TrafficManager.cpp`, `ChaseManager.cpp` |
-| GAME-008 (G1), AI-003 (G3) | Pedestrian AI — boucle Update réactivée le 2026-08-22 (REGR-001) | `AI/PedestrianManager.cpp`; appelée depuis `Game.cpp:813` |
-| AUDIO-001/003 (G1) | Pool 24 sources, audio spatial, sons procéduraux, file dialogue | `Audio/AudioManager.cpp:98-143` |
-| LEVEL-004 (G3) — parse | Locator2/TriggerVolume parsés + stockés | `Level.cpp:177-199` (reste : câbler les callbacks → LEVEL-TRIG) |
+| ✅ Done | 20 | 5 |
+| 🟡 Partial | 17 | 8 |
+| ⬜ To do | 27 | 10 |
+
+Plus 19 closed earlier (§ A) and 4 epics (§ C).
 
 ---
 
-## B. Backlog ouvert
+## A. Closed — delivered (do not redo)
 
-### B.0 — Bloquants (P0)
-| ID | Statut | Sujet | Pointeur |
+| Old ID(s) | Subject | Evidence |
+|---|---|---|
+| RENDER-001/004/005 (G1) | Skeletal animation (`Track::Evaluate`, lerp/slerp, `UpdatePose`, GPU upload) | `Render/SkinAnimation.*`, `Character.cpp` |
+| RENDER-002/003 (G1) | `LineRenderer::DrawBox` (3 variants + AABBox) | `LineRenderer.cpp` |
+| RENDER-010 (G1) | World and skin fog | shaders |
+| CORE-001..010 (G1) | Math bugs in Vector2/4, Matrix3x3 inverse, Quaternion Euler | animation and cameras work |
+| CORE-013 (G1) | RZ decompression (P3DZ: see P3D-016) | `P3DFile` |
+| PHYS-001/002/003 (G1) | Simulation stepping, full CharacterController, static collision | `CharacterController.cpp`, `Level.cpp` |
+| CHARCTRL-004 (G3) | stepUp as a convex sweep | `CharacterController.cpp` |
+| PHYS-007 (G1) | `btRaycastVehicle` car (4 wheels, suspension, boost, jump) | `Vehicle.cpp` |
+| GAME-004/006 (G1) | Third-person controls, follow/orbit/free cameras | `Game.cpp`, `FreeCamera.cpp` |
+| GAME-013 (G1) | DynaLoadData parsing | `Level.cpp` |
+| SCRIPT-001/002/003 (G1) | ScriptEngine and the mission state machine | `Scripting/ScriptEngine.cpp` |
+| GAME-007/008 (G1), POLICE-* (G2), AI-003/004 (G3) | Traffic, pedestrians, ChaseManager | `AI/` |
+| AUDIO-001/003 (G1) | 24-source pool, spatial audio, procedural sounds, dialogue queue | `Audio/AudioManager.cpp` |
+
+### Blockers (P0), all closed
+
+| ID | Subject |
+|---|---|
+| REGR-001 | The gameplay loop, commented out to isolate a crash, is back on |
+| CHARCTRL-FALL | The character fell through the ground: no `btGhostPairCallback` on the broadphase |
+| LEVEL-MISSIONP3D | No mission locator was loaded (`art/missions/levelNN/*.p3d`) |
+| SCRIPT-PARSE | `find_first_of("//")` cut every `.con` line with a `/` in an argument |
+| MISSION-LOOP | Each `.con` completed its own mission at the end of parsing |
+| UI-SPLASH | No 2D text or debug lines drawn (attribute locations left to the GL linker) |
+
+---
+
+## B. Open backlog, by module
+
+### Missions and scripts
+
+| ID | Status | Pri | Subject | Note |
+|---|---|---|---|---|
+| MISSION-STAGES | 🟡 | P1 | Missions as sequences of stages | Every objective type the seven levels use works but one: `destroyboss` (level 7's boss) is met at once, with a warning. Conditions, NPCs, spoken conversations, interiors, retries from `RESET_TO_HERE`. See the ticket |
+| LEVELS | 🟡 | P1 | Every level, not just level 1 | `--level n`, P3DZ, a level after another in one session, the Sunday drives, the story end to end. Missing: streaming (LEVEL-STREAM) |
+| AI-RACE | 🟡 | P2 | Race opponents and rubber-banding | Race and chase cars drive real circuits routed through the roads; a car that cannot get through a stretch is put further along it. Under `--autopilot`, a followed car is still lost now and then (thrown by the physics) and won on retry |
+| AI-PATH | 🟡 | P2 | Reusable path following | `src/AI/PathFollower.*`, A\* in `PathGraph::FindRoute`, routing by the 966 `RoadSegment`s. `TrafficManager` keeps its own copy; 95 links over 25m remain (multi-lane roads) |
+| HIT-AND-RUN | 🟡 | P2 | The meter, the police, busted | Running people down and ramming the traffic fill it; full, a police car drives after the player; caught, busted (50-coin fine, mission failed). Missing: the game's spawn rates and several police cars |
+
+### Game flow and collectibles
+
+| ID | Status | Pri | Subject | Note |
+|---|---|---|---|---|
+| GAME-003 | 🟡 | P1 | The full state machine | Splash, main menu (New Game, Continue, level select), in game, pause, mission complete and failed work. Missing: the game's own frontend screens (`FrontendProject` pages), loading screen, credits (the `Loading` and `Credits` states are never entered) |
+| GAME-010 | 🟡 | P2 | Collectibles and their saved state | Coins (purse in `donut_coins.dat`), cards (`donut_cards.dat`), wrenches, phone booths, doorbells, gags (sound, coin, rest-pose model, count, `donut_gags.dat`), buying cars and outfits. Missing: gag animations (P3D-004), wasp cameras |
+| GAME-011 | 🟡 | P2 | Full save and load | Separate files for story progress, best times, coins, cards and gags. Missing: one save slot holding them all, the player's car and outfit, the cars bought |
+| GAME-014 | 🟡 | P1 | Interiors | Every level's interiors load with the level; doors and zone triggers take the player in and out. Not streamed |
+| GAME-WASP | ⬜ | P2 | Wasp cameras (kicked for coins) | New. Their locators and models are in the level files |
+
+### P3D chunks
+
+| ID | Status | Pri | Subject |
 |---|---|---|---|
-| **REGR-001** | ✅ | **Boucle gameplay désactivée réactivée.** La cause du crash n'était pas dans le bloc : `db9c8db` l'a commenté pour isoler un crash que `9860a4f` a corrigé le même jour (`Character::_rotation` non initialisé + bugs `stepUp`/`stepDown`/`onGround`) ; le désactivage a survécu 22 commits. Vérifié 2026-08-22 : 91 882 exécutions, 0 crash, triggers ✅, collectibles ✅, piétons ✅ | `Game.cpp:813` + `Game.cpp:643` |
-| **CHARCTRL-FALL** | ✅ | **Le personnage traversait le sol dès qu'il avançait.** Cause : aucun `btGhostPairCallback` installé sur le broadphase, donc le ghost object du personnage n'accumulait aucune paire — ni dépénétration, ni collision horizontale. 56 chutes → **0** sur le même parcours de 60 s | `WorldPhysics.cpp` (constructeur) |
-| **LEVEL-MISSIONP3D** | ✅ | **Aucun locator de mission n'était chargé.** Ils vivent dans `art/missions/level01/level.p3d` (124) et `<mission>.p3d` (11), que rien n'ouvrait — et `Locator2` ne lisait même pas sa propre position, si bien que `Level` jetait tout locator sans trigger. Layout reversé et vérifié sur 1045 occurrences | `Locator2`, `Level.cpp`, `ScriptEngine.cpp` |
-| **SCRIPT-PARSE** | ✅ | **`find_first_of("//")` tronquait toute commande `.con` ayant un `/` dans un argument** (il cherche un `/` isolé, pas la séquence). `AddStageVehicle(..., "Missions/level01/M1race.con", ...)` et `SetPresentationBitmap("art/...")` étaient rejetées sans message — d'où l'absence de véhicule de mission. Corrigé aussi : `stdout` bufferisé qui perdait les journaux, téléport debug hors de portée, `E` qui faisait entrer puis sortir | `Commands.h`, `Core/Log.h`, `Game.cpp` |
-| **MISSION-LOOP** | ✅ | **Chaque `.con` terminait sa propre mission à la fin du parsing.** `CloseMission()` (marqueur de fin de bloc) déclenchait `GameState::MissionComplete`, d'où « STAGE COMPLETE! Time: 0.0s » en boucle et aucun véhicule atteignable. La complétion revient au gameplay | `ScriptEngine.cpp`, `Game.cpp` |
-| **MISSION-STAGES** | 🟡 | **Missions are sequences of stages**: each stage's commands are recorded and run when it begins; goto/interior/race/getin/talkto/dialogue/timer objectives complete and advance; `--autopilot` runs a mission unattended. The real m1 plays through all six stages (2026-10-18). Then conditions, NPCs, spoken conversations, interiors and most objective types: every level's story plays through under `--autopilot`. Still skipped: `destroyboss` objectives (met at once, with a warning); subtitles | `ScriptEngine.cpp`, `Game.cpp`, `ResourceManager.cpp` |
-| **UI-SPLASH** | ✅ | **Aucun texte 2D ni ligne de debug dessinés.** Les shaders inline de `SpriteBatch` et `LineRenderer` (`#version 150 core`, sans `layout(location)`) laissaient l'éditeur de liens GL choisir les emplacements d'attributs — sur AMD `position=2, texcoord=0, color=1` au lieu de 0/1/2 — donc le shader lisait la position dans les octets de couleur. L'état n'était pas bloqué : le menu était invisible | `SpriteBatch.cpp`, `LineRenderer.cpp` |
-
-> ✅ Plus de bloquant P0. La boucle complète est jouable et **observable** :
-> Splash → Entrée → menu → « New Game » → en jeu, avec HUD, piétons, collectibles, triggers,
-> véhicule, et le debug draw Bullet de nouveau visible.
-
-### CORE — nettoyage (P3)
-| ID | Statut | Sujet | Pointeur |
-|---|---|---|---|
-| CORE-014 | ✅ | Log : Warn/Error→stderr, filtrage niveau, remplacer `cout`/`printf` épars | `Core/Log.h` |
-| CORE-015 | ✅ | Retirer includes `<iostream>`/`<fmt>` superflus → `Core/Log.h` | multiple |
-
-### P3D — chunks manquants (additif, déjà bien scopé)
-| ID | Statut | Pri | Sujet |
-|---|---|---|---|
-| P3D-013 | ✅ | P3 | `GetShaderTexture()` — **faux bug** : 0 occurrence dans `src/` (ni déclaration ni appel). Ticket = confirmer et clore. Rétrogradé de P0 |
-| P3D-001 | ⬜ | P1 | Particle System (8 chunks) — fumée/feu/nitro |
-| P3D-006 | ⬜ | P1 | Entity variants (`AnimDynamicPhysicsWrapper`, `AnimCollision`…) |
-| P3D-008 | 🟡 | P1 | Spline / LocatorMatrix / SurfaceTypeList : classes ajoutées, layouts **reversés et vérifiés sur 7892 occurrences** (2 définitions de `p3d.json` sur 3 étaient fausses). Splines exposées par nom (13 rails de caméra). Reste `SurfaceTypeList` côté physique → `PHYS-008` |
+| P3D-004 | ⬜ | P1 | Animation controllers (float/vector channels, `FrameController`): animates gags, doors, level props. **The most visible gap.** Raised from P2 |
+| P3D-001 | ⬜ | P1 | Particle systems (8 chunks): smoke, fire, nitro |
+| P3D-006 | 🟡 | P1 | Entity variants: `AnimDynamicPhysicsWrapper` accepted and drawn (with or without its wrapper); `AnimCollision` still ignored |
+| P3D-008 | 🟡 | P1 | Spline / LocatorMatrix / SurfaceTypeList: layouts reversed and checked over 7892 occurrences, 13 camera rails exposed by name. `SurfaceTypeList` unused (→ PHYS-008) |
 | P3D-009 | ⬜ | P1 | CollisionWallVolume / CollisionEffect / Atc |
-| P3D-002 | ⬜ | P2 | Light chunks (headlights, lumières dynamiques) |
-| P3D-004 | ⬜ | P2 | Animation controllers (channels float/vector) |
-| P3D-005 | ⬜ | P2 | Frontend text/bible (localisation) |
-| P3D-007 | ⬜ | P2 | Tree/TreeNode (spatial — prérequis culling) |
+| P3D-002 | ⬜ | P2 | Lights (headlights, dynamic lights) |
+| P3D-007 | ⬜ | P2 | Tree/TreeNode (spatial, needed for culling) |
 | P3D-010 | ⬜ | P2 | StaticProp (6 chunks) |
-| P3D-011 | ⬜ | P2 | Geometry (Mesh, PackedNormalList, DrawShadow…) |
+| P3D-011 | ⬜ | P2 | Geometry extras (PackedNormalList, DrawShadow...) |
 | P3D-014 | ⬜ | P2 | CompositeDrawableSkin/Effect parsing |
-| P3D-016 | ✅ | P2 | **P3DZ** (header `0x5A443350`): Radical LZ blocks, decompressed in `P3DFile` |
-| P3D-003 | ⬜ | P3 | Expression/facial anim |
-| P3D-012 | ⬜ | P3 | ExportInfo (métadonnées 3ds Max) |
-| P3D-017 | ⬜ | P3 | Images non-PNG (palettisé, DXT) |
+| P3D-003 | ⬜ | P3 | Facial expression animation |
+| P3D-012 | ⬜ | P3 | ExportInfo (3ds Max metadata) |
+| P3D-017 | ⬜ | P3 | Non-PNG images (palettised, DXT) |
+| P3D-005 | ✅ | — | The text bible: read from `srr2.txt` (`UI/TextBible`), in five languages |
+| P3D-013 | ✅ | — | `GetShaderTexture()`: a false bug, no such call |
+| P3D-016 | ✅ | — | P3DZ: Radical LZ blocks, decompressed in `P3DFile` |
 
-### RENDER
-| ID | Statut | Pri | Sujet | Pointeur / note |
+### Render
+
+| ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
-| RENDER-006 | 🟡 | P1 | AnimObjectWrapper : peupler `_shaders`/`_textures` | `Render/CompositeModel.h:37-43` — vecteurs déclarés, **restent vides** |
-| RENDER-007 | ⬜ | P2 | Méthodes `CompositeDrawable` | `CompositeModel.h:96-105` — déclaration seule |
-| RENDER-011 | ⬜ | P2 | Billboards WorldSphere (lens flare, halo soleil) | `WorldSphere.cpp` — commenté |
-| RENDER-014 | ⬜ | P2 | Multi-UV (canal 1 = lightmap) | prérequis RENDER-015 |
-| RENDER-015 | ⬜ | P2 | Lightmaps / éclairage statique | dépend RENDER-014 |
-| RENDER-013 | ✅ | P3 | Cache/précompilation shaders | recompile à chaque lancement |
-| RENDER-008 | 🧩 | P2 | LOD + culling spatial | → § C.3 |
-| RENDER-009 | 🧩 | P3 | Pipeline post-process | → § C.4 (FBO `_sceneFBO` alloué jamais rendu, `Game.h:116-117`) |
+| RENDER-006 | 🟡 | P1 | AnimObjectWrapper: fill `_shaders`/`_textures` | `Render/CompositeModel.h`: still empty; drawing goes through the ResourceManager by name |
+| RENDER-007 | ⬜ | P2 | `CompositeDrawable` methods | declared only |
+| RENDER-011 | ⬜ | P2 | WorldSphere billboards (lens flare, sun halo) | commented out in `WorldSphere.cpp` |
+| RENDER-014 | ⬜ | P2 | Multi-UV (channel 1 = lightmap) | needed by RENDER-015 |
+| RENDER-015 | ⬜ | P2 | Lightmaps, static lighting | after RENDER-014 |
+| RENDER-008 | 🧩 | P2 | LOD and spatial culling | § C.3 |
+| RENDER-009 | 🧩 | P3 | Post-process | § C.4 |
+| RENDER-013 | ✅ | — | Shader cache | |
+| RENDER-CAR | ✅ | — | Cars drawn whole, with the world shader; follow cameras out of the scenery | |
+| VEH-DAMAGE | ✅ | — | A damaged car shows its dents (`*Dam.bmp` textures) | |
 
-### PHYS
-| ID | Statut | Pri | Sujet | Note |
+### Physics
+
+| ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
-| UI-RACE-GUIDE | ✅ | P1 | Les repères de checkpoint sortent du bloc debug, le radar montre le circuit avec le prochain en doré, et le HUD affiche « Next checkpoint: N m ». Le franchissement reste à confirmer à la main | `Hud.*`, `Game.cpp` |
-| VEH-SINK | ✅ | P1 | **La voiture ne roulait pas** (le châssis s'endormait et `applyEngineForce` n'active pas un corps endormi) et **la caméra passait sous le décor** (offset pivoté par le tangage du châssis). Le décor statique est aussi passé en `btRigidBody` de masse nulle, sans quoi les roues ne trouvaient pas le sol. 58 km/h, 55 s de conduite sans chute | `Vehicle.cpp`, `Game.cpp`, `WorldPhysics.cpp` |
-| RENDER-CAR | ✅ | P1 | **Cars drew as screen-centre debris, or not at all**: drawn with the skinning shader, whose vertex layout a P3D `Mesh` does not have, and in the translucent pass only. Now the world shader, both passes. Follow cameras also stay out of the scenery | `Game.cpp`, `Level.h` |
-| PHYS-004 | 🟡 | P1 | Callbacks collision (damage / pickup / sound) | impact damage done from the car's change of velocity (`Game::updateCarDamage`), with a thud; no contact callbacks yet |
-| PHYS-011 | ⬜ | P1 | Corps rigides dynamiques pour `AnimDynamicPhysics` | `Level.cpp:149-169` — instancié visuellement, **pas de body** |
-| PHYS-005 | ✅ | P2 | Utiliser `BulletFenceShape` au lieu de `btBoxShape` | `AddP3DFence` |
-| PHYS-008 | ⬜ | P2 | Frictions par surface (route/herbe/trottoir) | actuellement `_tireGrip` figé, pas de système matériau |
+| PHYS-004 | 🟡 | P1 | Collision callbacks | Car damage from the change of velocity, with a thud, a voice line, Hit & Run. No contact callbacks |
+| PHYS-011 | ⬜ | P1 | Dynamic bodies for `AnimDynamicPhysics` (things to knock over) | drawn, no body |
+| PHYS-008 | ⬜ | P2 | Grip per surface (road, grass, pavement) | `_tireGrip` fixed; needs `SurfaceTypeList` |
+| PHYS-005 | ✅ | — | `BulletFenceShape` for fences | |
+| VEH-SINK | ✅ | — | The car drives, and the camera stays above ground | |
+| — | ✅ | — | Traffic stops short of cars and of the player on foot (kinematic bodies pushed through them) | |
+| — | ✅ | — | A car that falls off the map is put back on the nearest road | |
 
-### AUDIO
-| ID | Statut | Pri | Sujet | Note |
+### Audio
+
+| ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
-| AUDIO-002 | 🟡 | P1 | **Finir** streaming musique double-buffer | the game's music plays: each level's RSD segments chained in order (`PlayMusicPlaylist`); the l<n>_music.rms script is not read |
-| AUDIO-007 | 🟡 | P2 | Dialogue : **sous-titres** + lip sync | queue priorité ✅ ; sous-titres **absents** |
-| AUDIO-006 | ✅ | P3 | Auto-scan dossier `audio/` (au lieu de 10 noms en dur) | constructeur |
-| AUDIO-008 | ⬜ | P3 | EFX reverb par zone (intérieur/extérieur) | |
-| AUDIO-009 | ✅ | P3 | Son de klaxon (actuellement `Game.cpp:508` log « HONK! ») | quick win |
+| AUDIO-002 | 🟡 | P1 | Music | Each level's RSD segments chained in order. The `l<n>_music.rms` script (moods, transitions) is not read |
+| AUDIO-007 | 🟡 | P2 | Dialogue: subtitles and lip sync | Conversations, voice lines, doorbells, near-miss shouts are heard. No subtitles, no lip sync |
+| AUDIO-008 | ⬜ | P3 | EFX reverb per zone (inside/outside) | |
+| AUDIO-006 | ✅ | — | `audio/` scanned for RCFs, any case | |
+| AUDIO-009 | ✅ | — | Horns: the player's, and the traffic's when kept waiting | |
+| — | ✅ | — | Engines pitched to the revs, ambience per level, gag sounds | none of it listened to yet on the dev machine |
 
-### AI
-| ID | Statut | Pri | Sujet | Note |
+### Level
+
+| ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
-| AI-RACE | 🟡 | P2 | Adversaire de course + rubber-banding | Huit causes empilées derrière le blocage à (109, 2, -559), toutes corrigées : `BulletCast<Quaternion>` décalait les composantes ; `Steering::Seek` braquait à l'opposé de `setSteeringValue` ; `ApplyInput` n'avait pas de marche arrière (le « dégagement » ne faisait que freiner) ; la voiture naissait dans une `DONUTFENCE` ; le waypoint n'était validé qu'au rayon ; le rattrapage hors-tracé revenait en arrière ; aucune récupération chute/blocage ; aucun contrôle de vitesse en virage. Puis la tenue de virage : profil de vitesse (grip + distance de freinage) au lieu d'une somme d'angles, poursuite pure à la place du cap sur le waypoint suivant, braquage dégressif avec la vitesse (`ApplyInput`, **le joueur aussi** — un braquage constant faisait partir toute voiture en tête-à-queue à 90 km/h), et un test de blocage qui mesure les waypoints atteints et non le compteur kilométrique. **122 waypoints sur 126 et un tour bouclé**, 39 km/h de moyenne. Deux correctifs préalables : `~Game` détruisait la physique avant le personnage (segfault à chaque sortie propre, qui tronquait le journal et faussait toute mesure), et `--autostart` / `--quit-after` permettent enfin de mesurer une mission sans clavier. Reste : trois endroits du circuit ne sont pas roulables (route qui passe sous son propre tablier, mur, trou dans le monde) — défauts de tracé, voir AI-PATH |
-| AI-PATH | 🟡 | P2 | Contrôleur path-following réutilisable | extrait dans `src/AI/PathFollower.*` et réutilisé par `RaceOpponent` ; `PathGraph::FindRoute` ajoute un A\*. `TrafficManager` garde ses copies. Les 966 `RoadSegment` (layout vérifié à l'octet) donnent la forme réelle des routes — placés au **centre de la dalle**, pas au coin — et `FindRoute` ne route plus que par la route : connexité **110 composantes / 4 %** → **1 / 100 %**, pas moyen du circuit **51 m → 13 m**, liens longs **288 → 95**. Reste 95 liens de plus de 25 m (les `Road` multi-voies : 237 dalles déclarent `lanes = 2`) |
-
-### GAME / flow
-| ID | Statut | Pri | Sujet | Note |
-|---|---|---|---|---|
-| GAME-003 | 🟡 | P1 | Machine d'état complète (splash→menu→levelselect→game→pause→result→credits) | menus déclarés non rendus |
-| GAME-010 | 🟡 | P2 | Collectibles (coins / cards 7 / gags ~50) + état persistant | coins from each level's coin locators, a purse in `donut_coins.dat` that pays fees, cars (buycar) and outfits (buyskin); each level's seven cards, found for good (`donut_cards.dat`), drawn with the card model, their titles shown; wrenches repair the car; phone booths send it; gags play their sounds and pay their coins (their models stand still) |
-| LEVELS | 🟡 | P1 | Every level, not just level 1 | `--level n`, files and scripts read rather than written out, P3DZ decompression, a level after another in one session, the Sunday drives; every level's story plays through under `--autopilot` |
-| HIT-AND-RUN | 🟡 | P2 | The meter, the police, busted | people run down and the traffic rammed fill it; full, a police car drives after the player; caught, busted (50-coin fine, mission failed) |
-| GAME-011 | ⬜ | P2 | Save/Load complet (auj. best-time seul) | |
-| GAME-014 | 🟡 | P1 | Intérieurs (maison Simpson, école, Kwik-E-Mart) chargés dynamiquement | 2026-10-18: the three level 1 interiors load at start-up and doors take the player in and out, drawing only the interior inside; not streamed |
-| GAME-001 | 🧩 | P1 | Refactor `Game` God object (1499 l.) | → § C.1 |
-
-### VEH
-| ID | Statut | Pri | Sujet |
-|---|---|---|---|
-| VEH-DAMAGE | ✅ | P3 | A damaged car looks damaged: hood, doors and back swap to their `*Dam.bmp` textures as the car's health runs down |
-
-### LEVEL
-| ID | Statut | Pri | Sujet | Note |
-|---|---|---|---|---|
-| LEVEL-TRIG | 🟡 | P1 | Câbler triggers parsés → callbacks script (`ActivateTrigger`/`DeactivateTrigger`) | 2026-10-18: enter/exit events, oriented boxes, locator type + data → `ScriptEngine::OnTrigger`; nothing acts on them yet |
-| LEVEL-STREAM | ⬜ | P1 | Streaming par distance (load/unload selon position joueur) | **absent** — pas de culling viewport |
-| LEVEL-FOG | ⬜ | P2 | Fog par zone depuis paramètres P3D | |
+| LEVEL-STREAM | ⬜ | P1 | Load and unload by distance | Everything is loaded and drawn. The dynamic-zone triggers that would drive it are parsed (`ScriptEngine::OnTrigger` only logs them) |
+| LEVEL-FOG | ⬜ | P2 | Fog per zone from P3D parameters | |
+| LEVEL-TRIG | ✅ | — | Triggers act | Doors and zone interiors, doorbells, phone booths, wrenches, bonus givers, gags. The dynamic-zone loaders wait for LEVEL-STREAM |
 
 ### UI / HUD
-| ID | Statut | Pri | Sujet | Note |
+
+| ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
-| UI-MENU | ✅ | P1 | Menus principal et pause opérationnels : hit-test aligné sur le rendu, empilement Y vers le bas centré, pause qui **gèle réellement** la simulation (elle tournait derrière l'overlay), `LoadP3D(fichier, page)` filtrable | `Game.cpp`, `GameMenu.h`, `FrontendProject.cpp` |
-| UI-TEXT | 🟡 | P1 | MultiText + text bible (localisation) via TextureFont | SpriteBatch dispo ; MultiText lu non rendu |
-| UI-HUD | ✅ | P1 | HUD complet : barres santé/Hit&Run/nitro, compteur de vitesse en véhicule, pièces/cartes, objectif+tour+timer, radar. Rendu extrait vers `src/UI/Hud.*`, `Game` ne remplit plus qu'un `HudState`. Nitro et cartes restent des placeholders (cf. ticket) | `src/UI/Hud.*` |
-| UI-LANG | ⬜ | P2 | Bibles de langue | dépend P3D-005 |
-| UI-LOADING | ⬜ | P3 | Écran de chargement + hints |
-| UI-FMV | ⬜ | P3 | Lecteur RMV (Radical Movie) | reverse format |
+| UI-TEXT | 🟡 | P1 | Frontend MultiText | The text bible drives objectives, titles, cards, failure reasons and hints; `FrontendMultiText` is read, not drawn |
+| UI-LOADING | ⬜ | P3 | Loading screen and hints | |
+| UI-FMV | ⬜ | P3 | RMV (Radical Movie) player | format to reverse |
+| UI-MENU | ✅ | — | Main and pause menus, hit-testing, pause freezes the game | |
+| UI-HUD | ✅ | — | Health, Hit & Run, nitro, speedometer, coins, cards, objective, laps, timer, radar with roads | `src/UI/Hud.*` |
+| UI-LANG | ✅ | — | `--language E/F/G/I/S` for the game's own text | |
+| UI-RACE-GUIDE | ✅ | — | Checkpoint markers, next checkpoint on the radar and the HUD | |
 
-### TOOLS / Assets (chantier transverse)
-| ID | Statut | Pri | Sujet |
+### Tools and assets
+
+| ID | Status | Pri | Subject |
 |---|---|---|---|
-| ASSET-001..006 | 🟡 | P0 | Pipeline extraction CAB/ISO → arbo `assets/` (unshield, 7z) |
-| TOOL-002 | ⬜ | P0 | Reverse `SIMPSONS.EXE` (Ghidra) : main loop, P3D/.con parse, P3DZ, symboles |
-| TOOL-004 | ⬜ | P1 | Faire tourner `donut-codegen` + enrichir `p3d.json` (prérequis chunks P3D-*) |
-| TOOL-008 | ✅ | — | Doc format `.con` (cf. `SCRIPT_FORMAT.md`) |
-| TOOL-007 | ⬜ | P3 | Tests unitaires P3D (parse→reserialize→compare) |
-| TOOL-010 | ⬜ | P3 | CI Linux+Windows + clang-format |
+| ASSET-001..006 | 🟡 | P1 | Extraction pipeline to the game tree. Done by hand once (`docs/ASSETS.md`); not scripted |
+| TOOL-002 | ⬜ | P2 | Reverse `SIMPSONS.EXE` (Ghidra). No longer blocking: P3DZ was solved without it |
+| TOOL-004 | ⬜ | P2 | Run `donut-codegen` and enrich `p3d.json` (for the P3D-* chunks) |
+| TOOL-007 | ⬜ | P3 | P3D unit tests (parse, reserialise, compare) |
+| TOOL-010 | ⬜ | P3 | CI (Linux, Windows) and clang-format |
+| TOOL-008 | ✅ | — | `.con` format documented (`SCRIPT_FORMAT.md`) |
+| CORE-014/015 | ✅ | — | Logging to stderr by level; stray includes removed |
 
 ---
 
-## C. Épics éclatés
+## C. Epics
 
-### C.1 — GAME-001 : refactor `Game` (1499 l., 23 membres, 18 systèmes)
+### C.1 — GAME-001: split up `Game`
 
-> Pas un God object catastrophique, mais coupling élevé. Découpe en passes **non bloquantes**
-> (chacune compile/tourne seule, à faire dans l'ordre).
+`Game.cpp` has grown from 1499 to **3353 lines** (2026-10-18): levels, story, autopilot,
+interiors, gags, Hit & Run, buying, audio cues all live there. Each step must build and play
+the same.
 
-| Sous-ticket | Sujet | Critère d'acceptation |
+| Sub-ticket | Status | Subject |
 |---|---|---|
-| GAME-001a | ✅ | Extraire `GameInput` (lecture clavier/souris/manette → struct d'intentions) | `Game::Run` n'appelle plus SDL directement ; jeu jouable à l'identique |
-| GAME-001b | Extraire `GameCamera` (logique orbite/follow/freecam, ~150 l. de `Game.cpp:403-554`) | aucune var `_cam*` dans `Game` ; caméra identique |
-| GAME-001c | Extraire `GameHud`/`GameUiRenderer` (rendu HUD + menus + texte d'aide) | tout le draw 2D hors `Game::Run` |
-| GAME-001d | Extraire `GameStateMachine` (splash/menu/ingame/pause/result) | transitions pilotées par un enum + table, pas par `if` épars |
-| GAME-001e | `Game` devient orchestrateur mince (< 400 l.) tenant les sous-systèmes | build vert, run identique, diff comportement nul |
+| GAME-001a | ✅ | `GameInput` (input to intents) |
+| GAME-001b | ⬜ | `GameCamera` (follow, orbit, free) |
+| GAME-001c | 🟡 | 2D drawing out of `Game::Run`: the HUD is in `UI/Hud.*`, menus and banners are not |
+| GAME-001d | ⬜ | `GameStateMachine` (transitions from a table, not scattered `if`s) |
+| GAME-001e | ⬜ | Out of `Game`: the autopilot, the story and level loading, interiors, gags |
 
-### C.2 — SCRIPT : 215/247 commandes `.con` encore en stub vide `{}`
+### C.2 — SCRIPT: `.con`/`.mfk` commands
 
-> **Le plus gros poste restant.** Le moteur (`ScriptEngine`) marche ; audit 2026-08-22 :
-> sur 247 commandes définies dans `GameCommands.cpp`, **29 portent de la vraie logique**
-> (3 de plus ne font que logger). Le chiffre « 138/203, ~65 marchent » des anciennes docs
-> était optimiste.
-> On éclate par **catégorie fonctionnelle** : chaque lot = un .con représentatif rejoué sans
-> warning « unimplemented command » pour cette catégorie. Cibles : `Scripting/GameCommands.cpp`.
+170 of the 247 commands in `GameCommands.cpp` are still empty one-line stubs (215 in
+2026-08). That overstates what is missing: several categories are read straight from the
+script files by the system that needs them (gags, traffic models, Hit & Run, the player's
+car, rewards), not through the commands.
 
-| Sous-ticket | Catégorie | Vol. approx. | Critère d'acceptation |
-|---|---|---|---|
-| SCRIPT-A | Combler les trous du **P0 mission** (les 18 commandes course de base) | qq-unes | `Missions/level01/M1race.con` tourne 0 stub |
-| SCRIPT-B | **Tuning véhicule** (`SetMass`, `SetTopSpeedKmh`, `SetTireGrip`, suspension…) | ~30 | un .con véhicule applique des params mesurables |
-| SCRIPT-C | **Caméra** (`SetAnimatedCameraName`, `SetConversationCam`, `SetCarStartCamera`…) | ~10 | caméra scriptée change effectivement de vue |
-| SCRIPT-D | **Course** (`SetRaceLaps`, `SetVehicleAIParams`, catchup…) | ~10 | PARTIAL 2026-10-18: laps, race catch-up and the opponent's win are wired |
-| SCRIPT-E | **Gags / collectibles** (`GagBegin/SetPosition/SetTrigger/End`…) | ~51 | dépend GAME-010 |
-| SCRIPT-F | **Hit & Run / police** (`EnableHitAndRun`, decay, spawn rate) | ~8 | branché sur ChaseManager (✅) |
-| SCRIPT-G | **Traffic / piétons** (`CreateTrafficGroup`, `CreatePedGroup`, `SetMaxTraffic`) | ~6 | branché sur Traffic/Ped managers (✅) |
-| SCRIPT-H | **UI / HUD** (`SetPresentationBitmap`, `ShowHUD`, `SetIrisWipe`, `SetFadeOut`) | ~8 | dépend UI-HUD / UI-MENU |
-| SCRIPT-I | **Achats / dialogue / FMV / bonus** | reste | P3 |
-
-### C.3 — RENDER-008 : LOD + culling
-
-| Sous-ticket | Sujet | Critère |
+| Sub-ticket | Status | Category |
 |---|---|---|
-| RENDER-008a | Frustum culling par AABB de drawable | objets hors-champ non dessinés (compteur draw calls baisse) |
-| RENDER-008b | Octree/kd depuis chunks `Tree` (dépend P3D-007) | requêtes spatiales O(log n) |
-| RENDER-008c | LOD : swap modèle selon distance | LOD lointain visible au recul |
+| SCRIPT-A | ✅ | The base race commands: every level's races run |
+| SCRIPT-B | 🟡 | Car tuning: `SetMass`, `SetGasScale`, `SetTopSpeedKmh`, `SetTireGrip` applied; suspension and the rest are stubs |
+| SCRIPT-C | 🟡 | Cameras: `SetConversationCam` only; `SetCarStartCamera`, conversation camera names are stubs |
+| SCRIPT-D | 🟡 | Race tuning: laps, catch-up, the opponent's win; `SetVehicleAIParams` and the rest are stubs |
+| SCRIPT-E | ✅ | Gags and collectibles: read from `level.mfk` (GAME-010); state props for `pickupitem` |
+| SCRIPT-F | 🟡 | Hit & Run: decay and chase model read from `leveli.mfk`; `SetHitAndRunMeter`, interior decay are stubs |
+| SCRIPT-G | 🟡 | Traffic and pedestrians: models read from `leveli.mfk`; `SetMaxTraffic`, `CreatePedGroup` are stubs |
+| SCRIPT-H | 🟡 | UI: `SetPresentationBitmap` shown; `ShowHUD`, `SetFadeOut`, `SetIrisWipe` are stubs |
+| SCRIPT-I | 🟡 | Buying, dialogue, bonus missions done; FMV not (UI-FMV) |
 
-### C.4 — RENDER-009 : post-process
+### C.3 — RENDER-008: LOD and culling
 
-| Sous-ticket | Sujet | Pri | Critère |
-|---|---|---|---|
-| FX-000 | ✅ Câbler le pipeline FBO (scène→`_sceneFBO`→quad plein écran) | P2 | prérequis ; image identique en passthrough |
-| FX-002 | ✅ Vignette | P3 | bords assombris réglables |
-| FX-005 | Color grading LUT 16³ | P3 | contraste/saturation ajustés |
-| FX-001 | Bloom (blur gaussien 2 passes) | P3 | halo sur sources vives |
-| FX-004 | Shadow mapping (depth FBO directionnel) = ex-RENDER-012 | P3 | ombres portées du soleil |
-| FX-003 | Motion blur (reprojection viewProj précédent) | P3 | flou au mouvement rapide |
+| Sub-ticket | Status | Subject |
+|---|---|---|
+| RENDER-008a | ⬜ | Frustum culling per drawable bounding box |
+| RENDER-008b | ⬜ | Spatial tree from the `Tree` chunks (after P3D-007) |
+| RENDER-008c | ⬜ | LOD by distance |
+
+### C.4 — RENDER-009: post-process
+
+| Sub-ticket | Status | Subject |
+|---|---|---|
+| FX-000 | ✅ | FBO pipeline (scene to `_sceneFBO` to a full-screen quad) |
+| FX-002 | ✅ | Vignette |
+| FX-005 | ⬜ | LUT colour grading |
+| FX-001 | ⬜ | Bloom |
+| FX-004 | ⬜ | Shadow mapping (ex RENDER-012) |
+| FX-003 | ⬜ | Motion blur |
 
 ---
 
-## D. Chemins d'attaque conseillés
+## D. Suggested order
 
-0. ~~Débloquer les P0~~ — fait (REGR-001, CHARCTRL-FALL, UI-SPLASH). Tout ce qui suit se valide désormais à l'écran.
-1. **Jouabilité visible** : ~~UI-MENU~~ ✅ → ~~UI-HUD~~ ✅ → **GAME-010** (collectibles : cartes/gags, l'état persistant) → SCRIPT-E/H. Donne une boucle de jeu lisible.
-2. **Fidélité monde** : LEVEL-STREAM → LEVEL-TRIG → PHYS-011 → PHYS-004. Le monde réagit.
-3. **Contenu missions** : SCRIPT-A → SCRIPT-B → AI-RACE → SCRIPT-D. Les vraies missions tournent.
-   Débloqué de bout en bout : la course tourne (MISSION-LOOP), le véhicule est créé et
-   embarquable (SCRIPT-PARSE), il roule (VEH-SINK) et les checkpoints sont repérables
-   (UI-RACE-GUIDE). Reste à confirmer qu'un franchissement incrémente bien `CP n/6`, puis
-   **AI-RACE** / **SCRIPT-D** pour l'adversaire.
-4. **Dette/qualité** (parallélisable) : GAME-001a→e, P3D-013, AUDIO-009.
+1. **Animated props** (P3D-004, then RENDER-006/007): gags, doors and level props come to
+   life; the biggest visible gain.
+2. **The game's own screens** (GAME-003, UI-TEXT, UI-LOADING, AUDIO-007 subtitles).
+3. **Gameplay left**: `destroyboss` (MISSION-STAGES), wasp cameras (GAME-WASP), things to
+   knock over (PHYS-011), grip per surface (PHYS-008), one save slot (GAME-011).
+4. **World look**: particles (P3D-001), lights (P3D-002), lightmaps (RENDER-014/015), fog
+   (LEVEL-FOG), sun halo (RENDER-011).
+5. **Scale**: LEVEL-STREAM, then culling (RENDER-008).
+6. **Debt** (in parallel): GAME-001b..e, CI and tests (TOOL-007/010).
 
 ---
 
-## E. Crosswalk anciens IDs → canonique
+## E. Old IDs to canonical
 
-Les anciens fichiers utilisaient des IDs en collision. Correspondance pour retrouver un ticket cité ailleurs :
-
-| Ancien (génération) | Canonique |
+| Old (generation) | Canonical |
 |---|---|
-| RENDER-001 (G3 « Lightmap ») | RENDER-015 |
-| RENDER-001 (G1 « SkinAnimation ») | ✅ clos (§A) |
-| RENDER-002/003 (G3 culling/LOD) | RENDER-008 (§C.3) |
-| RENDER-002 (G1 DrawBox) | ✅ clos |
-| UI-001 (G2 « mouse click ») / UI-003 (G1) | UI-MENU |
-| UI-001 (G3 « page nav ») / UI-002 (G1) | GAME-003 + UI-MENU |
-| UI-003/004 (G2 états/text) / UI-004 (G1) | UI-TEXT |
+| RENDER-001 (G3 "Lightmap") | RENDER-015 |
+| RENDER-001 (G1 "SkinAnimation") | closed (§ A) |
+| RENDER-002/003 (G3 culling/LOD) | RENDER-008 (§ C.3) |
+| RENDER-002 (G1 DrawBox) | closed |
+| UI-001 (G2 "mouse click") / UI-003 (G1) | UI-MENU |
+| UI-001 (G3 "page nav") / UI-002 (G1) | GAME-003 + UI-MENU |
+| UI-003/004 (G2 states/text) / UI-004 (G1) | UI-TEXT |
 | UI-004 (G2 HUD) / UI-005 (G1) | UI-HUD |
 | AUDIO-001 (G2/G3 streaming) / AUDIO-002 (G1) | AUDIO-002 |
 | AUDIO-002 (G3 subtitles) / AUDIO-007 (G1) | AUDIO-007 |
-| AUDIO-004 (G2 hash) / AUDIO-001 (G1 pool) | ✅ clos |
+| AUDIO-004 (G2 hash) / AUDIO-001 (G1 pool) | closed |
 | PHYS-003 (G3 rigid bodies) | PHYS-011 |
 | PHYS-004 (G3 callbacks) | PHYS-004 |
 | PHYS-005 (G3 friction) / PHYS-008 (G1) | PHYS-008 |
-| CHARCTRL-004 (G3 stepUp) | ✅ clos |
+| CHARCTRL-004 (G3 stepUp) | closed |
 | VEH-005 (G3) / GAME-012 (G1) | VEH-DAMAGE |
 | LEVEL-003 (G3) | LEVEL-STREAM |
-| LEVEL-004 (G3) | LEVEL-TRIG (parse ✅, callbacks TODO) |
+| LEVEL-004 (G3) | LEVEL-TRIG |
 | LEVEL-005 (G3) | LEVEL-FOG |
 | AI-002 (G3 path) | AI-PATH |
 | AI-005 (G3 race) | AI-RACE |
-| AI-003/004 (G3), POLICE-* (G2) | ✅ clos |
-| SCRIPT-004..010 (G1 par catégorie) | SCRIPT-A..I (§C.2) |
-| ASSET-001..006 (G2) | ASSET-001..006 (inchangé) |
-| FX-001..005 (G2) | FX-* (§C.4) |
-| GAME-001 (G1 refactor) | GAME-001a..e (§C.1) |
-</content>
-</invoke>
+| AI-003/004 (G3), POLICE-* (G2) | closed |
+| SCRIPT-004..010 (G1 by category) | SCRIPT-A..I (§ C.2) |
+| ASSET-001..006 (G2) | ASSET-001..006 |
+| FX-001..005 (G2) | FX-* (§ C.4) |
+| GAME-001 (G1 refactor) | GAME-001a..e (§ C.1) |
