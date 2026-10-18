@@ -99,4 +99,8 @@ beyond the above:
 
 ## Not done
 
-- The skipped do-not-enter signs, level crossing and old lamps.
+- The old lamps (`l2_lampoldShape*`), still skipped. The do-not-enter signs and the level
+  crossing are back: their model comes in an `AnimDynamicPhysicsWrapper` (0x3F0000F), laid
+  out like the `AnimObjectWrapper` level 1 uses, which the parser now reads too (a hand
+  edit of `P3D.generated.cpp`: the generator in `dev/codegen` is a Windows binary). Not
+  looked at on screen yet.

@@ -666,7 +666,12 @@ AnimDynamicPhysics::AnimDynamicPhysics(const P3DChunk& chunk)
 	{
 		switch (child->GetType())
 		{
+		// Edited by hand, not by dev/codegen: from level 2 on, the model comes
+		// in an AnimDynamicPhysicsWrapper (0x3F0000F), laid out like an
+		// AnimObjectWrapper. Without this, level 2's do-not-enter signs and
+		// level crossing had no model and were left out.
 		case ChunkType::AnimObjectWrapper:
+		case ChunkType::AnimDynamicPhysicsWrapper:
 		{
 			_animObjectWrapper = std::make_unique<AnimObjectWrapper>(*child);
 			break;
@@ -683,7 +688,7 @@ AnimDynamicPhysics::AnimDynamicPhysics(const P3DChunk& chunk)
 
 AnimObjectWrapper::AnimObjectWrapper(const P3DChunk& chunk)
 {
-	assert(chunk.IsType(ChunkType::AnimObjectWrapper));
+	assert(chunk.IsType(ChunkType::AnimObjectWrapper) || chunk.IsType(ChunkType::AnimDynamicPhysicsWrapper));
 
 	MemoryStream stream(chunk.GetData());
 	_name = stream.ReadLPString();
