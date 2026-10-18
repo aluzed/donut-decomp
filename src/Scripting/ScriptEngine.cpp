@@ -735,7 +735,17 @@ std::string ScriptEngine::GetObjectiveText() const
 	// otherwise.
 	if (_objectiveType.empty())
 		return {};
-	std::string text = "Objective: " + _objectiveType;
+	// Without the game's own line, a plain one; nothing for a stage that asks
+	// nothing of the player (a conversation, a pause). It read "Objective:
+	// dialogue".
+	static const std::map<std::string, std::string> kPlain {
+	    {"goto", "Go to the marker"}, {"getin", "Get in the car"}, {"talkto", "Talk to them"},
+	    {"interior", "Go inside"}, {"gooutside", "Go outside"}, {"race", "Win the race"},
+	    {"follow", "Follow that car"}, {"destroy", "Destroy that car"}, {"dump", "Ram the truck, take what falls"},
+	    {"delivery", "Collect them all"}, {"losetail", "Lose your tail"}, {"coins", "Pay the fee"},
+	    {"buycar", "Buy the car"}, {"buyskin", "Buy the outfit"}};
+	const auto plain = kPlain.find(_objectiveType);
+	std::string text = plain != kPlain.end() ? plain->second : std::string();
 	if (_stageMessage >= 0)
 	{
 		const std::string& phrase = _game.GetTextBible().Get(fmt::format("MISSION_OBJECTIVE_{}", _stageMessage));
