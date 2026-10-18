@@ -101,6 +101,19 @@ beyond the above:
   past him. The line is now 40m below the level's lowest road (-50 at the highest): -120
   on level 3. Its m2, m3 and m4 then play through.
 
+## The whole story (2026-10-18, later)
+
+Run unattended level by level, every level's story plays through: level 1 into level 2,
+level 5's m4 to m8 into level 6, level 7's m1 to m8. Winning level 7's last mission ends
+the story and returns to the main menu (it replayed that mission for ever). Two more
+things on the way:
+
+- A follow or destroy objective decided while its car sat at the end of its route was
+  decided again every frame of the results screen: level 5 m4 "completed" 800 times. The
+  end of the route is only looked at while the mission is undecided.
+- A character file that is a skeleton alone (`npd`, `nps`, `ndr`, the generic drivers)
+  crashed the game when a mission placed it (MISSION-STAGES).
+
 ## Not done
 
 - Nothing left out any more. The old lamps name their mesh after the instance

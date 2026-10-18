@@ -1532,6 +1532,14 @@ void Game::Run()
 					if (!_story.empty())
 						startStoryMission(0);
 				}
+				else if (levelWon)
+				{
+					// The last level's last mission: the story is over. It used to
+					// replay that mission, for ever.
+					Log::Info("Game: the story is over, level {} won", _levelNumber);
+					_scriptEngine->CleanupMission();
+					_gameState = GameState::MainMenu;
+				}
 				else if (!failed && _storyIndex >= 0 && _storyIndex + 1 < static_cast<int>(_story.size()))
 				{
 					saveStoryProgress(_levelNumber, _storyIndex + 1);

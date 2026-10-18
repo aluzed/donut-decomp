@@ -1646,6 +1646,12 @@ void ScriptEngine::UpdateAI(double dt)
 
 		opponent->Update(dt, playerLaps);
 
+		// Decided already: the car still at the end of its route must not win or
+		// lose it again every frame of the results screen (level 5 m4 "completed"
+		// 800 times over).
+		if (_raceDecided)
+			continue;
+
 		// A race is lost when an opponent finishes it first. Without this the
 		// only way to lose was the stage timer, and a player who was simply
 		// beaten kept racing an opponent that had long since gone round again.
