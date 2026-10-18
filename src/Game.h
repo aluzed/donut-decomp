@@ -272,6 +272,9 @@ private:
 		double lastPlayed = -100.0;
 	};
 	std::vector<Gag> _gags;
+	// False until the first look after loading: a gag the player starts the
+	// level standing in is not walked into.
+	bool _gagsPrimed = false;
 	// Gags found are kept in donut_gags.dat, keyed by level, model and place.
 	void loadGags();
 	std::string gagId(const Gag& gag) const;

@@ -1458,6 +1458,7 @@ bool Game::ringDoorbell()
 void Game::loadGags()
 {
 	_gags.clear();
+	_gagsPrimed = false;
 	std::ifstream script(fmt::format("scripts/{}/level.mfk", levelDirectory()));
 	if (!script)
 		return;
@@ -1647,10 +1648,11 @@ void Game::updateGags()
 			continue;
 		const bool inside = (gag.position - me).Length() < gag.radius;
 		// Once on the way in, and not again for a few seconds.
-		if (inside && !gag.inside && _elapsedSeconds - gag.lastPlayed > 5.0)
+		if (_gagsPrimed && inside && !gag.inside && _elapsedSeconds - gag.lastPlayed > 5.0)
 			playGag(gag);
 		gag.inside = inside;
 	}
+	_gagsPrimed = true;
 }
 
 bool Game::usePhoneBooth()
