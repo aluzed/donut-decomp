@@ -30,6 +30,7 @@
 #include "Render/CompositeModel.h"
 #include "Render/SceneSkins.h"
 #include "Render/VertexAnimation.h"
+#include "Game/UfoBoss.h"
 #include "Game/WaspManager.h"
 #include "Render/ParticleSystem.h"
 #include "Render/Font.h"
@@ -740,6 +741,7 @@ void Game::switchLevel(int level)
 	_trafficManager.reset();
 	_collectibleManager.reset();
 	_waspManager.reset();
+	_ufo.reset();
 	_sparks.reset();
 	_dust.reset();
 	_pathGraph.reset();
@@ -1025,6 +1027,35 @@ bool Game::BuySkin(const std::string& skin)
 	return true;
 }
 
+bool Game::IsPlayerInBossBeam() const
+{
+	return _ufo && _inVehicle && _activeVehicle && _interior.empty() && _ufo->InBeam(_activeVehicle->GetPosition());
+}
+
+bool Game::GetBossGround(Vector3& position) const
+{
+	if (!_ufo || _ufo->IsDestroyed())
+		return false;
+	position = _ufo->GetGroundPosition();
+	return true;
+}
+
+void Game::HitBoss(bool last)
+{
+	if (!_ufo)
+		return;
+	// The barrel goes up the beam and blows up against the hull.
+	const Vector3 blast = _ufo->Hit(last) - Vector3(0.0f, 2.0f, 0.0f);
+	if (_sparks)
+		_sparks->Burst(last ? 60 : 30, blast);
+	if (_dust)
+		_dust->Burst(last ? 30 : 15, blast);
+	AddShake(last ? 1.0f : 0.6f);
+	_audioManager->PlayAudio(last ? "sound\\soundfx\\collisions\\car_explosion_04b.rsd"
+	                              : "sound\\soundfx\\collisions\\car_explosion_01b.rsd",
+	                         blast);
+}
+
 bool Game::BuyCar(const std::string& car)
 {
 	if (car.empty() || _ownedCars.count(car))
@@ -1229,6 +1260,7 @@ void Game::loadLevel()
 	_level->LoadP3D(fmt::format("missions/{}/wasps.p3d", levelDirectory()));
 	_waspManager = std::make_unique<WaspManager>(_levelNumber, fmt::format("scripts/{}/leveli.mfk", levelDirectory()),
 	                                             *_level);
+	_ufo = UfoBoss::FromLevelScript(fmt::format("scripts/{}/leveli.mfk", levelDirectory()), *_level, *_worldPhysics);
 	_collectibleManager->SpawnOnPath();
 
 	// The level's ambient people: AddAmbientCharacter("ralph", "ambient_ralph", 1.3).
@@ -2856,6 +2888,8 @@ void Game::Run()
 				_health = 100.0f;
 			}
 			updateGags();
+			if (_ufo)
+				_ufo->Update(deltaTime);
 			// The wasp cameras: a jump at one, or a car driven into it,
 			// destroys it, for coins.
 			if (_waspManager && _character && _interior.empty())
@@ -3210,6 +3244,8 @@ void Game::Run()
 		drawGags(viewProjection);
 		if (_waspManager && _interior.empty())
 			_waspManager->Draw(_level->GetWorldShader(), _level->GetBillboardShader(), viewProjection);
+		if (_ufo && _interior.empty())
+			_ufo->Draw(_level->GetWorldShader(), _level->GetBillboardShader(), viewProjection);
 		if (_sparks && _dust)
 		{
 			_sparks->Update(deltaTime, Matrix4x4::Identity);

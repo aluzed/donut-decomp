@@ -44,6 +44,7 @@ class CompositeModel;
 class SceneSkins;
 struct VertexAnimation;
 class WaspManager;
+class UfoBoss;
 class ParticleFactory;
 class ParticleSystem;
 class TrafficManager;
@@ -142,6 +143,14 @@ public:
 	// Buys `car` if the purse holds its price, and drives it from then on. True
 	// once the player owns it (--autopilot is given it).
 	bool BuyCar(const std::string& car);
+	// Level 7's saucer ("destroyboss"): whether the player's car is in its
+	// beam, and a barrel blown up against it there (`last`, it comes down).
+	// False, and nothing, when the level has none.
+	bool IsPlayerInBossBeam() const;
+	void HitBoss(bool last);
+	// The ground under it, where the player is to drive the barrel.
+	bool GetBossGround(Vector3& position) const;
+	bool HasBoss() const { return _ufo != nullptr; }
 	void AddShake(float amount) { _shakeAmount = std::max(_shakeAmount, amount); }
 
 	static Game& GetInstance() { return *instance; }
@@ -172,6 +181,7 @@ private:
 	std::unique_ptr<PedestrianManager> _pedestrianManager;
 	std::unique_ptr<CollectibleManager> _collectibleManager;
 	std::unique_ptr<WaspManager> _waspManager;
+	std::unique_ptr<UfoBoss> _ufo;
 	// The bursts the game sets off: sparks off a crash, dust under a landing.
 	std::unique_ptr<ParticleFactory> _sparkFactory, _dustFactory;
 	std::unique_ptr<ParticleSystem> _sparks, _dust;

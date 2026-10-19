@@ -150,13 +150,33 @@ exists rather than building a second one. gr1, failing on its clock, retried 7 t
 on a single load with a single car; M1race picks up its race again after the timer.
 A completed mission still reloads from the top.
 
+## The boss (2026-10-20)
+
+Level 7's saucer (`src/Game/UfoBoss.*`): the level script's
+`AddFlyingActorByLocator("spaceship", "Planet Express Ship", "l7_spaceship", ...)` puts it
+over the school's playground, 18m up; `UFO.p3d` is the saucer, `ufobeam.p3d` its beam
+(`UFO_BEAM_ALWAYS_ON`). Both are drawn with their billboards and those billboards'
+animations (`BQG_*`); the beam's light cone, a quad some 7mm by 30cm in the file, is
+stretched from the saucer to the ground, 10m wide, as the game's beam behaviour does.
+
+Four missions end on it (m3, m5, m6, m7: a stage "final" whose objective is
+`destroyboss`, `SetObjTargetBoss("Planet Express Ship")`). The player drives the barrel
+they carry into the beam (within 6m of its axis): the saucer is hit -- sparks, dust, a
+shake, a car explosion's sound -- and rocks; the objective is met. The stage's
+`keepbarrel` counts the barrels carried so far (`AddCondition("keepbarrel", 4)`): at the
+fourth, m7's, the beam goes out and the saucer tips and falls out of sight. The objective's
+target (the HUD's, the autopilot's) is the ground under it ("UFO beam").
+
+Checked: the story from m3i under `--autopilot`, the saucer hit and the mission complete;
+from m7i, "hit, and down it goes"; the beam seen from the playground; the saucer falling.
+
 ## Not done
 
-- `destroyboss` objectives: met at once with a warning ("not implemented"), seen 8 times
-  over the 2026-10-18 validation runs of all seven levels. Level 7 m5 and m7 name a
-  barrel they do not place: they go to where the last mission put it (m3's for m5, m6's for m7,
-  in the story), or, loaded alone, have nowhere to go and are skipped. Not checked against
-  the game.
+- `destroyboss`: the saucer's explosion is the game's sparks and dust, not the barrel's own
+  (`bombbarrel.p3d`'s `car_expl`); the barrel is not seen going up the beam; the beam's
+  sparkles (its particle system) and the saucer's state props are not played. Level 7 m5 and
+  m7 name a barrel they do not place: they go to where the last mission put it (m3's for
+  m5, m6's for m7, in the story), or, loaded alone, have nowhere to go and are skipped.
 
 - Subtitles and lip sync for the conversations: the lines are heard, not shown, and the
   speakers do not move their lips. NPCs stand where placed, turning to face a player on

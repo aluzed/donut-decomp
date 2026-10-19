@@ -71,7 +71,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 
 | ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
-| MISSION-STAGES | 🟡 | P1 | Missions as sequences of stages | Every objective type the seven levels use works but one: `destroyboss` (level 7's boss) is met at once, with a warning. Conditions, NPCs, spoken conversations, interiors, retries from `RESET_TO_HERE`. See the ticket |
+| MISSION-STAGES | 🟡 | P1 | Missions as sequences of stages | Every objective type the seven levels use works, `destroyboss` included (2026-10-20): level 7's saucer hovers over the playground with its beam, a barrel driven into the beam hits it, the fourth brings it down. Conditions, NPCs, spoken conversations, interiors, retries from `RESET_TO_HERE`. Missing: subtitles, lip sync. See the ticket |
 | LEVELS | 🟡 | P1 | Every level, not just level 1 | `--level n`, P3DZ, a level after another in one session, the Sunday drives, the story end to end. Missing: streaming (LEVEL-STREAM) |
 | AI-RACE | 🟡 | P2 | Race opponents and rubber-banding | Race and chase cars drive real circuits routed through the roads; a car that cannot get through a stretch is put further along it. Under `--autopilot`, a followed car is still lost now and then (thrown by the physics) and won on retry |
 | AI-PATH | 🟡 | P2 | Reusable path following | `src/AI/PathFollower.*`, A\* in `PathGraph::FindRoute`, routing by the 966 `RoadSegment`s. `TrafficManager` keeps its own copy; 95 links over 25m remain (multi-lane roads) |
@@ -241,7 +241,7 @@ car, rewards), not through the commands.
 1. **Animated props** (P3D-004, then RENDER-006/007): gags, doors and level props come to
    life; the biggest visible gain.
 2. **The game's own screens** (GAME-003, UI-TEXT, UI-LOADING, AUDIO-007 subtitles).
-3. **Gameplay left**: `destroyboss` (MISSION-STAGES), wasp cameras (GAME-WASP), hit particles
+3. **Gameplay left**: wasp cameras (GAME-WASP), hit particles
    (PHYS-011), grip per surface (PHYS-008), one save slot (GAME-011).
 4. **World look**: particles (P3D-001), lights (P3D-002), lightmaps (RENDER-014/015), fog
    (LEVEL-FOG), sun halo (RENDER-011).

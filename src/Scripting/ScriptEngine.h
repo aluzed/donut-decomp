@@ -182,7 +182,7 @@ public:
 	// SetCondTime) and "damage" (the car's health down to SetCondMinHealth) are
 	// watched; "timeout" is the stage clock; "race"/"position" are the race's own
 	// result. The rest are noted and ignored.
-	void AddCondition(const std::string& type);
+	void AddCondition(const std::string& type, const std::string& argument = "");
 	void SetCondTime(int milliseconds);
 	void SetCondMinHealth(float health);
 	// "followdistance": how far the player may fall behind the car they follow.
@@ -321,6 +321,8 @@ private:
 		float seconds = 0.0f;
 		float minHealth = 0.0f;
 		float maxDistance = 0.0f;
+		// "keepbarrel": how many barrels the player has carried so far.
+		int count = 0;
 	};
 	std::vector<Condition> _conditions;
 	// A "delivery": items to pick up, in any order. Taken ones are removed.

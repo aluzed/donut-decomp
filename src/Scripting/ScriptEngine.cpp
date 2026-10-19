@@ -421,6 +421,26 @@ void ScriptEngine::updateObjective(double dt)
 		// to the Kwik-E-Mart's door and through it before this stage begins).
 		objectiveComplete();
 	}
+	else if (_objectiveType == "destroyboss")
+	{
+		// The barrel driven into the saucer's beam: up it goes and blows up
+		// against the hull. The stage's "keepbarrel" counts the barrels
+		// carried; the fourth (level 7's last mission) brings it down.
+		if (!_game.HasBoss())
+		{
+			Log::Warn("ScriptEngine: no saucer for 'destroyboss', skipping");
+			objectiveComplete();
+		}
+		else if (_game.IsPlayerInBossBeam())
+		{
+			int barrels = 0;
+			for (const auto& condition : _conditions)
+				if (condition.type == "keepbarrel")
+					barrels = std::max(barrels, condition.count);
+			_game.HitBoss(barrels >= 4);
+			objectiveComplete();
+		}
+	}
 	else if (_objectiveType == "race" || _objectiveType == "goto" || _objectiveType == "interior" ||
 	         _objectiveType == "pickupitem")
 	{
@@ -561,6 +581,9 @@ bool ScriptEngine::GetObjectiveTarget(Vector3& position) const
 		position = _raceOpponents.front()->GetVehicle().GetPosition();
 		return true;
 	}
+	// Under the saucer, in its beam.
+	if (_objectiveType == "destroyboss" && _game.GetBossGround(position))
+		return true;
 	// Somewhere on the roads well beyond the tail's reach, straight away from it.
 	if (const Vehicle* tail = _objectiveType == "losetail" ? chasingTarget() : nullptr)
 	{
@@ -596,9 +619,12 @@ bool ScriptEngine::GetObjectiveTarget(Vector3& position) const
 	return false;
 }
 
-void ScriptEngine::AddCondition(const std::string& type)
+void ScriptEngine::AddCondition(const std::string& type, const std::string& argument)
 {
-	_conditions.push_back({type});
+	Condition condition {type};
+	if (!argument.empty())
+		condition.count = std::atoi(argument.c_str());
+	_conditions.push_back(condition);
 }
 
 void ScriptEngine::SetCondTime(int milliseconds)
@@ -807,6 +833,8 @@ std::string ScriptEngine::GetObjectiveTargetLabel() const
 		return "Target";
 	if (_objectiveType == "talkto")
 		return "Talk to " + _talkToTarget;
+	if (_objectiveType == "destroyboss")
+		return "UFO beam";
 	return "Destination";
 }
 

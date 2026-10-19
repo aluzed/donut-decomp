@@ -112,7 +112,7 @@ void GameCommands::SetStageTime(int32_t param0)
 }
 void GameCommands::AddCondition(const std::string& param0, const std::string& param1 /*= ""*/)
 {
-	Game::GetInstance().GetScriptEngine().AddCondition(param0);
+	Game::GetInstance().GetScriptEngine().AddCondition(param0, param1);
 }
 void GameCommands::CloseCondition(int32_t param0 /*= 0*/) {}
 void GameCommands::ShowStageComplete(int32_t param0 /*= 0*/)
