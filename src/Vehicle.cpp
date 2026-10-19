@@ -334,18 +334,31 @@ void Vehicle::Update(double dt)
 	{
 		for (int i = 0; i < _rayVehicle->getNumWheels(); ++i)
 		{
-			// The ground under each wheel, and its grip for the next step;
-			// read before updateWheelTransform, which clears the contact.
+			// The ground under each wheel, and its grip for the next step.
 			btWheelInfo& wheel = _rayVehicle->getWheelInfo(i);
 			if (i < kWheels)
 			{
 				_wheelTouching[i] = wheel.m_raycastInfo.m_isInContact;
 				_wheelContacts[i] = BulletCast<Vector3>(wheel.m_raycastInfo.m_contactPointWS);
+				_wheelNormals[i] = BulletCast<Vector3>(wheel.m_raycastInfo.m_contactNormalWS);
+				_wheelAxles[i] = BulletCast<Vector3>(wheel.m_raycastInfo.m_wheelAxleWS);
+				// How fast the tyre goes sideways over the ground: the chassis'
+				// velocity where it touches, along its axle.
+				const btRigidBody* chassis = _rayVehicle->getRigidBody();
+				const btVector3 at = wheel.m_raycastInfo.m_contactPointWS - chassis->getCenterOfMassPosition();
+				const btVector3 velocity = chassis->getLinearVelocity() + chassis->getAngularVelocity().cross(at);
+				_wheelSlides[i] = _wheelTouching[i] ? std::fabs(velocity.dot(wheel.m_raycastInfo.m_wheelAxleWS)) : 0.0f;
 				if (_physicsWorld && _wheelTouching[i])
 					_wheelSurfaces[i] = _physicsWorld->GetSurfaceUnder(_wheelContacts[i]);
 				wheel.m_frictionSlip = kFrictionSlip * surfaceGrip(_wheelSurfaces[i]);
 			}
+			// updateWheelTransform clears the wheel's contact, which only the
+			// next physics step finds again: drawn at 240 frames a second over
+			// 60 steps, the car was airborne, its wheels touching nothing,
+			// three frames in four.
+			const bool touching = wheel.m_raycastInfo.m_isInContact;
 			_rayVehicle->updateWheelTransform(i, true);
+			wheel.m_raycastInfo.m_isInContact = touching;
 		}
 
 		btTransform trans = _rayVehicle->getChassisWorldTransform();
@@ -397,6 +410,8 @@ void Vehicle::ApplyInput(float throttle, float steer, float brake, float boost)
 	const float rolling = GetSpeedKmh();
 	_braking = brake > 0.1f || (throttle < -0.1f && rolling > 2.0f);
 	_reversing = throttle < -0.1f && rolling < 1.0f;
+	// Stamping on it at speed: the tyres lock and mark the road.
+	_brakingHard = (brake > 0.5f || throttle < -0.5f) && rolling > kSkidBrakeKmh;
 
 	// throttle runs -1..1: negative drives the wheels backwards. There was no way
 	// to reverse before -- the AI's "back out of the wall" manoeuvre passed

@@ -194,6 +194,8 @@ private:
 	};
 	std::map<const Vehicle*, std::array<WheelSpray, 2>> _wheelSprays;
 	void updateWheelSprays(double dt);
+	// The marks skidding tyres leave.
+	std::unique_ptr<class SkidMarks> _skidMarks;
 	std::unique_ptr<class HitAndRun> _hitAndRun;
 	// Runs the Hit & Run meter: people run down, the police, busted.
 	void updateHitAndRun(double dt);

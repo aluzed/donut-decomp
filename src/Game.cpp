@@ -7,6 +7,7 @@
 #include "Audio/AudioManager.h"
 #include "Character.h"
 #include "Core/Math/Frustum.h"
+#include "Render/SkidMarks.h"
 #include "Core/FpsTimer.h"
 #include "Core/Math/Math.h"
 #include "FreeCamera.h"
@@ -128,6 +129,10 @@ constexpr uint32_t kWheelSprayDirt = 10;
 constexpr uint32_t kWheelSprayGrass = 11;
 constexpr float kWheelSprayKmh = 15.0f;
 constexpr float kWheelSprayTilt = -0.9f;
+// A wheel going sideways over the ground faster than this, m/s, skids and
+// marks it, black at twice that; so does one braking hard. How wide its mark.
+constexpr float kSkidSlide = 3.5f;
+constexpr float kSkidWidth = 0.3f;
 } // namespace
 
 void GLAPIENTRY MessageCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message,
@@ -752,6 +757,8 @@ void Game::switchLevel(int level)
 	_sparks.reset();
 	_dust.reset();
 	_wheelSprays.clear();
+	if (_skidMarks)
+		_skidMarks->Clear();
 	_pathGraph.reset();
 	_character.reset();
 	_level.reset();
@@ -1247,6 +1254,7 @@ void Game::loadLevel()
 	_dustFactory = ParticleFactory::Burst("smoke2_m", 1.2f, 1.0f, 1.4f, 1.2f, 0.0f, Vector4(0.85f, 0.8f, 0.7f, 0.8f));
 	_sparks = std::make_unique<ParticleSystem>(*_sparkFactory);
 	_dust = std::make_unique<ParticleSystem>(*_dustFactory);
+	_skidMarks = std::make_unique<SkidMarks>();
 	_pathGraph = std::make_unique<PathGraph>(*_level, *_worldPhysics);
 	// Fallen off the map: well below the lowest road. A fixed -50 suited level
 	// 1, but level 3's lower town lies at -68, and the player standing there
@@ -2057,6 +2065,29 @@ void Game::updateWheelSprays(double dt)
 	for (const Vehicle* vehicle : cars)
 	{
 		const bool moving = std::fabs(vehicle->GetSpeedKmh()) > kWheelSprayKmh;
+		// Every wheel skidding marks the ground, with the ground's own mark.
+		for (int wheel = 0; wheel < 4 && _skidMarks; ++wheel)
+		{
+			const uint64_t track = reinterpret_cast<uintptr_t>(vehicle) * 4 + wheel;
+			Vector3 contact;
+			const float slide = vehicle->GetWheelSlide(wheel);
+			const char* mark = nullptr;
+			switch (vehicle->GetWheelSurface(wheel))
+			{
+			case Surface::Grass: mark = "grass_skidmark_shader"; break;
+			case Surface::Dirt:
+			case Surface::Sand:
+			case Surface::Gravel: mark = "dirt_skidmark_shader"; break;
+			case Surface::Water: break;
+			default: mark = "skid_m"; break;
+			}
+			const float strength = vehicle->IsBrakingHard() ? 0.8f : std::min(1.0f, slide / (kSkidSlide * 2.0f));
+			if (mark && (slide > kSkidSlide || vehicle->IsBrakingHard()) && vehicle->GetWheelContact(wheel, contact))
+				_skidMarks->Lay(track, contact, vehicle->GetWheelNormal(wheel), vehicle->GetWheelAxle(wheel), kSkidWidth,
+				                mark, strength);
+			else
+				_skidMarks->Lift(track);
+		}
 		for (int k = 0; k < 2; ++k)
 		{
 			// The rear wheels (2, 3).
@@ -3299,6 +3330,13 @@ void Game::Run()
 			_waspManager->Draw(_level->GetWorldShader(), _level->GetBillboardShader(), viewProjection);
 		if (_ufo && _interior.empty())
 			_ufo->Draw(_level->GetWorldShader(), _level->GetBillboardShader(), viewProjection);
+		if (_skidMarks)
+		{
+			GL::ShaderProgram& world = _level->GetWorldShader();
+			world.Bind();
+			world.SetUniformValue("viewProj", viewProjection);
+			_skidMarks->Draw(world);
+		}
 		if (_sparks && _dust)
 		{
 			_sparks->Update(deltaTime, Matrix4x4::Identity);

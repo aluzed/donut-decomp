@@ -98,6 +98,15 @@ public:
 		point = _wheelContacts[i];
 		return true;
 	}
+	// The ground's normal where wheel `i` touches it, and its axle, in the
+	// world.
+	Vector3 GetWheelNormal(int i) const { return i >= 0 && i < kWheels ? _wheelNormals[i] : Vector3(0.0f, 1.0f, 0.0f); }
+	// How fast wheel `i` goes sideways over the ground, m/s: a car cornering
+	// hard, or sliding.
+	float GetWheelSlide(int i) const { return i >= 0 && i < kWheels ? _wheelSlides[i] : 0.0f; }
+	// Braking hard at speed: its tyres skid.
+	bool IsBrakingHard() const { return _brakingHard; }
+	Vector3 GetWheelAxle(int i) const { return i >= 0 && i < kWheels ? _wheelAxles[i] : Vector3(1.0f, 0.0f, 0.0f); }
 
 
 private:
@@ -121,6 +130,9 @@ private:
 	Surface _wheelSurfaces[kWheels] = {Surface::Road, Surface::Road, Surface::Road, Surface::Road};
 	bool _wheelTouching[kWheels] = {};
 	Vector3 _wheelContacts[kWheels];
+	float _wheelSlides[kWheels] = {};
+	Vector3 _wheelNormals[kWheels];
+	Vector3 _wheelAxles[kWheels];
 	float _suspensionLimit = 0.3f;
 
 	std::unique_ptr<CompositeModel> _model;
@@ -139,6 +151,8 @@ private:
 	};
 	std::vector<Light> _lights;
 	bool _braking = false;
+	bool _brakingHard = false;
+	static constexpr float kSkidBrakeKmh = 30.0f;
 	bool _reversing = false;
 	std::string _modelName;
 	std::unique_ptr<btRaycastVehicle> _rayVehicle;

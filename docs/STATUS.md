@@ -42,7 +42,8 @@ into a playable arcade racing game.
 ### Physics (Bullet)
 - **Character Controller**: Capsule shape, raycast ground detection, jump, stepUp
 - **Vehicle Physics**: btRaycastVehicle with 4-wheel suspension; each wheel's grip from the
-  ground under it (road, grass, sand, gravel: the level's per-triangle terrain types)
+  ground under it (road, grass, sand, gravel: the level's per-triangle terrain types);
+  skid marks, black on the road, green on grass, brown on dirt
 - **Collision**: All P3D volume types, fence shapes, triangle meshes
 - **Props** (PHYS-011): the street furniture has bodies -- mailboxes and bins fly off,
   lamp posts give way to a hard hit, stop signs and hydrants break, trees stand and shed
