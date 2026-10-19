@@ -194,6 +194,8 @@ void TrafficManager::Update(double dt)
 		if (car.model >= 0 && car.blocked >= 1.5f && std::fmod(wasBlocked + 3.5f, 5.0f) > std::fmod(car.blocked + 3.5f, 5.0f))
 			_honks.emplace_back(_modelNames[car.model], car.grounded);
 		car.position += forward * speed * static_cast<float>(dt);
+		// Its wheels roll with it: a 0.35m radius, near enough for any car.
+		car.wheelAngle = std::fmod(car.wheelAngle + speed * static_cast<float>(dt) / 0.35f, 6.28318531f);
 		// The roads rise and fall; the car follows the height of its way.
 		car.position.Y = target.Y;
 	}
@@ -261,6 +263,10 @@ void TrafficManager::LoadModels(const std::string& levelScript)
 					lights.emplace_back(std::make_unique<BillboardBatch>(*group), joint);
 			}
 		_brakeLights.push_back(std::move(lights));
+		std::vector<int> wheels;
+		for (int w = 0; w < 4; ++w)
+			wheels.push_back(model->FindJoint(fmt::format("w{}", w)));
+		_wheelJoints.push_back(std::move(wheels));
 		_models.push_back(std::move(model));
 		_modelNames.push_back(name);
 		Log::Info("TrafficManager: traffic model '{}' (weight {})", name, weight);
@@ -278,10 +284,17 @@ void TrafficManager::DrawModels(GL::ShaderProgram& worldShader, const Matrix4x4&
 	for (std::size_t i = 0; i < _cars.size(); ++i)
 		transforms[i] = Matrix4x4::MakeTranslate(_cars[i].grounded) * Matrix4x4(_cars[i].rotation);
 
+	// The models are shared: each car's wheels are turned just before it is
+	// drawn.
 	for (const bool opaque : {true, false})
 		for (std::size_t i = 0; i < _cars.size(); ++i)
 			if (_cars[i].model >= 0)
-				_models[_cars[i].model]->Draw(worldShader, viewProj, transforms[i], opaque);
+			{
+				auto& model = *_models[_cars[i].model];
+				for (const int joint : _wheelJoints[_cars[i].model])
+					model.SetJointRotation(joint, Quaternion(Vector3(-1.0f, 0.0f, 0.0f), _cars[i].wheelAngle));
+				model.Draw(worldShader, viewProj, transforms[i], opaque);
+			}
 }
 
 void TrafficManager::DrawBrakeLights(GL::ShaderProgram& billboardShader, const Matrix4x4& viewProj)

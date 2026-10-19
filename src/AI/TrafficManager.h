@@ -41,6 +41,8 @@ public:
 		Vector3 grounded;
 		// How long a car in its way has kept it stopped.
 		float blocked = 0.0f;
+		// How far its wheels have turned, radians.
+		float wheelAngle = 0.0f;
 	};
 
 	TrafficManager(Level& level, LineRenderer& lineRenderer, const PathGraph& graph);
@@ -83,6 +85,8 @@ private:
 	std::vector<Vector3> _obstacles;
 	std::vector<std::pair<std::string, Vector3>> _honks;
 	std::vector<std::string> _modelNames;
+	// Each model's wheel joints (w0..w3), -1 where it has none.
+	std::vector<std::vector<int>> _wheelJoints;
 	// Each model's brake lights: the car file's brake billboards and their joints.
 	std::vector<std::vector<std::pair<std::unique_ptr<BillboardBatch>, int>>> _brakeLights;
 	std::vector<std::unique_ptr<CompositeModel>> _models;
