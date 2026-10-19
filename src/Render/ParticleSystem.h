@@ -96,7 +96,8 @@ public:
 	// `timelineFrame`: where the emitters' timeline stands, for an effect keyed
 	// to its owner's animation (a wasp's, whose explosion is frames 375-435);
 	// < 0 runs it on its own clock, round and round.
-	void Update(double dt, const Matrix4x4& placement, float timelineFrame = -1.0f);
+	// `emit` false lets those alive live out their lives, giving off no more.
+	void Update(double dt, const Matrix4x4& placement, float timelineFrame = -1.0f, bool emit = true);
 	// Gives off `count` sprites at once, at `position`.
 	void Burst(int count, const Vector3& position);
 	// With the billboard program, its viewProj already set.

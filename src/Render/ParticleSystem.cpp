@@ -243,7 +243,7 @@ ParticleSystem::ParticleSystem(const ParticleFactory& factory): _factory(factory
 
 ParticleSystem::~ParticleSystem() = default;
 
-void ParticleSystem::Update(double dt, const Matrix4x4& placement, float timelineFrame)
+void ParticleSystem::Update(double dt, const Matrix4x4& placement, float timelineFrame, bool emit)
 {
 	const float step = static_cast<float>(dt);
 	_age += dt;
@@ -272,7 +272,8 @@ void ParticleSystem::Update(double dt, const Matrix4x4& placement, float timelin
 		float frame = timelineFrame;
 		if (frame < 0.0f)
 			frame = e.timelineFrames > 0.0f ? std::fmod(static_cast<float>(_age) * rate, e.timelineFrames) : 0.0f;
-		running.owed += static_cast<float>(most) / lifeSeconds * step * std::max(0.0f, e.rate.At(frame, 1.0f));
+		if (emit)
+			running.owed += static_cast<float>(most) / lifeSeconds * step * std::max(0.0f, e.rate.At(frame, 1.0f));
 		while (running.owed >= 1.0f)
 		{
 			running.owed -= 1.0f;

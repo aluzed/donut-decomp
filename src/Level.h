@@ -268,6 +268,9 @@ private:
 		std::size_t composite;
 		int joint;
 		std::string file;
+		// A breakable's (its debris, its dust): played from its breaking, keyed
+		// to that animation, the index into _animatedObjects; -1 for one always on.
+		int breakable = -1;
 	};
 	std::vector<PlacedParticles> _particles;
 	void drawBillboards(Matrix4x4& viewProj, bool opaque, const std::function<bool(std::size_t)>& shown);

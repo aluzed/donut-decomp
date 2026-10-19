@@ -402,6 +402,31 @@ void Level::LoadP3D(const std::string& filename)
 					AnimatedObject object {_compositeModels.size(), dynaPhys->GetName(), false};
 					object.breaks = true;
 					object.position = transform.Translation();
+					// Its breaking's particle effects (a vending machine's cans,
+					// a crate's dust), from the effect list of its drawable:
+					// name, translucent, joint.
+					std::function<void(const P3D::P3DChunk&)> effects = [&](const P3D::P3DChunk& c) {
+						for (const auto& child : c.GetChildren())
+						{
+							if (child->IsType(P3D::ChunkType::CompositeDrawableEffect))
+							{
+								MemoryStream stream(child->GetData());
+								const std::string system = stream.ReadLPString();
+								stream.Read<uint32_t>();
+								const int joint = static_cast<int>(stream.Read<uint32_t>());
+								const auto named = particleSystems.find(system.substr(0, system.find('\0')));
+								const auto factory = named != particleSystems.end()
+								                         ? _particleFactories.find(named->second)
+								                         : _particleFactories.end();
+								if (factory != _particleFactories.end())
+									_particles.push_back({std::make_unique<ParticleSystem>(*factory->second),
+									                      _compositeModels.size(), joint, filename,
+									                      static_cast<int>(_animatedObjects.size())});
+							}
+							effects(*child);
+						}
+					};
+					effects(*chunk);
 					_animatedObjects.push_back(object);
 				}
 				_compositeModels.push_back(std::move(compositeModel));
@@ -923,7 +948,21 @@ void Level::Update(double deltatime)
 	for (auto& placed : _particles)
 	{
 		const CompositeModel& model = *_compositeModels[placed.composite];
-		placed.system->Update(deltatime, model.GetTransform() * model.GetEffectTransform(placed.joint));
+		const Matrix4x4 at = model.GetTransform() * model.GetEffectTransform(placed.joint);
+		if (placed.breakable < 0)
+		{
+			placed.system->Update(deltatime, at);
+			continue;
+		}
+		// Nothing until it breaks; then keyed to its breaking, giving off no more
+		// once that has played.
+		const auto& object = _animatedObjects[placed.breakable];
+		if (!object.broken)
+			continue;
+		const bool playing = object.startedAt >= 0.0;
+		const float frame = playing ? static_cast<float>(_animationTime - object.startedAt) * model.GetAnimationFrameRate()
+		                            : model.GetAnimationFrames();
+		placed.system->Update(deltatime, at, frame, playing);
 	}
 }
 
