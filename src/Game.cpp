@@ -2739,8 +2739,12 @@ void Game::Run()
 		// metal one.
 		for (const auto& [sound, effect, where] : _level->TakeKnockedProps())
 		{
+			// The stars off a gravestone have no sprite of their own in the
+			// effects files: a few of the sparks stand in for them.
 			if (effect == "eSpark" && _sparks)
 				_sparks->Burst(20, where);
+			else if (effect == "eStars" && _sparks)
+				_sparks->Burst(8, where);
 			const std::string file = _audioManager->ScriptSoundFile("collide", sound);
 			Log::Debug("Game: a prop knocked over at ({:.1f}, {:.1f}, {:.1f}), '{}' ({}), '{}'", where.X, where.Y, where.Z, sound,
 			           file.empty() ? "no sound" : file, effect);

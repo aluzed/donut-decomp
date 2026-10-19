@@ -128,7 +128,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
 | PHYS-004 | 🟡 | P1 | Collision callbacks | Car damage from the change of velocity, with a thud, a voice line, Hit & Run. No contact callbacks |
-| PHYS-011 | 🟡 | P1 | Things to knock over | The `DynamicPhysics` props (269 on level 1) have bodies: mailboxes and bins fly off, lamp posts give way to a hard hit, hydrants and stop signs break (their `BreakableObject` breaking plays), trees shed leaves; letters, rubbish, leaves fly off (`InstParticleSystem`); masses from `atc.p3d`, sounds from `collide.spt` (2026-10-20). Missing: stars off a hit, `AnimDynamicPhysics` bodies |
+| PHYS-011 | 🟡 | P1 | Things to knock over | The `DynamicPhysics` props (269 on level 1) have bodies: mailboxes and bins fly off, lamp posts give way to a hard hit, hydrants and stop signs break (their `BreakableObject` breaking plays), trees shed leaves; letters, rubbish, leaves fly off (`InstParticleSystem`); masses from `atc.p3d`, sounds from `collide.spt` (2026-10-20). Missing: a few hit effects (`eParkingMeter`, coconuts), `AnimDynamicPhysics` bodies |
 | PHYS-008 | ⬜ | P2 | Grip per surface (road, grass, pavement) | `_tireGrip` fixed; needs `SurfaceTypeList` |
 | PHYS-005 | ✅ | — | `BulletFenceShape` for fences | |
 | VEH-SINK | ✅ | — | The car drives, and the camera stays above ground | |
