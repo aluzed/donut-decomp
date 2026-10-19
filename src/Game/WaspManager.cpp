@@ -11,6 +11,7 @@
 #include "Render/BillboardBatch.h"
 #include "Render/CompositeModel.h"
 #include "Render/OpenGL/ShaderProgram.h"
+#include "Render/ParticleSystem.h"
 
 #include <algorithm>
 #include <cmath>
@@ -153,6 +154,42 @@ WaspManager::WaspManager(int level, const std::string& levelScript, const Level&
 			if (glowShaders.count(shader->GetName()) && !resources.GetShader(shader->GetName()))
 				resources.LoadShader(*shader);
 		}
+	// Its particle effects: the factories, the systems naming them, and the
+	// beecamera's effect list (each effect: name, translucent, joint).
+	std::map<std::string, std::string> systems;
+	for (const auto& chunk : root.GetChildren())
+	{
+		if (chunk->IsType(P3D::ChunkType::ParticleSystemFactory))
+			if (auto factory = ParticleFactory::FromChunk(*chunk); !factory->GetEmitters().empty())
+				_factories.try_emplace(factory->GetName(), std::move(factory));
+		if (chunk->IsType(P3D::ChunkType::ParticleSystem))
+		{
+			MemoryStream stream(chunk->GetData());
+			stream.Read<uint32_t>();
+			const std::string name = readLPString(stream);
+			systems[name] = readLPString(stream);
+		}
+	}
+	for (const auto& chunk : root.GetChildren())
+	{
+		if (!chunk->IsType(P3D::ChunkType::CompositeDrawable))
+			continue;
+		MemoryStream header(chunk->GetData());
+		if (readLPString(header) != "beecamera")
+			continue;
+		for (const auto& list : chunk->GetChildren())
+			if (list->IsType(P3D::ChunkType::CompositeDrawableEffectList))
+				for (const auto& effect : list->GetChildren())
+				{
+					MemoryStream stream(effect->GetData());
+					const std::string name = readLPString(stream);
+					stream.Read<uint32_t>();
+					const int joint = static_cast<int>(stream.Read<uint32_t>());
+					if (const auto system = systems.find(name); system != systems.end() && _factories.count(system->second))
+						_effectSlots.push_back({name, joint, system->second});
+				}
+	}
+
 	if (_states.size() <= kDestroyed)
 	{
 		Log::Warn("WaspManager: no beecamera states in {}", fx);
@@ -200,6 +237,8 @@ WaspManager::WaspManager(int level, const std::string& levelScript, const Level&
 		if (!wasp.gone)
 		{
 			wasp.model = std::make_unique<CompositeModel>(CompositeModel_Named(root, "beecamera", _wasps.empty()));
+			for (const auto& slot : _effectSlots)
+				wasp.effects.push_back({slot.name, slot.joint, std::make_unique<ParticleSystem>(*_factories[slot.factory])});
 			enter(wasp, kHovering);
 			wasp.frame += static_cast<float>(_wasps.size() * 7 % 80);
 		}
@@ -417,6 +456,8 @@ WaspManager::Result WaspManager::Update(double dt, const Vector3& player, bool a
 		wasp.model->Pose(wasp.frame, false);
 		wasp.model->SetTransform(Matrix4x4::MakeTranslate(at) *
 		                         Matrix4x4(Quaternion::MakeFromEuler(Vector3(0.0f, wasp.yaw, 0.0f))));
+		for (auto& effect : wasp.effects)
+			effect.system->Update(dt, wasp.model->GetTransform() * wasp.model->GetJointTransform(effect.joint));
 	}
 	// The shots fly on; one that reaches the player hits.
 	for (auto& shot : _shots)
@@ -479,7 +520,17 @@ void WaspManager::Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& billbo
 				sprite->Draw(billboardShader, opaque);
 		}
 	}
+	// Their particle effects, those their state shows.
 	billboardShader.SetUniformValue("viewProj", viewProj);
+	for (const auto& wasp : _wasps)
+	{
+		if (wasp.gone)
+			continue;
+		const auto& visible = _states[wasp.state].visible;
+		for (const auto& effect : wasp.effects)
+			if (const auto shown = visible.find(effect.name); shown == visible.end() || shown->second)
+				effect.system->Draw(billboardShader);
+	}
 	glBlendFunc(source, destination);
 	if (blending)
 		glEnable(GL_BLEND);

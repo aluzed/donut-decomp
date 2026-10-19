@@ -50,6 +50,10 @@ locators are in `art/missions/levelNN/wasps.p3d` (now loaded with the level).
   miss (`laser_miss`), a wasp coming apart (`wasp_destroyed`). Checked from the log, each
   found and decoded; not listened to.
 
+- **Particle effects**: the beecamera's effect list places three systems at its joints
+  (`wasp_psShape`, `asdasdasdfShape`, `fadein_psShape`), each drawn when the current state
+  shows it (they mostly wait for firing, coming in and coming apart).
+
 Checked: the wasp by the lemon tree hovering, its lens glowing; the one by the bonus car
 destroyed by a jump, coming apart, 20 coins (60 to 80), "Wasp cameras 1/20"; twenty on
 each of the seven levels; the bonus car's wasp coming from 6m to 4m and firing ten
@@ -59,5 +63,5 @@ ball, and the health bar down as it lands.
 ## Not done
 
 - `EVADE_PLAYER`.
-- Their particle effects and shockwave (`wasp_psShape`, `shockwaveShape`).
+- The shockwave billboards (`shockwaveShape`) of a wasp coming apart.
 - Wasps high up are out of a jump's reach: the game expects them reached by climbing.

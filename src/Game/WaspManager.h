@@ -12,6 +12,8 @@ namespace Donut
 {
 
 class BillboardBatch;
+class ParticleFactory;
+class ParticleSystem;
 class CompositeModel;
 class Level;
 namespace GL
@@ -83,6 +85,15 @@ private:
 		double nextBuzz = 0.0;
 		Vector3 home;
 		std::unique_ptr<CompositeModel> model;
+		// Its particle effects (its trail, its coming in), each at a joint and
+		// shown as its state says.
+		struct Effect
+		{
+			std::string name;
+			int joint;
+			std::unique_ptr<ParticleSystem> system;
+		};
+		std::vector<Effect> effects;
 		int state = 1;
 		float frame = 0.0f;
 		float yaw = 0.0f;
@@ -112,6 +123,16 @@ private:
 	float _shotSpeed = 60.0f / 3.6f;
 	std::vector<std::unique_ptr<BillboardBatch>> _shotSprites;
 	std::vector<std::pair<std::string, std::unique_ptr<BillboardBatch>>> _glows;
+	// The effects file's particle factories, and which the beecamera's effect
+	// list places where: effect name, joint, factory.
+	std::map<std::string, std::unique_ptr<ParticleFactory>> _factories;
+	struct EffectSlot
+	{
+		std::string name;
+		int joint;
+		std::string factory;
+	};
+	std::vector<EffectSlot> _effectSlots;
 
 	std::unique_ptr<P3D::P3DFile> _effects;
 	std::vector<State> _states;
