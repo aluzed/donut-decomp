@@ -1746,15 +1746,21 @@ MultiControllerTracks::MultiControllerTracks(const P3DChunk& chunk)
 	assert(chunk.IsType(ChunkType::MultiControllerTracks));
 
 	MemoryStream stream(chunk.GetData());
+	// Edited by hand: each track is its name, start, end and scale in turn,
+	// not four arrays one after the other (the codegen cannot say so). Read as
+	// arrays, every value after the first name came out as garbage.
 	_numTracks = stream.Read<uint32_t>();
 	_trackNames.resize(_numTracks);
-	for (size_t i = 0; i < _trackNames.size(); ++i) { _trackNames[i] = stream.ReadLPString(); }
 	_trackStartTimes.resize(_numTracks);
-	stream.ReadBytes(reinterpret_cast<uint8_t*>(_trackStartTimes.data()), _trackStartTimes.size() * sizeof(float));
 	_trackEndTimes.resize(_numTracks);
-	stream.ReadBytes(reinterpret_cast<uint8_t*>(_trackEndTimes.data()), _trackEndTimes.size() * sizeof(float));
 	_trackScales.resize(_numTracks);
-	stream.ReadBytes(reinterpret_cast<uint8_t*>(_trackScales.data()), _trackScales.size() * sizeof(float));
+	for (size_t i = 0; i < _numTracks; ++i)
+	{
+		_trackNames[i] = stream.ReadLPString();
+		_trackStartTimes[i] = stream.Read<float>();
+		_trackEndTimes[i] = stream.Read<float>();
+		_trackScales[i] = stream.Read<float>();
+	}
 }
 
 CollisionObject::CollisionObject(const P3DChunk& chunk)
