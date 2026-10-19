@@ -69,6 +69,9 @@ public:
 	// car's own space (-1, the left in the game's left-handed space, when the
 	// model does not say).
 	float GetDriverSide() const { return _driverSide; }
+	// Where the driver sits (the model's "dl" joint), in the world; false when
+	// the model does not say.
+	bool GetDriverSeat(Vector3& seat) const;
 	bool HasModel() const { return _model != nullptr; }
 	float GetSpeedKmh() const;
 	// No wheel touching anything.
@@ -99,6 +102,7 @@ private:
 	int _wheelJoints[4] = {-1, -1, -1, -1};
 	int _doorJoint = -1;
 	float _driverSide = -1.0f;
+	int _seatJoint = -1;
 	std::string _modelName;
 	std::unique_ptr<btRaycastVehicle> _rayVehicle;
 };

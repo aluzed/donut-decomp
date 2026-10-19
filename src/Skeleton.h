@@ -22,6 +22,7 @@ class SkinAnimation;
 // Represents a Skeleton
 class Skeleton
 {
+public:
 	struct Joint
 	{
 		std::string name;
@@ -38,7 +39,6 @@ class Skeleton
 		}
 	};
 
-public:
 	Skeleton(const P3D::Skeleton& skeleton);
 
 	void ResetPose();

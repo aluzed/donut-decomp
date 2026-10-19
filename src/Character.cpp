@@ -61,6 +61,16 @@ void Character::LoadModel(const std::string& name)
 	}
 }
 
+const Skeleton::Joint* Character::FindJoint(const std::string& name) const
+{
+	if (!_skeleton)
+		return nullptr;
+	for (const auto& joint : _skeleton->GetJoints())
+		if (joint.name == name)
+			return &joint;
+	return nullptr;
+}
+
 bool Character::HasMesh() const
 {
 	return _skinModel && _skinModel->HasMesh();

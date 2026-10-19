@@ -89,6 +89,7 @@ void Vehicle::LoadModel(const std::string& modelPath)
 			}
 		}
 		_doorJoint = _model->FindJoint("DoorDRot");
+		_seatJoint = _model->FindJoint("dl");
 		// "DoorDTrans" stands at the origin; the hinge is where the door is.
 		if (_doorJoint >= 0)
 			_driverSide = _model->GetJointRestPosition(_doorJoint).X >= 0.0f ? 1.0f : -1.0f;
@@ -237,6 +238,14 @@ void Vehicle::SetPosition(const Vector3& pos)
 				_model->SetJointRotation(_wheelJoints[i], Quaternion(Vector3(0.0f, 1.0f, 0.0f), wheel.m_steering) *
 				                                              Quaternion(Vector3(-1.0f, 0.0f, 0.0f), wheel.m_rotation));
 			}
+}
+
+bool Vehicle::GetDriverSeat(Vector3& seat) const
+{
+	if (!_model || _seatJoint < 0)
+		return false;
+	seat = _model->GetTransform() * _model->GetJointRestPosition(_seatJoint);
+	return true;
 }
 
 void Vehicle::SetDoorOpen(float amount)

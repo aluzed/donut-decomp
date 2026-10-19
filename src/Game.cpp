@@ -2934,6 +2934,25 @@ void Game::Run()
 		if (_level != nullptr)
 			_level->Draw(viewProjection);
 
+		// At the wheel, the player sits in the driver's seat, idling as drivers
+		// do (in_car_idle); the controller keeps him where he got in, and
+		// takes him back as he gets out.
+		Vector3 seat;
+		if (_character != nullptr && _inVehicle && _activeVehicle && _activeVehicle->GetDriverSeat(seat))
+		{
+			playPlayerAnimation("in_car_idle", true);
+			// The driving animations are built about a point beside the car: their
+			// Motion_Root stands at (1.0, 0.46, -0.72) from the character's
+			// origin. Put that root, not the origin, at the seat.
+			Vector3 root = Vector3::Zero;
+			if (const auto* joint = _character->FindJoint("Motion_Root"))
+				root = joint->pose.Translation();
+			_character->SetRotation(_activeVehicle->GetRotation());
+			_character->FollowController(seat - _activeVehicle->GetRotation() * Vector3(root.X, 0.0f, root.Z));
+			glDisable(GL_CULL_FACE);
+			_character->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
+			glEnable(GL_CULL_FACE);
+		}
 		if (_character != nullptr && !_inVehicle)
 		{
 			// the skinned character mesh has inconsistent winding; with the

@@ -6,6 +6,7 @@
 #include "Core/Math/Quaternion.h"
 #include "Core/Math/Vector3.h"
 #include "Render/TextureAnimation.h"
+#include "Skeleton.h"
 
 #include <cstdint>
 #include <memory>
@@ -79,6 +80,8 @@ public:
 	float GetAnimationProgress() const;
 	CharacterController& GetCharacterController() const { return *_characterController; }
 	Skeleton& GetSkeleton() const { return *_skeleton; }
+	// A joint of its skeleton, as posed now; null when it has no such joint.
+	const Skeleton::Joint* FindJoint(const std::string& name) const;
 
 	void Update(double deltatime);
 	void Draw(const Matrix4x4& viewProjection, GL::ShaderProgram&, const ResourceManager&);
