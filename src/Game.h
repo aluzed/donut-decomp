@@ -327,6 +327,12 @@ private:
 	std::map<std::string, std::unique_ptr<Character>> _npcs;
 	// A non-player character's rest pose, and its gestures while it talks.
 	static std::string npcRestAnimation(const Character& npc);
+	// Sits `character` at `car`'s wheel, idling: false when the car has no seat.
+	static bool seatDriver(Character& character, const Vehicle& car);
+	// The mission cars' drivers, by car; made as they are first seen.
+	std::map<const Vehicle*, std::unique_ptr<Character>> _carDrivers;
+	std::set<std::string> _driversWithoutModel;
+	void drawCarDrivers(const Matrix4x4& viewProjection);
 	void animateNpc(Character& npc, bool talking);
 	struct NpcGesture
 	{

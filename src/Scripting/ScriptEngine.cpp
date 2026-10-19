@@ -1098,6 +1098,22 @@ void ScriptEngine::AddStageVehicle(const std::string& car, const std::string& lo
 
 	Vehicle& vehicle = spawnVehicle(car, locator, pos);
 
+	// Its driver, the stage's or the car's own (SetDriver("skinner") in
+	// scripts/cars/<car>.con); "none" for an empty seat.
+	std::string seated = driver;
+	if (seated.empty())
+	{
+		std::ifstream script("scripts/cars/" + car + ".con");
+		for (std::string line; std::getline(script, line);)
+			if (const std::size_t at = line.find("SetDriver(\""); at != std::string::npos)
+			{
+				const std::size_t open = at + 11;
+				seated = line.substr(open, line.find('"', open) - open);
+				break;
+			}
+	}
+	_vehicleDrivers[&vehicle] = seated == "none" ? std::string() : seated;
+
 	// A "race" stage vehicle is an opponent's. Its driver comes with the circuit,
 	// in buildRaceCircuit.
 	//
@@ -1114,6 +1130,12 @@ void ScriptEngine::AddStageVehicle(const std::string& car, const std::string& lo
 // with the same commands a mission uses on its "current" vehicle. Run it with the
 // new car as that vehicle, before its physics body exists, so the body is built
 // with the car's own mass. Without it every car in the game was the same car.
+std::string ScriptEngine::GetVehicleDriver(const Vehicle* vehicle) const
+{
+	const auto found = _vehicleDrivers.find(vehicle);
+	return found != _vehicleDrivers.end() ? found->second : std::string();
+}
+
 void ScriptEngine::applyCarScript(Vehicle& vehicle)
 {
 	const std::string path = "scripts/cars/" + vehicle.GetName() + ".con";

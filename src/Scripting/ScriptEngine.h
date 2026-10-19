@@ -217,6 +217,9 @@ public:
 	bool IsNewRecord() const { return _isNewRecord; }
 	void AdvanceCheckpoint();
 	std::vector<std::unique_ptr<Vehicle>>& GetMissionVehicles() { return _missionVehicles; }
+	// Who drives a mission car: the stage's driver (AddStageVehicle's last
+	// argument), or else the car's own (its script's SetDriver); empty for none.
+	std::string GetVehicleDriver(const Vehicle* vehicle) const;
 	// The car the mission gave the player (SetMissionResetPlayerInCar/OutCar), or null.
 	Vehicle* GetPlayerCar() const { return _playerCar; }
 
@@ -384,6 +387,7 @@ private:
 	std::vector<std::string> conversationLines() const;
 	// The player has had the car being followed within the follow distance.
 	bool _followInRange = false;
+	std::map<const Vehicle*, std::string> _vehicleDrivers;
 	std::map<std::string, std::string> _stateProps;
 	// Catch-up curves by car name, held until that car's driver exists.
 	std::map<std::string, RaceOpponent::Catchup> _raceCatchups;

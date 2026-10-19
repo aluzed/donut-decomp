@@ -1533,6 +1533,67 @@ std::unique_ptr<Character> Game::makeNpc(const std::string& name) const
 	return npc;
 }
 
+bool Game::seatDriver(Character& character, const Vehicle& car)
+{
+	Vector3 seat;
+	if (!car.GetDriverSeat(seat))
+		return false;
+	// The driving animations are built about a point beside the car: their
+	// Motion_Root stands at (1.0, 0.46, -0.72) from the character's origin. Put
+	// that root, not the origin, at the seat; facing the car's way.
+	Vector3 root = Vector3::Zero;
+	if (const auto* joint = character.FindJoint("Motion_Root"))
+		root = joint->pose.Translation();
+	character.SetRotation(car.GetRotation());
+	character.FollowController(seat - car.GetRotation() * Vector3(root.X, 0.0f, root.Z));
+	return true;
+}
+
+void Game::drawCarDrivers(const Matrix4x4& viewProjection)
+{
+	// The cars of the mission at hand that are not the player's: Skinner at
+	// his own wheel, Eddie in the limo. Drawn where the camera can see them.
+	std::set<const Vehicle*> present;
+	for (const auto& vehicle : _scriptEngine->GetMissionVehicles())
+	{
+		const Vehicle* car = vehicle.get();
+		const std::string name = _scriptEngine->GetVehicleDriver(car);
+		if (name.empty())
+			continue;
+		present.insert(car);
+		if (car == _activeVehicle || (car->GetPosition() - _camera->GetPosition()).Length() > 120.0f)
+			continue;
+		auto& driver = _carDrivers[car];
+		// Made once: a car rebuilt where an old one stood is told by its driver.
+		if (driver && driver->GetModelName() != name)
+			driver.reset();
+		if (!driver)
+		{
+			// Once only for one without a model: a file read a frame otherwise.
+			if (_driversWithoutModel.count(name))
+				continue;
+			driver = makeNpc(name);
+			if (!driver)
+			{
+				_driversWithoutModel.insert(name);
+				continue;
+			}
+			for (const auto& [anim, data] : driver->GetAnimations())
+				if (anim.size() > 12 && anim.compare(anim.size() - 12, 12, "_in_car_idle") == 0)
+					driver->SetAnimation(anim);
+		}
+		if (seatDriver(*driver, *car))
+		{
+			glDisable(GL_CULL_FACE);
+			driver->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
+			glEnable(GL_CULL_FACE);
+		}
+	}
+	// Those of cars gone (a mission over) go too.
+	for (auto it = _carDrivers.begin(); it != _carDrivers.end();)
+		it = present.count(it->first) ? std::next(it) : _carDrivers.erase(it);
+}
+
 std::string Game::npcRestAnimation(const Character& npc)
 {
 	std::string any;
@@ -2871,6 +2932,9 @@ void Game::Run()
 		const auto talkingNear = [&](const Vector3& position) {
 			return speaking && (position - _character->GetPosition()).Length() < 8.0f;
 		};
+		for (auto& [car, driver] : _carDrivers)
+			if (driver)
+				driver->Update(deltaTime);
 		for (auto& giver : _bonusGivers)
 			if (giver.npc)
 			{
@@ -2937,22 +3001,17 @@ void Game::Run()
 		// At the wheel, the player sits in the driver's seat, idling as drivers
 		// do (in_car_idle); the controller keeps him where he got in, and
 		// takes him back as he gets out.
-		Vector3 seat;
-		if (_character != nullptr && _inVehicle && _activeVehicle && _activeVehicle->GetDriverSeat(seat))
+		if (_character != nullptr && _inVehicle && _activeVehicle)
 		{
 			playPlayerAnimation("in_car_idle", true);
-			// The driving animations are built about a point beside the car: their
-			// Motion_Root stands at (1.0, 0.46, -0.72) from the character's
-			// origin. Put that root, not the origin, at the seat.
-			Vector3 root = Vector3::Zero;
-			if (const auto* joint = _character->FindJoint("Motion_Root"))
-				root = joint->pose.Translation();
-			_character->SetRotation(_activeVehicle->GetRotation());
-			_character->FollowController(seat - _activeVehicle->GetRotation() * Vector3(root.X, 0.0f, root.Z));
-			glDisable(GL_CULL_FACE);
-			_character->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
-			glEnable(GL_CULL_FACE);
+			if (seatDriver(*_character, *_activeVehicle))
+			{
+				glDisable(GL_CULL_FACE);
+				_character->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
+				glEnable(GL_CULL_FACE);
+			}
 		}
+		drawCarDrivers(viewProjection);
 		if (_character != nullptr && !_inVehicle)
 		{
 			// the skinned character mesh has inconsistent winding; with the
