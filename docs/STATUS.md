@@ -30,7 +30,8 @@ into a playable arcade racing game.
 - **Cars**: dents, wheels that roll and steer, brake and reversing lights (the traffic's
   too)
 - **Particles** (P3D-001): steam, smoke, fires, torches; the wasps' effects; sparks off a
-  crash, dust under a landing
+  crash, dust under a landing; breakings (a hydrant's geyser, a tree's leaves) and what
+  props shed when hit (letters, rubbish, leaves, sparks); debris falls
 - **Wasp cameras**: twenty a level, coming in as the player nears, watching, firing shots
   that can be dodged, blown up by a jump or a car
 - **LineRenderer**: Debug drawing for physics, skeletons, beacons
@@ -39,6 +40,10 @@ into a playable arcade racing game.
 - **Character Controller**: Capsule shape, raycast ground detection, jump, stepUp
 - **Vehicle Physics**: btRaycastVehicle with 4-wheel suspension
 - **Collision**: All P3D volume types, fence shapes, triangle meshes
+- **Props** (PHYS-011): the street furniture has bodies -- mailboxes and bins fly off,
+  lamp posts give way to a hard hit, stop signs and hydrants break, trees stand and shed
+  leaves; masses from the game's collision attribute table, crash sounds from its
+  sound script; kicked about on foot
 - **Gravity**: 9.8 m/s² with velocity caps
 
 ### Audio (OpenAL)
