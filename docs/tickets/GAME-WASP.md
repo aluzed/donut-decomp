@@ -45,6 +45,11 @@ locators are in `art/missions/levelNN/wasps.p3d` (now loaded with the level).
   The blending the billboards set is put back after: left additive, the frame washed white,
   left off, the HUD's text came out as boxes.
 
+- **Sounds** (`sound\soundfx\wasp\`), each where it happens: a wasp within 20m buzzes
+  (`wasp_idle_03`, every 2s), a shot (`wasp_laser`), a hit (`character_zapped_02`) or a
+  miss (`laser_miss`), a wasp coming apart (`wasp_destroyed`). Checked from the log, each
+  found and decoded; not listened to.
+
 Checked: the wasp by the lemon tree hovering, its lens glowing; the one by the bonus car
 destroyed by a jump, coming apart, 20 coins (60 to 80), "Wasp cameras 1/20"; twenty on
 each of the seven levels; the bonus car's wasp coming from 6m to 4m and firing ten
@@ -54,5 +59,5 @@ ball, and the health bar down as it lands.
 ## Not done
 
 - `EVADE_PLAYER`.
-- Their billboards and particle effects (lens glow, shockwave, `wasp_psShape`), the buzz.
+- Their particle effects and shockwave (`wasp_psShape`, `shockwaveShape`).
 - Wasps high up are out of a jump's reach: the game expects them reached by climbing.

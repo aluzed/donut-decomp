@@ -107,6 +107,11 @@ constexpr int kFiring = 4;
 constexpr int kDestroyed = 5;
 constexpr float kAlertDistance = 10.0f;
 constexpr int kCoins = 20;
+const char* const kBuzz = "sound\\soundfx\\wasp\\wasp_idle_03.rsd";
+const char* const kFire = "sound\\soundfx\\wasp\\wasp_laser.rsd";
+const char* const kHit = "sound\\soundfx\\wasp\\character_zapped_02.rsd";
+const char* const kMiss = "sound\\soundfx\\wasp\\laser_miss.rsd";
+const char* const kBlownUp = "sound\\soundfx\\wasp\\wasp_destroyed.rsd";
 } // namespace
 
 WaspManager::WaspManager(int level, const std::string& levelScript, const Level& world)
@@ -353,6 +358,7 @@ WaspManager::Result WaspManager::Update(double dt, const Vector3& player, bool a
 				++result.destroyed;
 				save();
 				Log::Info("WaspManager: '{}' destroyed", wasp.id);
+				result.sounds.emplace_back(kBlownUp, wasp.position);
 			}
 			else if (wasp.state == kHovering && distance < kAlertDistance)
 				enter(wasp, kAlerted);
@@ -374,9 +380,17 @@ WaspManager::Result WaspManager::Update(double dt, const Vector3& player, bool a
 					// moving is missed.
 					const Vector3 aim = player + Vector3(0.0f, 0.8f, 0.0f) - wasp.position;
 					_shots.push_back({wasp.position, aim.Normalized() * _shotSpeed, 0.0f, b.range + 5.0f});
+					result.sounds.emplace_back(kFire, wasp.position);
 					Log::Info("WaspManager: '{}' fires at the player, {:.0f}m", wasp.id, distance);
 				}
 			}
+		}
+
+		// Buzzing, heard near.
+		if (!wasp.destroyed && distance < 20.0f && _time >= wasp.nextBuzz)
+		{
+			result.sounds.emplace_back(kBuzz, wasp.position);
+			wasp.nextBuzz = _time + 2.0;
 		}
 
 		// Hovering, bobbing.
@@ -413,8 +427,11 @@ WaspManager::Result WaspManager::Update(double dt, const Vector3& player, bool a
 		if ((shot.position - (player + Vector3(0.0f, 0.8f, 0.0f))).Length() < 1.2f)
 		{
 			result.damage += _shotDamage;
+			result.sounds.emplace_back(kHit, shot.position);
 			shot.travelled = shot.range;
 		}
+		else if (shot.travelled >= shot.range)
+			result.sounds.emplace_back(kMiss, shot.position);
 	}
 	_shots.erase(std::remove_if(_shots.begin(), _shots.end(), [](const Shot& s) { return s.travelled >= s.range; }),
 	             _shots.end());

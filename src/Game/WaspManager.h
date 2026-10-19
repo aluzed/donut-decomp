@@ -47,6 +47,9 @@ public:
 		int destroyed = 0;
 		// Shots that hit the player, and what they cost.
 		float damage = 0.0f;
+		// What is heard, and where: the buzz, a shot, a hit or a miss, a wasp
+		// coming apart (sound\soundfx\wasp\).
+		std::vector<std::pair<std::string, Vector3>> sounds;
 	};
 	Result Update(double dt, const Vector3& player, bool attacking, float reach);
 	void Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& billboardShader, const Matrix4x4& viewProj);
@@ -77,6 +80,7 @@ private:
 		Behaviour behaviour;
 		Vector3 position;
 		double nextShot = 0.0;
+		double nextBuzz = 0.0;
 		Vector3 home;
 		std::unique_ptr<CompositeModel> model;
 		int state = 1;
