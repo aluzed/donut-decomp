@@ -19,6 +19,20 @@ into a playable arcade racing game.
 - **Fog**: Exponential fog in world + skin shaders, sky color
 - **Lightmap Support**: Multi-UV channel ready, shader infrastructure
 - **Skeletal Animation**: Keyframe interpolation (lerp+slerp), skinning shader
+- **Animated world** (P3D-004): gags with their characters; the level's animated objects
+  (windmill, signs, butterflies, the power plant's platforms, whose collision moves with
+  them); breakables that break; doorbells; rivers, pools and screens (texture
+  animations); flashing sirens and pulsing glows (billboard animations); blinking eyes
+- **Characters**: the player runs, dashes, jumps, kicks, lands, fidgets, presses
+  doorbells, celebrates, gestures in conversation, gets in and out of cars by the
+  driver's door (which opens), and sits at the wheel; mission cars have their drivers;
+  pedestrians pause, flail when hit and run clear of cars
+- **Cars**: dents, wheels that roll and steer, brake and reversing lights (the traffic's
+  too)
+- **Particles** (P3D-001): steam, smoke, fires, torches; the wasps' effects; sparks off a
+  crash, dust under a landing
+- **Wasp cameras**: twenty a level, coming in as the player nears, watching, firing shots
+  that can be dodged, blown up by a jump or a car
 - **LineRenderer**: Debug drawing for physics, skeletons, beacons
 
 ### Physics (Bullet)
@@ -113,9 +127,9 @@ into a playable arcade racing game.
 | Key | On Foot | In Vehicle |
 |-----|---------|------------|
 | Arrows | Move | Drive |
-| E | Jump / Enter car | Exit car |
+| E | Jump / Enter car / kick in the air | Exit car |
 | Space | - | Jump |
-| Shift | - | Boost |
+| Shift | Dash | Boost |
 | H | - | Horn |
 | M | Restart mission | - |
 | T | Teleport to vehicle | - |
