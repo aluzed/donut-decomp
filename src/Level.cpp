@@ -844,6 +844,14 @@ int Level::PlayAnimatedObject(const std::string& name)
 	return started;
 }
 
+bool Level::HasBreakableNear(const Vector3& position, float radius) const
+{
+	for (const auto& object : _animatedObjects)
+		if (object.breaks && !object.broken && (object.position - position).Length() < radius)
+			return true;
+	return false;
+}
+
 int Level::BreakObjectsNear(const Vector3& position, float radius)
 {
 	int broke = 0;

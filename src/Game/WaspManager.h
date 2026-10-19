@@ -58,6 +58,8 @@ public:
 	void Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& billboardShader, const Matrix4x4& viewProj);
 
 	int GetDestroyed() const;
+	// Whether a wasp is out within `radius` of `position`.
+	bool AnyNear(const Vector3& position, float radius) const;
 	int GetTotal() const { return static_cast<int>(_wasps.size()); }
 
 private:

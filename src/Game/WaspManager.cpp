@@ -616,6 +616,14 @@ void WaspManager::Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& billbo
 	glDepthMask(GL_TRUE);
 }
 
+bool WaspManager::AnyNear(const Vector3& position, float radius) const
+{
+	for (const auto& wasp : _wasps)
+		if (wasp.present && !wasp.destroyed && !wasp.gone && (wasp.position - position).Length() < radius)
+			return true;
+	return false;
+}
+
 int WaspManager::GetDestroyed() const
 {
 	int destroyed = 0;

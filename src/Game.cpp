@@ -2258,7 +2258,18 @@ void Game::Run()
 						}
 					}
 				}
-				if (!_inVehicle && !_boarding.car && ctrl.canJump())
+				// Something to hit within reach (a crate, a wasp come low): the
+				// character's strike, not a jump. It counts as an attack for the
+				// wasps, as a jump does.
+				const Vector3 me = _character->GetPosition();
+				const bool target = _level->HasBreakableNear(me, 2.2f) || (_waspManager && _waspManager->AnyNear(me, 2.5f));
+				if (!_inVehicle && !_boarding.car && ctrl.onGround() && target && playPlayerAnimation("break", false))
+				{
+					_lastJumpAt = _elapsedSeconds;
+					if (_level->BreakObjectsNear(me, 2.2f) > 0)
+						AddShake(0.2f);
+				}
+				else if (!_inVehicle && !_boarding.car && ctrl.canJump())
 				{
 					ctrl.jump(btVector3(0, 0, 0));
 					playPlayerAnimation("jump_idle_take_off", false);

@@ -127,7 +127,7 @@ into a playable arcade racing game.
 | Key | On Foot | In Vehicle |
 |-----|---------|------------|
 | Arrows | Move | Drive |
-| E | Jump / Enter car / kick in the air | Exit car |
+| E | Jump / Enter car / strike beside a crate or wasp / kick in the air | Exit car |
 | Space | - | Jump |
 | Shift | Dash | Boost |
 | H | - | Horn |

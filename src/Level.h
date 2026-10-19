@@ -53,6 +53,8 @@ public:
 	// vending machines, gas pumps): each plays its animation once and stays
 	// as it ends. How many broke.
 	int BreakObjectsNear(const Vector3& position, float radius);
+	// Whether one stands unbroken within `radius`.
+	bool HasBreakableNear(const Vector3& position, float radius) const;
 	void Draw(Matrix4x4& viewProj, const Vector3& cameraPos = Vector3::Zero);
 	// The shader the level's own meshes are drawn with, uniforms as Draw left
 	// them -- what any other P3D Mesh (a car's, say) has to be drawn with too.
