@@ -8,7 +8,11 @@
 #include "Game.h"
 #include "Level.h"
 #include "Physics/WorldPhysics.h"
+#include "P3D/P3D.generated.h"
+#include "P3D/P3DFile.h"
+#include "Render/BillboardBatch.h"
 #include "Render/CompositeModel.h"
+#include "Render/OpenGL/ShaderProgram.h"
 #include "Render/LineRenderer.h"
 #include "Render/OpenGL/ShaderProgram.h"
 #include "Render/SimpleMesh.h"
@@ -245,6 +249,18 @@ void TrafficManager::LoadModels(const std::string& levelScript)
 			continue;
 		for (int i = 0; i < weight; ++i)
 			pool.push_back(static_cast<int>(_models.size()));
+		// Its brake lights, brake1Shape..brake4Shape, where their joints are.
+		std::vector<std::pair<std::unique_ptr<BillboardBatch>, int>> lights;
+		const P3D::P3DFile file("art/cars/" + name + ".p3d");
+		for (const auto& chunk : file.GetRoot().GetChildren())
+			if (chunk->IsType(P3D::ChunkType::BillboardQuadGroup))
+			{
+				const auto group = P3D::BillboardQuadGroup::Load(*chunk);
+				const int joint = model->FindPropJoint(group->GetName());
+				if (group->GetName().rfind("brake", 0) == 0 && joint >= 0)
+					lights.emplace_back(std::make_unique<BillboardBatch>(*group), joint);
+			}
+		_brakeLights.push_back(std::move(lights));
 		_models.push_back(std::move(model));
 		_modelNames.push_back(name);
 		Log::Info("TrafficManager: traffic model '{}' (weight {})", name, weight);
@@ -266,6 +282,24 @@ void TrafficManager::DrawModels(GL::ShaderProgram& worldShader, const Matrix4x4&
 		for (std::size_t i = 0; i < _cars.size(); ++i)
 			if (_cars[i].model >= 0)
 				_models[_cars[i].model]->Draw(worldShader, viewProj, transforms[i], opaque);
+}
+
+void TrafficManager::DrawBrakeLights(GL::ShaderProgram& billboardShader, const Matrix4x4& viewProj)
+{
+	billboardShader.Bind();
+	for (const bool opaque : {true, false})
+		for (const auto& car : _cars)
+		{
+			if (car.model < 0 || car.blocked <= 0.0f)
+				continue;
+			const Matrix4x4 placed = Matrix4x4::MakeTranslate(car.grounded) * Matrix4x4(car.rotation);
+			for (const auto& [batch, joint] : _brakeLights[car.model])
+			{
+				billboardShader.SetUniformValue("viewProj", viewProj * placed * _models[car.model]->GetJointTransform(joint));
+				batch->Draw(billboardShader, opaque);
+			}
+		}
+	billboardShader.SetUniformValue("viewProj", viewProj);
 }
 
 void TrafficManager::SetPresent(bool present)

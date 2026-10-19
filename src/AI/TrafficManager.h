@@ -18,6 +18,7 @@ class LineRenderer;
 class WorldPhysics;
 class PathGraph;
 class SimpleMesh;
+class BillboardBatch;
 class CompositeModel;
 namespace GL { class ShaderProgram; }
 
@@ -51,6 +52,9 @@ public:
 	// The cars that have a model, drawn with it (`worldShader`, as for mission
 	// cars); DrawSolid draws the rest as boxes.
 	void DrawModels(GL::ShaderProgram& worldShader, const Matrix4x4& viewProj);
+	// The brake lights of the cars held up (a car or the player in the way),
+	// with the billboard program.
+	void DrawBrakeLights(GL::ShaderProgram& billboardShader, const Matrix4x4& viewProj);
 
 	// Gives the cars the models a level script names for its traffic
 	// (AddTrafficModel("minivanA", 2) ...), shared out by those weights.
@@ -79,6 +83,8 @@ private:
 	std::vector<Vector3> _obstacles;
 	std::vector<std::pair<std::string, Vector3>> _honks;
 	std::vector<std::string> _modelNames;
+	// Each model's brake lights: the car file's brake billboards and their joints.
+	std::vector<std::vector<std::pair<std::unique_ptr<BillboardBatch>, int>>> _brakeLights;
 	std::vector<std::unique_ptr<CompositeModel>> _models;
 
 	// Each car is a kinematic box in the physics world, moved with it every

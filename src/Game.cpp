@@ -3105,6 +3105,20 @@ void Game::Run()
 		if (!_scriptEngine->IsTrafficSuppressed() && _interior.empty())
 		{
 			_trafficManager->DrawModels(_level->GetWorldShader(), viewProjection);
+			// Blending on for the glows, then as it was.
+			{
+				const GLboolean blending = glIsEnabled(GL_BLEND);
+				GLint source = GL_SRC_ALPHA, destination = GL_ONE_MINUS_SRC_ALPHA;
+				glGetIntegerv(GL_BLEND_SRC_RGB, &source);
+				glGetIntegerv(GL_BLEND_DST_RGB, &destination);
+				glEnable(GL_BLEND);
+				_trafficManager->DrawBrakeLights(_level->GetBillboardShader(), viewProjection);
+				glBlendFunc(source, destination);
+				if (!blending)
+					glDisable(GL_BLEND);
+				glEnable(GL_DEPTH_TEST);
+				glDepthMask(GL_TRUE);
+			}
 			if (!_showDebug)
 				_trafficManager->DrawSolid(*_carMesh, *_meshShader, viewProjection);
 		}
