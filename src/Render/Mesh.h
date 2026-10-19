@@ -25,6 +25,12 @@ public:
 	void Commit();
 	void Draw(GL::ShaderProgram&, bool opaque);
 
+	const std::string& GetName() const { return _name; }
+	// Moves the vertices of primitive group `group` from where they were built
+	// by `offsets`, one per vertex (a morph target: an inflating doll). Fewer
+	// offsets than vertices leave the rest as built.
+	void OffsetGroup(std::size_t group, const std::vector<Vector3>& offsets);
+
 protected:
 	struct PrimGroup
 	{
@@ -50,6 +56,9 @@ protected:
 
 	std::string _name;
 	std::vector<PrimGroup> _primGroups;
+	// Kept for OffsetGroup: every vertex as built, and where each group's start.
+	std::vector<Vertex> _vertices;
+	std::vector<std::size_t> _groupVertexStart;
 
 	std::shared_ptr<GL::VertexBuffer> _vertexBuffer;
 	std::shared_ptr<GL::IndexBuffer> _indexBuffer;

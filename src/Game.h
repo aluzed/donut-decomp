@@ -42,6 +42,7 @@ class ScriptEngine;
 class Vehicle;
 class CompositeModel;
 class SceneSkins;
+struct VertexAnimation;
 class WaspManager;
 class ParticleFactory;
 class ParticleSystem;
@@ -296,6 +297,8 @@ private:
 		std::shared_ptr<CompositeModel> drawable;
 		// The characters it holds, if any (Homer on the couch).
 		std::shared_ptr<SceneSkins> skins;
+		// A mesh of it that changes shape (the blow-up doll inflating).
+		std::shared_ptr<VertexAnimation> morph;
 		Vector3 placed;
 		// GagSetCycle: "cycle" plays round and round; "single" plays once when
 		// triggered and stays as it ends; "reset" plays once and goes back.

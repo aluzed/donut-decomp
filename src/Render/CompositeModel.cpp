@@ -159,6 +159,14 @@ void CompositeModel::SetPropVisible(const std::string& prop, bool visible)
 			p.visible = visible;
 }
 
+Mesh* CompositeModel::FindMesh(const std::string& name) const
+{
+	for (const auto& mesh : _meshes)
+		if (mesh->GetName() == name)
+			return mesh.get();
+	return nullptr;
+}
+
 int CompositeModel::FirstPropJoint() const
 {
 	for (const auto& prop : _props)

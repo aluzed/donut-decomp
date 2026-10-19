@@ -29,6 +29,7 @@
 #include "RCL/RSDFile.h"
 #include "Render/CompositeModel.h"
 #include "Render/SceneSkins.h"
+#include "Render/VertexAnimation.h"
 #include "Game/WaspManager.h"
 #include "Render/ParticleSystem.h"
 #include "Render/Font.h"
@@ -1849,6 +1850,7 @@ void Game::loadGags()
 				{
 					gag->drawable = CompositeModel::LoadP3D(file);
 					gag->skins = SceneSkins::Load(file);
+					gag->morph = VertexAnimation::FromFile(file);
 				}
 				gag->played = found.count(gagId(*gag)) > 0;
 				_gags.push_back(*gag);
@@ -1964,6 +1966,11 @@ void Game::drawGags(const Matrix4x4& viewProjection)
 				}
 			}
 			gag.drawable->Pose(frame, gag.cycle == "cycle");
+			if (gag.morph)
+				if (Mesh* mesh = gag.drawable->FindMesh(gag.morph->mesh))
+					for (std::size_t group = 0; group < gag.morph->groups.size(); ++group)
+						if (const auto* offsets = gag.morph->KeyAt(group, frame))
+							mesh->OffsetGroup(group, *offsets);
 			if (gag.skins)
 				gag.skins->Pose(frame, gag.cycle == "cycle");
 		}

@@ -68,6 +68,7 @@ void Mesh::CreateMeshBuffers(const P3D::Geometry& geometry)
 			});
 		}
 
+		_groupVertexStart.push_back(vertOffset);
 		for (auto const& idx : prim->GetIndices()) { allIndices.push_back(idx + static_cast<uint32_t>(vertOffset)); }
 
 		vertOffset += verts.size();
@@ -86,6 +87,7 @@ void Mesh::CreateMeshBuffers(const P3D::Geometry& geometry)
 	}
 
 	_vertexBuffer = std::make_shared<GL::VertexBuffer>(allVerts.data(), allVerts.size(), sizeof(Vertex));
+	_vertices = std::move(allVerts);
 	_indexBuffer = std::make_shared<GL::IndexBuffer>(allIndices.data(), allIndices.size(), GL_UNSIGNED_INT);
 }
 
@@ -186,6 +188,18 @@ void MeshInstanced::DrawPrimGroup(const PrimGroup& primGroup)
 {
 	glDrawElementsInstanced(primGroup.type, static_cast<GLsizei>(primGroup.indicesCount), _indexBuffer->GetType(),
 	                        reinterpret_cast<void*>(primGroup.indicesOffset * 4), (GLsizei)_transforms.size());
+}
+
+void Mesh::OffsetGroup(std::size_t group, const std::vector<Vector3>& offsets)
+{
+	if (group >= _groupVertexStart.size() || !_vertexBuffer)
+		return;
+	const std::size_t start = _groupVertexStart[group];
+	const std::size_t end = group + 1 < _groupVertexStart.size() ? _groupVertexStart[group + 1] : _vertices.size();
+	std::vector<Vertex> moved(_vertices.begin() + start, _vertices.begin() + end);
+	for (std::size_t i = 0; i < moved.size() && i < offsets.size(); ++i)
+		moved[i].pos += offsets[i];
+	_vertexBuffer->UpdateBuffer(moved.data(), start * sizeof(Vertex), moved.size() * sizeof(Vertex));
 }
 
 } // namespace Donut

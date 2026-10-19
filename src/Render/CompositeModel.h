@@ -106,6 +106,8 @@ public:
 	// first posable prop's; and a joint's transform as posed now, in the model's
 	// space.
 	int FindPropJoint(const std::string& prop) const;
+	// One of its meshes, by name; null when it has no such.
+	Mesh* FindMesh(const std::string& name) const;
 	// Shows or hides the props of that name (a state prop's: a wasp's head
 	// gives way to its exploding one).
 	void SetPropVisible(const std::string& prop, bool visible);
