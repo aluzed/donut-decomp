@@ -83,6 +83,20 @@ void PedestrianManager::Update(double deltaTime, const Vector3& playerPosition)
 			continue;
 		}
 
+		// Standing a while, at rest, before going on.
+		if (p.waiting > 0.0f)
+		{
+			p.waiting -= static_cast<float>(deltaTime);
+			if (p.body >= 0)
+			{
+				Character& body = *_bodies[p.body];
+				playOn(body, p.waiting > 0.0f ? "_loco_idle_rest" : "_loco_walk", true);
+				body.SetPosition(p.position);
+				body.Update(deltaTime);
+			}
+			continue;
+		}
+
 		p.targetTimer -= static_cast<float>(deltaTime);
 
 		Vector3 toTarget = p.targetDirection - p.position;
@@ -91,6 +105,9 @@ void PedestrianManager::Update(double deltaTime, const Vector3& playerPosition)
 
 		if (p.targetTimer <= 0.0f || dist < 1.0f)
 		{
+			// Now and then, a pause where they are.
+			if (std::uniform_real_distribution<float>(0.0f, 1.0f)(_rng) < 0.3f)
+				p.waiting = 2.0f + std::uniform_real_distribution<float>(0.0f, 4.0f)(_rng);
 			std::uniform_real_distribution<float> angleDist(0.0f, 2.0f * 3.14159f);
 			p.targetDirection = p.position + Vector3(std::cos(angleDist(_rng)) * 5.0f, 0, std::sin(angleDist(_rng)) * 5.0f);
 			p.targetTimer = 2.0f + std::uniform_real_distribution<float>(0.0f, 3.0f)(_rng);

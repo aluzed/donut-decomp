@@ -26,6 +26,8 @@ struct Pedestrian
 	int body = -1;
 	// Knocked flying by a car: seconds in the air, or -1 walking.
 	float flying = -1.0f;
+	// Standing a moment where they have got to, seconds left.
+	float waiting = 0.0f;
 };
 
 class PedestrianManager
