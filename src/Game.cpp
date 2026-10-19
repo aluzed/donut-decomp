@@ -2531,9 +2531,14 @@ void Game::Run()
 
 		if (_gameState == GameState::MissionComplete || _gameState == GameState::MissionFailed)
 		{
-			// Won on foot, the player celebrates.
+			// Won on foot, the player celebrates: the big one for the level's last
+			// story mission.
 			if (_missionCompleteTimer == 0.0 && _gameState == GameState::MissionComplete && !_inVehicle)
-				playPlayerAnimation("victory_small", false);
+			{
+				const bool levelWon = _storyIndex >= 0 && _storyIndex + 1 == static_cast<int>(_story.size());
+				if (!levelWon || !playPlayerAnimation("victory_large", false))
+					playPlayerAnimation("victory_small", false);
+			}
 			_missionCompleteTimer += deltaTime;
 			if (_missionCompleteTimer > 5.0)
 			{
