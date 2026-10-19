@@ -83,6 +83,33 @@ void PedestrianManager::Update(double deltaTime, const Vector3& playerPosition)
 			continue;
 		}
 
+		// Running clear of a car.
+		if (p.fleeing > 0.0f)
+		{
+			p.fleeing -= static_cast<float>(deltaTime);
+			p.position += p.velocity * static_cast<float>(deltaTime);
+			float ground = 0.0f;
+			if (_worldPhysics.FindGroundHeight(p.position, 4.0f, 8.0f, ground, true))
+				p.position.Y = ground;
+			if (p.body >= 0)
+			{
+				Character& body = *_bodies[p.body];
+				playOn(body, p.fleeing > 0.0f ? "_loco_dash" : "_loco_walk", true);
+				body.SetPosition(p.position);
+				body.SetRotation(Quaternion::MakeFromEuler(
+				    Vector3(0.0f, std::atan2(p.velocity.X, p.velocity.Z) + 3.14159265f, 0.0f)));
+				body.Update(deltaTime);
+			}
+			if (p.fleeing <= 0.0f)
+			{
+				// Walking on from where they got to.
+				p.velocity = p.velocity.Normalized() * 1.2f;
+				p.targetDirection = p.position + p.velocity.Normalized() * 5.0f;
+				p.targetTimer = 3.0f;
+			}
+			continue;
+		}
+
 		// Standing a while, at rest, before going on.
 		if (p.waiting > 0.0f)
 		{
@@ -247,6 +274,31 @@ int PedestrianManager::KnockDown(const Vector3& position, float radius, const Ve
 		}
 	}
 	return hit;
+}
+
+void PedestrianManager::Scare(const Vector3& carPosition, float radius, const Vector3& carVelocity)
+{
+	Vector3 heading(carVelocity.X, 0.0f, carVelocity.Z);
+	if (heading.LengthSquared() < 1.0f)
+		return;
+	heading.Normalize();
+	for (auto& p : _pedestrians)
+	{
+		if (!p.active || p.flying >= 0.0f || p.fleeing > 0.0f)
+			continue;
+		Vector3 d = p.position - carPosition;
+		d.Y = 0.0f;
+		// Ahead of the car, within reach.
+		if (d.LengthSquared() > radius * radius || d.X * heading.X + d.Z * heading.Z < -1.0f)
+			continue;
+		// Sideways, to the side of the path they stand on.
+		Vector3 away(-heading.Z, 0.0f, heading.X);
+		if (d.X * away.X + d.Z * away.Z < 0.0f)
+			away = away * -1.0f;
+		p.velocity = away * 5.0f;
+		p.fleeing = 1.2f;
+		p.waiting = 0.0f;
+	}
 }
 
 int PedestrianManager::CountNear(const Vector3& position, float radius) const

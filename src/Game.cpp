@@ -909,6 +909,9 @@ void Game::updateHitAndRun(double dt)
 			if (!cries.empty())
 				_audioManager->PlayAudio(cries[static_cast<std::size_t>(rand()) % cries.size()]);
 		}
+	// Those in the way of a car coming at them run clear of it.
+	if (driving && std::abs(speed) > 20.0f && _pedestrianManager && _interior.empty())
+		_pedestrianManager->Scare(player, 7.0f, _activeVehicle->GetVelocity());
 	// A near miss at speed: someone jumps clear and says what they think of it
 	// (generic_*\p_nhitbyc_*).
 	if (driving && std::abs(speed) > 30.0f && _pedestrianManager && _interior.empty())

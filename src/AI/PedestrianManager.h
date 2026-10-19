@@ -28,6 +28,8 @@ struct Pedestrian
 	float flying = -1.0f;
 	// Standing a moment where they have got to, seconds left.
 	float waiting = 0.0f;
+	// Running clear of a car, seconds left.
+	float fleeing = 0.0f;
 };
 
 class PedestrianManager
@@ -55,6 +57,9 @@ public:
 	// taken off the street (there is no knock-down animation) and counted.
 	int KnockDown(const Vector3& position, float radius, const Vector3& carVelocity = Vector3::Zero);
 	// Pedestrians standing within `radius` of `position`, still on their feet.
+	// Those within `radius` of a car coming at `carVelocity` run clear of it,
+	// sideways from its path, in a dash.
+	void Scare(const Vector3& carPosition, float radius, const Vector3& carVelocity);
 	int CountNear(const Vector3& position, float radius) const;
 
 private:
