@@ -5,6 +5,7 @@
 #include "Level.h"
 #include "UI/TextBible.h"
 
+#include <array>
 #include <map>
 #include <set>
 
@@ -185,6 +186,14 @@ private:
 	// The bursts the game sets off: sparks off a crash, dust under a landing.
 	std::unique_ptr<ParticleFactory> _sparkFactory, _dustFactory;
 	std::unique_ptr<ParticleSystem> _sparks, _dust;
+	// What a car's rear wheels throw up off the road, the level's own sprays:
+	// grass on grass, earth and stones on dirt, sand, gravel.
+	struct WheelSpray
+	{
+		std::unique_ptr<ParticleSystem> grass, dirt;
+	};
+	std::map<const Vehicle*, std::array<WheelSpray, 2>> _wheelSprays;
+	void updateWheelSprays(double dt);
 	std::unique_ptr<class HitAndRun> _hitAndRun;
 	// Runs the Hit & Run meter: people run down, the police, busted.
 	void updateHitAndRun(double dt);

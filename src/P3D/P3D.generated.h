@@ -1167,12 +1167,17 @@ public:
 	const std::vector<Vector3>& GetPositions() const { return _positions; }
 	const std::vector<Vector3>& GetNormals() const { return _normals; }
 	const std::unique_ptr<BoundingBox>& GetBounds() const { return _bounds; }
+	// What each triangle's ground is (SurfaceTypeList, 0x300000E: a version, a
+	// count, a byte a triangle): the game's terrain type, 0x80 set indoors.
+	// Empty when the chunk has none.
+	const std::vector<uint8_t>& GetSurfaceTypes() const { return _surfaceTypes; }
 
 private:
 	std::vector<uint32_t> _indices;
 	std::vector<Vector3> _positions;
 	std::vector<Vector3> _normals;
 	std::unique_ptr<BoundingBox> _bounds;
+	std::vector<uint8_t> _surfaceTypes;
 };
 
 class WorldSphere

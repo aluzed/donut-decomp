@@ -1168,6 +1168,15 @@ void Level::propHit(const Prop& prop, const Vector3& position)
 	_hitParticles.push_back(std::move(hit));
 }
 
+const ParticleFactory* Level::GetHitParticleFactory(uint32_t type) const
+{
+	const auto name = _hitParticleFactories.find(type);
+	if (name == _hitParticleFactories.end())
+		return nullptr;
+	const auto factory = _particleFactories.find(name->second);
+	return factory != _particleFactories.end() ? factory->second.get() : nullptr;
+}
+
 void Level::LoadHitParticles(const P3D::P3DChunk& effectsRoot)
 {
 	for (const auto& chunk : effectsRoot.GetChildren())

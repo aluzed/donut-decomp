@@ -43,6 +43,20 @@ enum class PhysicsDebugDrawMode
 	DrawFrames = (1 << 15)
 };
 
+// What the ground is, as the level's collision gives it per triangle (the
+// game's terrain types, in its order).
+enum class Surface : uint8_t
+{
+	Road, // and pavement: anything not marked otherwise
+	Grass,
+	Sand,
+	Gravel,
+	Water,
+	Wood,
+	Metal,
+	Dirt,
+};
+
 class WorldPhysics
 {
 public:
@@ -126,6 +140,11 @@ public:
 	bool CastRay(const Vector3& from, const Vector3& direction, float range, Vector3& outPoint, Vector3& outNormal,
 	             bool staticOnly = false) const;
 
+	// What the ground right under `point` is (a wheel's contact, a foot's):
+	// looked for half a metre above it to a metre below. Road where nothing of
+	// the level's ground is found.
+	Surface GetSurfaceUnder(const Vector3& point) const;
+
 	void SetDebugDrawMode(PhysicsDebugDrawMode mode) const { _debugDraw->setDebugMode((int)mode); }
 	PhysicsDebugDrawMode GetDebugDrawMode() const { return (PhysicsDebugDrawMode)_debugDraw->getDebugMode(); }
 
@@ -154,6 +173,9 @@ private:
 	// lists them here.
 	std::vector<KinematicVolume>* _kinematicSink = nullptr;
 	int _kinematicOwner = -1;
+	// The level's ground meshes' surface, a byte a triangle (Surface, 0x80 set
+	// indoors).
+	std::unordered_map<const btCollisionObject*, std::vector<uint8_t>> _surfaces;
 	std::vector<std::vector<uint32_t>*> _allocatedIndexArrays;
 	std::vector<std::vector<Vector3>*> _allocatedVertexArrays;
 };

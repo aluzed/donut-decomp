@@ -178,7 +178,7 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 	tuning.m_suspensionCompression = 4.4f;
 	tuning.m_suspensionDamping = 2.8f;
 	tuning.m_maxSuspensionTravelCm = 500.0f;
-	tuning.m_frictionSlip = 10.5f;
+	tuning.m_frictionSlip = kFrictionSlip;
 
 	_rayVehicle = std::make_unique<btRaycastVehicle>(tuning, chassis, raycaster);
 	_rayVehicle->setCoordinateSystem(0, 1, 2);
@@ -309,12 +309,44 @@ void Vehicle::SetRotation(const Quaternion& rot)
 		_model->SetTransform(Matrix4x4::MakeTranslate(_position) * Matrix4x4(_rotation));
 }
 
+namespace
+{
+// How well a tyre holds on each ground, against the road's: grass, dirt and
+// gravel give, sand and a wet floor give more.
+float surfaceGrip(Surface surface)
+{
+	switch (surface)
+	{
+	case Surface::Grass: return 0.75f;
+	case Surface::Dirt: return 0.75f;
+	case Surface::Gravel: return 0.7f;
+	case Surface::Sand: return 0.6f;
+	case Surface::Water: return 0.6f;
+	case Surface::Metal: return 0.9f;
+	default: return 1.0f;
+	}
+}
+} // namespace
+
 void Vehicle::Update(double dt)
 {
 	if (_rayVehicle)
 	{
 		for (int i = 0; i < _rayVehicle->getNumWheels(); ++i)
+		{
+			// The ground under each wheel, and its grip for the next step;
+			// read before updateWheelTransform, which clears the contact.
+			btWheelInfo& wheel = _rayVehicle->getWheelInfo(i);
+			if (i < kWheels)
+			{
+				_wheelTouching[i] = wheel.m_raycastInfo.m_isInContact;
+				_wheelContacts[i] = BulletCast<Vector3>(wheel.m_raycastInfo.m_contactPointWS);
+				if (_physicsWorld && _wheelTouching[i])
+					_wheelSurfaces[i] = _physicsWorld->GetSurfaceUnder(_wheelContacts[i]);
+				wheel.m_frictionSlip = kFrictionSlip * surfaceGrip(_wheelSurfaces[i]);
+			}
 			_rayVehicle->updateWheelTransform(i, true);
+		}
 
 		btTransform trans = _rayVehicle->getChassisWorldTransform();
 		_position = BulletCast<Vector3>(trans.getOrigin());

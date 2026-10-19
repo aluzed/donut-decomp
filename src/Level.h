@@ -185,6 +185,9 @@ public:
 	// everything again when empty. Inside, the rest of the level is the town
 	// overhead, seen from underneath.
 	void SetDrawOnly(const std::string& file) { _drawOnly = file; }
+	// The effects file's particle effect of that type (the game's: 10 a
+	// wheel's dirt spray, 11 its grass), or null.
+	const ParticleFactory* GetHitParticleFactory(uint32_t type) const;
 	const std::vector<Path>& GetPaths() const { return _paths; }
 
 	// Named camera/animation splines. Spline chunks are nested inside the level

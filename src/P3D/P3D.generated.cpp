@@ -1092,6 +1092,14 @@ Intersect::Intersect(const P3DChunk& chunk)
 			_bounds = std::make_unique<BoundingBox>(*child);
 			break;
 		}
+		case ChunkType::SurfaceTypeList:
+		{
+			MemoryStream types(child->GetData());
+			types.Read<uint32_t>(); // version
+			_surfaceTypes.resize(types.Read<uint32_t>());
+			types.ReadBytes(_surfaceTypes.data(), _surfaceTypes.size());
+			break;
+		}
 		default: break;
 		}
 	}

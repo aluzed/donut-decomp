@@ -5,6 +5,7 @@
 #include "Core/Math/Matrix4x4.h"
 #include "Core/Math/Quaternion.h"
 #include "Core/Math/Vector3.h"
+#include "Physics/WorldPhysics.h"
 
 #include <BulletDynamics/Vehicle/btRaycastVehicle.h>
 
@@ -86,6 +87,17 @@ public:
 	bool IsAirborne() const;
 	// The chassis' velocity, in m/s.
 	Vector3 GetVelocity() const;
+	// The ground under wheel `i` (0, 1 front; 2, 3 rear) when it last touched
+	// any.
+	Surface GetWheelSurface(int i) const { return i >= 0 && i < kWheels ? _wheelSurfaces[i] : Surface::Road; }
+	// Where wheel `i` touches the ground; false when it touches nothing.
+	bool GetWheelContact(int i, Vector3& point) const
+	{
+		if (i < 0 || i >= kWheels || !_wheelTouching[i])
+			return false;
+		point = _wheelContacts[i];
+		return true;
+	}
 
 
 private:
@@ -102,6 +114,13 @@ private:
 	float _gasScale = kReferenceGasScale;
 	float _topSpeedKmh = 180.0f;
 	float _tireGrip = 1.0f;
+	// The tyres' grip on the road (btWheelInfo::m_frictionSlip), less on other
+	// grounds.
+	static constexpr float kFrictionSlip = 10.5f;
+	static constexpr int kWheels = 4;
+	Surface _wheelSurfaces[kWheels] = {Surface::Road, Surface::Road, Surface::Road, Surface::Road};
+	bool _wheelTouching[kWheels] = {};
+	Vector3 _wheelContacts[kWheels];
 	float _suspensionLimit = 0.3f;
 
 	std::unique_ptr<CompositeModel> _model;

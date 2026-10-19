@@ -99,8 +99,9 @@ trees — and the car drove through every one.
 ## Not done
 
 - The particle types the table names but the effects file does not hold by a name we
-  know (`eParkingMeter`, `eCoconutsDropping...`, ...): types 9, 10, 11, 14, 19 are dust,
-  dirt, grass, a car's damage smoke, fire; which names they answer to is not known.
+  know (`eParkingMeter`, `eCoconutsDropping...`, ...). Types 9, 10, 11, 14, 19 are the
+  dash's dust, a wheel's dirt and grass sprays (used since, PHYS-008), a car's damage
+  smoke, fire.
 - The `AnimDynamicPhysics` objects (crates, vending machines) still have no body: they
   break when the car comes near (`Level::BreakObjectsNear`).
 - The player on foot does not push them by walking into them (the character is a

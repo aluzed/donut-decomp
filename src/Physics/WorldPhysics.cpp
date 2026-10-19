@@ -140,6 +140,38 @@ bool WorldPhysics::CastRay(const Vector3& from, const Vector3& direction, float 
 	return true;
 }
 
+namespace
+{
+// The level's ground under a ray, and which of its triangles.
+struct SurfaceRayCallback : LevelRayCallback
+{
+	int triangle = -1;
+	SurfaceRayCallback(const btVector3& from, const btVector3& to): LevelRayCallback(from, to, true) {}
+
+	btScalar addSingleResult(btCollisionWorld::LocalRayResult& result, bool normalInWorldSpace) override
+	{
+		const btScalar fraction = LevelRayCallback::addSingleResult(result, normalInWorldSpace);
+		triangle = result.m_localShapeInfo ? result.m_localShapeInfo->m_triangleIndex : -1;
+		return fraction;
+	}
+};
+} // namespace
+
+Surface WorldPhysics::GetSurfaceUnder(const Vector3& point) const
+{
+	const btVector3 from(point.X, point.Y + 0.5f, point.Z);
+	const btVector3 to(point.X, point.Y - 1.0f, point.Z);
+	SurfaceRayCallback callback(from, to);
+	_dynamicsWorld->rayTest(from, to, callback);
+	if (!callback.hasHit() || callback.triangle < 0)
+		return Surface::Road;
+	const auto found = _surfaces.find(callback.m_collisionObject);
+	if (found == _surfaces.end() || static_cast<std::size_t>(callback.triangle) >= found->second.size())
+		return Surface::Road;
+	const uint8_t type = found->second[callback.triangle] & 0x7F;
+	return type <= static_cast<uint8_t>(Surface::Dirt) ? static_cast<Surface>(type) : Surface::Road;
+}
+
 btCollisionObject* WorldPhysics::addStaticBody(btCollisionShape* shape, const btTransform& transform)
 {
 	// Static geometry has to be a zero-mass btRigidBody, not a bare
@@ -225,7 +257,9 @@ void WorldPhysics::AddIntersect(const P3D::Intersect& intersect)
 
 	auto trimeshShape = new btBvhTriangleMeshShape(meshInterface, true);
 
-	addStaticBody(trimeshShape, btTransform::getIdentity());
+	const btCollisionObject* body = addStaticBody(trimeshShape, btTransform::getIdentity());
+	if (!intersect.GetSurfaceTypes().empty())
+		_surfaces[body] = intersect.GetSurfaceTypes();
 
 	// add for cleanup
 	_allocatedVertexArrays.push_back(verts);

@@ -31,7 +31,8 @@ into a playable arcade racing game.
   too)
 - **Particles** (P3D-001): steam, smoke, fires, torches; the wasps' effects; sparks off a
   crash, dust under a landing; breakings (a hydrant's geyser, a tree's leaves) and what
-  props shed when hit (letters, rubbish, leaves, sparks); debris falls
+  props shed when hit (letters, rubbish, leaves, sparks); grass and earth thrown up by a
+  car's wheels; debris falls
 - **Wasp cameras**: twenty a level, coming in as the player nears, watching, firing shots
   that can be dodged, blown up by a jump or a car
 - **Frustum culling** (RENDER-008a): meshes out of view are not drawn, tested by their
@@ -40,7 +41,8 @@ into a playable arcade racing game.
 
 ### Physics (Bullet)
 - **Character Controller**: Capsule shape, raycast ground detection, jump, stepUp
-- **Vehicle Physics**: btRaycastVehicle with 4-wheel suspension
+- **Vehicle Physics**: btRaycastVehicle with 4-wheel suspension; each wheel's grip from the
+  ground under it (road, grass, sand, gravel: the level's per-triangle terrain types)
 - **Collision**: All P3D volume types, fence shapes, triangle meshes
 - **Props** (PHYS-011): the street furniture has bodies -- mailboxes and bins fly off,
   lamp posts give way to a hard hit, stop signs and hydrants break, trees stand and shed

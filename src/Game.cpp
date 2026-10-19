@@ -122,6 +122,12 @@ namespace
 {
 // Below this speed, holding "back" reverses instead of braking.
 constexpr float kReverseThresholdKmh = 2.0f;
+// The effects file's wheel sprays (their particle types), the speed a wheel
+// throws them up from, and how far back from straight up they go.
+constexpr uint32_t kWheelSprayDirt = 10;
+constexpr uint32_t kWheelSprayGrass = 11;
+constexpr float kWheelSprayKmh = 15.0f;
+constexpr float kWheelSprayTilt = -0.9f;
 } // namespace
 
 void GLAPIENTRY MessageCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message,
@@ -745,6 +751,7 @@ void Game::switchLevel(int level)
 	_ufo.reset();
 	_sparks.reset();
 	_dust.reset();
+	_wheelSprays.clear();
 	_pathGraph.reset();
 	_character.reset();
 	_level.reset();
@@ -2035,6 +2042,48 @@ bool Game::useGag()
 	return false;
 }
 
+void Game::updateWheelSprays(double dt)
+{
+	// The cars there are now; those gone take their sprays with them.
+	std::vector<const Vehicle*> cars;
+	if (_scriptEngine->IsMissionActive())
+		for (const auto& vehicle : _scriptEngine->GetMissionVehicles())
+			cars.push_back(vehicle.get());
+	for (auto it = _wheelSprays.begin(); it != _wheelSprays.end();)
+		it = std::find(cars.begin(), cars.end(), it->first) == cars.end() ? _wheelSprays.erase(it) : std::next(it);
+
+	const ParticleFactory* grass = _level ? _level->GetHitParticleFactory(kWheelSprayGrass) : nullptr;
+	const ParticleFactory* dirt = _level ? _level->GetHitParticleFactory(kWheelSprayDirt) : nullptr;
+	for (const Vehicle* vehicle : cars)
+	{
+		const bool moving = std::fabs(vehicle->GetSpeedKmh()) > kWheelSprayKmh;
+		for (int k = 0; k < 2; ++k)
+		{
+			// The rear wheels (2, 3).
+			Vector3 contact;
+			const bool touching = vehicle->GetWheelContact(2 + k, contact);
+			const Surface surface = vehicle->GetWheelSurface(2 + k);
+			const bool onGrass = moving && touching && surface == Surface::Grass;
+			const bool onDirt = moving && touching &&
+			                    (surface == Surface::Dirt || surface == Surface::Sand || surface == Surface::Gravel);
+			auto& spray = _wheelSprays[vehicle][k];
+			if (onGrass && !spray.grass && grass)
+				spray.grass = std::make_unique<ParticleSystem>(*grass);
+			if (onDirt && !spray.dirt && dirt)
+				spray.dirt = std::make_unique<ParticleSystem>(*dirt);
+			// The emitters throw straight up their own Y: tipped back, off the
+			// tyre and behind the car.
+			const Matrix4x4 placement =
+			    Matrix4x4::MakeTranslate(contact) *
+			    Matrix4x4(vehicle->GetRotation() * Quaternion(Vector3(1.0f, 0.0f, 0.0f), kWheelSprayTilt));
+			if (spray.grass)
+				spray.grass->Update(dt, placement, -1.0f, onGrass);
+			if (spray.dirt)
+				spray.dirt->Update(dt, placement, -1.0f, onDirt);
+		}
+	}
+}
+
 void Game::updateGags()
 {
 	if (!_character)
@@ -3254,12 +3303,18 @@ void Game::Run()
 		{
 			_sparks->Update(deltaTime, Matrix4x4::Identity);
 			_dust->Update(deltaTime, Matrix4x4::Identity);
+			updateWheelSprays(deltaTime);
 			GL::ShaderProgram& billboards = _level->GetBillboardShader();
 			billboards.Bind();
 			billboards.SetUniformValue("viewProj", viewProjection);
 			const GLboolean blending = glIsEnabled(GL_BLEND);
 			_sparks->Draw(billboards);
 			_dust->Draw(billboards);
+			for (auto& [vehicle, sprays] : _wheelSprays)
+				for (auto& spray : sprays)
+					for (auto* system : {spray.grass.get(), spray.dirt.get()})
+						if (system)
+							system->Draw(billboards);
 			if (!blending)
 				glDisable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

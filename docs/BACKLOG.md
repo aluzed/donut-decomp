@@ -94,7 +94,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | P3D-004 | 🟡 | P1 | Animation controllers. Pose animations play on composite models (`CompositeModel::Pose`), Vector1/2/3 and (compressed) quaternion channels: gags animate. Gag scenes' characters too (`SceneSkins`). The level's `Anim` and `AnimCollision` objects, never loaded before (69 on level 1: windmill, signs, butterflies, rivers, the power plant's platforms and fans), are drawn and go round. Doorbells play their button and switch when rung; breakables (crates, gas pumps) break when the car runs into them. The moving objects' collision moves with them (the power plant's platforms carry the player). Missing: the power plant's own switches, `FrameController`/`MultiController` timing, texture animations |
 | P3D-001 | 🟡 | P1 | Particle systems: the animated objects' effects (steam, smoke, the tire fire, torches) run and draw (2026-10-19); the wasp cameras', breakings', and the props' hit effects (0x3001001); gravity read right, so debris fall (2026-10-20). Missing: weight, spin, drag, nitro |
 | P3D-006 | 🟡 | P1 | Entity variants: `AnimDynamicPhysicsWrapper` accepted and drawn (with or without its wrapper); `AnimCollision` still ignored |
-| P3D-008 | 🟡 | P1 | Spline / LocatorMatrix / SurfaceTypeList: layouts reversed and checked over 7892 occurrences, 13 camera rails exposed by name. `SurfaceTypeList` unused (→ PHYS-008) |
+| P3D-008 | 🟡 | P1 | Spline / LocatorMatrix / SurfaceTypeList: layouts reversed and checked over 7892 occurrences, 13 camera rails exposed by name. `SurfaceTypeList` read per triangle for the grip (PHYS-008) |
 | P3D-009 | 🟡 | P1 | CollisionWallVolume / CollisionEffect / Atc: `CollisionEffect` (class, attribute row, sound) and the `Atc` table (sound, particle, breakable, friction, mass, elasticity) read by hand for PHYS-011 (2026-10-20). `CollisionWallVolume` not done |
 | P3D-002 | ⬜ | P2 | Lights (headlights, dynamic lights) |
 | P3D-007 | ⬜ | P2 | Tree/TreeNode (spatial, needed for culling) |
@@ -129,7 +129,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 |---|---|---|---|---|
 | PHYS-004 | 🟡 | P1 | Collision callbacks | Car damage from the change of velocity, with a thud, a voice line, Hit & Run. No contact callbacks |
 | PHYS-011 | 🟡 | P1 | Things to knock over | The `DynamicPhysics` props (269 on level 1) have bodies: mailboxes and bins fly off, lamp posts give way to a hard hit, hydrants and stop signs break (their `BreakableObject` breaking plays), trees shed leaves; letters, rubbish, leaves fly off (`InstParticleSystem`); masses from `atc.p3d`, sounds from `collide.spt` (2026-10-20). Missing: a few hit effects (`eParkingMeter`, coconuts), `AnimDynamicPhysics` bodies |
-| PHYS-008 | ⬜ | P2 | Grip per surface (road, grass, pavement) | `_tireGrip` fixed; needs `SurfaceTypeList` |
+| PHYS-008 | ✅ | — | Grip per surface | Each wheel's friction from the ground's terrain type (`SurfaceTypeList`): grass, dirt, sand slip; the rear wheels throw up grass or earth (2026-10-20) |
 | PHYS-005 | ✅ | — | `BulletFenceShape` for fences | |
 | VEH-SINK | ✅ | — | The car drives, and the camera stays above ground | |
 | — | ✅ | — | Traffic stops short of cars and of the player on foot (kinematic bodies pushed through them) | |
