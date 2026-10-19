@@ -405,6 +405,7 @@ Game::~Game()
 	_npcs.clear();         // NPCs and pedestrians are Characters too
 	_ambientNpcs.clear();
 	_bonusGivers.clear();
+	_carDrivers.clear();   // the mission cars' drivers, Characters as well
 	_pedestrianManager.reset();
 	_level.reset();        // static level geometry
 	_worldPhysics.reset();
@@ -733,6 +734,7 @@ void Game::switchLevel(int level)
 	ClearNpcs();
 	_ambientNpcs.clear();
 	_bonusGivers.clear();
+	_carDrivers.clear();
 	_hitAndRun.reset();
 	_pedestrianManager.reset();
 	_trafficManager.reset();
