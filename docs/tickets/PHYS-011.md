@@ -57,7 +57,9 @@ trees — and the car drove through every one.
   then the sprites' own textures and shaders, factories and the system naming one):
   type 3 a hedge's leaves (`eShrub`), 4 a bin's rubbish (`eGarbage`: apples, bones,
   banana skins), 5 an oak's leaves (`eOakTreeLeaves`), 6 a mailbox's letters (`eMail`).
-  Given off where the prop is hit, as long as its timeline says, then left to die out.
+  Given off at the prop's foot, where a car meets it, as long as its timeline says, then
+  left to die out. A row naming `eSpark` (lamp posts, the basketball hoop, the washer)
+  gets the game's own spark burst, the one off a car's impacts.
 - **Heard**: the effect's sound names a resource of `sound\scripts\collide.spt`
   (`car_hit_mailbox`: `mailbox_hit_0318a.rsd`, ...), played where the prop is when it
   is knocked loose or sent flying (once a tumble).
@@ -92,7 +94,7 @@ trees — and the car drove through every one.
 ## Not done
 
 - The particle types the table names but the effects file does not hold by a name we
-  know (`eSpark`, `eStars`, `eParkingMeter`, ...): types 9, 10, 11, 14, 19 are dust,
+  know (`eStars`, `eParkingMeter`, ...): types 9, 10, 11, 14, 19 are dust,
   dirt, grass, a car's damage smoke, fire; which names they answer to is not known.
 - The `AnimDynamicPhysics` objects (crates, vending machines) still have no body: they
   break when the car comes near (`Level::BreakObjectsNear`).

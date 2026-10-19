@@ -458,6 +458,7 @@ void Level::LoadP3D(const std::string& filename)
 					prop.vanishes = !tree;
 				}
 				prop.placement = transforms.at(i);
+				prop.effect = attributes.particle;
 				if (const auto particles = kHitParticleTypes.find(attributes.particle); particles != kHitParticleTypes.end())
 					prop.hitParticles = static_cast<int>(particles->second);
 				_props.push_back(prop);
@@ -1095,7 +1096,7 @@ void Level::updateProps()
 				if (playBreakable(static_cast<uint32_t>(prop.breakable), prop.placement))
 				{
 					prop.brokeAt = _animationTime;
-					propHit(prop, prop.placement.Translation());
+					propHit(prop, prop.placement.Translation() + Vector3(0.0f, 0.7f, 0.0f));
 					if (prop.vanishes)
 					{
 						physics.RemoveProp(prop.body, prop.mass, other);
@@ -1133,7 +1134,9 @@ void Level::updateProps()
 		if (!prop.heard && prop.body->getLinearVelocity().length() > 1.5f)
 		{
 			prop.heard = true;
-			propHit(prop, WorldPhysics::GetBodyTransform(prop.body).Translation());
+			// At its foot, where a car meets it, not its middle (a lamp post's
+			// is 6 m up).
+			propHit(prop, (WorldPhysics::GetBodyTransform(prop.body) * prop.centre).Translation() + Vector3(0.0f, 0.7f, 0.0f));
 		}
 		auto& entity = static_cast<InstancedStaticEntity&>(*_instances[prop.instances]);
 		entity.SetInstanceTransform(prop.slot, WorldPhysics::GetBodyTransform(prop.body) * prop.centre);
@@ -1142,7 +1145,7 @@ void Level::updateProps()
 
 void Level::propHit(const Prop& prop, const Vector3& position)
 {
-	_knockedProps.emplace_back(prop.sound, position);
+	_knockedProps.push_back({prop.sound, prop.effect, position});
 	if (prop.hitParticles < 0)
 		return;
 	const auto name = _hitParticleFactories.find(static_cast<uint32_t>(prop.hitParticles));
@@ -1226,7 +1229,7 @@ bool Level::playBreakable(uint32_t type, const Matrix4x4& placement)
 	return false;
 }
 
-std::vector<std::pair<std::string, Vector3>> Level::TakeKnockedProps()
+std::vector<Level::KnockedProp> Level::TakeKnockedProps()
 {
 	return std::exchange(_knockedProps, {});
 }

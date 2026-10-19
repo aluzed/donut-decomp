@@ -2731,12 +2731,15 @@ void Game::Run()
 			}
 		}
 		_level->Update(deltaTime);
-		// A mailbox, a lamp post knocked over: its crash.
-		for (const auto& [sound, where] : _level->TakeKnockedProps())
+		// A mailbox, a lamp post knocked over: its crash, and the sparks off a
+		// metal one.
+		for (const auto& [sound, effect, where] : _level->TakeKnockedProps())
 		{
+			if (effect == "eSpark" && _sparks)
+				_sparks->Burst(20, where);
 			const std::string file = _audioManager->ScriptSoundFile("collide", sound);
-			Log::Debug("Game: a prop knocked over at ({:.1f}, {:.1f}, {:.1f}), '{}' ({})", where.X, where.Y, where.Z, sound,
-			           file.empty() ? "no sound" : file);
+			Log::Debug("Game: a prop knocked over at ({:.1f}, {:.1f}, {:.1f}), '{}' ({}), '{}'", where.X, where.Y, where.Z, sound,
+			           file.empty() ? "no sound" : file, effect);
 			if (!file.empty())
 				_audioManager->PlayAudio(file, where);
 		}

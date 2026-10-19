@@ -56,8 +56,15 @@ public:
 	// Whether one stands unbroken within `radius`.
 	bool HasBreakableNear(const Vector3& position, float radius) const;
 	// The props knocked loose since the last call: the sound each makes (a
-	// resource of sound\\scripts\\collide.spt) and where.
-	std::vector<std::pair<std::string, Vector3>> TakeKnockedProps();
+	// resource of sound\\scripts\\collide.spt), the effect its attribute row
+	// names that the game makes itself ("eSpark"), and where.
+	struct KnockedProp
+	{
+		std::string sound;
+		std::string effect;
+		Vector3 position;
+	};
+	std::vector<KnockedProp> TakeKnockedProps();
 	void Draw(Matrix4x4& viewProj, const Vector3& cameraPos = Vector3::Zero);
 	// The shader the level's own meshes are drawn with, uniforms as Draw left
 	// them -- what any other P3D Mesh (a car's, say) has to be drawn with too.
@@ -272,15 +279,17 @@ private:
 		// leaves); where it stands; when it last broke.
 		int breakable = -1;
 		bool vanishes = false;
-		// The particle effect it gives off as it is hit, or -1.
+		// The particle effect it gives off as it is hit, or -1; and the name
+		// its attribute row gives it ("eMail", "eSpark").
 		int hitParticles = -1;
+		std::string effect;
 		Matrix4x4 placement;
 		double brokeAt = -100.0;
 	};
 	std::vector<Prop> _props;
 	// The fixed ones, by body.
 	std::unordered_map<const void*, std::size_t> _fixedProps;
-	std::vector<std::pair<std::string, Vector3>> _knockedProps;
+	std::vector<KnockedProp> _knockedProps;
 	// A prop hit: its sound, and its particle effect, where it is.
 	void propHit(const Prop& prop, const Vector3& position);
 	// The hit particle effects, by the game's particle type (an
