@@ -8,6 +8,7 @@
 #include <functional>
 #include <map>
 #include "Core/Math/Matrix4x4.h"
+#include "Render/BillboardAnimation.h"
 #include "Render/ParticleSystem.h"
 #include "Render/TextureAnimation.h"
 #include <memory>
@@ -246,16 +247,15 @@ private:
 	std::map<std::size_t, AttachedBillboard> _attachedBillboards;
 	// Billboards whose colour is animated (BQG_*: a siren flashing): which quad
 	// of which batch, and its colour from each key frame on.
-	struct BillboardAnimation
+	struct AnimatedQuad
 	{
 		std::size_t batch;
 		int quad;
 		float frameRate;
-		float frameCount;
-		std::vector<std::pair<float, Vector4>> colors;
-		int shown = -1;
+		float frames;
+		BillboardAnimation::Quad animation;
 	};
-	std::vector<BillboardAnimation> _billboardAnimations;
+	std::vector<AnimatedQuad> _billboardAnimations;
 	// Particle effects (steam, smoke, a tire fire): the level's factories by
 	// name, and the systems running, each where a joint of an animated object
 	// is, with the file it came from (for SetDrawOnly).

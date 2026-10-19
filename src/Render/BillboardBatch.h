@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "Core/Math/Vector2.h"
+
 namespace Donut
 {
 namespace GL
@@ -35,6 +37,8 @@ public:
 	// siren flashing. -1 when there is no such quad.
 	int FindQuad(const std::string& name) const;
 	void SetQuadColor(int quad, const struct Vector4& color);
+	void SetQuadSize(int quad, const struct Vector2& size);
+	const struct Vector2& GetQuadSize(int quad) const { return _quadSizes[quad]; }
 
 private:
 	std::shared_ptr<GL::VertexBuffer> _vertexBuffer;
@@ -46,6 +50,7 @@ private:
 	std::vector<std::string> _quadNames;
 	// Each quad's colour, where it sits in the instance buffer.
 	std::vector<std::size_t> _colorOffsets;
+	std::vector<Vector2> _quadSizes;
 
 	std::string _shader;
 	bool _zTest;

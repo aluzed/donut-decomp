@@ -49,6 +49,7 @@ BillboardBatch::BillboardBatch(const P3D::BillboardQuadGroup& billboardQuadGroup
 	for (auto const& billboardQuad : billboardQuadGroup.GetQuads())
 	{
 		_quadNames.push_back(billboardQuad->GetName());
+		_quadSizes.emplace_back(billboardQuad->GetWidth(), billboardQuad->GetHeight());
 		_colorOffsets.push_back(quadInstances.size() * sizeof(QuadInstance) + offsetof(QuadInstance, color));
 		quadInstances.push_back(QuadInstance {
 		    billboardQuad->GetTranslation(),
@@ -97,6 +98,12 @@ void BillboardBatch::SetQuadColor(int quad, const Vector4& color)
 {
 	if (quad >= 0 && quad < static_cast<int>(_colorOffsets.size()))
 		_instanceBuffer->UpdateBuffer(&color, _colorOffsets[quad], sizeof(Vector4));
+}
+
+void BillboardBatch::SetQuadSize(int quad, const Vector2& size)
+{
+	if (quad >= 0 && quad < static_cast<int>(_colorOffsets.size()))
+		_instanceBuffer->UpdateBuffer(&size, quad * sizeof(QuadInstance) + offsetof(QuadInstance, size), sizeof(Vector2));
 }
 
 void BillboardBatch::Draw(GL::ShaderProgram& shader, bool opaque)

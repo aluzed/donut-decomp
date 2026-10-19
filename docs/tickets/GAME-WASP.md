@@ -50,6 +50,10 @@ locators are in `art/missions/levelNN/wasps.p3d` (now loaded with the level).
   miss (`laser_miss`), a wasp coming apart (`wasp_destroyed`). Checked from the log, each
   found and decoded; not listened to.
 
+- **Glows animated**: their billboards follow their `BQG_*` animations at the wasp's frame
+  (size, colour, visibility): the signal ring pulses, the lens lights up once the wasp has
+  come in, the shockwave grows and fades as it arrives. Checked: the ring absent, small,
+  large, faded across four frames.
 - **Particle effects**: the beecamera's effect list places three systems at its joints
   (`wasp_psShape`, `asdasdasdfShape`, `fadein_psShape`), each drawn when the current state
   shows it, keyed to its animation's frame: checked, a wasp blowing up gives a puff of smoke
@@ -64,5 +68,4 @@ ball, and the health bar down as it lands.
 ## Not done
 
 - `EVADE_PLAYER`.
-- The shockwave billboards (`shockwaveShape`) of a wasp coming apart.
 - Wasps high up are out of a jump's reach: the game expects them reached by climbing.

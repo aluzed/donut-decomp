@@ -2,6 +2,7 @@
 
 #include "Core/Math/Matrix4x4.h"
 #include "Core/Math/Vector3.h"
+#include "Render/BillboardAnimation.h"
 
 #include <map>
 #include <memory>
@@ -123,6 +124,8 @@ private:
 	float _shotSpeed = 60.0f / 3.6f;
 	std::vector<std::unique_ptr<BillboardBatch>> _shotSprites;
 	std::vector<std::pair<std::string, std::unique_ptr<BillboardBatch>>> _glows;
+	// Their animations over the wasp's timeline (BQG_*): size, colour, visibility.
+	std::vector<BillboardAnimation::Quad> _glowAnimations;
 	// The effects file's particle factories, and which the beecamera's effect
 	// list places where: effect name, joint, factory.
 	std::map<std::string, std::unique_ptr<ParticleFactory>> _factories;

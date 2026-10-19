@@ -595,46 +595,20 @@ void Level::LoadP3D(const std::string& filename)
 		}
 	}
 
-	// "BQG_l2z4_sirensShape19": one group per quad, named after it, whose colour
-	// channel ("CLR": version, param, key count, key frames u16, colours u32)
-	// flashes it.
+	// "BQG_l2z4_sirensShape19": one group per quad, named after it, its size,
+	// colour and visibility over frames (BillboardAnimation).
 	for (const P3D::P3DChunk* chunk : fileBillboardAnimations)
 	{
-		MemoryStream stream(chunk->GetData());
-		stream.Read<uint32_t>();
-		stream.ReadLPString();
-		if (stream.ReadString(4).rfind("BQG", 0) != 0)
+		auto animation = BillboardAnimation::FromChunk(*chunk);
+		if (!animation)
 			continue;
-		const float frameCount = stream.Read<float>();
-		const float frameRate = stream.Read<float>();
-		for (const auto& groups : chunk->GetChildren())
-			for (const auto& group : groups->GetChildren())
-			{
-				if (!group->IsType(P3D::ChunkType::AnimationGroup))
-					continue;
-				const std::string quadName = readLPString(group->GetData(), 4);
-				for (const auto& channel : group->GetChildren())
+		for (auto& quad : animation->quads)
+			for (std::size_t b = fileBatchesFrom; b < _billboardBatches.size(); ++b)
+				if (const int index = _billboardBatches[b]->FindQuad(quad.name); index >= 0)
 				{
-					if (!channel->IsType(P3D::ChunkType::Color))
-						continue;
-					MemoryStream values(channel->GetData());
-					values.Read<uint32_t>();
-					values.ReadString(4);
-					const uint32_t count = values.Read<uint32_t>();
-					std::vector<uint16_t> frames(count);
-					for (auto& frame : frames)
-						frame = values.Read<uint16_t>();
-					BillboardAnimation animation {0, -1, frameRate, frameCount, {}};
-					for (const uint16_t frame : frames)
-						animation.colors.emplace_back(static_cast<float>(frame),
-						                              P3D::P3DUtil::ConvertColor(values.Read<uint32_t>()));
-					for (std::size_t b = fileBatchesFrom; b < _billboardBatches.size() && animation.quad < 0; ++b)
-						if ((animation.quad = _billboardBatches[b]->FindQuad(quadName)) >= 0)
-							animation.batch = b;
-					if (animation.quad >= 0 && !animation.colors.empty())
-						_billboardAnimations.push_back(std::move(animation));
+					_billboardAnimations.push_back({b, index, animation->frameRate, animation->frames, std::move(quad)});
+					break;
 				}
-			}
 	}
 
 	range.entities[1] = _entities.size();
@@ -921,20 +895,18 @@ void Level::Update(double deltatime)
 	// draws debug shit
 	_worldSphere->Update(deltatime);
 
-	// Flashing billboards.
-	for (auto& animation : _billboardAnimations)
+	// Flashing, pulsing billboards, round and round. Hidden, a quad is drawn
+	// black and clear, nothing in either blend.
+	for (auto& animated : _billboardAnimations)
 	{
-		const float frames = std::max(animation.frameCount, animation.colors.back().first + 1.0f);
-		const float frame = std::fmod(static_cast<float>(_animationTime) * animation.frameRate, frames);
-		int key = 0;
-		for (std::size_t k = 0; k < animation.colors.size(); ++k)
-			if (animation.colors[k].first <= frame)
-				key = static_cast<int>(k);
-		if (key != animation.shown)
-		{
-			_billboardBatches[animation.batch]->SetQuadColor(animation.quad, animation.colors[key].second);
-			animation.shown = key;
-		}
+		const float frames = std::max(1.0f, animated.frames);
+		const float frame = std::fmod(static_cast<float>(_animationTime) * animated.frameRate, frames);
+		auto& batch = *_billboardBatches[animated.batch];
+		batch.SetQuadSize(animated.quad, animated.animation.SizeAt(frame, batch.GetQuadSize(animated.quad)));
+		if (!animated.animation.VisibleAt(frame))
+			batch.SetQuadColor(animated.quad, Vector4(0.0f, 0.0f, 0.0f, 0.0f));
+		else if (const auto color = animated.animation.ColorAt(frame))
+			batch.SetQuadColor(animated.quad, *color);
 	}
 
 	// The animated objects' collision, where they now stand.

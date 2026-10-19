@@ -140,12 +140,18 @@ WaspManager::WaspManager(int level, const std::string& levelScript, const Level&
 			const std::string name = group->GetName();
 			if (name.rfind("waspray_bb", 0) == 0)
 				_shotSprites.push_back(std::make_unique<BillboardBatch>(*group));
-			else if (name.rfind("wasp_bb", 0) == 0 || name == "lenseShape" || name == "signal_bbShape")
+			else if (name.rfind("wasp_bb", 0) == 0 || name == "lenseShape" || name == "signal_bbShape" ||
+			         name.rfind("shockwave", 0) == 0)
 				_glows.emplace_back(name, std::make_unique<BillboardBatch>(*group));
 			else
 				continue;
 			glowShaders.insert(group->GetShader());
 		}
+	for (const auto& chunk : root.GetChildren())
+		if (chunk->IsType(P3D::ChunkType::Animation))
+			if (auto animation = BillboardAnimation::FromChunk(*chunk))
+				for (auto& quad : animation->quads)
+					_glowAnimations.push_back(std::move(quad));
 	auto& resources = Game::GetInstance().GetResourceManager();
 	for (const auto& chunk : root.GetChildren())
 		if (chunk->IsType(P3D::ChunkType::Shader))
@@ -502,12 +508,30 @@ void WaspManager::Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& billbo
 			glEnable(GL_BLEND);
 		for (const auto& wasp : _wasps)
 		{
-			if (wasp.gone || wasp.destroyed)
+			if (wasp.gone)
 				continue;
+			const auto& visible = _states[wasp.state].visible;
 			for (const auto& [name, glow] : _glows)
 			{
+				// As the state shows it, and as its animation has it at the
+				// wasp's frame: the signal ring pulses, the shockwave grows and
+				// fades as the wasp comes in.
 				const int joint = wasp.model->FindPropJoint(name);
-				if (joint < 0)
+				const auto shown = visible.find(name);
+				if (joint < 0 || (shown != visible.end() && !shown->second))
+					continue;
+				bool hidden = false;
+				for (const auto& animation : _glowAnimations)
+				{
+					const int quad = glow->FindQuad(animation.name);
+					if (quad < 0)
+						continue;
+					hidden = hidden || !animation.VisibleAt(wasp.frame);
+					glow->SetQuadSize(quad, animation.SizeAt(wasp.frame, glow->GetQuadSize(quad)));
+					if (const auto color = animation.ColorAt(wasp.frame))
+						glow->SetQuadColor(quad, *color);
+				}
+				if (hidden)
 					continue;
 				billboardShader.SetUniformValue(
 				    "viewProj", viewProj * wasp.model->GetTransform() * wasp.model->GetJointTransform(joint));
