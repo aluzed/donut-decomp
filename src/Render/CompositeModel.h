@@ -106,6 +106,9 @@ public:
 	// first posable prop's; and a joint's transform as posed now, in the model's
 	// space.
 	int FindPropJoint(const std::string& prop) const;
+	// Shows or hides the props of that name (a state prop's: a wasp's head
+	// gives way to its exploding one).
+	void SetPropVisible(const std::string& prop, bool visible);
 	int FirstPropJoint() const;
 	Matrix4x4 GetJointTransform(int joint) const;
 	// Where an effect at that joint stands (a particle system): as the joint,
@@ -122,6 +125,9 @@ private:
 		size_t joint = 0;
 		// Whether that joint is of the posed skeleton.
 		bool posable = false;
+		// Its name (a mesh's), and whether it is drawn (SetPropVisible).
+		std::string name;
+		bool visible = true;
 	};
 
 	void updateJoints(float frame, bool loop);

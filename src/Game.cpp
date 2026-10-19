@@ -29,6 +29,7 @@
 #include "RCL/RSDFile.h"
 #include "Render/CompositeModel.h"
 #include "Render/SceneSkins.h"
+#include "Game/WaspManager.h"
 #include "Render/Font.h"
 #include "Render/LineRenderer.h"
 #include "Render/OpenGL/FrameBuffer.h"
@@ -723,6 +724,7 @@ void Game::switchLevel(int level)
 	_pedestrianManager.reset();
 	_trafficManager.reset();
 	_collectibleManager.reset();
+	_waspManager.reset();
 	_pathGraph.reset();
 	_character.reset();
 	_level.reset();
@@ -1190,6 +1192,11 @@ void Game::loadLevel()
 	_pedestrianManager = std::make_unique<PedestrianManager>(*_worldPhysics);
 	_pedestrianManager->LoadModels(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
 	_collectibleManager = std::make_unique<CollectibleManager>(*_level, *_lineRenderer);
+	// The wasp cameras, at the spawn points the level script lists, their
+	// locators in the mission art.
+	_level->LoadP3D(fmt::format("missions/{}/wasps.p3d", levelDirectory()));
+	_waspManager = std::make_unique<WaspManager>(_levelNumber, fmt::format("scripts/{}/leveli.mfk", levelDirectory()),
+	                                             *_level);
 	_collectibleManager->SpawnOnPath();
 
 	// The level's ambient people: AddAmbientCharacter("ralph", "ambient_ralph", 1.3).
@@ -2171,6 +2178,7 @@ void Game::Run()
 				{
 					ctrl.jump(btVector3(0, 0, 0));
 					playPlayerAnimation("jump_idle_take_off", false);
+					_lastJumpAt = _elapsedSeconds;
 				}
 			}
 
@@ -2700,6 +2708,27 @@ void Game::Run()
 				_health = 100.0f;
 			}
 			updateGags();
+			// The wasp cameras: a jump at one, or a car driven into it,
+			// destroys it, for coins.
+			if (_waspManager && _character && _interior.empty())
+			{
+				const bool driving = _inVehicle && _activeVehicle;
+				const Vector3 at = driving ? _activeVehicle->GetPosition() : _character->GetPosition();
+				// A jump, not merely being off the ground: a teleport sets the
+				// player down from a little above, and destroyed a wasp nearby.
+				const bool attacking = driving ? std::abs(_activeVehicle->GetSpeedKmh()) > 10.0f
+				                               : _elapsedSeconds - _lastJumpAt < 1.0;
+				const auto wasps = _waspManager->Update(deltaTime, at, attacking, driving ? 3.5f : 2.5f);
+				if (wasps.destroyed > 0)
+				{
+					_coins += wasps.coins;
+					saveCoins();
+					AddShake(0.4f);
+					_audioManager->PlayRaw(SoundGenerator::Chirp(400.0f, 60.0f, 0.4f, 44100), 44100, 1, 16);
+					_cardMessage = fmt::format("Wasp cameras {}/{}", _waspManager->GetDestroyed(), _waspManager->GetTotal());
+					_cardMessageUntil = _elapsedSeconds + 3.0;
+				}
+			}
 			if (_collectibleManager)
 			{
 				const Vector3 collector = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()
@@ -2992,6 +3021,8 @@ void Game::Run()
 			_collectibleManager->Draw(_level->GetWorldShader(), viewProjection, static_cast<float>(_elapsedSeconds));
 
 		drawGags(viewProjection);
+		if (_waspManager && _interior.empty())
+			_waspManager->Draw(_level->GetWorldShader(), viewProjection);
 
 		if (_scriptEngine->IsMissionActive() && !_scriptEngine->GetCheckpoints().empty())
 		{

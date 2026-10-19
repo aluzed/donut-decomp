@@ -139,7 +139,7 @@ CompositeModel::CompositeModel(const ICompositeModel& provider)
 
 			const auto& transform = transforms[prop->GetSkeletonJoint()];
 			_props.push_back(DrawableProp {meshNames[prop->GetName()], transform, prop->GetSkeletonJoint(),
-			                               posable && !_jointNames.empty()});
+			                               posable && !_jointNames.empty(), propName});
 			if (posable && !_jointNames.empty())
 				_propJoints[propName] = static_cast<int>(prop->GetSkeletonJoint());
 		}
@@ -150,6 +150,13 @@ int CompositeModel::FindPropJoint(const std::string& prop) const
 {
 	const auto found = _propJoints.find(prop);
 	return found != _propJoints.end() ? found->second : -1;
+}
+
+void CompositeModel::SetPropVisible(const std::string& prop, bool visible)
+{
+	for (auto& p : _props)
+		if (p.name == prop)
+			p.visible = visible;
 }
 
 int CompositeModel::FirstPropJoint() const
@@ -254,6 +261,8 @@ void CompositeModel::Draw(GL::ShaderProgram& shader, const Matrix4x4& viewProj, 
 	shader.Bind();
 	for (const auto& prop : _props)
 	{
+		if (!prop.visible)
+			continue;
 		shader.SetUniformValue("viewProj", viewProj * modelMatrix * prop.transform);
 		_meshes[prop.meshIndex]->Draw(shader, opaque);
 	}

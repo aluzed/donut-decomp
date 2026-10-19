@@ -42,6 +42,7 @@ class ScriptEngine;
 class Vehicle;
 class CompositeModel;
 class SceneSkins;
+class WaspManager;
 class TrafficManager;
 class PathGraph;
 class PedestrianManager;
@@ -167,6 +168,7 @@ private:
 	std::unique_ptr<PathGraph> _pathGraph;
 	std::unique_ptr<PedestrianManager> _pedestrianManager;
 	std::unique_ptr<CollectibleManager> _collectibleManager;
+	std::unique_ptr<WaspManager> _waspManager;
 	std::unique_ptr<class HitAndRun> _hitAndRun;
 	// Runs the Hit & Run meter: people run down, the police, busted.
 	void updateHitAndRun(double dt);
@@ -256,6 +258,7 @@ private:
 	double _playerIdleFor = 0.0;
 	double _playerAirborneFor = 0.0;
 	double _playerGestureAt = 0.0;
+	double _lastJumpAt = -100.0;
 	// Plays the player's animation `what` ("loco_run"), if the character has it.
 	bool playPlayerAnimation(const std::string& what, bool loop);
 	// Picks the player's animation each frame: run, jump, land, idle.
