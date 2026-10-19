@@ -89,13 +89,11 @@ CompositeModel::CompositeModel(const ICompositeModel& provider)
 
 	for (const auto& drawable : drawables)
 	{
+		// A drawable with no props still has its skeleton kept: an effect-only
+		// one (a vent's steam) is placed by it.
 		const auto& propList = drawable->GetPropList();
-		if (!propList)
-			continue;
-
-		const auto& props = propList->GetProps();
-		if (props.empty())
-			continue;
+		static const std::vector<std::unique_ptr<P3D::CompositeDrawableProp>> noProps;
+		const auto& props = propList ? propList->GetProps() : noProps;
 
 		const auto& transforms = jointTransforms[drawable->GetSkeletonName()];
 
@@ -165,6 +163,13 @@ int CompositeModel::FirstPropJoint() const
 Matrix4x4 CompositeModel::GetJointTransform(int joint) const
 {
 	return joint >= 0 && joint < static_cast<int>(_jointGlobals.size()) ? _jointGlobals[joint] : Matrix4x4::Identity;
+}
+
+Matrix4x4 CompositeModel::GetEffectTransform(int joint) const
+{
+	if (_animation || _jointRests.empty())
+		return GetJointTransform(joint);
+	return _jointRests[0] * GetJointTransform(joint);
 }
 
 int CompositeModel::FindJoint(const std::string& name) const

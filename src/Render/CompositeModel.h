@@ -108,6 +108,10 @@ public:
 	int FindPropJoint(const std::string& prop) const;
 	int FirstPropJoint() const;
 	Matrix4x4 GetJointTransform(int joint) const;
+	// Where an effect at that joint stands (a particle system): as the joint,
+	// but with the root's own rest -- which the props ignore, and which places
+	// an effect-only skeleton (a vent's steam) in the world.
+	Matrix4x4 GetEffectTransform(int joint) const;
 
 private:
 	struct DrawableProp

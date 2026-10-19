@@ -92,7 +92,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | ID | Status | Pri | Subject |
 |---|---|---|---|
 | P3D-004 | 🟡 | P1 | Animation controllers. Pose animations play on composite models (`CompositeModel::Pose`), Vector1/2/3 and (compressed) quaternion channels: gags animate. Gag scenes' characters too (`SceneSkins`). The level's `Anim` and `AnimCollision` objects, never loaded before (69 on level 1: windmill, signs, butterflies, rivers, the power plant's platforms and fans), are drawn and go round. Doorbells play their button and switch when rung; breakables (crates, gas pumps) break when the car runs into them. The moving objects' collision moves with them (the power plant's platforms carry the player). Missing: the power plant's own switches, `FrameController`/`MultiController` timing, texture animations |
-| P3D-001 | ⬜ | P1 | Particle systems (8 chunks): smoke, fire, nitro |
+| P3D-001 | 🟡 | P1 | Particle systems: the animated objects' effects (steam, smoke, the tire fire, torches) run and draw (2026-10-19). Missing: weight, spin, drag, emitter orientation, the world-placed systems (0x3001001), the wasp cameras' effects, nitro |
 | P3D-006 | 🟡 | P1 | Entity variants: `AnimDynamicPhysicsWrapper` accepted and drawn (with or without its wrapper); `AnimCollision` still ignored |
 | P3D-008 | 🟡 | P1 | Spline / LocatorMatrix / SurfaceTypeList: layouts reversed and checked over 7892 occurrences, 13 camera rails exposed by name. `SurfaceTypeList` unused (→ PHYS-008) |
 | P3D-009 | ⬜ | P1 | CollisionWallVolume / CollisionEffect / Atc |
@@ -114,7 +114,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 |---|---|---|---|---|
 | RENDER-006 | 🟡 | P1 | AnimObjectWrapper: fill `_shaders`/`_textures` | `Render/CompositeModel.h`: still empty; drawing goes through the ResourceManager by name |
 | RENDER-007 | ⬜ | P2 | `CompositeDrawable` methods | declared only |
-| RENDER-011 | 🟡 | P2 | WorldSphere billboards (lens flare, sun halo) | Drawn with the billboard program, not the world's (whose vertex layout is not theirs): the sun's warm halo shows (2026-10-19). The sky's meshes still look like scattered pale panels, with or without their animation; lens flares not done |
+| RENDER-011 | 🟡 | P2 | WorldSphere billboards (lens flare, sun halo) | Drawn with the billboard program, not the world's (whose vertex layout is not theirs): the sun's warm halo shows; the sky's clouds show since the fog no longer mixes into the alpha (2026-10-19). Lens flares not done |
 | RENDER-014 | ⬜ | P2 | Multi-UV (channel 1 = lightmap) | needed by RENDER-015 |
 | RENDER-015 | ⬜ | P2 | Lightmaps, static lighting | after RENDER-014 |
 | RENDER-008 | 🧩 | P2 | LOD and spatial culling | § C.3 |

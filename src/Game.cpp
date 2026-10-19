@@ -1163,6 +1163,17 @@ void Game::loadLevel()
 		_level->LoadP3D(file);
 	// The mission art shared by the whole level: the coin, among others.
 	_level->LoadP3D(fmt::format("missions/{}/level.p3d", levelDirectory()));
+	// The level's effects file (art/l01_fx.p3d) holds the textures its particle
+	// effects draw with -- the tire fire's smoke3.bmp -- and was never read: the
+	// smoke showed as squares of whatever texture a shader falls back on. Its
+	// textures only; its shaders could take the names of the world's.
+	if (const std::string fx = fmt::format("art/l{:02}_fx.p3d", _levelNumber); FileSystem::exists(fx))
+	{
+		const P3D::P3DFile effects(fx);
+		for (const auto& chunk : effects.GetRoot().GetChildren())
+			if (chunk->GetType() == P3D::ChunkType::Texture)
+				_resourceManager->LoadTexture(*P3D::Texture::Load(*chunk));
+	}
 	_pathGraph = std::make_unique<PathGraph>(*_level, *_worldPhysics);
 	// Fallen off the map: well below the lowest road. A fixed -50 suited level
 	// 1, but level 3's lower town lies at -68, and the player standing there

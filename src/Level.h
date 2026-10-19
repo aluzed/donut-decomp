@@ -8,6 +8,7 @@
 #include <functional>
 #include <map>
 #include "Core/Math/Matrix4x4.h"
+#include "Render/ParticleSystem.h"
 #include "Render/TextureAnimation.h"
 #include <memory>
 #include <set>
@@ -253,6 +254,18 @@ private:
 		int shown = -1;
 	};
 	std::vector<BillboardAnimation> _billboardAnimations;
+	// Particle effects (steam, smoke, a tire fire): the level's factories by
+	// name, and the systems running, each where a joint of an animated object
+	// is, with the file it came from (for SetDrawOnly).
+	std::map<std::string, std::unique_ptr<ParticleFactory>> _particleFactories;
+	struct PlacedParticles
+	{
+		std::unique_ptr<ParticleSystem> system;
+		std::size_t composite;
+		int joint;
+		std::string file;
+	};
+	std::vector<PlacedParticles> _particles;
 	void drawBillboards(Matrix4x4& viewProj, bool opaque, const std::function<bool(std::size_t)>& shown);
 	void moveVolumes();
 	// The level's texture animations (a river's water, a pool, an arcade

@@ -154,6 +154,25 @@ void Level::LoadP3D(const std::string& filename)
 	std::vector<const P3D::P3DChunk*> fileBillboardAnimations;
 	const std::size_t fileBatchesFrom = _billboardBatches.size();
 
+	// Particle factories, and the systems that name them ("l1z2_steam3Shape"
+	// runs "l1z2_steamShape1"): version, name, factory.
+	std::map<std::string, std::string> particleSystems;
+	for (const auto& chunk : root.GetChildren())
+	{
+		if (chunk->IsType(P3D::ChunkType::ParticleSystemFactory))
+			// The first of a name is kept: another file's of the same name
+			// would destroy one that running systems refer to.
+			if (auto factory = ParticleFactory::FromChunk(*chunk); !factory->GetEmitters().empty())
+				_particleFactories.try_emplace(factory->GetName(), std::move(factory));
+		if (chunk->IsType(P3D::ChunkType::ParticleSystem))
+		{
+			MemoryStream stream(chunk->GetData());
+			stream.Read<uint32_t>();
+			const std::string name = stream.ReadLPString();
+			particleSystems[name] = stream.ReadLPString();
+		}
+	}
+
 	// What the animated objects name: the file's skeletons, meshes and
 	// animations, by name.
 	std::map<std::string, const P3D::P3DChunk*> fileSkeletons, fileGeometries, fileAnimations;
@@ -182,6 +201,26 @@ void Level::LoadP3D(const std::string& filename)
 		{
 			auto model = std::make_unique<CompositeModel>(
 			    CompositeModel_Anim(*chunk, fileSkeletons, fileGeometries, fileAnimations));
+			// Its particle effects: the drawable's effect list names a particle
+			// system and the joint it stands at (name, translucent, joint).
+			for (const auto& child : chunk->GetChildren())
+				if (child->IsType(P3D::ChunkType::CompositeDrawable))
+					for (const auto& list : child->GetChildren())
+						if (list->IsType(P3D::ChunkType::CompositeDrawableEffectList))
+							for (const auto& effect : list->GetChildren())
+							{
+								MemoryStream stream(effect->GetData());
+								const std::string system = stream.ReadLPString();
+								stream.Read<uint32_t>();
+								const int joint = static_cast<int>(stream.Read<uint32_t>());
+								const auto named = particleSystems.find(system);
+								const auto factory = named != particleSystems.end()
+								                         ? _particleFactories.find(named->second)
+								                         : _particleFactories.end();
+								if (factory != _particleFactories.end())
+									_particles.push_back({std::make_unique<ParticleSystem>(*factory->second),
+									                      _compositeModels.size(), joint, filename});
+							}
 			// Its billboards (a siren's lights, an arrow): quads about the
 			// origin, each group drawn where the joint it hangs from is.
 			for (const auto& child : chunk->GetChildren())
@@ -900,6 +939,12 @@ void Level::Update(double deltatime)
 
 	// The animated objects' collision, where they now stand.
 	moveVolumes();
+
+	for (auto& placed : _particles)
+	{
+		const CompositeModel& model = *_compositeModels[placed.composite];
+		placed.system->Update(deltatime, model.GetTransform() * model.GetEffectTransform(placed.joint));
+	}
 }
 
 void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
@@ -977,6 +1022,13 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 			_compositeModels[i]->Draw(*_worldShader, viewProj, _compositeModels[i]->GetTransform(), false);
 
 	drawBillboards(viewProj, false, [&](std::size_t i) { return shown(&DrawRange::billboards, i); });
+
+	// The particle effects, of the file drawn only, when one is.
+	_billboardBatchShader->Bind();
+	_billboardBatchShader->SetUniformValue("viewProj", viewProj);
+	for (auto& placed : _particles)
+		if (!restricted || placed.file == _drawOnly)
+			placed.system->Draw(*_billboardBatchShader);
 
 	_worldInstancedShader->Bind();
 	_worldInstancedShader->SetUniformValue("viewProj", viewProj);
