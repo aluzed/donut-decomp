@@ -30,6 +30,7 @@
 #include "Render/CompositeModel.h"
 #include "Render/SceneSkins.h"
 #include "Game/WaspManager.h"
+#include "Render/ParticleSystem.h"
 #include "Render/Font.h"
 #include "Render/LineRenderer.h"
 #include "Render/OpenGL/FrameBuffer.h"
@@ -558,6 +559,8 @@ void Game::updatePlayerAnimation(double dt, bool moving, bool onGround)
 	}
 	if (wasFalling)
 	{
+		if (_dust)
+			_dust->Burst(10, _character->GetPosition() - Vector3(0.0f, 0.9f, 0.0f));
 		playPlayerAnimation("jump_idle_land", false);
 		return;
 	}
@@ -729,6 +732,8 @@ void Game::switchLevel(int level)
 	_trafficManager.reset();
 	_collectibleManager.reset();
 	_waspManager.reset();
+	_sparks.reset();
+	_dust.reset();
 	_pathGraph.reset();
 	_character.reset();
 	_level.reset();
@@ -822,6 +827,8 @@ void Game::updateCarDamage()
 			const float damage = (flat - kImpactThreshold) * kDamagePerMs;
 			_health = std::max(0.0f, _health - damage);
 			AddShake(std::min(1.0f, flat * 0.05f));
+			if (_sparks)
+				_sparks->Burst(static_cast<int>(std::min(30.0f, flat * 2.0f)), position + Vector3(0.0f, 0.5f, 0.0f));
 			// A low falling thud, for want of the game's crash sounds.
 			_audioManager->PlayRaw(SoundGenerator::Chirp(140.0f, 50.0f, 0.25f, 44100), 44100, 1, 16);
 			Log::Info("Game: impact, {:.1f} m/s lost, -{:.0f} health, {:.0f} left", flat, damage, _health);
@@ -1182,7 +1189,16 @@ void Game::loadLevel()
 		for (const auto& chunk : effects.GetRoot().GetChildren())
 			if (chunk->GetType() == P3D::ChunkType::Texture)
 				_resourceManager->LoadTexture(*P3D::Texture::Load(*chunk));
+		// And the shaders the world does not have already (spark3_m, smoke2_m).
+		for (const auto& chunk : effects.GetRoot().GetChildren())
+			if (chunk->GetType() == P3D::ChunkType::Shader)
+				if (auto shader = P3D::Shader::Load(*chunk); !_resourceManager->HasShader(shader->GetName()))
+					_resourceManager->LoadShader(*shader);
 	}
+	_sparkFactory = ParticleFactory::Burst("spark3_m", 0.5f, 6.0f, 1.2f, 0.4f, 9.8f, Vector4(1.0f, 0.8f, 0.4f, 1.0f));
+	_dustFactory = ParticleFactory::Burst("smoke2_m", 1.2f, 1.0f, 1.4f, 1.2f, 0.0f, Vector4(0.85f, 0.8f, 0.7f, 0.8f));
+	_sparks = std::make_unique<ParticleSystem>(*_sparkFactory);
+	_dust = std::make_unique<ParticleSystem>(*_dustFactory);
 	_pathGraph = std::make_unique<PathGraph>(*_level, *_worldPhysics);
 	// Fallen off the map: well below the lowest road. A fixed -50 suited level
 	// 1, but level 3's lower town lies at -68, and the player standing there
@@ -3143,6 +3159,20 @@ void Game::Run()
 		drawGags(viewProjection);
 		if (_waspManager && _interior.empty())
 			_waspManager->Draw(_level->GetWorldShader(), _level->GetBillboardShader(), viewProjection);
+		if (_sparks && _dust)
+		{
+			_sparks->Update(deltaTime, Matrix4x4::Identity);
+			_dust->Update(deltaTime, Matrix4x4::Identity);
+			GL::ShaderProgram& billboards = _level->GetBillboardShader();
+			billboards.Bind();
+			billboards.SetUniformValue("viewProj", viewProjection);
+			const GLboolean blending = glIsEnabled(GL_BLEND);
+			_sparks->Draw(billboards);
+			_dust->Draw(billboards);
+			if (!blending)
+				glDisable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
 
 		if (_scriptEngine->IsMissionActive() && !_scriptEngine->GetCheckpoints().empty())
 		{

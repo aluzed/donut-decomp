@@ -43,6 +43,12 @@ class ParticleFactory
 {
 public:
 	static std::unique_ptr<ParticleFactory> FromChunk(const P3D::P3DChunk& factory);
+	// A one-emitter factory for bursts the game sets off (sparks off a crash,
+	// dust under a landing): `count` sprites a burst, living `life` seconds,
+	// leaving at `speed` m/s within `spread` radians of straight up, `size`
+	// metres, falling at `gravity` m/s/s, fading out.
+	static std::unique_ptr<ParticleFactory> Burst(const std::string& shader, float life, float speed, float spread,
+	                                              float size, float gravity, const Vector4& color);
 
 	struct Curve
 	{
@@ -91,6 +97,8 @@ public:
 	// to its owner's animation (a wasp's, whose explosion is frames 375-435);
 	// < 0 runs it on its own clock, round and round.
 	void Update(double dt, const Matrix4x4& placement, float timelineFrame = -1.0f);
+	// Gives off `count` sprites at once, at `position`.
+	void Burst(int count, const Vector3& position);
 	// With the billboard program, its viewProj already set.
 	void Draw(GL::ShaderProgram& billboardShader);
 

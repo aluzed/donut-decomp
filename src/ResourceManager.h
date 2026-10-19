@@ -46,6 +46,8 @@ public:
 	void ImGuiDebugWindow(bool* p_open) const;
 
 	Shader* GetShader(const std::string& name) const;
+	// Without the warning GetShader gives for a missing one.
+	bool HasShader(const std::string& name) const { return _shaders.count(name) > 0; }
 	Texture* GetTexture(const std::string& name) const;
 	Font* GetFont(const std::string& name) const;
 	Mesh* GetGeometry(const std::string& name) const;

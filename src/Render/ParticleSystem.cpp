@@ -184,6 +184,55 @@ std::unique_ptr<ParticleFactory> ParticleFactory::FromChunk(const P3D::P3DChunk&
 	return factory;
 }
 
+std::unique_ptr<ParticleFactory> ParticleFactory::Burst(const std::string& shader, float life, float speed, float spread,
+                                                       float size, float gravity, const Vector4& color)
+{
+	// In the file's terms: frames at 30 a second, speed per frame, gravity per
+	// frame per frame; none given off but by Burst (NUM 0).
+	auto factory = std::make_unique<ParticleFactory>();
+	factory->_name = "burst_" + shader;
+	Emitter e;
+	e.shader = shader;
+	e.frameRate = 30.0f;
+	e.lifeFrames = 10.0f;
+	e.life.keys = {{0.0f, life * 30.0f}};
+	e.lifeVariance.keys = {{0.0f, life * 6.0f}};
+	e.speed.keys = {{0.0f, speed / 30.0f}};
+	e.speedVariance.keys = {{0.0f, speed / 90.0f}};
+	e.size.keys = {{0.0f, size}};
+	e.sizeVariance.keys = {{0.0f, size * 0.3f}};
+	e.gravity.keys = {{0.0f, gravity / 900.0f}};
+	e.alphaOverLife.keys = {{0.0f, 255.0f}, {9.0f, 0.0f}};
+	e.sizeOverLife.keys = {{0.0f, 1.0f}, {9.0f, 1.6f}};
+	e.color = color;
+	e.horizontalSpread = 3.14159265f;
+	e.verticalSpread = spread;
+	factory->_emitters.push_back(std::move(e));
+	return factory;
+}
+
+void ParticleSystem::Burst(int count, const Vector3& position)
+{
+	for (auto& running : _running)
+	{
+		const auto& e = *running.emitter;
+		const float rate = e.frameRate;
+		for (int i = 0; i < count; ++i)
+		{
+			Particle p;
+			p.position = position;
+			const float yaw = uniform(_random, -e.horizontalSpread, e.horizontalSpread);
+			const float tilt = uniform(_random, 0.0f, e.verticalSpread);
+			p.velocity = Vector3(std::sin(tilt) * std::cos(yaw), std::cos(tilt), std::sin(tilt) * std::sin(yaw)) *
+			             ((e.speed.At(0.0f, 0.0f) + uniform(_random, -1.0f, 1.0f) * e.speedVariance.At(0.0f, 0.0f)) * rate);
+			p.age = 0.0f;
+			p.life = std::max(0.1f, (e.life.At(0.0f, 30.0f) + uniform(_random, -1.0f, 1.0f) * e.lifeVariance.At(0.0f, 0.0f)) / rate);
+			p.size = std::max(0.01f, e.size.At(0.0f, 1.0f) + uniform(_random, -1.0f, 1.0f) * e.sizeVariance.At(0.0f, 0.0f));
+			running.particles.push_back(p);
+		}
+	}
+}
+
 ParticleSystem::ParticleSystem(const ParticleFactory& factory): _factory(factory), _random(std::random_device {}())
 {
 	_quad = std::make_shared<GL::VertexBuffer>(kCorners.data(), kCorners.size(), sizeof(Vector2));

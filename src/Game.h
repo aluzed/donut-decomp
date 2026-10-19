@@ -43,6 +43,8 @@ class Vehicle;
 class CompositeModel;
 class SceneSkins;
 class WaspManager;
+class ParticleFactory;
+class ParticleSystem;
 class TrafficManager;
 class PathGraph;
 class PedestrianManager;
@@ -169,6 +171,9 @@ private:
 	std::unique_ptr<PedestrianManager> _pedestrianManager;
 	std::unique_ptr<CollectibleManager> _collectibleManager;
 	std::unique_ptr<WaspManager> _waspManager;
+	// The bursts the game sets off: sparks off a crash, dust under a landing.
+	std::unique_ptr<ParticleFactory> _sparkFactory, _dustFactory;
+	std::unique_ptr<ParticleSystem> _sparks, _dust;
 	std::unique_ptr<class HitAndRun> _hitAndRun;
 	// Runs the Hit & Run meter: people run down, the police, busted.
 	void updateHitAndRun(double dt);
