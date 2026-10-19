@@ -9,6 +9,7 @@
 #include <Physics/BulletDebugDraw.h>
 
 #include <cstdint>
+#include <unordered_map>
 
 class btRigidBody;
 class btMotionState;
@@ -48,7 +49,7 @@ public:
 	WorldPhysics(LineRenderer*);
 	~WorldPhysics();
 
-	void Update(float dt) const;
+	void Update(float dt);
 
 	void AddIntersect(const P3D::Intersect&);
 	void AddCollisionVolume(const P3D::CollisionVolume&);
@@ -70,6 +71,37 @@ public:
 	std::vector<KinematicVolume> AddKinematicVolumes(const P3D::CollisionVolume& volume);
 	// Moves one, to `transform` (rotation and translation only).
 	void MoveKinematic(btRigidBody* body, const Matrix4x4& transform) const;
+
+	// A prop a car can knock about (a mailbox, a bin, a lamp post): one rigid
+	// body made of `volume`'s leaf volumes, given in the prop's own space, placed
+	// by `placement` (rotation and translation). `mass` in kilograms. A `fixed`
+	// prop stands as static geometry until released (ReleaseProp); the others
+	// are dynamic from the start, asleep until something touches them.
+	// `centre` takes the body's transform to the prop's: the body is centred on
+	// the volumes, the prop about its base.
+	struct PropBody
+	{
+		btRigidBody* body = nullptr;
+		Matrix4x4 centre;
+	};
+	PropBody AddPropBody(const P3D::CollisionVolume& volume, const Matrix4x4& placement, float mass, bool fixed);
+	// A fixed prop, knocked loose by `hitter`: dynamic from now on. The hitter
+	// was stopped dead by it, as by a wall; it gets back the speed it had,
+	// less what it gave the prop, which leaves with it.
+	void ReleaseProp(btRigidBody* body, float mass, const btCollisionObject* hitter);
+	// A fixed prop that breaks up as it is hit (a hydrant, a stop sign): out
+	// of the world, the hitter given back its speed as above.
+	void RemoveProp(btRigidBody* body, float mass, const btCollisionObject* hitter);
+	static Matrix4x4 GetBodyTransform(const btRigidBody* body);
+	// Every pair of bodies in touch now, and how hard they push on each other
+	// (the impulse their contacts took this step, N·s).
+	struct Contact
+	{
+		const btCollisionObject* a;
+		const btCollisionObject* b;
+		float impulse;
+	};
+	std::vector<Contact> GetContacts() const;
 
 	// Adds `shape` as static (zero-mass) rigid body geometry; see the note in the
 	// implementation for why a bare btCollisionObject is not enough.
@@ -112,6 +144,12 @@ private:
 	// allocated objects for cleanup
 	std::vector<btCollisionObject*> _allocatedCollisionObjects;
 	std::vector<std::unique_ptr<btMotionState>> _motionStates;
+	std::vector<std::unique_ptr<btCollisionShape>> _propShapes;
+	// The velocity of every moving body before the last step.
+	std::unordered_map<const btCollisionObject*, btVector3> _velocitiesBefore;
+	// The hitter's speed back, less what it gave a prop of `mass`; the speed it
+	// leaves with, zero when there is none to give.
+	btVector3 giveBackSpeed(const btCollisionObject* hitter, float mass);
 	// While AddKinematicVolumes runs, addStaticBody makes kinematic bodies and
 	// lists them here.
 	std::vector<KinematicVolume>* _kinematicSink = nullptr;

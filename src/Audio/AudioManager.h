@@ -62,6 +62,10 @@ public:
 	// A car's sounds, from its sound script (sound\\scripts\\<car>.spt):
 	// the engine loop and the horn it names. Empty when there is none.
 	std::string CarSoundFile(const std::string& car, const std::string& suffix = "") const;
+	// One of the files a sound script's resource names, at random:
+	// ScriptSoundFile("collide", "car_hit_stopsign") is one of the stop sign's
+	// hits (sound\\scripts\\collide.spt). Empty when there is none.
+	std::string ScriptSoundFile(const std::string& script, const std::string& resource) const;
 	// The engine of the car the player drives: one loop, pitched to the revs.
 	void PlayEngine(const std::string& file);
 	void SetEnginePitch(float pitch);

@@ -54,6 +54,7 @@ public:
 	InstancedStaticEntity(const P3D::Geometry&, const std::vector<Matrix4x4>&);
 
 	void Draw(GL::ShaderProgram&, bool opaque) override;
+	void SetInstanceTransform(std::size_t instance, const Matrix4x4& transform) { _mesh->SetTransform(instance, transform); }
 
 	const std::string GetClassName() const override { return "InstancedStaticEntity"; }
 

@@ -55,6 +55,9 @@ public:
 	int BreakObjectsNear(const Vector3& position, float radius);
 	// Whether one stands unbroken within `radius`.
 	bool HasBreakableNear(const Vector3& position, float radius) const;
+	// The props knocked loose since the last call: the sound each makes (a
+	// resource of sound\\scripts\\collide.spt) and where.
+	std::vector<std::pair<std::string, Vector3>> TakeKnockedProps();
 	void Draw(Matrix4x4& viewProj, const Vector3& cameraPos = Vector3::Zero);
 	// The shader the level's own meshes are drawn with, uniforms as Draw left
 	// them -- what any other P3D Mesh (a car's, say) has to be drawn with too.
@@ -62,6 +65,10 @@ public:
 	// Its billboard program, with the frame's uniforms set by Draw.
 	GL::ShaderProgram& GetBillboardShader() { return *_billboardBatchShader; }
 	void LoadP3D(const std::string& filename);
+	// The level's effects file (art/lNN_fx.p3d): the particle effects a prop
+	// gives off as it is hit (InstParticleSystem, 0x3001001: a hedge's
+	// leaves, a mailbox's letters, a bin's rubbish).
+	void LoadHitParticles(const P3D::P3DChunk& effectsRoot);
 
 	void DynaLoadData(const std::string& dynaLoadData);
 
@@ -226,8 +233,80 @@ private:
 		bool breaks = false;
 		bool broken = false;
 		Vector3 position;
+		// One of a breakable's breakings (BreakableObject), played where a prop
+		// is hit and hidden once played; free when not playing.
+		bool pooled = false;
+		bool free = true;
 	};
+	// The breakings of each breakable type: the game's breakable enum, the
+	// first field of a BreakableObject (0x3001000), to the animated objects
+	// that play it.
+	std::map<uint32_t, std::vector<std::size_t>> _breakablePools;
+	// Plays a breaking of `type` at `placement`; false when there is none, or
+	// none free.
+	bool playBreakable(uint32_t type, const Matrix4x4& placement);
 	std::vector<AnimatedObject> _animatedObjects;
+	// The props a car knocks about (DynamicPhysics: mailboxes, bins, lamp
+	// posts, stop signs), each a rigid body its mesh instance follows. What
+	// each does is its collision class (CollisionEffect, 0x3000600): 3 moves
+	// from the first touch; 10, and the breakables but trees (4), stand until
+	// something runs into them at speed. Its mass is its row of the collision
+	// attribute table.
+	struct Prop
+	{
+		btRigidBody* body;
+		Matrix4x4 centre;
+		std::size_t instances;
+		std::size_t slot;
+		float mass;
+		bool fixed;
+		std::string sound;
+		// Heard once a tumble: a mailbox sent flying, not every bounce.
+		bool heard = false;
+		// Where it stood; one fallen far below, through the world, is taken
+		// out of it rather than left falling for ever.
+		float startY;
+		bool gone = false;
+		// A breakable's (class 4): its breaking's type, or -1; whether the prop
+		// goes as it breaks (a hydrant, a stop sign) or stays (a tree shedding
+		// leaves); where it stands; when it last broke.
+		int breakable = -1;
+		bool vanishes = false;
+		// The particle effect it gives off as it is hit, or -1.
+		int hitParticles = -1;
+		Matrix4x4 placement;
+		double brokeAt = -100.0;
+	};
+	std::vector<Prop> _props;
+	// The fixed ones, by body.
+	std::unordered_map<const void*, std::size_t> _fixedProps;
+	std::vector<std::pair<std::string, Vector3>> _knockedProps;
+	// A prop hit: its sound, and its particle effect, where it is.
+	void propHit(const Prop& prop, const Vector3& position);
+	// The hit particle effects, by the game's particle type (an
+	// InstParticleSystem's first field), as factory names; and those playing:
+	// each gives off what its timeline says, then lives out its debris.
+	std::map<uint32_t, std::string> _hitParticleFactories;
+	struct HitParticles
+	{
+		std::unique_ptr<ParticleSystem> system;
+		Matrix4x4 placement;
+		double age = 0.0;
+		float frames = 0.0f;
+		float frameRate = 30.0f;
+	};
+	std::vector<HitParticles> _hitParticles;
+	void updateProps();
+	// The collision attribute table (art/atc/atc.p3d, Atc 0x3000602), by the
+	// row a CollisionEffect names: sound, particle effect, breakable object,
+	// friction, mass, elasticity.
+	struct CollisionAttributes
+	{
+		std::string sound, particle, breakable;
+		float friction = 0.0f, mass = 100.0f, elasticity = 0.0f;
+	};
+	std::vector<CollisionAttributes> _collisionAttributes;
+	void loadCollisionAttributes();
 	// The collision of animated objects (AnimCollision: the power plant's
 	// platforms and fans): kinematic bodies following a joint of their object,
 	// at a fixed offset from it.

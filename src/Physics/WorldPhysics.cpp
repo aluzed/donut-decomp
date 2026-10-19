@@ -8,6 +8,7 @@
 
 #include <BulletCollision/CollisionDispatch/btGhostObject.h>
 #include <BulletCollision/CollisionShapes/btBox2dShape.h>
+#include <BulletCollision/CollisionShapes/btCompoundShape.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <LinearMath/btDefaultMotionState.h>
 
@@ -69,14 +70,25 @@ WorldPhysics::~WorldPhysics()
 	delete _broadphase;
 }
 
-void WorldPhysics::Update(const float dt) const
+void WorldPhysics::Update(const float dt)
 {
+	_velocitiesBefore.clear();
+	for (int i = 0; i < _dynamicsWorld->getNonStaticRigidBodies().size(); ++i)
+	{
+		const btRigidBody* body = _dynamicsWorld->getNonStaticRigidBodies()[i];
+		if (body->isActive())
+			_velocitiesBefore[body] = body->getLinearVelocity();
+	}
+
 	_dynamicsWorld->stepSimulation(dt);
 	_dynamicsWorld->debugDrawWorld();
 }
 
 namespace
 {
+// The user index a prop's body carries.
+constexpr int kPropBody = 1;
+
 // The closest hit, optionally among static objects only.
 struct LevelRayCallback : btCollisionWorld::ClosestRayResultCallback
 {
@@ -86,7 +98,10 @@ struct LevelRayCallback : btCollisionWorld::ClosestRayResultCallback
 
 	bool needsCollision(btBroadphaseProxy* proxy) const override
 	{
-		if (staticOnly && !static_cast<btCollisionObject*>(proxy->m_clientObject)->isStaticObject())
+		// A prop is not the level, even standing: a lamp post by the road
+		// held a passing van up on its top.
+		const auto* object = static_cast<btCollisionObject*>(proxy->m_clientObject);
+		if (staticOnly && (!object->isStaticObject() || object->getUserIndex() == kPropBody))
 			return false;
 		return ClosestRayResultCallback::needsCollision(proxy);
 	}
@@ -241,7 +256,10 @@ void WorldPhysics::AddCollisionVolume(const P3D::CollisionVolume& volume)
 		AddP3DCylinder(*cylinder);
 }
 
-void WorldPhysics::AddP3DOBBoxVolume(const P3D::CollisionOBBoxVolume& volume)
+namespace
+{
+// A leaf volume's shape, and where it stands in the space its volume is given in.
+btCollisionShape* obboxShape(const P3D::CollisionOBBoxVolume& volume, btTransform& transform)
 {
 	const auto centre = volume.GetVectors()[0];
 	const auto rotX = volume.GetVectors()[1];
@@ -250,29 +268,20 @@ void WorldPhysics::AddP3DOBBoxVolume(const P3D::CollisionOBBoxVolume& volume)
 
 	const Quaternion rotation = Matrix3x3(rotX.X, rotX.Y, rotX.Z, rotY.X, rotY.Y, rotY.Z, rotZ.X, rotZ.Y, rotZ.Z).Quat();
 
-	const auto he = volume.GetHalfExtents();
-	const auto bulletShape = new btBoxShape(BulletCast<btVector3>(volume.GetHalfExtents()));
-
-	btTransform worldTransform;
-	worldTransform.setIdentity();
-	worldTransform.setOrigin(BulletCast<btVector3>(centre));
-	worldTransform.setRotation(BulletCast<btQuaternion>(rotation));
-
-	addStaticBody(bulletShape, worldTransform);
+	transform.setIdentity();
+	transform.setOrigin(BulletCast<btVector3>(centre));
+	transform.setRotation(BulletCast<btQuaternion>(rotation));
+	return new btBoxShape(BulletCast<btVector3>(volume.GetHalfExtents()));
 }
 
-void WorldPhysics::AddP3DSphere(const P3D::CollisionSphere& sphere)
+btCollisionShape* sphereShape(const P3D::CollisionSphere& sphere, btTransform& transform)
 {
-	const auto bulletSphere = new btSphereShape(sphere.GetRadius());
-
-	btTransform worldTransform;
-	worldTransform.setIdentity();
-	worldTransform.setOrigin(BulletCast<btVector3>(sphere.GetVectors()[0]));
-
-	addStaticBody(bulletSphere, worldTransform);
+	transform.setIdentity();
+	transform.setOrigin(BulletCast<btVector3>(sphere.GetVectors()[0]));
+	return new btSphereShape(sphere.GetRadius());
 }
 
-void WorldPhysics::AddP3DCylinder(const P3D::CollisionCylinder& cylinder)
+btCollisionShape* cylinderShape(const P3D::CollisionCylinder& cylinder, btTransform& transform)
 {
 	const float radius = cylinder.GetRadius();
 	const float halfLength = cylinder.GetLength();
@@ -293,18 +302,166 @@ void WorldPhysics::AddP3DCylinder(const P3D::CollisionCylinder& cylinder)
 		rotation = Quaternion::Identity;
 	}
 
-	btConvexShape* shape = nullptr;
+	transform.setIdentity();
+	transform.setOrigin(BulletCast<btVector3>(cylinder.GetVectors()[0]));
+	transform.setRotation(BulletCast<btQuaternion>(rotation));
 	if (cylinder.GetFlatEnd() == 1)
-		shape = new btCylinderShape(btVector3(radius, halfLength, radius));
-	else
-		shape = new btCapsuleShape(radius, halfLength * 2);
+		return new btCylinderShape(btVector3(radius, halfLength, radius));
+	return new btCapsuleShape(radius, halfLength * 2);
+}
 
+btCollisionShape* leafShape(const P3D::CollisionVolume& volume, btTransform& transform)
+{
+	if (volume.GetObBox())
+		return obboxShape(*volume.GetObBox(), transform);
+	if (volume.GetSphere())
+		return sphereShape(*volume.GetSphere(), transform);
+	if (volume.GetCylinder())
+		return cylinderShape(*volume.GetCylinder(), transform);
+	return nullptr;
+}
+} // namespace
+
+void WorldPhysics::AddP3DOBBoxVolume(const P3D::CollisionOBBoxVolume& volume)
+{
 	btTransform worldTransform;
-	worldTransform.setIdentity();
-	worldTransform.setOrigin(BulletCast<btVector3>(cylinder.GetVectors()[0]));
-	worldTransform.setRotation(BulletCast<btQuaternion>(rotation));
-
+	auto* shape = obboxShape(volume, worldTransform);
 	addStaticBody(shape, worldTransform);
+}
+
+void WorldPhysics::AddP3DSphere(const P3D::CollisionSphere& sphere)
+{
+	btTransform worldTransform;
+	auto* shape = sphereShape(sphere, worldTransform);
+	addStaticBody(shape, worldTransform);
+}
+
+void WorldPhysics::AddP3DCylinder(const P3D::CollisionCylinder& cylinder)
+{
+	btTransform worldTransform;
+	auto* shape = cylinderShape(cylinder, worldTransform);
+	addStaticBody(shape, worldTransform);
+}
+
+WorldPhysics::PropBody WorldPhysics::AddPropBody(const P3D::CollisionVolume& volume, const Matrix4x4& placement,
+                                                 float mass, bool fixed)
+{
+	std::vector<std::pair<btCollisionShape*, btTransform>> leaves;
+	std::function<void(const P3D::CollisionVolume&)> collect = [&](const P3D::CollisionVolume& v) {
+		for (const auto& sub : v.GetSubVolumes())
+			collect(*sub);
+		btTransform local;
+		if (auto* shape = leafShape(v, local))
+			leaves.emplace_back(shape, local);
+	};
+	collect(volume);
+	if (leaves.empty())
+		return {};
+
+	// Centred on its volumes, so that it tips and turns about the middle of
+	// what it is rather than its base.
+	btVector3 centre(0, 0, 0);
+	for (const auto& leaf : leaves)
+		centre += leaf.second.getOrigin();
+	centre /= static_cast<btScalar>(leaves.size());
+
+	auto compound = std::make_unique<btCompoundShape>();
+	for (auto& [shape, local] : leaves)
+	{
+		local.setOrigin(local.getOrigin() - centre);
+		compound->addChildShape(local, shape);
+		_propShapes.emplace_back(shape);
+	}
+
+	btTransform start;
+	start.setIdentity();
+	start.setOrigin(BulletCast<btVector3>(placement.Translation()));
+	start.setRotation(BulletCast<btQuaternion>(placement.ToQuat().Normal()));
+	btTransform offset;
+	offset.setIdentity();
+	offset.setOrigin(centre);
+	start = start * offset;
+
+	auto motionState = std::make_unique<btDefaultMotionState>(start);
+	btVector3 inertia(0, 0, 0);
+	if (!fixed)
+		compound->calculateLocalInertia(mass, inertia);
+	btRigidBody::btRigidBodyConstructionInfo info(fixed ? 0.0f : mass, motionState.get(), compound.get(), inertia);
+	info.m_friction = 0.6f;
+	info.m_restitution = 0.2f;
+	// Slowed as it tumbles, or it rolls down the street for ever.
+	info.m_linearDamping = 0.1f;
+	info.m_angularDamping = 0.3f;
+	auto* body = new btRigidBody(info);
+	body->setUserIndex(kPropBody);
+	if (fixed)
+		body->setCollisionFlags(body->getCollisionFlags() | btCollisionObject::CF_STATIC_OBJECT);
+	_dynamicsWorld->addRigidBody(body);
+	if (!fixed)
+		// Standing still where it was put, until something runs into it.
+		body->setActivationState(ISLAND_SLEEPING);
+
+	_allocatedCollisionObjects.push_back(body);
+	_motionStates.push_back(std::move(motionState));
+	_propShapes.push_back(std::move(compound));
+
+	return {body, Matrix4x4::MakeTranslate(BulletCast<Vector3>(-centre))};
+}
+
+void WorldPhysics::ReleaseProp(btRigidBody* body, float mass, const btCollisionObject* hitter)
+{
+	_dynamicsWorld->removeRigidBody(body);
+	btVector3 inertia(0, 0, 0);
+	body->getCollisionShape()->calculateLocalInertia(mass, inertia);
+	body->setMassProps(mass, inertia);
+	body->setCollisionFlags(body->getCollisionFlags() & ~btCollisionObject::CF_STATIC_OBJECT);
+	body->updateInertiaTensor();
+	_dynamicsWorld->addRigidBody(body);
+	body->activate(true);
+	body->setLinearVelocity(giveBackSpeed(hitter, mass) * 1.2f);
+}
+
+void WorldPhysics::RemoveProp(btRigidBody* body, float mass, const btCollisionObject* hitter)
+{
+	_dynamicsWorld->removeRigidBody(body);
+	giveBackSpeed(hitter, mass);
+}
+
+btVector3 WorldPhysics::giveBackSpeed(const btCollisionObject* hitter, float mass)
+{
+	auto* other = const_cast<btRigidBody*>(btRigidBody::upcast(hitter));
+	const auto before = _velocitiesBefore.find(hitter);
+	if (!other || other->getInvMass() <= 0.0f || before == _velocitiesBefore.end())
+		return btVector3(0, 0, 0);
+	const float hitterMass = 1.0f / other->getInvMass();
+	const btVector3 after = before->second * (hitterMass / (hitterMass + mass));
+	other->setLinearVelocity(after);
+	return after;
+}
+
+Matrix4x4 WorldPhysics::GetBodyTransform(const btRigidBody* body)
+{
+	btTransform t;
+	body->getMotionState()->getWorldTransform(t);
+	Matrix4x4 m = Matrix4x4(BulletCast<Quaternion>(t.getRotation()));
+	return Matrix4x4::MakeTranslate(BulletCast<Vector3>(t.getOrigin())) * m;
+}
+
+std::vector<WorldPhysics::Contact> WorldPhysics::GetContacts() const
+{
+	std::vector<Contact> contacts;
+	const int manifolds = _collisionDispatcher->getNumManifolds();
+	for (int i = 0; i < manifolds; ++i)
+	{
+		const btPersistentManifold* manifold = _collisionDispatcher->getManifoldByIndexInternal(i);
+		if (manifold->getNumContacts() == 0)
+			continue;
+		float impulse = 0.0f;
+		for (int c = 0; c < manifold->getNumContacts(); ++c)
+			impulse += manifold->getContactPoint(c).getAppliedImpulse();
+		contacts.push_back({manifold->getBody0(), manifold->getBody1(), impulse});
+	}
+	return contacts;
 }
 
 void WorldPhysics::AddP3DFence(const P3D::Fence& fence)

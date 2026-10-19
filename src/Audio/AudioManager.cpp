@@ -7,7 +7,9 @@
 #include "Core/Log.h"
 #include "Render/imgui/imgui.h"
 
+#include <cctype>
 #include <cstdint>
+#include <cstdlib>
 #include <stdexcept>
 
 namespace Donut
@@ -325,6 +327,46 @@ std::string AudioManager::CarSoundFile(const std::string& car, const std::string
 		std::string file = text.substr(open + 1, close - open - 1);
 		std::replace(file.begin(), file.end(), '/', '\\');
 		return file;
+	}
+	return {};
+}
+
+std::string AudioManager::ScriptSoundFile(const std::string& script, const std::string& resource) const
+{
+	const std::string path = "sound\\scripts\\" + script + ".spt";
+	const auto found = _sounds.find(path);
+	if (found == _sounds.end())
+		return {};
+	auto stream = found->second->GetFileStream(path);
+	if (!stream)
+		return {};
+	std::string text(stream->Size(), '\0');
+	stream->ReadBytes(reinterpret_cast<uint8_t*>(text.data()), text.size());
+
+	// create daSoundResourceData named car_hit_stopsign
+	//     AddFilename ( "sound/soundfx/collisions/stopsign_hit_02.rsd" 1.000000 ) ...
+	const std::string named = "named " + resource;
+	std::size_t at = 0;
+	while ((at = text.find(named, at)) != std::string::npos)
+	{
+		at += named.size();
+		if (at < text.size() && !std::isspace(static_cast<unsigned char>(text[at])))
+			continue;
+		const std::size_t next = text.find("create ", at);
+		std::vector<std::string> files;
+		for (std::size_t add = text.find("AddFilename", at); add < next; add = text.find("AddFilename", add + 1))
+		{
+			const std::size_t open = text.find('"', add);
+			const std::size_t close = open == std::string::npos ? open : text.find('"', open + 1);
+			if (close == std::string::npos || close > next)
+				break;
+			std::string file = text.substr(open + 1, close - open - 1);
+			std::replace(file.begin(), file.end(), '/', '\\');
+			files.push_back(file);
+		}
+		if (files.empty())
+			return {};
+		return files[static_cast<std::size_t>(std::rand()) % files.size()];
 	}
 	return {};
 }

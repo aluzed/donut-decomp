@@ -12,9 +12,12 @@
 #include <P3D/P3D.generated.h>
 #include <P3D/P3DFile.h>
 #include <Physics/WorldPhysics.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <Render/BillboardBatch.h>
 
 #include <cmath>
+#include <cstdint>
+#include <utility>
 #include <cstring>
 #include <Render/Font.h>
 #include <Render/LineRenderer.h>
@@ -27,6 +30,26 @@
 
 namespace Donut
 {
+
+namespace
+{
+// The game's breakable types (the first field of a BreakableObject), by the
+// name the collision attribute table gives them; read off what each type's
+// breaking shows (type 3 is a hydrant's, 29 a stop sign's, 15 an oak's).
+const std::map<std::string, uint32_t> kBreakableTypes = {
+    {"eHydrantBreaking", 3},     {"eTomaccoBreaking", 8},  {"ePineTreeBreaking", 14},    {"eOakTreeBreaking", 15},
+    {"eBigBarrierBreaking", 16}, {"eRailCrossBreaking", 17}, {"eKrustyGlassBreaking", 19}, {"eCypressTreeBreaking", 20},
+    {"eDeadTreeBreaking", 21},   {"eSkeletonBreaking", 22}, {"eWillow", 23},              {"eGlobeLight", 25},
+    {"eTreeMorn", 26},           {"ePalmTreeSmall", 27},   {"ePalmTreeLarge", 28},       {"eStopsign", 29},
+    {"ePumpkin", 30},            {"ePumpkinMed", 31},      {"ePumpkinSmall", 32},
+};
+// The game's particle types (an InstParticleSystem's first field) a hit prop
+// gives off, by the table's names; read off their textures (type 6 is
+// letters, 4 apples, bones and banana skins).
+const std::map<std::string, uint32_t> kHitParticleTypes = {
+    {"eShrub", 3}, {"eGarbage", 4}, {"eOakTreeLeaves", 5}, {"eMail", 6},
+};
+} // namespace
 
 namespace
 {
@@ -342,6 +365,8 @@ void Level::LoadP3D(const std::string& filename)
 			for (const auto& geometry : geometries) { meshesNameIndex.insert({geometry->GetName(), meshesNameIndex.size()}); }
 
 			std::unordered_map<std::string, std::vector<Matrix4x4>> meshTransforms;
+			// Each drawable's place among its mesh's instances.
+			std::vector<std::size_t> drawableSlots;
 
 			for (size_t i = 0; i < drawables.size(); ++i)
 			{
@@ -350,6 +375,7 @@ void Level::LoadP3D(const std::string& filename)
 				const auto& meshName = drawable->GetName();
 
 				auto& transforms = meshTransforms[meshName];
+				drawableSlots.push_back(transforms.size());
 				transforms.push_back(transform);
 			}
 
@@ -357,6 +383,7 @@ void Level::LoadP3D(const std::string& filename)
 			// ("l2_lampoldShape3") while the object carries it under its own
 			// name ("l2_oldstreetlamp_Shape"); map::at threw and the load died.
 			// An object with a single mesh draws it whatever the name.
+			std::map<std::string, std::size_t> meshEntities;
 			for (const auto& meshTransformsPair : meshTransforms)
 			{
 				auto index = meshesNameIndex.find(meshTransformsPair.first);
@@ -368,7 +395,72 @@ void Level::LoadP3D(const std::string& filename)
 					continue;
 				}
 				const auto& mesh = geometries.at(index->second);
+				meshEntities[meshTransformsPair.first] = _instances.size();
 				_instances.emplace_back(std::make_unique<InstancedStaticEntity>(*mesh, meshTransformsPair.second));
+			}
+
+			// Its collision, in its own space, and what it does when hit: its
+			// collision effect (class, attribute row, sound).
+			std::unique_ptr<P3D::CollisionObject> collision;
+			uint32_t collisionClass = 0;
+			uint32_t attributeRow = 0;
+			std::string sound;
+			for (const auto& child : chunk->GetChildren())
+			{
+				if (child->IsType(P3D::ChunkType::CollisionObject))
+					collision = P3D::CollisionObject::Load(*child);
+				else if (child->IsType(P3D::ChunkType::CollisionEffect))
+				{
+					MemoryStream stream(child->GetData());
+					collisionClass = stream.Read<uint32_t>();
+					attributeRow = stream.Read<uint32_t>();
+					sound = stream.ReadLPString();
+					sound = sound.substr(0, sound.find('\0'));
+				}
+			}
+			if (!collision || !collision->GetVolume())
+				break;
+
+			loadCollisionAttributes();
+			const CollisionAttributes attributes = attributeRow < _collisionAttributes.size()
+			                                           ? _collisionAttributes[attributeRow]
+			                                           : CollisionAttributes {};
+			const float mass = std::clamp(attributes.mass, 5.0f, 5000.0f);
+			// Trees shed their leaves (their "breakable" is that) but stay.
+			const auto& breakable = attributes.breakable;
+			const bool tree = breakable.find("Tree") != std::string::npos ||
+			                  breakable.find("Palm") != std::string::npos ||
+			                  breakable.find("Willow") != std::string::npos;
+			const bool moves = collisionClass == 3;
+			const bool knocksLoose = collisionClass == 10 || (collisionClass == 4 && !breakable.empty() && !tree);
+			const auto breakableType = kBreakableTypes.find(breakable);
+			const bool breaks = collisionClass == 4 && breakableType != kBreakableTypes.end();
+
+			auto& physics = Game::GetInstance().GetWorldPhysics();
+			for (size_t i = 0; i < drawables.size(); ++i)
+			{
+				const auto body = physics.AddPropBody(*collision->GetVolume(), transforms.at(i), mass, !moves);
+				if (!body.body || (!moves && !knocksLoose && !breaks))
+					continue;
+				const auto entity = meshEntities.find(drawables.at(i)->GetName());
+				const std::size_t instances = entity != meshEntities.end()
+				                                  ? entity->second
+				                                  : (meshEntities.size() == 1 ? meshEntities.begin()->second : SIZE_MAX);
+				if (instances == SIZE_MAX)
+					continue;
+				if (!moves)
+					_fixedProps[body.body] = _props.size();
+				Prop prop {body.body, body.centre, instances, drawableSlots.at(i), mass, !moves,
+				           sound.empty() ? attributes.sound : sound, false, transforms.at(i).Translation().Y};
+				if (breaks)
+				{
+					prop.breakable = static_cast<int>(breakableType->second);
+					prop.vanishes = !tree;
+				}
+				prop.placement = transforms.at(i);
+				if (const auto particles = kHitParticleTypes.find(attributes.particle); particles != kHitParticleTypes.end())
+					prop.hitParticles = static_cast<int>(particles->second);
+				_props.push_back(prop);
 			}
 
 			break;
@@ -432,6 +524,116 @@ void Level::LoadP3D(const std::string& filename)
 				_compositeModels.push_back(std::move(compositeModel));
 			}
 
+			break;
+		}
+		case P3D::ChunkType::BreakableObject:
+		{
+			// A breakable's breaking (a hydrant's geyser, a tree shedding its
+			// leaves): its type, how many may play at once, then its
+			// animation, skeleton, drawable, meshes and particle systems.
+			MemoryStream header(chunk->GetData());
+			const uint32_t type = header.Read<uint32_t>();
+			const uint32_t count = std::min<uint32_t>(header.Read<uint32_t>(), 4);
+			std::map<std::string, std::string> ownSystems;
+			for (const auto& child : chunk->GetChildren())
+			{
+				if (child->IsType(P3D::ChunkType::ParticleSystemFactory))
+					if (auto factory = ParticleFactory::FromChunk(*child); !factory->GetEmitters().empty())
+						_particleFactories.try_emplace(factory->GetName(), std::move(factory));
+				if (child->IsType(P3D::ChunkType::ParticleSystem))
+				{
+					MemoryStream stream(child->GetData());
+					stream.Read<uint32_t>();
+					const std::string name = stream.ReadLPString();
+					ownSystems[name] = stream.ReadLPString();
+				}
+			}
+			// One file's breakings of a type are enough: every region file
+			// carries its own copy.
+			if (_breakablePools.count(type))
+				break;
+			const CompositeModel_Chunk source(*chunk);
+			// Its pieces' visibility over the breaking ("PVIS": a tree's trunk
+			// pieces gone by frame 30): per prop, a group (version, name, ...)
+			// whose bool channel holds version, param, the start state (u16),
+			// then the toggles (count, u16 frames).
+			std::vector<CompositeModel::VisibilityTrack> visibility;
+			for (const auto& animation : chunk->GetChildren())
+			{
+				if (!animation->IsType(P3D::ChunkType::Animation))
+					continue;
+				MemoryStream animationHeader(animation->GetData());
+				animationHeader.Read<uint32_t>();
+				animationHeader.ReadLPString();
+				if (animationHeader.ReadString(4).rfind("PVIS", 0) != 0)
+					continue;
+				for (const auto& groups : animation->GetChildren())
+					for (const auto& group : groups->GetChildren())
+					{
+						if (!group->IsType(P3D::ChunkType::AnimationGroup))
+							continue;
+						MemoryStream groupHeader(group->GetData());
+						groupHeader.Read<uint32_t>();
+						CompositeModel::VisibilityTrack track;
+						track.prop = groupHeader.ReadLPString();
+						track.prop = track.prop.substr(0, track.prop.find('\0'));
+						for (const auto& channel : group->GetChildren())
+						{
+							if (!channel->IsType(P3D::ChunkType::BoolChannel))
+								continue;
+							MemoryStream stream(channel->GetData());
+							stream.Read<uint32_t>();
+							stream.ReadString(4);
+							track.startsVisible = stream.Read<uint16_t>() != 0;
+							const uint32_t toggles = stream.Read<uint32_t>();
+							for (uint32_t i = 0; i < toggles; ++i)
+								track.toggles.push_back(static_cast<float>(stream.Read<uint16_t>()));
+						}
+						visibility.push_back(std::move(track));
+					}
+			}
+			for (uint32_t n = 0; n < count; ++n)
+			{
+				auto model = std::make_unique<CompositeModel>(source);
+				if (!model->IsAnimated())
+					break;
+				model->SetVisibilityAnimation(visibility);
+				model->SetVisible(false);
+				AnimatedObject object {_compositeModels.size(), fmt::format("breakable{}", type), false};
+				object.breaks = true;
+				object.pooled = true;
+				const int objectIndex = static_cast<int>(_animatedObjects.size());
+				for (const auto& drawable : chunk->GetChildren())
+				{
+					if (!drawable->IsType(P3D::ChunkType::CompositeDrawable))
+						continue;
+					for (const auto& list : drawable->GetChildren())
+					{
+						if (!list->IsType(P3D::ChunkType::CompositeDrawableEffectList))
+							continue;
+						for (const auto& effect : list->GetChildren())
+						{
+							MemoryStream stream(effect->GetData());
+							std::string system = stream.ReadLPString();
+							system = system.substr(0, system.find('\0'));
+							stream.Read<uint32_t>();
+							const int joint = static_cast<int>(stream.Read<uint32_t>());
+							std::string factoryName;
+							if (const auto own = ownSystems.find(system); own != ownSystems.end())
+								factoryName = own->second;
+							else if (const auto shared = particleSystems.find(system); shared != particleSystems.end())
+								factoryName = shared->second;
+							const auto factory = _particleFactories.find(factoryName);
+							if (factory != _particleFactories.end())
+								_particles.push_back({std::make_unique<ParticleSystem>(*factory->second),
+								                      _compositeModels.size(), joint, filename, objectIndex});
+						}
+					}
+				}
+				_breakablePools[type].push_back(_animatedObjects.size());
+				_animatedObjects.push_back(object);
+				_compositeModels.push_back(std::move(model));
+			}
 			break;
 		}
 		case P3D::ChunkType::Intersect:
@@ -826,6 +1028,209 @@ void Level::unloadRegion(const std::string& filename)
 	_loadedP3Ds.erase(filename);
 }
 
+void Level::loadCollisionAttributes()
+{
+	if (!_collisionAttributes.empty())
+		return;
+	const std::string path = "./art/atc/atc.p3d";
+	if (!FileSystem::exists(path))
+	{
+		Log::Warn("Level: no collision attribute table ({})", path);
+		_collisionAttributes.resize(1);
+		return;
+	}
+	const auto p3d = P3D::P3DFile(path);
+	for (const auto& chunk : p3d.GetRoot().GetChildren())
+	{
+		if (!chunk->IsType(P3D::ChunkType::Atc))
+			continue;
+		MemoryStream stream(chunk->GetData());
+		const uint32_t rows = stream.Read<uint32_t>();
+		const auto text = [&] {
+			std::string value = stream.ReadLPString();
+			return value.substr(0, value.find('\0'));
+		};
+		for (uint32_t i = 0; i < rows; ++i)
+		{
+			CollisionAttributes row;
+			row.sound = text();
+			row.particle = text();
+			row.breakable = text();
+			row.friction = stream.Read<float>();
+			row.mass = stream.Read<float>();
+			row.elasticity = stream.Read<float>();
+			_collisionAttributes.push_back(row);
+		}
+	}
+	if (_collisionAttributes.empty())
+		_collisionAttributes.resize(1);
+	Log::Info("Level: {} collision attribute rows", _collisionAttributes.size());
+}
+
+void Level::updateProps()
+{
+	if (_props.empty())
+		return;
+	auto& physics = Game::GetInstance().GetWorldPhysics();
+
+	// The fixed ones knocked loose by anything that runs into one hard enough:
+	// a car, not the player walking by. A lamp post (1000 kg) takes a car
+	// (1500 kg) losing some 7 km/h on it; a stop sign, a touch.
+	for (const auto& contact : physics.GetContacts())
+	{
+		for (const auto& [mine, other] : {std::pair(contact.a, contact.b), std::pair(contact.b, contact.a)})
+		{
+			const auto found = _fixedProps.find(mine);
+			if (found == _fixedProps.end() || other->isStaticObject())
+				continue;
+			Prop& prop = _props[found->second];
+			if (prop.gone || !prop.fixed || contact.impulse <= std::max(300.0f, prop.mass * 3.0f))
+				continue;
+			// A breakable plays its breaking: a hydrant, a stop sign go with
+			// it; a tree stands, shedding leaves, again a while later.
+			if (prop.breakable >= 0)
+			{
+				if (_animationTime - prop.brokeAt < 5.0)
+					continue;
+				if (playBreakable(static_cast<uint32_t>(prop.breakable), prop.placement))
+				{
+					prop.brokeAt = _animationTime;
+					propHit(prop, prop.placement.Translation());
+					if (prop.vanishes)
+					{
+						physics.RemoveProp(prop.body, prop.mass, other);
+						static_cast<InstancedStaticEntity&>(*_instances[prop.instances])
+						    .SetInstanceTransform(prop.slot, Matrix4x4(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+						prop.gone = true;
+					}
+					continue;
+				}
+				// Its breaking not loaded: a tree stands, the rest are
+				// knocked loose.
+				if (!prop.vanishes)
+					continue;
+			}
+			physics.ReleaseProp(prop.body, prop.mass, other);
+			prop.fixed = false;
+		}
+	}
+
+	for (auto& prop : _props)
+	{
+		if (prop.gone || prop.fixed)
+			continue;
+		if (!prop.body->isActive())
+		{
+			prop.heard = false;
+			continue;
+		}
+		if (prop.body->getWorldTransform().getOrigin().getY() < prop.startY - 50.0f)
+		{
+			physics.GetDynamicsWorld()->removeRigidBody(prop.body);
+			prop.gone = true;
+			continue;
+		}
+		if (!prop.heard && prop.body->getLinearVelocity().length() > 1.5f)
+		{
+			prop.heard = true;
+			propHit(prop, WorldPhysics::GetBodyTransform(prop.body).Translation());
+		}
+		auto& entity = static_cast<InstancedStaticEntity&>(*_instances[prop.instances]);
+		entity.SetInstanceTransform(prop.slot, WorldPhysics::GetBodyTransform(prop.body) * prop.centre);
+	}
+}
+
+void Level::propHit(const Prop& prop, const Vector3& position)
+{
+	_knockedProps.emplace_back(prop.sound, position);
+	if (prop.hitParticles < 0)
+		return;
+	const auto name = _hitParticleFactories.find(static_cast<uint32_t>(prop.hitParticles));
+	const auto factory = name != _hitParticleFactories.end() ? _particleFactories.find(name->second)
+	                                                         : _particleFactories.end();
+	if (factory == _particleFactories.end())
+		return;
+	HitParticles hit;
+	hit.system = std::make_unique<ParticleSystem>(*factory->second);
+	hit.placement = Matrix4x4::MakeTranslate(position);
+	for (const auto& emitter : factory->second->GetEmitters())
+	{
+		hit.frames = std::max(hit.frames, emitter.timelineFrames);
+		hit.frameRate = emitter.frameRate;
+	}
+	// A timeline of none: a short puff.
+	if (hit.frames <= 0.0f)
+		hit.frames = hit.frameRate * 0.5f;
+	_hitParticles.push_back(std::move(hit));
+}
+
+void Level::LoadHitParticles(const P3D::P3DChunk& effectsRoot)
+{
+	for (const auto& chunk : effectsRoot.GetChildren())
+	{
+		if (!chunk->IsType(P3D::ChunkType::InstParticleSystem))
+			continue;
+		// Its type, how many may play at once, then its factories and the
+		// system that names one.
+		MemoryStream header(chunk->GetData());
+		const uint32_t type = header.Read<uint32_t>();
+		// Its sprites' textures and shaders are its own (letter.tga,
+		// letter_m), not the file's.
+		auto& resources = Game::GetInstance().GetResourceManager();
+		for (const auto& child : chunk->GetChildren())
+		{
+			if (child->IsType(P3D::ChunkType::Texture))
+				resources.LoadTexture(*P3D::Texture::Load(*child));
+			else if (child->IsType(P3D::ChunkType::Shader))
+				if (auto shader = P3D::Shader::Load(*child); !resources.HasShader(shader->GetName()))
+					resources.LoadShader(*shader);
+		}
+		for (const auto& child : chunk->GetChildren())
+		{
+			if (child->IsType(P3D::ChunkType::ParticleSystemFactory))
+				if (auto factory = ParticleFactory::FromChunk(*child); !factory->GetEmitters().empty())
+					_particleFactories.try_emplace(factory->GetName(), std::move(factory));
+			if (child->IsType(P3D::ChunkType::ParticleSystem))
+			{
+				MemoryStream stream(child->GetData());
+				stream.Read<uint32_t>();
+				stream.ReadLPString();
+				std::string factory = stream.ReadLPString();
+				_hitParticleFactories.try_emplace(type, factory.substr(0, factory.find('\0')));
+			}
+		}
+	}
+	Log::Info("Level: {} hit particle effects", _hitParticleFactories.size());
+}
+
+bool Level::playBreakable(uint32_t type, const Matrix4x4& placement)
+{
+	const auto pool = _breakablePools.find(type);
+	if (pool == _breakablePools.end())
+		return false;
+	for (const std::size_t index : pool->second)
+	{
+		auto& object = _animatedObjects[index];
+		if (!object.free)
+			continue;
+		object.free = false;
+		object.broken = true;
+		object.startedAt = _animationTime;
+		object.position = placement.Translation();
+		auto& model = *_compositeModels[object.index];
+		model.SetTransform(placement);
+		model.Pose(0.0f, false);
+		model.SetVisible(true);
+		return true;
+	}
+	return false;
+}
+
+std::vector<std::pair<std::string, Vector3>> Level::TakeKnockedProps()
+{
+	return std::exchange(_knockedProps, {});
+}
+
 void Level::moveVolumes()
 {
 	auto& physics = Game::GetInstance().GetWorldPhysics();
@@ -872,7 +1277,7 @@ int Level::PlayAnimatedObject(const std::string& name)
 bool Level::HasBreakableNear(const Vector3& position, float radius) const
 {
 	for (const auto& object : _animatedObjects)
-		if (object.breaks && !object.broken && (object.position - position).Length() < radius)
+		if (object.breaks && !object.pooled && !object.broken && (object.position - position).Length() < radius)
 			return true;
 	return false;
 }
@@ -881,7 +1286,7 @@ int Level::BreakObjectsNear(const Vector3& position, float radius)
 {
 	int broke = 0;
 	for (auto& object : _animatedObjects)
-		if (object.breaks && !object.broken && (object.position - position).Length() < radius)
+		if (object.breaks && !object.pooled && !object.broken && (object.position - position).Length() < radius)
 		{
 			object.broken = true;
 			object.startedAt = _animationTime;
@@ -919,6 +1324,13 @@ void Level::Update(double deltatime)
 			{
 				object.startedAt = -1.0;
 				model.Pose(object.breaks ? model.GetAnimationFrames() : 0.0f, false);
+				// A breaking played goes, ready for the next; its debris live
+				// out their lives.
+				if (object.pooled)
+				{
+					model.SetVisible(false);
+					object.free = true;
+				}
 			}
 			else
 				model.Pose(frame, false);
@@ -944,6 +1356,7 @@ void Level::Update(double deltatime)
 
 	// The animated objects' collision, where they now stand.
 	moveVolumes();
+	updateProps();
 
 	for (auto& placed : _particles)
 	{
@@ -964,6 +1377,19 @@ void Level::Update(double deltatime)
 		                            : model.GetAnimationFrames();
 		placed.system->Update(deltatime, at, frame, playing);
 	}
+
+	for (auto& hit : _hitParticles)
+	{
+		hit.age += deltatime;
+		const float frame = static_cast<float>(hit.age) * hit.frameRate;
+		hit.system->Update(deltatime, hit.placement, frame, frame < hit.frames);
+	}
+	// Gone once their debris have lived out their lives (a few seconds).
+	_hitParticles.erase(std::remove_if(_hitParticles.begin(), _hitParticles.end(),
+	                                   [](const HitParticles& hit) {
+		                                   return hit.age * hit.frameRate > hit.frames + hit.frameRate * 5.0f;
+	                                   }),
+	                    _hitParticles.end());
 }
 
 void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
@@ -1048,6 +1474,8 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 	for (auto& placed : _particles)
 		if (!restricted || placed.file == _drawOnly)
 			placed.system->Draw(*_billboardBatchShader);
+	for (auto& hit : _hitParticles)
+		hit.system->Draw(*_billboardBatchShader);
 
 	_worldInstancedShader->Bind();
 	_worldInstancedShader->SetUniformValue("viewProj", viewProj);

@@ -229,6 +229,14 @@ void CompositeModel::Pose(float frame, bool loop)
 {
 	if (_animation)
 		updateJoints(frame, loop);
+	for (const auto& track : _visibilityTracks)
+	{
+		bool visible = track.startsVisible;
+		for (const float at : track.toggles)
+			if (frame >= at)
+				visible = !visible;
+		SetPropVisible(track.prop, visible);
+	}
 }
 
 void CompositeModel::updateJoints(float frame, bool loop)
@@ -266,6 +274,8 @@ std::unique_ptr<CompositeModel> CompositeModel::LoadP3D(const std::string& filen
 
 void CompositeModel::Draw(GL::ShaderProgram& shader, const Matrix4x4& viewProj, const Matrix4x4& modelMatrix, bool opaque)
 {
+	if (!_visible)
+		return;
 	shader.Bind();
 	for (const auto& prop : _props)
 	{

@@ -86,6 +86,9 @@ public:
 	void Draw(GL::ShaderProgram&, const Matrix4x4&, const Matrix4x4&, bool);
 
 	void SetTransform(const Matrix4x4& transform) { _transform = transform; }
+	// Hidden, it draws nothing (a breakable's breaking, waiting to be played).
+	void SetVisible(bool visible) { _visible = visible; }
+	bool IsVisible() const { return _visible; }
 	const Matrix4x4& GetTransform() const { return _transform; }
 
 	// The model's first animation, if it has one: its length in frames and its
@@ -111,6 +114,16 @@ public:
 	// Shows or hides the props of that name (a state prop's: a wasp's head
 	// gives way to its exploding one).
 	void SetPropVisible(const std::string& prop, bool visible);
+	// A visibility animation ("PVIS": a breaking's pieces, gone one by one),
+	// which Pose plays too: each prop, shown or not at the start, turning at
+	// these frames.
+	struct VisibilityTrack
+	{
+		std::string prop;
+		bool startsVisible = true;
+		std::vector<float> toggles;
+	};
+	void SetVisibilityAnimation(std::vector<VisibilityTrack> tracks) { _visibilityTracks = std::move(tracks); }
 	int FirstPropJoint() const;
 	Matrix4x4 GetJointTransform(int joint) const;
 	// Where an effect at that joint stands (a particle system): as the joint,
@@ -145,6 +158,8 @@ private:
 	std::unique_ptr<SkinAnimation> _animation;
 
 	Matrix4x4 _transform = Matrix4x4::Identity;
+	bool _visible = true;
+	std::vector<VisibilityTrack> _visibilityTracks;
 	std::vector<std::unique_ptr<Mesh>> _meshes;
 	std::vector<std::unique_ptr<BillboardBatch>> _billboards;
 	std::vector<DrawableProp> _props;

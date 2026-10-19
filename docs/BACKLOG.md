@@ -27,8 +27,8 @@ real menus, subtitles, particles, lighting) and **scale** (streaming, culling).
 | | § B tickets | § C epic sub-tickets |
 |---|---|---|
 | ✅ Done | 20 | 5 |
-| 🟡 Partial | 17 | 8 |
-| ⬜ To do | 27 | 10 |
+| 🟡 Partial | 19 | 8 |
+| ⬜ To do | 25 | 10 |
 
 Plus 19 closed earlier (§ A) and 4 epics (§ C).
 
@@ -92,10 +92,10 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | ID | Status | Pri | Subject |
 |---|---|---|---|
 | P3D-004 | 🟡 | P1 | Animation controllers. Pose animations play on composite models (`CompositeModel::Pose`), Vector1/2/3 and (compressed) quaternion channels: gags animate. Gag scenes' characters too (`SceneSkins`). The level's `Anim` and `AnimCollision` objects, never loaded before (69 on level 1: windmill, signs, butterflies, rivers, the power plant's platforms and fans), are drawn and go round. Doorbells play their button and switch when rung; breakables (crates, gas pumps) break when the car runs into them. The moving objects' collision moves with them (the power plant's platforms carry the player). Missing: the power plant's own switches, `FrameController`/`MultiController` timing, texture animations |
-| P3D-001 | 🟡 | P1 | Particle systems: the animated objects' effects (steam, smoke, the tire fire, torches) run and draw (2026-10-19). Missing: weight, spin, drag, emitter orientation, the world-placed systems (0x3001001), the wasp cameras' effects, nitro |
+| P3D-001 | 🟡 | P1 | Particle systems: the animated objects' effects (steam, smoke, the tire fire, torches) run and draw (2026-10-19); the wasp cameras', breakings', and the props' hit effects (0x3001001); gravity read right, so debris fall (2026-10-20). Missing: weight, spin, drag, nitro |
 | P3D-006 | 🟡 | P1 | Entity variants: `AnimDynamicPhysicsWrapper` accepted and drawn (with or without its wrapper); `AnimCollision` still ignored |
 | P3D-008 | 🟡 | P1 | Spline / LocatorMatrix / SurfaceTypeList: layouts reversed and checked over 7892 occurrences, 13 camera rails exposed by name. `SurfaceTypeList` unused (→ PHYS-008) |
-| P3D-009 | ⬜ | P1 | CollisionWallVolume / CollisionEffect / Atc |
+| P3D-009 | 🟡 | P1 | CollisionWallVolume / CollisionEffect / Atc: `CollisionEffect` (class, attribute row, sound) and the `Atc` table (sound, particle, breakable, friction, mass, elasticity) read by hand for PHYS-011 (2026-10-20). `CollisionWallVolume` not done |
 | P3D-002 | ⬜ | P2 | Lights (headlights, dynamic lights) |
 | P3D-007 | ⬜ | P2 | Tree/TreeNode (spatial, needed for culling) |
 | P3D-010 | ⬜ | P2 | StaticProp (6 chunks) |
@@ -128,7 +128,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
 | PHYS-004 | 🟡 | P1 | Collision callbacks | Car damage from the change of velocity, with a thud, a voice line, Hit & Run. No contact callbacks |
-| PHYS-011 | ⬜ | P1 | Dynamic bodies for `AnimDynamicPhysics` (things to knock over) | drawn, no body |
+| PHYS-011 | 🟡 | P1 | Things to knock over | The `DynamicPhysics` props (269 on level 1) have bodies: mailboxes and bins fly off, lamp posts give way to a hard hit, hydrants and stop signs break (their `BreakableObject` breaking plays), trees shed leaves; letters, rubbish, leaves fly off (`InstParticleSystem`); masses from `atc.p3d`, sounds from `collide.spt` (2026-10-20). Missing: sparks and stars off a hit, `AnimDynamicPhysics` bodies |
 | PHYS-008 | ⬜ | P2 | Grip per surface (road, grass, pavement) | `_tireGrip` fixed; needs `SurfaceTypeList` |
 | PHYS-005 | ✅ | — | `BulletFenceShape` for fences | |
 | VEH-SINK | ✅ | — | The car drives, and the camera stays above ground | |
@@ -241,8 +241,8 @@ car, rewards), not through the commands.
 1. **Animated props** (P3D-004, then RENDER-006/007): gags, doors and level props come to
    life; the biggest visible gain.
 2. **The game's own screens** (GAME-003, UI-TEXT, UI-LOADING, AUDIO-007 subtitles).
-3. **Gameplay left**: `destroyboss` (MISSION-STAGES), wasp cameras (GAME-WASP), things to
-   knock over (PHYS-011), grip per surface (PHYS-008), one save slot (GAME-011).
+3. **Gameplay left**: `destroyboss` (MISSION-STAGES), wasp cameras (GAME-WASP), hit particles
+   (PHYS-011), grip per surface (PHYS-008), one save slot (GAME-011).
 4. **World look**: particles (P3D-001), lights (P3D-002), lightmaps (RENDER-014/015), fog
    (LEVEL-FOG), sun halo (RENDER-011).
 5. **Scale**: LEVEL-STREAM, then culling (RENDER-008).

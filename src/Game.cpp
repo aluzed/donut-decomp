@@ -1202,6 +1202,7 @@ void Game::loadLevel()
 			if (chunk->GetType() == P3D::ChunkType::Shader)
 				if (auto shader = P3D::Shader::Load(*chunk); !_resourceManager->HasShader(shader->GetName()))
 					_resourceManager->LoadShader(*shader);
+		_level->LoadHitParticles(effects.GetRoot());
 	}
 	_sparkFactory = ParticleFactory::Burst("spark3_m", 0.5f, 6.0f, 1.2f, 0.4f, 9.8f, Vector4(1.0f, 0.8f, 0.4f, 1.0f));
 	_dustFactory = ParticleFactory::Burst("smoke2_m", 1.2f, 1.0f, 1.4f, 1.2f, 0.0f, Vector4(0.85f, 0.8f, 0.7f, 0.8f));
@@ -2730,6 +2731,15 @@ void Game::Run()
 			}
 		}
 		_level->Update(deltaTime);
+		// A mailbox, a lamp post knocked over: its crash.
+		for (const auto& [sound, where] : _level->TakeKnockedProps())
+		{
+			const std::string file = _audioManager->ScriptSoundFile("collide", sound);
+			Log::Debug("Game: a prop knocked over at ({:.1f}, {:.1f}, {:.1f}), '{}' ({})", where.X, where.Y, where.Z, sound,
+			           file.empty() ? "no sound" : file);
+			if (!file.empty())
+				_audioManager->PlayAudio(file, where);
+		}
 		// A stage that asks for no traffic gets empty streets: neither moved,
 		// drawn nor run into.
 		const bool traffic = !_scriptEngine->IsTrafficSuppressed();

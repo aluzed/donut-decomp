@@ -73,6 +73,9 @@ class MeshInstanced: public Mesh
 public:
 	MeshInstanced(const P3D::Geometry& geometry, const std::vector<Matrix4x4>& transforms);
 
+	// Moves one of its instances (a prop knocked about).
+	void SetTransform(std::size_t instance, const Matrix4x4& transform);
+
 protected:
 	virtual void CreateVertexBinding() override;
 

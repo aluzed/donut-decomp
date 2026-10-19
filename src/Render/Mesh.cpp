@@ -162,6 +162,15 @@ MeshInstanced::MeshInstanced(const P3D::Geometry& geometry, const std::vector<Ma
 {
 }
 
+void MeshInstanced::SetTransform(std::size_t instance, const Matrix4x4& transform)
+{
+	if (instance >= _transforms.size())
+		return;
+	_transforms[instance] = transform;
+	if (_instanceBuffer)
+		_instanceBuffer->UpdateBuffer(&_transforms[instance], instance * sizeof(Matrix4x4), sizeof(Matrix4x4));
+}
+
 void MeshInstanced::CreateVertexBinding()
 {
 	static const size_t vertStride = sizeof(Mesh::Vertex);
