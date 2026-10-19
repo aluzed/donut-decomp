@@ -142,6 +142,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | AUDIO-002 | 🟡 | P1 | Music | Each level's RSD segments chained in order. The `l<n>_music.rms` script (moods, transitions) is not read |
 | AUDIO-007 | 🟡 | P2 | Dialogue: subtitles and lip sync | Conversations, voice lines, doorbells, near-miss shouts are heard. No subtitles, no lip sync |
 | AUDIO-008 | ⬜ | P3 | EFX reverb per zone (inside/outside) | |
+| AUDIO-010 | ✅ | — | Footsteps and tyre squeal by the ground | The characters' own steps (concrete, metal, wood, dirt), landings; `skid`/`dirt_skid` looped while the player's car skids (2026-10-20) |
 | AUDIO-006 | ✅ | — | `audio/` scanned for RCFs, any case | |
 | AUDIO-009 | ✅ | — | Horns: the player's, and the traffic's when kept waiting | |
 | — | ✅ | — | Engines pitched to the revs, ambience per level, gag sounds | none of it listened to yet on the dev machine |

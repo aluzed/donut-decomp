@@ -292,6 +292,14 @@ private:
 	bool playPlayerAnimation(const std::string& what, bool loop);
 	// Picks the player's animation each frame: run, jump, land, idle.
 	void updatePlayerAnimation(double dt, bool moving, bool onGround);
+	// The player's footsteps, a stride at a time, by the ground underfoot
+	// (concrete, metal, wood, dirt), in the character's own shoes; and its
+	// landing.
+	void updateFootsteps(bool onGround);
+	Vector3 _lastFootstepAt;
+	bool _footstepWasOnGround = true;
+	// The character's sound script ("homer"), found once.
+	std::string _footstepScript;
 	// Getting into or out of a car, by its driver's door: the door opens, the
 	// player climbs in or out, the door shuts -- three of the character's
 	// animations. The player has no control meanwhile.

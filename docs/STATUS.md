@@ -55,7 +55,9 @@ into a playable arcade racing game.
 - **Source Pool**: 24 simultaneous sounds; the listener is the camera
 - **Music**: each level's own score, its RSD segments chained in turn
 - **Ambience**: each level's background loop outdoors, a room's indoors
-- **Cars**: the driven car's own engine loop, pitched with speed, and its own horn
+- **Cars**: the driven car's own engine loop, pitched with speed, and its own horn; its tyres
+  squealing as it skids (scraping on loose ground)
+- **Footsteps**: the player's own shoes on concrete, metal, wood or dirt, and landings
 - **Voices**: mission conversations spoken line after line; the player's character on
   crashes, jumps, people run down, cards, wins and failures; traffic drivers rammed,
   residents at their doorbell, the level's people walked up to

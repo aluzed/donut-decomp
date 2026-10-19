@@ -129,6 +129,10 @@ constexpr uint32_t kWheelSprayDirt = 10;
 constexpr uint32_t kWheelSprayGrass = 11;
 constexpr float kWheelSprayKmh = 15.0f;
 constexpr float kWheelSprayTilt = -0.9f;
+// A footstep every so far, metres (a run's stride), heard at the feet, this far
+// under the character's middle.
+constexpr float kStride = 1.1f;
+constexpr float kFeetBelowCentre = 0.9f;
 // A wheel going sideways over the ground faster than this, m/s, skids and
 // marks it, black at twice that; so does one braking hard. How wide its mark.
 constexpr float kSkidSlide = 3.5f;
@@ -551,6 +555,69 @@ bool Game::playPlayerAnimation(const std::string& what, bool loop)
 	return true;
 }
 
+void Game::updateFootsteps(bool onGround)
+{
+	if (!_character || !_audioManager || !_worldPhysics)
+		return;
+	const Vector3 feet = _character->GetPosition() - Vector3(0.0f, kFeetBelowCentre, 0.0f);
+	// Whose shoes: the character's own script ("homer"), or the one its costume
+	// is a variant of ("h_fat" is Homer's).
+	if (_footstepScript.empty())
+	{
+		static const std::pair<char, const char*> kOwners[] = {
+		    {'h', "homer"}, {'b', "bart"}, {'l', "lisa"}, {'m', "marge"}, {'a', "apu"}};
+		for (const std::string& name : {_character->GetName(), _character->GetModelName()})
+			if (!_audioManager->ScriptSoundFile(name, "feet_concrete").empty())
+				_footstepScript = name;
+		if (_footstepScript.empty() && !_character->GetModelName().empty())
+			for (const auto& [initial, owner] : kOwners)
+				if (std::tolower(static_cast<unsigned char>(_character->GetModelName()[0])) == initial)
+					_footstepScript = owner;
+		if (_footstepScript.empty())
+			_footstepScript = "homer";
+	}
+	const auto step = [&](const char* suffix) {
+		const char* ground = "feet_concrete";
+		switch (_worldPhysics->GetSurfaceUnder(feet))
+		{
+		case Surface::Metal: ground = "feet_metal"; break;
+		case Surface::Wood: ground = "feet_wood"; break;
+		case Surface::Grass:
+		case Surface::Dirt:
+		case Surface::Sand:
+		case Surface::Gravel:
+		case Surface::Water: ground = "feet_dirt"; break;
+		default: break;
+		}
+		const std::string file = _audioManager->ScriptSoundFile(_footstepScript, std::string(ground) + suffix);
+		if (!file.empty())
+			_audioManager->PlayAudio(file, feet);
+	};
+
+	if (onGround && !_footstepWasOnGround)
+	{
+		// Down from a jump.
+		step("_jump");
+		_lastFootstepAt = feet;
+	}
+	_footstepWasOnGround = onGround;
+	if (!onGround)
+		return;
+	// A stride's way along the ground since the last step (driven or not: the
+	// autopilot walks without the controls).
+	const Vector3 gone = feet - _lastFootstepAt;
+	if (gone.X * gone.X + gone.Z * gone.Z < kStride * kStride)
+		return;
+	// Put back somewhere else (out of a car, into a building): no step for it.
+	if (gone.X * gone.X + gone.Z * gone.Z > 4.0f * kStride * kStride)
+	{
+		_lastFootstepAt = feet;
+		return;
+	}
+	step("");
+	_lastFootstepAt = feet;
+}
+
 void Game::updatePlayerAnimation(double dt, bool moving, bool onGround)
 {
 	if (_boarding.car)
@@ -757,10 +824,13 @@ void Game::switchLevel(int level)
 	_sparks.reset();
 	_dust.reset();
 	_wheelSprays.clear();
+	if (_audioManager)
+		_audioManager->SetLoop("skid", "");
 	if (_skidMarks)
 		_skidMarks->Clear();
 	_pathGraph.reset();
 	_character.reset();
+	_footstepScript.clear();
 	_level.reset();
 	_worldPhysics = std::make_unique<WorldPhysics>(_lineRenderer.get());
 
@@ -2062,12 +2132,17 @@ void Game::updateWheelSprays(double dt)
 
 	const ParticleFactory* grass = _level ? _level->GetHitParticleFactory(kWheelSprayGrass) : nullptr;
 	const ParticleFactory* dirt = _level ? _level->GetHitParticleFactory(kWheelSprayDirt) : nullptr;
+	// How hard the player's car skids, and whether any of it on the road: its
+	// tyres squeal there, scrape on loose ground.
+	float playerSkid = 0.0f;
+	bool playerSkidsOnRoad = false;
 	for (const Vehicle* vehicle : cars)
 	{
 		const bool moving = std::fabs(vehicle->GetSpeedKmh()) > kWheelSprayKmh;
 		// Every wheel skidding marks the ground, with the ground's own mark.
 		for (int wheel = 0; wheel < 4 && _skidMarks; ++wheel)
 		{
+			const bool player = vehicle == _activeVehicle && _inVehicle;
 			const uint64_t track = reinterpret_cast<uintptr_t>(vehicle) * 4 + wheel;
 			Vector3 contact;
 			const float slide = vehicle->GetWheelSlide(wheel);
@@ -2083,8 +2158,15 @@ void Game::updateWheelSprays(double dt)
 			}
 			const float strength = vehicle->IsBrakingHard() ? 0.8f : std::min(1.0f, slide / (kSkidSlide * 2.0f));
 			if (mark && (slide > kSkidSlide || vehicle->IsBrakingHard()) && vehicle->GetWheelContact(wheel, contact))
+			{
 				_skidMarks->Lay(track, contact, vehicle->GetWheelNormal(wheel), vehicle->GetWheelAxle(wheel), kSkidWidth,
 				                mark, strength);
+				if (player)
+				{
+					playerSkid = std::max(playerSkid, strength);
+					playerSkidsOnRoad = playerSkidsOnRoad || std::string(mark) == "skid_m";
+				}
+			}
 			else
 				_skidMarks->Lift(track);
 		}
@@ -2112,6 +2194,22 @@ void Game::updateWheelSprays(double dt)
 			if (spray.dirt)
 				spray.dirt->Update(dt, placement, -1.0f, onDirt);
 		}
+	}
+	if (_audioManager)
+	{
+		// The game's sound settings name the clips (SetSkidRoadClipName "skid",
+		// SetSkidDirtClipName "dirt_skid").
+		static std::string road, dirt;
+		if (road.empty())
+			for (const char* script : {"carsound", "car_tune", "global"})
+			{
+				if (road.empty())
+					road = _audioManager->ScriptSoundFile(script, "skid");
+				if (dirt.empty())
+					dirt = _audioManager->ScriptSoundFile(script, "dirt_skid");
+			}
+		_audioManager->SetLoop("skid", playerSkid > 0.0f ? (!playerSkidsOnRoad && !dirt.empty() ? dirt : road) : "",
+		                       0.3f + 0.5f * playerSkid);
 	}
 }
 
@@ -3111,6 +3209,8 @@ void Game::Run()
 
 		if (_character != nullptr)
 			_character->Update(deltaTime);
+		if (_character && !_inVehicle && !_boarding.car)
+			updateFootsteps(_character->GetCharacterController().onGround());
 		// The level's people say something to a player who walks up to them,
 		// now and then: one of their recorded idle replies.
 		if (_character && !_inVehicle)

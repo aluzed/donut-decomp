@@ -70,6 +70,10 @@ public:
 	void PlayEngine(const std::string& file);
 	void SetEnginePitch(float pitch);
 	void StopEngine();
+	// A sound looped while something lasts, by name ("skid": the tyres of the
+	// player's car squealing): `file` at `gain`; the same file again only
+	// changes its gain, an empty one stops it.
+	void SetLoop(const std::string& channel, const std::string& file, float gain = 1.0f);
 	// The place's background sound, looped softly ("suburb_day_loop.rsd").
 	void PlayAmbience(const std::string& part);
 	// Every sound the loaded RCFs hold whose name contains `part`, sorted.
@@ -133,6 +137,13 @@ private:
 	std::string _ambience;
 	std::string _ambienceAsked; // the last `part`, to look it up only on a change
 	ALuint _engineBuffer = 0;
+	struct Loop
+	{
+		std::string file;
+		ALuint source = 0;
+		ALuint buffer = 0;
+	};
+	std::unordered_map<std::string, Loop> _loops;
 	std::size_t _playlistIndex = 0;
 	// Stops and frees the music source, if any.
 	void releaseMusic();

@@ -401,6 +401,46 @@ void AudioManager::SetEnginePitch(float pitch)
 		alSourcef(_engineSource, AL_PITCH, std::clamp(pitch, 0.5f, 2.0f));
 }
 
+void AudioManager::SetLoop(const std::string& channel, const std::string& file, float gain)
+{
+	auto found = _loops.find(channel);
+	if (found != _loops.end() && found->second.file == file && !file.empty())
+	{
+		alSourcef(found->second.source, AL_GAIN, gain);
+		return;
+	}
+	if (found != _loops.end())
+	{
+		alSourceStop(found->second.source);
+		alSourcei(found->second.source, AL_BUFFER, 0);
+		alDeleteSources(1, &found->second.source);
+		alDeleteBuffers(1, &found->second.buffer);
+		_loops.erase(found);
+	}
+	if (file.empty() || !_alContext)
+		return;
+	const auto sound = _sounds.find(file);
+	if (sound == _sounds.end())
+		return;
+	auto stream = sound->second->GetFileStream(file);
+	if (!stream)
+		return;
+	RCL::RSDFile rsd(*stream);
+	if (rsd.GetData().empty())
+		return;
+	Loop loop {file};
+	alGenSources(1, &loop.source);
+	alGenBuffers(1, &loop.buffer);
+	alBufferData(loop.buffer, getFormat(rsd), rsd.GetData().data(), static_cast<ALsizei>(rsd.GetData().size()),
+	             rsd.GetSampleRate());
+	alSourcei(loop.source, AL_BUFFER, static_cast<ALint>(loop.buffer));
+	alSourcei(loop.source, AL_LOOPING, AL_TRUE);
+	alSourcei(loop.source, AL_SOURCE_RELATIVE, AL_TRUE);
+	alSourcef(loop.source, AL_GAIN, gain);
+	alSourcePlay(loop.source);
+	_loops[channel] = loop;
+}
+
 void AudioManager::StopEngine()
 {
 	if (_engineSource == 0)
@@ -557,6 +597,13 @@ void AudioManager::initializeOpenAL()
 void AudioManager::shutdownOpenAL()
 {
 	releaseMusic();
+	for (auto& [channel, loop] : _loops)
+	{
+		alSourceStop(loop.source);
+		alDeleteSources(1, &loop.source);
+		alDeleteBuffers(1, &loop.buffer);
+	}
+	_loops.clear();
 
 	for (auto& src : _sources)
 	{
