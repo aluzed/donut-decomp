@@ -91,15 +91,6 @@ void readChannels(const P3D::P3DChunk& chunk, Channels& out)
 		readChannels(*child, out);
 }
 
-// `m` applied to the point `v`. Matrix4x4 is stored by columns, M[column][row],
-// and its operator*(Vector3) reads it by rows: the transpose, translation lost.
-Vector3 transformPoint(const Matrix4x4& m, const Vector3& v)
-{
-	return Vector3(m.M[0][0] * v.X + m.M[1][0] * v.Y + m.M[2][0] * v.Z + m.M[3][0],
-	               m.M[0][1] * v.X + m.M[1][1] * v.Y + m.M[2][1] * v.Z + m.M[3][1],
-	               m.M[0][2] * v.X + m.M[1][2] * v.Y + m.M[2][2] * v.Z + m.M[3][2]);
-}
-
 float uniform(std::mt19937& random, float from, float to)
 {
 	return std::uniform_real_distribution<float>(from, to)(random);
@@ -230,7 +221,7 @@ void ParticleSystem::Update(double dt, const Matrix4x4& placement)
 			Particle p;
 			const Vector3 local = e.offset + Vector3(uniform(_random, -0.5f, 0.5f) * e.width, 0.0f,
 			                                         uniform(_random, -0.5f, 0.5f) * e.height);
-			p.position = transformPoint(placement, local);
+			p.position = placement * local;
 			// Straight up, tipped within the spreads.
 			const float yaw = uniform(_random, -e.horizontalSpread, e.horizontalSpread);
 			const float tilt = uniform(_random, -e.verticalSpread, e.verticalSpread);
