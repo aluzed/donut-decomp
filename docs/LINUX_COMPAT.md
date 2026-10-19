@@ -54,6 +54,12 @@ sudo apt install \
 | `libgl1-mesa-dev` | Headers OpenGL | Oui |
 | `mesa-utils` | `glxinfo` (diagnostic GPU) | Non |
 
+> **Without root:** `tools/fetch_deps.sh` downloads Bullet, fmt, OpenAL and glm with
+> `apt-get download` and unpacks them into `deps/sysroot` (ignored by git; the `.deb`
+> files are kept in `deps/debs` for offline reuse). `CMakeLists.txt` searches there
+> first, and the binary finds those libraries through its RUNPATH, so no
+> `LD_LIBRARY_PATH` is needed for them. Re-run `cmake -S . -B build` afterwards.
+
 ### Arch Linux
 
 ```bash

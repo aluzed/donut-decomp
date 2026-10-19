@@ -39,6 +39,11 @@ mark_as_advanced(_CXX_FILESYSTEM_HAVE_HEADER)
 mark_as_advanced(_CXX_FILESYSTEM_HAVE_EXPERIMENTAL_HEADER)
 
 # Dependencies
+# Libraries unpacked into the project without root (tools/fetch_deps.sh) come
+# first, so that no system install is needed for them.
+if (EXISTS "${CMAKE_SOURCE_DIR}/deps/sysroot/usr")
+  list(PREPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/deps/sysroot/usr")
+endif()
 find_package(SDL2 REQUIRED)
 find_package(fmt REQUIRED)
 find_package(OpenAL REQUIRED) #find_package(openal-soft CONFIG REQUIRED)
