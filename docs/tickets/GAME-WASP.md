@@ -29,13 +29,22 @@ locators are in `art/missions/levelNN/wasps.p3d` (now loaded with the level).
   over 10 km/h). Destroyed, it plays its explosion and is gone, for 20 coins and the count,
   "Wasp cameras 1/20"; destroyed wasps stay so (`donut_wasps.dat`, every level's).
 
+- **Their behaviours**, from the level script (`AddBehaviour`, for the class `beecamera` or
+  one spawn point by name, which starts from the class's): `ATTRACTION` (nearest,
+  farthest, speed in km/h; -1 stays put) draws a wasp to a player between the two, never
+  more than 25m from its spot, and back; `ATTACK_PLAYER` (range, arc, period) fires once a
+  period at a player in range within its arc (widened 10 degrees: it turns slower than a
+  player walks): the firing state plays, and the shot costs `SetProjectileStats`'s damage
+  (5 on level 1), with a zap and a jolt. It turns at `SetActorRotationSpeed`.
+
 Checked: the wasp by the lemon tree hovering, its lens glowing; the one by the bonus car
 destroyed by a jump, coming apart, 20 coins (60 to 80), "Wasp cameras 1/20"; twenty on
-each of the seven levels.
+each of the seven levels; the bonus car's wasp coming from 6m to 4m and firing ten
+seconds apart (level 1's period), health 100 to 95 to 90.
 
 ## Not done
 
-- Shooting at the player (`FIRE_ENERGY_BOLT`, the `waspray` projectile and its damage), the
-  wasps flying about (`ATTRACTION`, `ATTACK_PLAYER` behaviours) rather than staying put.
+- The shot itself (the `waspray` projectile, its flight and dodging it): the damage is dealt
+  as the wasp fires. `EVADE_PLAYER`.
 - Their billboards and particle effects (lens glow, shockwave, `wasp_psShape`), the buzz.
 - Wasps high up are out of a jump's reach: the game expects them reached by climbing.

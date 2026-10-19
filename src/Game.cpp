@@ -2719,6 +2719,13 @@ void Game::Run()
 				const bool attacking = driving ? std::abs(_activeVehicle->GetSpeedKmh()) > 10.0f
 				                               : _elapsedSeconds - _lastJumpAt < 1.0;
 				const auto wasps = _waspManager->Update(deltaTime, at, attacking, driving ? 3.5f : 2.5f);
+				// Shot: a zap, a jolt and the damage, on foot or at the wheel.
+				if (wasps.damage > 0.0f)
+				{
+					_health = std::max(0.0f, _health - wasps.damage);
+					AddShake(0.25f);
+					_audioManager->PlayRaw(SoundGenerator::Chirp(1200.0f, 300.0f, 0.15f, 44100), 44100, 1, 16);
+				}
 				if (wasps.destroyed > 0)
 				{
 					_coins += wasps.coins;

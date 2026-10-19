@@ -10,6 +10,7 @@
 #include "P3D/P3DFile.h"
 #include "Render/CompositeModel.h"
 
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <set>
@@ -100,6 +101,7 @@ private:
 
 constexpr int kHovering = 1;
 constexpr int kAlerted = 3;
+constexpr int kFiring = 4;
 constexpr int kDestroyed = 5;
 constexpr float kAlertDistance = 10.0f;
 constexpr int kCoins = 20;
@@ -125,6 +127,8 @@ WaspManager::WaspManager(int level, const std::string& levelScript, const Level&
 		Log::Warn("WaspManager: no beecamera states in {}", fx);
 		return;
 	}
+
+	readBehaviours(levelScript);
 
 	// AddSpawnPointByLocatorScript("w_lemon", "beecamera", "Shelley", "w_lemon", ...).
 	std::set<std::string> destroyed;
@@ -157,6 +161,10 @@ WaspManager::WaspManager(int level, const std::string& levelScript, const Level&
 		Wasp wasp;
 		wasp.id = fmt::format("L{} {}", level, args[3]);
 		wasp.home = home;
+		wasp.position = home;
+		// Its own behaviour, by its spawn point's name, or the class's.
+		const auto own = _behaviours.find(args[0]);
+		wasp.behaviour = own != _behaviours.end() ? own->second : _behaviours["beecamera"];
 		wasp.destroyed = wasp.gone = destroyed.count(wasp.id) > 0;
 		if (!wasp.gone)
 		{
@@ -170,6 +178,57 @@ WaspManager::WaspManager(int level, const std::string& levelScript, const Level&
 }
 
 WaspManager::~WaspManager() = default;
+
+void WaspManager::readBehaviours(const std::string& levelScript)
+{
+	// AddBehaviour("w_simpsons", "ATTRACTION", "2.0", "20", "-1"),
+	// AddBehaviour("beecamera", "ATTACK_PLAYER", "10.0", "5.0", "10.0"),
+	// SetActorRotationSpeed("beecamera", "40.0"), SetProjectileStats("waspray", "60.0", "5").
+	std::ifstream script(levelScript);
+	for (std::string line; std::getline(script, line);)
+	{
+		const std::size_t comment = line.find("//");
+		const std::size_t open = line.find('(');
+		if (open == std::string::npos || (comment != std::string::npos && comment < open))
+			continue;
+		std::vector<std::string> args;
+		for (std::size_t q = line.find('"', open); q != std::string::npos; q = line.find('"', q + 1))
+		{
+			const std::size_t close = line.find('"', q + 1);
+			if (close == std::string::npos)
+				break;
+			args.push_back(line.substr(q + 1, close - q - 1));
+			q = close;
+		}
+		const auto number = [&](std::size_t i, float otherwise) {
+			return i < args.size() ? static_cast<float>(std::atof(args[i].c_str())) : otherwise;
+		};
+		if (line.find("AddBehaviour") != std::string::npos && args.size() >= 5)
+		{
+			// A spawn point's own behaviour starts from the class's.
+			auto found = _behaviours.find(args[0]);
+			if (found == _behaviours.end())
+				found = _behaviours.emplace(args[0], _behaviours["beecamera"]).first;
+			Behaviour& b = found->second;
+			if (args[1] == "ATTRACTION")
+			{
+				b.nearest = number(2, b.nearest);
+				b.farthest = number(3, b.farthest);
+				b.speed = number(4, b.speed);
+			}
+			else if (args[1] == "ATTACK_PLAYER")
+			{
+				b.range = number(2, b.range);
+				b.arc = number(3, b.arc);
+				b.period = number(4, b.period);
+			}
+		}
+		else if (line.find("SetActorRotationSpeed") != std::string::npos && args.size() >= 2)
+			_turnRate = number(1, 85.0f) * 3.14159265f / 180.0f;
+		else if (line.find("SetProjectileStats") != std::string::npos && args.size() >= 3)
+			_shotDamage = number(2, _shotDamage);
+	}
+}
 
 void WaspManager::readStates(const P3D::P3DChunk& stateProp)
 {
@@ -225,16 +284,38 @@ WaspManager::Result WaspManager::Update(double dt, const Vector3& player, bool a
 		if (wasp.gone)
 			continue;
 
-		// Hovering about its spot, bobbing.
-		const Vector3 at = wasp.home + Vector3(0.0f, 0.3f * std::sin(static_cast<float>(_time) * 2.0f + i), 0.0f);
-		const Vector3 toPlayer = player - at;
+		const Behaviour& b = wasp.behaviour;
+		const Vector3 toPlayer = player - wasp.position;
 		const float distance = toPlayer.Length();
+		const float flat = std::sqrt(toPlayer.X * toPlayer.X + toPlayer.Z * toPlayer.Z);
 
 		if (!wasp.destroyed)
 		{
-			// Watching the player who comes near (the model faces -Z).
-			if (distance < kAlertDistance * 2.0f)
-				wasp.yaw = std::atan2(toPlayer.X, toPlayer.Z) + 3.14159265f;
+			// Turning to the player who comes near, at its own rate (the model
+			// faces -Z).
+			if (distance < b.farthest * 2.0f)
+			{
+				float delta = std::atan2(toPlayer.X, toPlayer.Z) + 3.14159265f - wasp.yaw;
+				while (delta > 3.14159265f) delta -= 6.28318531f;
+				while (delta < -3.14159265f) delta += 6.28318531f;
+				const float turn = _turnRate * static_cast<float>(dt);
+				wasp.yaw += std::clamp(delta, -turn, turn);
+			}
+			// Drawn to the player between its nearest and farthest, not too far
+			// from home; back home otherwise. -1 never moves.
+			if (b.speed > 0.0f)
+			{
+				const float step = b.speed / 3.6f * static_cast<float>(dt);
+				Vector3 goal = wasp.home;
+				if (flat > b.nearest && distance < b.farthest * 2.0f && (player - wasp.home).Length() < 25.0f)
+					goal = Vector3(player.X, wasp.home.Y + std::max(0.0f, player.Y - wasp.home.Y), player.Z);
+				Vector3 way = goal - wasp.position;
+				if (flat <= b.nearest && goal != wasp.home)
+					way = Vector3::Zero;
+				if (way.Length() > step)
+					wasp.position += way.Normalized() * step;
+			}
+
 			if (distance < reach && attacking)
 			{
 				wasp.destroyed = true;
@@ -248,7 +329,26 @@ WaspManager::Result WaspManager::Update(double dt, const Vector3& player, bool a
 				enter(wasp, kAlerted);
 			else if (wasp.state == kAlerted && distance > kAlertDistance * 1.5f)
 				enter(wasp, kHovering);
+			// Firing: in range, the player within its arc (a few degrees either
+			// way, widened a little: it turns slower than a player walks), once a
+			// period.
+			else if (wasp.state == kAlerted && distance < b.range && _time >= wasp.nextShot)
+			{
+				float off = std::atan2(toPlayer.X, toPlayer.Z) + 3.14159265f - wasp.yaw;
+				while (off > 3.14159265f) off -= 6.28318531f;
+				while (off < -3.14159265f) off += 6.28318531f;
+				if (std::abs(off) < (b.arc + 10.0f) * 3.14159265f / 180.0f)
+				{
+					enter(wasp, kFiring);
+					wasp.nextShot = _time + (b.period > 0.0f ? b.period : 3.0f);
+					result.damage += _shotDamage;
+					Log::Info("WaspManager: '{}' fires at the player, {:.0f}m", wasp.id, distance);
+				}
+			}
 		}
+
+		// Hovering, bobbing.
+		const Vector3 at = wasp.position + Vector3(0.0f, 0.3f * std::sin(static_cast<float>(_time) * 2.0f + i), 0.0f);
 
 		// Its stretch of the animation: round and round, or through and on.
 		const State& state = _states[wasp.state];

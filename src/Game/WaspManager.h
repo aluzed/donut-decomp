@@ -44,6 +44,8 @@ public:
 	{
 		int coins = 0;
 		int destroyed = 0;
+		// Shots that hit the player, and what they cost.
+		float damage = 0.0f;
 	};
 	Result Update(double dt, const Vector3& player, bool attacking, float reach);
 	void Draw(GL::ShaderProgram& worldShader, const Matrix4x4& viewProj);
@@ -60,9 +62,20 @@ private:
 		int next = -1;
 		std::map<std::string, bool> visible;
 	};
+	// AddBehaviour: ATTRACTION (comes no closer than `nearest`, follows within
+	// `farthest`, at `speed` km/h; -1 stays put) and ATTACK_PLAYER (fires within
+	// `range` metres, `arc` degrees of its heading, every `period` seconds).
+	struct Behaviour
+	{
+		float nearest = 4.0f, farthest = 10.0f, speed = 10.0f;
+		float range = 10.0f, arc = 5.0f, period = 3.0f;
+	};
 	struct Wasp
 	{
 		std::string id;
+		Behaviour behaviour;
+		Vector3 position;
+		double nextShot = 0.0;
 		Vector3 home;
 		std::unique_ptr<CompositeModel> model;
 		int state = 1;
@@ -73,6 +86,10 @@ private:
 	};
 
 	void readStates(const P3D::P3DChunk& stateProp);
+	void readBehaviours(const std::string& levelScript);
+	std::map<std::string, Behaviour> _behaviours;
+	float _turnRate = 1.5f;     // radians a second (SetActorRotationSpeed)
+	float _shotDamage = 5.0f;   // SetProjectileStats
 	void enter(Wasp& wasp, int state);
 	void save() const;
 
