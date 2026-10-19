@@ -57,6 +57,12 @@ public:
 		// Over a particle's life.
 		float lifeFrames = 20.0f;
 		Curve alphaOverLife, sizeOverLife, speedOverLife;
+		// Colour over a particle's life (COOL), multiplying its colour.
+		std::vector<std::pair<float, Vector4>> colorOverLife;
+		// The emission rate over the emitter's timeline (RAT), a multiplier:
+		// an explosion's debris come in one burst. The timeline's length.
+		Curve rate;
+		float timelineFrames = 0.0f;
 		// The emitter's.
 		Curve count, life, lifeVariance, speed, speedVariance, size, sizeVariance, gravity, alpha;
 		Vector4 color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -81,7 +87,10 @@ public:
 
 	// Moves the particles on, giving off new ones where `placement` puts the
 	// system.
-	void Update(double dt, const Matrix4x4& placement);
+	// `timelineFrame`: where the emitters' timeline stands, for an effect keyed
+	// to its owner's animation (a wasp's, whose explosion is frames 375-435);
+	// < 0 runs it on its own clock, round and round.
+	void Update(double dt, const Matrix4x4& placement, float timelineFrame = -1.0f);
 	// With the billboard program, its viewProj already set.
 	void Draw(GL::ShaderProgram& billboardShader);
 
@@ -109,6 +118,7 @@ private:
 	std::shared_ptr<GL::VertexBuffer> _quad;
 	std::shared_ptr<GL::IndexBuffer> _indices;
 	std::mt19937 _random;
+	double _age = 0.0;
 };
 
 } // namespace Donut

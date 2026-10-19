@@ -41,7 +41,7 @@ struct Channels
 {
 	std::map<std::string, ParticleFactory::Curve> curves;
 	std::map<std::string, Vector3> vectors;
-	std::map<std::string, uint32_t> colors;
+	std::map<std::string, std::vector<std::pair<float, uint32_t>>> colors;
 	float frames = 0.0f;
 };
 
@@ -74,8 +74,9 @@ void readChannels(const P3D::P3DChunk& chunk, Channels& out)
 		}
 		else if (type == P3D::ChunkType::Color)
 		{
-			if (count > 0)
-				out.colors[param] = stream.Read<uint32_t>();
+			auto& keys = out.colors[param];
+			for (const uint16_t frame : frames)
+				keys.emplace_back(static_cast<float>(frame), stream.Read<uint32_t>());
 		}
 		else
 		{
@@ -148,6 +149,9 @@ std::unique_ptr<ParticleFactory> ParticleFactory::FromChunk(const P3D::P3DChunk&
 					emitter.alphaOverLife = curve("ALOL");
 					emitter.sizeOverLife = curve("SZOL");
 					emitter.speedOverLife = curve("SPOL");
+					if (const auto found = channels.colors.find("COOL"); found != channels.colors.end())
+						for (const auto& [frame, color] : found->second)
+							emitter.colorOverLife.emplace_back(frame, P3D::P3DUtil::ConvertColor(color));
 				}
 				else if (part->GetType() == P3D::ChunkType::EmitterAnimation)
 				{
@@ -162,8 +166,10 @@ std::unique_ptr<ParticleFactory> ParticleFactory::FromChunk(const P3D::P3DChunk&
 					emitter.alpha = curve("ALP");
 					if (const auto found = channels.vectors.find("TRA"); found != channels.vectors.end())
 						emitter.offset = found->second;
-					if (const auto found = channels.colors.find("CLR"); found != channels.colors.end())
-						emitter.color = P3D::P3DUtil::ConvertColor(found->second);
+					if (const auto found = channels.colors.find("CLR"); found != channels.colors.end() && !found->second.empty())
+						emitter.color = P3D::P3DUtil::ConvertColor(found->second.front().second);
+					emitter.rate = curve("RAT");
+					emitter.timelineFrames = channels.frames;
 				}
 				else if (part->GetType() == P3D::ChunkType::GeneratorAnimation)
 				{
@@ -188,9 +194,10 @@ ParticleSystem::ParticleSystem(const ParticleFactory& factory): _factory(factory
 
 ParticleSystem::~ParticleSystem() = default;
 
-void ParticleSystem::Update(double dt, const Matrix4x4& placement)
+void ParticleSystem::Update(double dt, const Matrix4x4& placement, float timelineFrame)
 {
 	const float step = static_cast<float>(dt);
+	_age += dt;
 	for (auto& running : _running)
 	{
 		const auto& e = *running.emitter;
@@ -211,8 +218,12 @@ void ParticleSystem::Update(double dt, const Matrix4x4& placement)
 		                                       [](const Particle& p) { return p.age >= p.life; }),
 		                        running.particles.end());
 
-		// Given off at a rate that keeps about NUM alive.
-		running.owed += static_cast<float>(most) / lifeSeconds * step;
+		// Given off at a rate that keeps about NUM alive, times the timeline's
+		// rate where it stands.
+		float frame = timelineFrame;
+		if (frame < 0.0f)
+			frame = e.timelineFrames > 0.0f ? std::fmod(static_cast<float>(_age) * rate, e.timelineFrames) : 0.0f;
+		running.owed += static_cast<float>(most) / lifeSeconds * step * std::max(0.0f, e.rate.At(frame, 1.0f));
 		while (running.owed >= 1.0f)
 		{
 			running.owed -= 1.0f;
@@ -261,6 +272,21 @@ void ParticleSystem::Draw(GL::ShaderProgram& billboardShader)
 			const float size = p.size * e.sizeOverLife.At(olFrame, 1.0f);
 			Vector4 color = e.color;
 			color.W *= baseAlpha * e.alphaOverLife.At(olFrame, 255.0f) / 255.0f;
+			if (!e.colorOverLife.empty())
+			{
+				// Between the two keys about `olFrame`.
+				Vector4 over = e.colorOverLife.back().second;
+				for (std::size_t k = 1; k < e.colorOverLife.size(); ++k)
+					if (olFrame < e.colorOverLife[k].first)
+					{
+						const auto& [f0, c0] = e.colorOverLife[k - 1];
+						const auto& [f1, c1] = e.colorOverLife[k];
+						const float t = std::clamp((olFrame - f0) / std::max(0.001f, f1 - f0), 0.0f, 1.0f);
+						over = c0 + (c1 - c0) * t;
+						break;
+					}
+				color = Vector4(color.X * over.X, color.Y * over.Y, color.Z * over.Z, color.W * over.W);
+			}
 			sprites.push_back({p.position, Vector2(size, size), color, Vector2(0.0f, 0.0f), Vector2(1.0f, 0.0f),
 			                   Vector2(1.0f, 1.0f), Vector2(0.0f, 1.0f)});
 		}
@@ -291,8 +317,10 @@ void ParticleSystem::Draw(GL::ShaderProgram& billboardShader)
 		// Blended as the material says, tested against the world but not
 		// hiding what is behind.
 		glEnable(GL_BLEND);
+		// Additive, weighted by the alpha: a spark fades as it dies, and a
+		// burst of them did not saturate into a white square.
 		if (material->GetBlendMode() == BlendMode::Additive)
-			glBlendFunc(GL_ONE, GL_ONE);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 		else
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glEnable(GL_DEPTH_TEST);

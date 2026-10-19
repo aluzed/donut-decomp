@@ -457,7 +457,8 @@ WaspManager::Result WaspManager::Update(double dt, const Vector3& player, bool a
 		wasp.model->SetTransform(Matrix4x4::MakeTranslate(at) *
 		                         Matrix4x4(Quaternion::MakeFromEuler(Vector3(0.0f, wasp.yaw, 0.0f))));
 		for (auto& effect : wasp.effects)
-			effect.system->Update(dt, wasp.model->GetTransform() * wasp.model->GetJointTransform(effect.joint));
+			effect.system->Update(dt, wasp.model->GetTransform() * wasp.model->GetJointTransform(effect.joint),
+			                      wasp.frame);
 	}
 	// The shots fly on; one that reaches the player hits.
 	for (auto& shot : _shots)
