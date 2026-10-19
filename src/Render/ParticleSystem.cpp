@@ -225,7 +225,10 @@ void ParticleSystem::Update(double dt, const Matrix4x4& placement)
 			// Straight up, tipped within the spreads.
 			const float yaw = uniform(_random, -e.horizontalSpread, e.horizontalSpread);
 			const float tilt = uniform(_random, -e.verticalSpread, e.verticalSpread);
-			const Vector3 direction(std::sin(tilt) * std::cos(yaw), std::cos(tilt), std::sin(tilt) * std::sin(yaw));
+			// The emitter's up, as its joint turns it (a spring's steam, aimed
+			// sideways): the placement's rotation alone.
+			const Vector3 spread(std::sin(tilt) * std::cos(yaw), std::cos(tilt), std::sin(tilt) * std::sin(yaw));
+			const Vector3 direction = (placement * spread - placement * Vector3::Zero).Normalized();
 			const float speed =
 			    (e.speed.At(0.0f, 0.0f) + uniform(_random, -1.0f, 1.0f) * e.speedVariance.At(0.0f, 0.0f)) * rate;
 			p.velocity = direction * speed;
