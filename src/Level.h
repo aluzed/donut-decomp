@@ -55,6 +55,11 @@ public:
 	int BreakObjectsNear(const Vector3& position, float radius);
 	// Whether one stands unbroken within `radius`.
 	bool HasBreakableNear(const Vector3& position, float radius) const;
+	// The props the player can kick about (a mailbox, a bin, a lamp post
+	// already down) within `radius` of `position`; and kicking them, away
+	// from it: how many.
+	bool HasKickablePropNear(const Vector3& position, float radius) const;
+	int KickPropsNear(const Vector3& position, float radius);
 	// The props knocked loose since the last call: the sound each makes (a
 	// resource of sound\\scripts\\collide.spt), the effect its attribute row
 	// names that the game makes itself ("eSpark"), and where.

@@ -64,6 +64,9 @@ trees — and the car drove through every one.
   (`car_hit_mailbox`: `mailbox_hit_0318a.rsd`, ...), played where the prop is when it
   is knocked loose or sent flying (once a tumble).
 - One fallen 50 m below where it stood is taken out of the world.
+- **Kicked**: on foot, the strike (or a jump's kick) sends those that move -- a mailbox,
+  a bin, a lamp post already down -- off at some 5 m/s, a little up and turning over;
+  one within reach makes the attack button strike rather than jump, as a crate does.
 
 ## What it took besides
 
@@ -88,6 +91,7 @@ trees — and the car drove through every one.
 - A hydrant's breaking: a geyser; an oak's: its trunk pieces fly and go, its leaves rise
   and fall.
 - A mailbox's letters burst out of it and flutter up; a bin's rubbish flies.
+- Homer kicks a mailbox: it tumbles off, its letters fly, its sound plays.
 - The race opponents knock some over too. The seven stories under `--autopilot`, 240 s
   each: as many missions won as before, no failure, no crash.
 
@@ -98,7 +102,8 @@ trees — and the car drove through every one.
   dirt, grass, a car's damage smoke, fire; which names they answer to is not known.
 - The `AnimDynamicPhysics` objects (crates, vending machines) still have no body: they
   break when the car comes near (`Level::BreakObjectsNear`).
-- The player on foot does not push them (the character is a kinematic capsule).
+- The player on foot does not push them by walking into them (the character is a
+  kinematic capsule); a kick does (below).
 - Traffic (kinematic) passes through the fixed ones, as before.
 - `l1z7_washer` stands at the world's origin (its placement is identity); that was so
   before.

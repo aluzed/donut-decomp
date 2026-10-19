@@ -1229,6 +1229,38 @@ bool Level::playBreakable(uint32_t type, const Matrix4x4& placement)
 	return false;
 }
 
+bool Level::HasKickablePropNear(const Vector3& position, float radius) const
+{
+	for (const auto& prop : _props)
+		if (!prop.gone && !prop.fixed &&
+		    ((WorldPhysics::GetBodyTransform(prop.body) * prop.centre).Translation() - position).Length() < radius)
+			return true;
+	return false;
+}
+
+int Level::KickPropsNear(const Vector3& position, float radius)
+{
+	int kicked = 0;
+	for (auto& prop : _props)
+	{
+		if (prop.gone || prop.fixed)
+			continue;
+		const Vector3 at = (WorldPhysics::GetBodyTransform(prop.body) * prop.centre).Translation();
+		Vector3 away = at - position;
+		away.Y = 0.0f;
+		if (away.Length() >= radius)
+			continue;
+		away = away.Length() > 0.01f ? away.Normalized() : Vector3(0.0f, 0.0f, 1.0f);
+		// Sent off at some 5 m/s, a little up, turning over.
+		const Vector3 velocity = away * 5.0f + Vector3(0.0f, 3.0f, 0.0f);
+		prop.body->activate(true);
+		prop.body->applyCentralImpulse(btVector3(velocity.X, velocity.Y, velocity.Z) * prop.mass);
+		prop.body->applyTorqueImpulse(btVector3(away.Z, 0.0f, -away.X) * prop.mass * 0.5f);
+		++kicked;
+	}
+	return kicked;
+}
+
 std::vector<Level::KnockedProp> Level::TakeKnockedProps()
 {
 	return std::exchange(_knockedProps, {});

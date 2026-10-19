@@ -2277,12 +2277,15 @@ void Game::Run()
 				// character's strike, not a jump. It counts as an attack for the
 				// wasps, as a jump does.
 				const Vector3 me = _character->GetPosition();
-				const bool target = _level->HasBreakableNear(me, 2.2f) || (_waspManager && _waspManager->AnyNear(me, 2.5f));
+				const bool target = _level->HasBreakableNear(me, 2.2f) || _level->HasKickablePropNear(me, 1.8f) ||
+				                    (_waspManager && _waspManager->AnyNear(me, 2.5f));
 				if (!_inVehicle && !_boarding.car && ctrl.onGround() && target && playPlayerAnimation("break", false))
 				{
 					_lastJumpAt = _elapsedSeconds;
 					if (_level->BreakObjectsNear(me, 2.2f) > 0)
 						AddShake(0.2f);
+					// A mailbox, a bin kicked over.
+					_level->KickPropsNear(me, 1.8f);
 				}
 				else if (!_inVehicle && !_boarding.car && ctrl.canJump())
 				{
@@ -2300,6 +2303,7 @@ void Game::Run()
 					_lastJumpAt = _elapsedSeconds;
 					if (_level->BreakObjectsNear(_character->GetPosition(), 2.0f) > 0)
 						AddShake(0.2f);
+					_level->KickPropsNear(_character->GetPosition(), 1.8f);
 				}
 			}
 
