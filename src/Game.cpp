@@ -511,7 +511,12 @@ void Game::updateBoarding()
 			_boarding = {};
 			return;
 		}
-		if (playPlayerAnimation((_boarding.in ? kIn : kOut)[_boarding.step], false))
+		// A truck's own, climbed: get_into_car_high_driver and the like.
+		std::string step = (_boarding.in ? kIn : kOut)[_boarding.step];
+		if (car.IsHigh())
+			step.insert(step.size() - 7, "_high");
+		if (playPlayerAnimation(step, false) ||
+		    playPlayerAnimation((_boarding.in ? kIn : kOut)[_boarding.step], false))
 			break;
 	}
 	// The door opens with the first step, stands open, and shuts with the last.

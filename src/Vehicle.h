@@ -77,6 +77,9 @@ public:
 	// Where the driver sits (the model's "dl" joint), in the world; false when
 	// the model does not say.
 	bool GetDriverSeat(Vector3& seat) const;
+	// A truck, a van: its seat stands well above its wheels' hubs (over 0.5m;
+	// a car's is level with them). Climbed into with the "_high" animations.
+	bool IsHigh() const { return _high; }
 	bool HasModel() const { return _model != nullptr; }
 	float GetSpeedKmh() const;
 	// No wheel touching anything.
@@ -108,6 +111,7 @@ private:
 	int _doorJoint = -1;
 	float _driverSide = -1.0f;
 	int _seatJoint = -1;
+	bool _high = false;
 	struct Light
 	{
 		std::unique_ptr<BillboardBatch> batch;

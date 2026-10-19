@@ -93,6 +93,8 @@ void Vehicle::LoadModel(const std::string& modelPath)
 		}
 		_doorJoint = _model->FindJoint("DoorDRot");
 		_seatJoint = _model->FindJoint("dl");
+		if (const int hub = _model->FindJoint("w0"); hub >= 0 && _seatJoint >= 0)
+			_high = _model->GetJointRestPosition(_seatJoint).Y - _model->GetJointRestPosition(hub).Y > 0.5f;
 		// Its lights: brake1Shape..brake4Shape, rev1Shape..rev4Shape.
 		const P3D::P3DFile file(modelPath);
 		for (const auto& chunk : file.GetRoot().GetChildren())
