@@ -86,6 +86,13 @@ void Mesh::CreateMeshBuffers(const P3D::Geometry& geometry)
 		idxOffset += indices.size();
 	}
 
+	if (!allVerts.empty())
+	{
+		_bounds = BoundingBox(allVerts[0].pos, allVerts[0].pos);
+		for (const auto& vertex : allVerts)
+			_bounds.Merge(vertex.pos);
+	}
+
 	_vertexBuffer = std::make_shared<GL::VertexBuffer>(allVerts.data(), allVerts.size(), sizeof(Vertex));
 	_vertices = std::move(allVerts);
 	_indexBuffer = std::make_shared<GL::IndexBuffer>(allIndices.data(), allIndices.size(), GL_UNSIGNED_INT);
@@ -167,8 +174,34 @@ void MeshInstanced::SetTransform(std::size_t instance, const Matrix4x4& transfor
 	if (instance >= _transforms.size())
 		return;
 	_transforms[instance] = transform;
+	_instancesBoundsStale = true;
 	if (_instanceBuffer)
 		_instanceBuffer->UpdateBuffer(&_transforms[instance], instance * sizeof(Matrix4x4), sizeof(Matrix4x4));
+}
+
+const BoundingBox& MeshInstanced::GetInstancesBounds()
+{
+	if (!_instancesBoundsStale)
+		return _instancesBounds;
+	_instancesBoundsStale = false;
+	bool first = true;
+	for (const auto& transform : _transforms)
+	{
+		if (transform.M[0][0] == 0.0f && transform.M[0][1] == 0.0f && transform.M[0][2] == 0.0f)
+			continue;
+		const BoundingBox box = _bounds.Transform(transform);
+		if (first)
+			_instancesBounds = box;
+		else
+		{
+			_instancesBounds.Merge(box.GetMin());
+			_instancesBounds.Merge(box.GetMax());
+		}
+		first = false;
+	}
+	if (first)
+		_instancesBounds = BoundingBox();
+	return _instancesBounds;
 }
 
 void MeshInstanced::CreateVertexBinding()
@@ -207,7 +240,10 @@ void Mesh::OffsetGroup(std::size_t group, const std::vector<Vector3>& offsets)
 	const std::size_t end = group + 1 < _groupVertexStart.size() ? _groupVertexStart[group + 1] : _vertices.size();
 	std::vector<Vertex> moved(_vertices.begin() + start, _vertices.begin() + end);
 	for (std::size_t i = 0; i < moved.size() && i < offsets.size(); ++i)
+	{
 		moved[i].pos += offsets[i];
+		_bounds.Merge(moved[i].pos);
+	}
 	_vertexBuffer->UpdateBuffer(moved.data(), start * sizeof(Vertex), moved.size() * sizeof(Vertex));
 }
 

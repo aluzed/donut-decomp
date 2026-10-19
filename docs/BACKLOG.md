@@ -219,7 +219,7 @@ car, rewards), not through the commands.
 
 | Sub-ticket | Status | Subject |
 |---|---|---|
-| RENDER-008a | ⬜ | Frustum culling per drawable bounding box |
+| RENDER-008a | ✅ | Frustum culling per drawable bounding box |
 | RENDER-008b | ⬜ | Spatial tree from the `Tree` chunks (after P3D-007) |
 | RENDER-008c | ⬜ | LOD by distance |
 

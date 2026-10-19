@@ -27,6 +27,9 @@ public:
 	virtual ~Entity() = default;
 
 	virtual void Draw(GL::ShaderProgram&, bool opaque) {}
+	// The box it fills in the world, to leave it out when unseen; none, it is
+	// always drawn.
+	virtual const BoundingBox* GetBounds() { return nullptr; }
 
 	const std::string& GetName() const { return _name; }
 	virtual const std::string GetClassName() const { return "Entity"; }
@@ -41,6 +44,8 @@ public:
 	StaticEntity(const P3D::StaticEntity&);
 
 	void Draw(GL::ShaderProgram&, bool opaque) override;
+	// Its mesh stands where it is in the world.
+	const BoundingBox* GetBounds() override { return &_mesh->GetBounds(); }
 
 	const std::string GetClassName() const override { return "StaticEntity"; }
 
@@ -55,6 +60,7 @@ public:
 
 	void Draw(GL::ShaderProgram&, bool opaque) override;
 	void SetInstanceTransform(std::size_t instance, const Matrix4x4& transform) { _mesh->SetTransform(instance, transform); }
+	const BoundingBox* GetBounds() override { return &_mesh->GetInstancesBounds(); }
 
 	const std::string GetClassName() const override { return "InstancedStaticEntity"; }
 

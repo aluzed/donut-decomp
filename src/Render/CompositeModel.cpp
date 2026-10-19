@@ -1,6 +1,7 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
 #include <Core/Log.h>
+#include <Core/Math/Frustum.h>
 #include <Game.h>
 #include <P3D/P3D.generated.h>
 #include <P3D/P3DFile.h>
@@ -281,7 +282,12 @@ void CompositeModel::Draw(GL::ShaderProgram& shader, const Matrix4x4& viewProj, 
 	{
 		if (!prop.visible)
 			continue;
-		shader.SetUniformValue("viewProj", viewProj * modelMatrix * prop.transform);
+		const Matrix4x4 transform = viewProj * modelMatrix * prop.transform;
+		const bool seen = Frustum(transform).Intersects(_meshes[prop.meshIndex]->GetBounds());
+		CullStats::Count(seen);
+		if (!seen)
+			continue;
+		shader.SetUniformValue("viewProj", transform);
 		_meshes[prop.meshIndex]->Draw(shader, opaque);
 	}
 }

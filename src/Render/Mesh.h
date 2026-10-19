@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "Core/Math/BoundingBox.h"
 #include "Core/Math/Fwd.h"
 #include "P3D/P3D.generated.h"
 #include "Render/OpenGL/IndexBuffer.h"
@@ -30,6 +31,8 @@ public:
 	// by `offsets`, one per vertex (a morph target: an inflating doll). Fewer
 	// offsets than vertices leave the rest as built.
 	void OffsetGroup(std::size_t group, const std::vector<Vector3>& offsets);
+	// The box its vertices fill, in its own space (grown by OffsetGroup).
+	const BoundingBox& GetBounds() const { return _bounds; }
 
 protected:
 	struct PrimGroup
@@ -64,8 +67,7 @@ protected:
 	std::shared_ptr<GL::IndexBuffer> _indexBuffer;
 	std::shared_ptr<GL::VertexBinding> _vertexBinding;
 
-	Vector3 _boundingBoxMin;
-	Vector3 _boundingBoxMax;
+	BoundingBox _bounds;
 };
 
 class MeshInstanced: public Mesh
@@ -75,6 +77,9 @@ public:
 
 	// Moves one of its instances (a prop knocked about).
 	void SetTransform(std::size_t instance, const Matrix4x4& transform);
+	// The box all its instances fill, in the world; one gone (at zero scale)
+	// left out.
+	const BoundingBox& GetInstancesBounds();
 
 protected:
 	virtual void CreateVertexBinding() override;
@@ -83,6 +88,8 @@ protected:
 
 	std::vector<Matrix4x4> _transforms;
 	std::shared_ptr<GL::VertexBuffer> _instanceBuffer;
+	BoundingBox _instancesBounds;
+	bool _instancesBoundsStale = true;
 };
 
 } // namespace Donut

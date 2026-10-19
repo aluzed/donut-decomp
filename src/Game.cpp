@@ -6,6 +6,7 @@
 #include "Audio/SoundGenerator.h"
 #include "Audio/AudioManager.h"
 #include "Character.h"
+#include "Core/Math/Frustum.h"
 #include "Core/FpsTimer.h"
 #include "Core/Math/Math.h"
 #include "FreeCamera.h"
@@ -3008,6 +3009,7 @@ void Game::Run()
 			auto const& camRot = _camera->GetOrientation();
 			ImGui::Text("Camera Position: %s", camPos.ToString().c_str());
 			ImGui::Text("Camera Orientation: %s", camRot.ToString().c_str());
+			ImGui::Text("Meshes drawn: %d, culled: %d", CullStats::drawn, CullStats::culled);
 
 			float fov = _camera->GetFOV();
 			if (ImGui::SliderFloat("FOV", &fov, 0.0f, 120.0f))
@@ -3116,6 +3118,8 @@ void Game::Run()
 		Matrix4x4 projMatrix = _camera->GetProjectionMatrix();
 		Matrix4x4 viewProjection = projMatrix * viewMatrix;
 
+		// Counted afresh each frame, shown the next (the overlay is built first).
+		CullStats::drawn = CullStats::culled = 0;
 		if (_level != nullptr)
 			_level->Draw(viewProjection);
 

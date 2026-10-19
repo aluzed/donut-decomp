@@ -34,6 +34,8 @@ into a playable arcade racing game.
   props shed when hit (letters, rubbish, leaves, sparks); debris falls
 - **Wasp cameras**: twenty a level, coming in as the player nears, watching, firing shots
   that can be dodged, blown up by a jump or a car
+- **Frustum culling** (RENDER-008a): meshes out of view are not drawn, tested by their
+  bounding box (two thirds of level 1's left out, about 60% more frames a second)
 - **LineRenderer**: Debug drawing for physics, skeletons, beacons
 
 ### Physics (Bullet)

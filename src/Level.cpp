@@ -5,6 +5,7 @@
 #include <cctype>
 #include <Core/File.h>
 #include <Core/Log.h>
+#include <Core/Math/Frustum.h>
 #include <Core/MemoryStream.h>
 #include <Entity.h>
 #include <Game.h>
@@ -1470,9 +1471,17 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 		const std::size_t(&bounds)[2] = only->second.*range;
 		return index >= bounds[0] && index < bounds[1];
 	};
+	// And of those, what the camera may see.
+	const Frustum frustum(viewProj);
+	const auto seen = [&](Entity& entity) {
+		const BoundingBox* bounds = entity.GetBounds();
+		const bool inside = bounds == nullptr || frustum.Intersects(*bounds);
+		CullStats::Count(inside);
+		return inside;
+	};
 
 	for (std::size_t i = 0; i < _entities.size(); ++i)
-		if (shown(&DrawRange::entities, i))
+		if (shown(&DrawRange::entities, i) && seen(*_entities[i]))
 			_entities[i]->Draw(*_worldShader, true);
 
 	for (std::size_t i = 0; i < _compositeModels.size(); ++i)
@@ -1485,7 +1494,7 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 	_worldInstancedShader->SetUniformValue("viewProj", viewProj);
 
 	for (std::size_t i = 0; i < _instances.size(); ++i)
-		if (shown(&DrawRange::instances, i))
+		if (shown(&DrawRange::instances, i) && seen(*_instances[i]))
 			_instances[i]->Draw(*_worldInstancedShader, true);
 
 	glEnable(GL_BLEND);
@@ -1494,7 +1503,7 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 	_worldShader->SetUniformValue("viewProj", viewProj);
 
 	for (std::size_t i = 0; i < _entities.size(); ++i)
-		if (shown(&DrawRange::entities, i))
+		if (shown(&DrawRange::entities, i) && seen(*_entities[i]))
 			_entities[i]->Draw(*_worldShader, false);
 
 	for (std::size_t i = 0; i < _compositeModels.size(); ++i)
@@ -1516,7 +1525,7 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 	_worldInstancedShader->SetUniformValue("viewProj", viewProj);
 
 	for (std::size_t i = 0; i < _instances.size(); ++i)
-		if (shown(&DrawRange::instances, i))
+		if (shown(&DrawRange::instances, i) && seen(*_instances[i]))
 			_instances[i]->Draw(*_worldInstancedShader, false);
 }
 
