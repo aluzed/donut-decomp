@@ -133,6 +133,17 @@ std::unique_ptr<ParticleFactory> ParticleFactory::FromChunk(const P3D::P3DChunk&
 		Emitter emitter;
 		emitter.shader = sprite.ReadLPString();
 		emitter.frameRate = frameRate > 0.0f ? frameRate : 30.0f;
+		// How the sprites turn (SPEC, MOAL, RAND) and by how much; then their
+		// texture's frames: how they go (NONE, RAND, LIN), how many, how fast.
+		sprite.ReadString(4);
+		sprite.Read<float>();
+		const std::string animation = sprite.ReadString(4);
+		emitter.textureFrames = std::max<uint32_t>(1, sprite.Read<uint32_t>());
+		emitter.textureFrameRate = static_cast<float>(sprite.Read<uint32_t>());
+		if (animation.rfind("RAND", 0) == 0)
+			emitter.textureAnimation = Emitter::TextureAnimation::Random;
+		else if (animation.rfind("LIN", 0) == 0)
+			emitter.textureAnimation = Emitter::TextureAnimation::Linear;
 
 		for (const auto& base : child->GetChildren())
 			for (const auto& part : base->GetChildren())
@@ -228,6 +239,7 @@ void ParticleSystem::Burst(int count, const Vector3& position)
 			p.age = 0.0f;
 			p.life = std::max(0.1f, (e.life.At(0.0f, 30.0f) + uniform(_random, -1.0f, 1.0f) * e.lifeVariance.At(0.0f, 0.0f)) / rate);
 			p.size = std::max(0.01f, e.size.At(0.0f, 1.0f) + uniform(_random, -1.0f, 1.0f) * e.sizeVariance.At(0.0f, 0.0f));
+			p.seed = static_cast<uint32_t>(_random());
 			running.particles.push_back(p);
 		}
 	}
@@ -311,6 +323,7 @@ void ParticleSystem::Update(double dt, const Matrix4x4& placement, float timelin
 			p.age = 0.0f;
 			p.life = std::max(0.1f, (lifeFrames + uniform(_random, -1.0f, 1.0f) * e.lifeVariance.At(0.0f, 0.0f)) / rate);
 			p.size = std::max(0.01f, e.size.At(0.0f, 1.0f) + uniform(_random, -1.0f, 1.0f) * e.sizeVariance.At(0.0f, 0.0f));
+			p.seed = static_cast<uint32_t>(_random());
 			running.particles.push_back(p);
 		}
 	}
@@ -352,8 +365,18 @@ void ParticleSystem::Draw(GL::ShaderProgram& billboardShader)
 					}
 				color = Vector4(color.X * over.X, color.Y * over.Y, color.Z * over.Z, color.W * over.W);
 			}
-			sprites.push_back({p.position, Vector2(size, size), color, Vector2(0.0f, 0.0f), Vector2(1.0f, 0.0f),
-			                   Vector2(1.0f, 1.0f), Vector2(0.0f, 1.0f)});
+			// Its frame of the strip: drawn whole, the four of a flame side by
+			// side, a hundred of them added up to a white glare.
+			uint32_t textureFrame = 0;
+			const uint32_t tick = static_cast<uint32_t>(p.age * e.textureFrameRate);
+			if (e.textureAnimation == ParticleFactory::Emitter::TextureAnimation::Random)
+				textureFrame = (p.seed + tick * 2654435761u) % e.textureFrames;
+			else if (e.textureAnimation == ParticleFactory::Emitter::TextureAnimation::Linear)
+				textureFrame = tick % e.textureFrames;
+			const float u0 = static_cast<float>(textureFrame) / static_cast<float>(e.textureFrames);
+			const float u1 = static_cast<float>(textureFrame + 1) / static_cast<float>(e.textureFrames);
+			sprites.push_back({p.position, Vector2(size, size), color, Vector2(u0, 0.0f), Vector2(u1, 0.0f),
+			                   Vector2(u1, 1.0f), Vector2(u0, 1.0f)});
 		}
 
 		// The instance buffer, grown as needed and refilled every frame.

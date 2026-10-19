@@ -74,6 +74,18 @@ public:
 		Vector4 color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 		Vector3 offset = Vector3::Zero;
 		float width = 0.0f, height = 0.0f, horizontalSpread = 0.0f, verticalSpread = 0.0f;
+		// Its texture, a strip of frames side by side (a flame's four): how
+		// many, and how a sprite goes through them, at so many a second --
+		// at random (RAND), in order (LIN), or not at all, the first (NONE).
+		enum class TextureAnimation
+		{
+			None,
+			Random,
+			Linear,
+		};
+		TextureAnimation textureAnimation = TextureAnimation::None;
+		uint32_t textureFrames = 1;
+		float textureFrameRate = 0.0f;
 	};
 
 	const std::string& GetName() const { return _name; }
@@ -111,6 +123,8 @@ private:
 		float age;
 		float life;
 		float size;
+		// Where it starts in its texture's frames, and what picks the next.
+		uint32_t seed = 0;
 	};
 	struct Running
 	{
