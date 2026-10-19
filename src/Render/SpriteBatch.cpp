@@ -447,6 +447,15 @@ void SpriteBatch::Flush(const Matrix4x4& proj, float scale)
 
 	_drawCallCount = 0;
 
+	// Its own blending, whatever was drawn before: it relied on the world
+	// passes leaving alpha blending on, and every effect that changed it (an
+	// additive glow, blending turned off) had the HUD's text drawn as boxes.
+	const GLboolean blending = glIsEnabled(GL_BLEND);
+	GLint source = GL_SRC_ALPHA, destination = GL_ONE_MINUS_SRC_ALPHA;
+	glGetIntegerv(GL_BLEND_SRC_RGB, &source);
+	glGetIntegerv(GL_BLEND_DST_RGB, &destination);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glDisable(GL_DEPTH_TEST);
 
 	GL::ShaderProgram& shader = GetShader();
@@ -544,6 +553,9 @@ void SpriteBatch::Flush(const Matrix4x4& proj, float scale)
 	shader.Unbind();
 
 	glEnable(GL_DEPTH_TEST);
+	glBlendFunc(source, destination);
+	if (!blending)
+		glDisable(GL_BLEND);
 
 	_spritesToDraw.clear();
 }
