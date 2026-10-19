@@ -29,6 +29,11 @@ locators are in `art/missions/levelNN/wasps.p3d` (now loaded with the level).
   over 10 km/h). Destroyed, it plays its explosion and is gone, for 20 coins and the count,
   "Wasp cameras 1/20"; destroyed wasps stay so (`donut_wasps.dat`, every level's).
 
+- **Evading** (`EVADE_PLAYER`: near, far, low, high, speed; levels 2 to 5 and 7): alerted,
+  a wasp hops once a period (`ATTACK_PLAYER`'s third number) to a spot near..far metres
+  from its own and low..high above it, at its speed, instead of following the player.
+  Checked on level 2 from the log: the wasp by (299.5, 10.2, 32.7) dodging about it,
+  0.7 to 1.2m higher, firing between hops.
 - **Coming and going**: a wasp is out only while the player is within its spawn point's
   radius (`AddSpawnPointByLocatorScript`'s fifth argument, 8 to 60m): it comes in as they
   enter it (state 0, then hovering by itself: it drops in, spreads its wings, its signal
@@ -72,5 +77,4 @@ ball, and the health bar down as it lands.
 
 ## Not done
 
-- `EVADE_PLAYER`.
 - Wasps high up are out of a jump's reach: the game expects them reached by climbing.

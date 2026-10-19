@@ -76,6 +76,10 @@ private:
 	{
 		float nearest = 4.0f, farthest = 10.0f, speed = 10.0f;
 		float range = 10.0f, arc = 5.0f, period = 3.0f;
+		// EVADE_PLAYER: once a period, a hop to a spot `evadeNear`..`evadeFar`
+		// metres from its own, `evadeLow`..`evadeHigh` higher, at `evadeSpeed`
+		// km/h; 0 for none.
+		float evadeNear = 0.0f, evadeFar = 0.0f, evadeLow = 0.0f, evadeHigh = 0.0f, evadeSpeed = 0.0f;
 	};
 	struct Wasp
 	{
@@ -84,6 +88,9 @@ private:
 		Vector3 position;
 		double nextShot = 0.0;
 		double nextBuzz = 0.0;
+		// Where an evasion is taking it (home when none), and when the next is.
+		Vector3 evadeTo;
+		double nextEvade = 0.0;
 		// Out only while the player is within its spawn point's radius
 		// (AddSpawnPointByLocatorScript's fifth argument): it comes in when
 		// they enter it, and goes when they are well away.

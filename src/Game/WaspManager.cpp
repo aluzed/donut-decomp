@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <cmath>
 #include <fstream>
+#include <random>
 #include <set>
 
 namespace Donut
@@ -293,6 +294,14 @@ void WaspManager::readBehaviours(const std::string& levelScript)
 				b.farthest = number(3, b.farthest);
 				b.speed = number(4, b.speed);
 			}
+			else if (args[1] == "EVADE_PLAYER" && args.size() >= 7)
+			{
+				b.evadeNear = number(2, 1.0f);
+				b.evadeFar = number(3, 5.0f);
+				b.evadeLow = number(4, 1.0f);
+				b.evadeHigh = number(5, 2.0f);
+				b.evadeSpeed = number(6, 5.0f);
+			}
 			else if (args[1] == "ATTACK_PLAYER")
 			{
 				b.range = number(2, b.range);
@@ -374,6 +383,7 @@ WaspManager::Result WaspManager::Update(double dt, const Vector3& player, bool a
 				continue;
 			wasp.present = true;
 			wasp.position = wasp.home;
+			wasp.evadeTo = wasp.home;
 			enter(wasp, 0);
 		}
 		else if (!wasp.destroyed && fromHome > wasp.spawnRadius * 1.5f + 10.0f)
@@ -401,7 +411,29 @@ WaspManager::Result WaspManager::Update(double dt, const Vector3& player, bool a
 			}
 			// Drawn to the player between its nearest and farthest, not too far
 			// from home; back home otherwise. -1 never moves.
-			if (b.speed > 0.0f)
+			// Alerted, it dodges about its spot now and then (EVADE_PLAYER),
+			// rather than following the player.
+			const bool evading = b.evadeSpeed > 0.0f && wasp.state == kAlerted;
+			if (evading)
+			{
+				if (_time >= wasp.nextEvade)
+				{
+					static std::mt19937 random(std::random_device {}());
+					std::uniform_real_distribution<float> unit(0.0f, 1.0f);
+					const float angle = unit(random) * 6.28318531f;
+					const float out = b.evadeNear + unit(random) * (b.evadeFar - b.evadeNear);
+					const float up = b.evadeLow + unit(random) * (b.evadeHigh - b.evadeLow);
+					wasp.evadeTo = wasp.home + Vector3(std::sin(angle) * out, up, std::cos(angle) * out);
+					wasp.nextEvade = _time + (b.period > 0.0f ? b.period : 3.0f);
+				}
+				const Vector3 way = wasp.evadeTo - wasp.position;
+				const float step = b.evadeSpeed / 3.6f * static_cast<float>(dt);
+				if (way.Length() > step)
+					wasp.position += way.Normalized() * step;
+				else
+					wasp.position = wasp.evadeTo;
+			}
+			else if (b.speed > 0.0f)
 			{
 				const float step = b.speed / 3.6f * static_cast<float>(dt);
 				Vector3 goal = wasp.home;
