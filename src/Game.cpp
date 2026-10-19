@@ -546,6 +546,10 @@ void Game::updatePlayerAnimation(double dt, bool moving, bool onGround)
 	const bool tookOff = _character->GetAnimName() == _playerAnimations["jump_idle_take_off"] &&
 	                     _character->IsAnimationFinished();
 	const bool falling = _character->GetAnimName() == _playerAnimations["jump_idle_in_air"];
+	// A kick plays through before the fall takes over.
+	const bool kicking = _character->GetAnimName() == _playerAnimations["jump_kick"] && !_character->IsAnimationFinished();
+	if (kicking && !onGround)
+		return;
 	if (_playerAirborneFor > 0.25 || (!onGround && (tookOff || falling)))
 	{
 		_playerIdleFor = 0.0;
@@ -2240,6 +2244,17 @@ void Game::Run()
 					ctrl.jump(btVector3(0, 0, 0));
 					playPlayerAnimation("jump_idle_take_off", false);
 					_lastJumpAt = _elapsedSeconds;
+					_kickedThisJump = false;
+				}
+				// In the air, a kick: once a jump. It hits a wasp in reach (the
+				// attack lasts a second more) and breaks what it lands on.
+				else if (!_inVehicle && !_boarding.car && !ctrl.onGround() && !_kickedThisJump &&
+				         playPlayerAnimation("jump_kick", false))
+				{
+					_kickedThisJump = true;
+					_lastJumpAt = _elapsedSeconds;
+					if (_level->BreakObjectsNear(_character->GetPosition(), 2.0f) > 0)
+						AddShake(0.2f);
 				}
 			}
 
