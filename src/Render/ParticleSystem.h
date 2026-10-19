@@ -33,7 +33,7 @@ class VertexBinding;
 // Read from the emitter's animations, each channel a constant or a curve:
 //   per emitter (EmitterAnimation): NUM particles alive at most, LIF life in
 //   frames (LIFV either way), SPD speed per frame (SPDV), SIZ size (SIZV), GRA
-//   gravity, ALP alpha, CLR colour, TRA the emitter's offset; its generator
+//   gravity (m/s/s, up: debris fall at -2 to -6, flames rise at 3), ALP alpha, CLR colour, TRA the emitter's offset; its generator
 //   (GeneratorAnimation): WDT, HGT the area it emits from, HOSP and VESP the
 //   spread of directions about straight up;
 //   over a particle's life (ParticleAnimation, its frames spanning the life):
@@ -117,6 +117,8 @@ private:
 		const ParticleFactory::Emitter* emitter;
 		std::vector<Particle> particles;
 		float owed = 0.0f;
+		// Where its timeline stood at the last step; -1 before the first.
+		float lastFrame = -1.0f;
 		std::shared_ptr<GL::VertexBuffer> instances;
 		std::shared_ptr<GL::VertexBinding> binding;
 		std::size_t capacity = 0;

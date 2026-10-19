@@ -187,8 +187,8 @@ std::unique_ptr<ParticleFactory> ParticleFactory::FromChunk(const P3D::P3DChunk&
 std::unique_ptr<ParticleFactory> ParticleFactory::Burst(const std::string& shader, float life, float speed, float spread,
                                                        float size, float gravity, const Vector4& color)
 {
-	// In the file's terms: frames at 30 a second, speed per frame, gravity per
-	// frame per frame; none given off but by Burst (NUM 0).
+	// In the file's terms: frames at 30 a second, speed per frame, gravity in
+	// m/s/s, up; none given off but by Burst (NUM 0).
 	auto factory = std::make_unique<ParticleFactory>();
 	factory->_name = "burst_" + shader;
 	Emitter e;
@@ -201,7 +201,7 @@ std::unique_ptr<ParticleFactory> ParticleFactory::Burst(const std::string& shade
 	e.speedVariance.keys = {{0.0f, speed / 90.0f}};
 	e.size.keys = {{0.0f, size}};
 	e.sizeVariance.keys = {{0.0f, size * 0.3f}};
-	e.gravity.keys = {{0.0f, gravity / 900.0f}};
+	e.gravity.keys = {{0.0f, -gravity}};
 	e.alphaOverLife.keys = {{0.0f, 255.0f}, {9.0f, 0.0f}};
 	e.sizeOverLife.keys = {{0.0f, 1.0f}, {9.0f, 1.6f}};
 	e.color = color;
@@ -260,7 +260,10 @@ void ParticleSystem::Update(double dt, const Matrix4x4& placement, float timelin
 		{
 			p.age += step;
 			const float olFrame = std::min(p.age / p.life, 1.0f) * (e.lifeFrames - 1.0f);
-			p.velocity.Y -= e.gravity.At(0.0f, 0.0f) * rate * rate * step;
+			// GRA pulls up, in m/s/s: debris fall (a crate's bits at -2, glass at
+			// -6), flames rise (3). Taken per frame per frame, it threw every
+			// falling bit to the sky at hundreds of g.
+			p.velocity.Y += e.gravity.At(0.0f, 0.0f) * step;
 			p.position += p.velocity * (e.speedOverLife.At(olFrame, 1.0f) * step);
 		}
 		running.particles.erase(std::remove_if(running.particles.begin(), running.particles.end(),
@@ -272,8 +275,20 @@ void ParticleSystem::Update(double dt, const Matrix4x4& placement, float timelin
 		float frame = timelineFrame;
 		if (frame < 0.0f)
 			frame = e.timelineFrames > 0.0f ? std::fmod(static_cast<float>(_age) * rate, e.timelineFrames) : 0.0f;
+		// The rate over the stretch of timeline this step covers, not where it
+		// ends: a mailbox's letters come in a burst of five frames, which one
+		// slow frame stepped right over.
+		float from = running.lastFrame;
+		running.lastFrame = frame;
+		if (from < 0.0f || from > frame)
+			from = frame;
+		const int samples = std::clamp(static_cast<int>(std::ceil(frame - from)), 1, 64);
+		float timelineRate = 0.0f;
+		for (int i = 0; i < samples; ++i)
+			timelineRate += std::max(0.0f, e.rate.At(from + (frame - from) * (i + 0.5f) / samples, 1.0f));
+		timelineRate /= static_cast<float>(samples);
 		if (emit)
-			running.owed += static_cast<float>(most) / lifeSeconds * step * std::max(0.0f, e.rate.At(frame, 1.0f));
+			running.owed += static_cast<float>(most) / lifeSeconds * step * timelineRate;
 		while (running.owed >= 1.0f)
 		{
 			running.owed -= 1.0f;
