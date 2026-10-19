@@ -9,11 +9,13 @@
 #include <BulletDynamics/Vehicle/btRaycastVehicle.h>
 
 #include <memory>
+#include <vector>
 #include <string>
 
 namespace Donut
 {
 
+class BillboardBatch;
 class CompositeModel;
 namespace GL { class ShaderProgram; }
 class WorldPhysics;
@@ -28,6 +30,9 @@ public:
 	void CreatePhysicsBody(WorldPhysics& physics, const Vector3& position);
 	void Update(double dt);
 	void Draw(Matrix4x4& viewProj, GL::ShaderProgram& shader, bool opaque);
+	// Its brake lights while it brakes, its reversing lights while it backs up:
+	// the car file's billboards, at their joints, with the billboard program.
+	void DrawLights(const Matrix4x4& viewProj, GL::ShaderProgram& billboardShader);
 
 	void SetEngineForce(float force);
 	void SetSteeringValue(float steering);
@@ -103,6 +108,15 @@ private:
 	int _doorJoint = -1;
 	float _driverSide = -1.0f;
 	int _seatJoint = -1;
+	struct Light
+	{
+		std::unique_ptr<BillboardBatch> batch;
+		int joint;
+		bool brake; // else reversing
+	};
+	std::vector<Light> _lights;
+	bool _braking = false;
+	bool _reversing = false;
 	std::string _modelName;
 	std::unique_ptr<btRaycastVehicle> _rayVehicle;
 };

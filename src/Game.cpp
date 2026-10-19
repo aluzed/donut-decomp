@@ -3072,6 +3072,7 @@ void Game::Run()
 					GL::ShaderProgram& worldShader = _level->GetWorldShader();
 					v->Draw(viewProjection, worldShader, true);
 					v->Draw(viewProjection, worldShader, false);
+					v->DrawLights(viewProjection, _level->GetBillboardShader());
 				}
 				else
 				{

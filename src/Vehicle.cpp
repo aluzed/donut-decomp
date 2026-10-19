@@ -5,6 +5,9 @@
 #include "Physics/BulletCast.h"
 #include "Physics/WorldPhysics.h"
 #include "Render/CompositeModel.h"
+#include "P3D/P3DFile.h"
+#include "P3D/P3D.generated.h"
+#include "Render/BillboardBatch.h"
 #include "Render/OpenGL/ShaderProgram.h"
 
 #include <BulletCollision/CollisionShapes/btBoxShape.h>
@@ -90,6 +93,20 @@ void Vehicle::LoadModel(const std::string& modelPath)
 		}
 		_doorJoint = _model->FindJoint("DoorDRot");
 		_seatJoint = _model->FindJoint("dl");
+		// Its lights: brake1Shape..brake4Shape, rev1Shape..rev4Shape.
+		const P3D::P3DFile file(modelPath);
+		for (const auto& chunk : file.GetRoot().GetChildren())
+			if (chunk->IsType(P3D::ChunkType::BillboardQuadGroup))
+			{
+				const auto group = P3D::BillboardQuadGroup::Load(*chunk);
+				const std::string& name = group->GetName();
+				const bool brake = name.rfind("brake", 0) == 0;
+				if (!brake && name.rfind("rev", 0) != 0)
+					continue;
+				const int joint = _model->FindPropJoint(name);
+				if (joint >= 0)
+					_lights.push_back({std::make_unique<BillboardBatch>(*group), joint, brake});
+			}
 		// "DoorDTrans" stands at the origin; the hinge is where the door is.
 		if (_doorJoint >= 0)
 			_driverSide = _model->GetJointRestPosition(_doorJoint).X >= 0.0f ? 1.0f : -1.0f;
@@ -240,6 +257,34 @@ void Vehicle::SetPosition(const Vector3& pos)
 			}
 }
 
+void Vehicle::DrawLights(const Matrix4x4& viewProj, GL::ShaderProgram& billboardShader)
+{
+	if (!_model || (!_braking && !_reversing))
+		return;
+	// The blending the billboards set is put back after: the HUD drawn later
+	// relies on it.
+	const GLboolean blending = glIsEnabled(GL_BLEND);
+	GLint source = GL_SRC_ALPHA, destination = GL_ONE_MINUS_SRC_ALPHA;
+	glGetIntegerv(GL_BLEND_SRC_RGB, &source);
+	glGetIntegerv(GL_BLEND_DST_RGB, &destination);
+	glEnable(GL_BLEND);
+	billboardShader.Bind();
+	for (const bool opaque : {true, false})
+		for (const auto& light : _lights)
+			if (light.brake ? _braking : _reversing)
+			{
+				billboardShader.SetUniformValue("viewProj",
+				                                viewProj * _model->GetTransform() * _model->GetJointTransform(light.joint));
+				light.batch->Draw(billboardShader, opaque);
+			}
+	billboardShader.SetUniformValue("viewProj", viewProj);
+	glBlendFunc(source, destination);
+	if (!blending)
+		glDisable(GL_BLEND);
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+}
+
 bool Vehicle::GetDriverSeat(Vector3& seat) const
 {
 	if (!_model || _seatJoint < 0)
@@ -314,6 +359,11 @@ void Vehicle::SetBrake(float brake)
 
 void Vehicle::ApplyInput(float throttle, float steer, float brake, float boost)
 {
+	// Braking: the brake, or the throttle against the way it is rolling.
+	const float rolling = GetSpeedKmh();
+	_braking = brake > 0.1f || (throttle < -0.1f && rolling > 2.0f);
+	_reversing = throttle < -0.1f && rolling < 1.0f;
+
 	// throttle runs -1..1: negative drives the wheels backwards. There was no way
 	// to reverse before -- the AI's "back out of the wall" manoeuvre passed
 	// throttle 0 and brake 1, which just stops a car that is already stopped, so
