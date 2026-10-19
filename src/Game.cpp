@@ -564,7 +564,7 @@ void Game::updatePlayerAnimation(double dt, bool moving, bool onGround)
 	if (moving)
 	{
 		_playerIdleFor = 0.0;
-		if (!playPlayerAnimation("loco_run", true))
+		if (!(_playerDashing && playPlayerAnimation("loco_dash", true)) && !playPlayerAnimation("loco_run", true))
 			playPlayerAnimation("loco_walk", true);
 		return;
 	}
@@ -2265,7 +2265,9 @@ void Game::Run()
 				// character then pivots to face its movement direction.
 				charMove.Normalize();
 				Vector3 worldMove = Quaternion::MakeFromEuler(Vector3(0.0f, _camYaw, 0.0f)) * charMove;
-				ctrl.setWalkDirection(BulletCast<btVector3>(worldMove * 5.0f));
+				// A dash with the boost held: faster, and in Homer's dash.
+				_playerDashing = intent.boostHeld;
+				ctrl.setWalkDirection(BulletCast<btVector3>(worldMove * (_playerDashing ? 8.0f : 5.0f)));
 
 				// A character model faces -Z: unturned, Homer walked +Z backwards,
 				// showing the camera behind him his face.
