@@ -29,6 +29,11 @@ locators are in `art/missions/levelNN/wasps.p3d` (now loaded with the level).
   over 10 km/h). Destroyed, it plays its explosion and is gone, for 20 coins and the count,
   "Wasp cameras 1/20"; destroyed wasps stay so (`donut_wasps.dat`, every level's).
 
+- **Coming and going**: a wasp is out only while the player is within its spawn point's
+  radius (`AddSpawnPointByLocatorScript`'s fifth argument, 8 to 60m): it comes in as they
+  enter it (state 0, then hovering by itself: it drops in, spreads its wings, its signal
+  ring lights) and goes, unharmed, once they are well away (1.5 times the radius, plus
+  10m). Checked: absent, then dropping in by the bonus car as the player arrives.
 - **Their behaviours**, from the level script (`AddBehaviour`, for the class `beecamera` or
   one spawn point by name, which starts from the class's): `ATTRACTION` (nearest,
   farthest, speed in km/h; -1 stays put) draws a wasp to a player between the two, never

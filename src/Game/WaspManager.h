@@ -84,6 +84,11 @@ private:
 		Vector3 position;
 		double nextShot = 0.0;
 		double nextBuzz = 0.0;
+		// Out only while the player is within its spawn point's radius
+		// (AddSpawnPointByLocatorScript's fifth argument): it comes in when
+		// they enter it, and goes when they are well away.
+		float spawnRadius = 30.0f;
+		bool present = false;
 		Vector3 home;
 		std::unique_ptr<CompositeModel> model;
 		// Its particle effects (its trail, its coming in), each at a joint and

@@ -234,6 +234,8 @@ WaspManager::WaspManager(int level, const std::string& levelScript, const Level&
 			continue;
 		Wasp wasp;
 		wasp.id = fmt::format("L{} {}", level, args[3]);
+		if (args.size() >= 5)
+			wasp.spawnRadius = std::max(5.0f, static_cast<float>(std::atof(args[4].c_str())));
 		wasp.home = home;
 		wasp.position = home;
 		// Its own behaviour, by its spawn point's name, or the class's.
@@ -246,7 +248,6 @@ WaspManager::WaspManager(int level, const std::string& levelScript, const Level&
 			for (const auto& slot : _effectSlots)
 				wasp.effects.push_back({slot.name, slot.joint, std::make_unique<ParticleSystem>(*_factories[slot.factory])});
 			enter(wasp, kHovering);
-			wasp.frame += static_cast<float>(_wasps.size() * 7 % 80);
 		}
 		_wasps.push_back(std::move(wasp));
 	}
@@ -362,6 +363,24 @@ WaspManager::Result WaspManager::Update(double dt, const Vector3& player, bool a
 		Wasp& wasp = _wasps[i];
 		if (wasp.gone)
 			continue;
+
+		// Coming in as the player arrives (state 0, which goes on to hovering
+		// by itself: a fade-in, its sparkles and a shockwave); gone again,
+		// unharmed, once they are well away.
+		const float fromHome = (player - wasp.home).Length();
+		if (!wasp.present)
+		{
+			if (wasp.destroyed || fromHome > wasp.spawnRadius)
+				continue;
+			wasp.present = true;
+			wasp.position = wasp.home;
+			enter(wasp, 0);
+		}
+		else if (!wasp.destroyed && fromHome > wasp.spawnRadius * 1.5f + 10.0f)
+		{
+			wasp.present = false;
+			continue;
+		}
 
 		const Behaviour& b = wasp.behaviour;
 		const Vector3 toPlayer = player - wasp.position;
@@ -490,7 +509,7 @@ void WaspManager::Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& billbo
 {
 	for (const bool opaque : {true, false})
 		for (const auto& wasp : _wasps)
-			if (!wasp.gone)
+			if (!wasp.gone && wasp.present)
 				wasp.model->Draw(worldShader, viewProj, wasp.model->GetTransform(), opaque);
 
 	// The glows where their joints are, the shots where they fly. The blending
@@ -508,7 +527,7 @@ void WaspManager::Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& billbo
 			glEnable(GL_BLEND);
 		for (const auto& wasp : _wasps)
 		{
-			if (wasp.gone)
+			if (wasp.gone || !wasp.present)
 				continue;
 			const auto& visible = _states[wasp.state].visible;
 			for (const auto& [name, glow] : _glows)
@@ -549,7 +568,7 @@ void WaspManager::Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& billbo
 	billboardShader.SetUniformValue("viewProj", viewProj);
 	for (const auto& wasp : _wasps)
 	{
-		if (wasp.gone)
+		if (wasp.gone || !wasp.present)
 			continue;
 		const auto& visible = _states[wasp.state].visible;
 		for (const auto& effect : wasp.effects)
