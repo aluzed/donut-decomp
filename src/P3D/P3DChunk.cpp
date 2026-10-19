@@ -15,7 +15,12 @@ namespace Donut::P3D
 ImageDecoder ImageDecoder::Decode(const std::vector<uint8_t>& data)
 {
 	ImageDecoder ret;
-	uint8_t* image = stbi_load_from_memory(data.data(), (std::int32_t)data.size(), &ret.width, &ret.height, &ret.comp, 0);
+	// Always as RGBA: asked for "as stored", a palette image's transparency
+	// (its tRNS chunk: the smoke puffs' corners) came back as three opaque
+	// channels, and every puff was drawn as a dark square.
+	int stored = 0;
+	uint8_t* image = stbi_load_from_memory(data.data(), (std::int32_t)data.size(), &ret.width, &ret.height, &stored, 4);
+	ret.comp = 4;
 	ret.data = std::vector<uint8_t>(image, image + (ret.width * ret.height * ret.comp));
 	stbi_image_free(image);
 
