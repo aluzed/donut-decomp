@@ -85,7 +85,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | GAME-010 | 🟡 | P2 | Collectibles and their saved state | Coins (purse in `donut_coins.dat`), cards (`donut_cards.dat`), wrenches, phone booths, doorbells, gags (sound, coin, animated model and characters, count, `donut_gags.dat`), wasp cameras (GAME-WASP), buying cars and outfits |
 | GAME-011 | 🟡 | P2 | Full save and load | Separate files for story progress, best times, coins, cards and gags. Missing: one save slot holding them all, the player's car and outfit, the cars bought |
 | GAME-014 | 🟡 | P1 | Interiors | Every level's interiors load with the level; doors and zone triggers take the player in and out. Not streamed |
-| GAME-WASP | 🟡 | P2 | Wasp cameras | Twenty per level hover at their spawn points; drawn to the player and firing at them as the level script says; a jump or a car destroys one (its explosion plays), for 20 coins, kept in `donut_wasps.dat`. Missing: the projectile, evading, their effects and buzz |
+| GAME-WASP | 🟡 | P2 | Wasp cameras | Twenty per level hover at their spawn points; drawn to the player and firing at them as the level script says; a jump or a car destroys one (its explosion plays), for 20 coins, kept in `donut_wasps.dat`. Their shots fly and can be dodged; their lens and signal glow. Missing: evading, their buzz |
 
 ### P3D chunks
 

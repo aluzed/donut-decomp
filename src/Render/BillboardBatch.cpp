@@ -102,6 +102,8 @@ void BillboardBatch::SetQuadColor(int quad, const Vector4& color)
 void BillboardBatch::Draw(GL::ShaderProgram& shader, bool opaque)
 {
 	auto const& material = Game::GetInstance().GetResourceManager().GetShader(_shader);
+	if (material == nullptr)
+		return;
 
 	bool trans = (!material->IsAlphaTested() && material->IsTranslucent());
 

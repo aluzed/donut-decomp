@@ -11,6 +11,7 @@
 namespace Donut
 {
 
+class BillboardBatch;
 class CompositeModel;
 class Level;
 namespace GL
@@ -48,7 +49,7 @@ public:
 		float damage = 0.0f;
 	};
 	Result Update(double dt, const Vector3& player, bool attacking, float reach);
-	void Draw(GL::ShaderProgram& worldShader, const Matrix4x4& viewProj);
+	void Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& billboardShader, const Matrix4x4& viewProj);
 
 	int GetDestroyed() const;
 	int GetTotal() const { return static_cast<int>(_wasps.size()); }
@@ -92,6 +93,21 @@ private:
 	float _shotDamage = 5.0f;   // SetProjectileStats
 	void enter(Wasp& wasp, int state);
 	void save() const;
+
+	// The shot ("waspray": two glowing billboards) in flight to where the player
+	// stood, hitting them if they are still there; and the wasps' own glows
+	// (their lens, signal), each hung from a joint.
+	struct Shot
+	{
+		Vector3 position;
+		Vector3 velocity;
+		float travelled = 0.0f;
+		float range = 10.0f;
+	};
+	std::vector<Shot> _shots;
+	float _shotSpeed = 60.0f / 3.6f;
+	std::vector<std::unique_ptr<BillboardBatch>> _shotSprites;
+	std::vector<std::pair<std::string, std::unique_ptr<BillboardBatch>>> _glows;
 
 	std::unique_ptr<P3D::P3DFile> _effects;
 	std::vector<State> _states;

@@ -37,14 +37,22 @@ locators are in `art/missions/levelNN/wasps.p3d` (now loaded with the level).
   player walks): the firing state plays, and the shot costs `SetProjectileStats`'s damage
   (5 on level 1), with a zap and a jolt. It turns at `SetActorRotationSpeed`.
 
+- **The shot** flies (`waspray`: two glowing billboards) from the wasp to where the player
+  was, at `SetProjectileStats`'s speed (60 km/h on level 1), and costs its damage only if
+  it reaches the player: one who keeps moving is missed. The wasp's own glows (its lens,
+  its signal ring) are drawn where their joints are. Their shaders are loaded from the
+  effects file; a billboard whose shader is missing is now skipped rather than crashing.
+  The blending the billboards set is put back after: left additive, the frame washed white,
+  left off, the HUD's text came out as boxes.
+
 Checked: the wasp by the lemon tree hovering, its lens glowing; the one by the bonus car
 destroyed by a jump, coming apart, 20 coins (60 to 80), "Wasp cameras 1/20"; twenty on
 each of the seven levels; the bonus car's wasp coming from 6m to 4m and firing ten
-seconds apart (level 1's period), health 100 to 95 to 90.
+seconds apart (level 1's period), health 100 to 95 to 90; the shot seen leaving it, a green
+ball, and the health bar down as it lands.
 
 ## Not done
 
-- The shot itself (the `waspray` projectile, its flight and dodging it): the damage is dealt
-  as the wasp fires. `EVADE_PLAYER`.
+- `EVADE_PLAYER`.
 - Their billboards and particle effects (lens glow, shockwave, `wasp_psShape`), the buzz.
 - Wasps high up are out of a jump's reach: the game expects them reached by climbing.

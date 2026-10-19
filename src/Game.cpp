@@ -3029,7 +3029,7 @@ void Game::Run()
 
 		drawGags(viewProjection);
 		if (_waspManager && _interior.empty())
-			_waspManager->Draw(_level->GetWorldShader(), viewProjection);
+			_waspManager->Draw(_level->GetWorldShader(), _level->GetBillboardShader(), viewProjection);
 
 		if (_scriptEngine->IsMissionActive() && !_scriptEngine->GetCheckpoints().empty())
 		{

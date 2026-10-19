@@ -8,7 +8,9 @@
 #include "Level.h"
 #include "P3D/P3D.generated.h"
 #include "P3D/P3DFile.h"
+#include "Render/BillboardBatch.h"
 #include "Render/CompositeModel.h"
+#include "Render/OpenGL/ShaderProgram.h"
 
 #include <algorithm>
 #include <cmath>
@@ -122,6 +124,30 @@ WaspManager::WaspManager(int level, const std::string& levelScript, const Level&
 			if (readLPString(stream) == "beecamera")
 				readStates(*chunk);
 		}
+	// The shot's billboards, and the wasp's own (its lens, its signal), with
+	// the shaders they draw with.
+	std::set<std::string> glowShaders;
+	for (const auto& chunk : root.GetChildren())
+		if (chunk->IsType(P3D::ChunkType::BillboardQuadGroup))
+		{
+			auto group = P3D::BillboardQuadGroup::Load(*chunk);
+			const std::string name = group->GetName();
+			if (name.rfind("waspray_bb", 0) == 0)
+				_shotSprites.push_back(std::make_unique<BillboardBatch>(*group));
+			else if (name.rfind("wasp_bb", 0) == 0 || name == "lenseShape" || name == "signal_bbShape")
+				_glows.emplace_back(name, std::make_unique<BillboardBatch>(*group));
+			else
+				continue;
+			glowShaders.insert(group->GetShader());
+		}
+	auto& resources = Game::GetInstance().GetResourceManager();
+	for (const auto& chunk : root.GetChildren())
+		if (chunk->IsType(P3D::ChunkType::Shader))
+		{
+			auto shader = P3D::Shader::Load(*chunk);
+			if (glowShaders.count(shader->GetName()) && !resources.GetShader(shader->GetName()))
+				resources.LoadShader(*shader);
+		}
 	if (_states.size() <= kDestroyed)
 	{
 		Log::Warn("WaspManager: no beecamera states in {}", fx);
@@ -226,7 +252,10 @@ void WaspManager::readBehaviours(const std::string& levelScript)
 		else if (line.find("SetActorRotationSpeed") != std::string::npos && args.size() >= 2)
 			_turnRate = number(1, 85.0f) * 3.14159265f / 180.0f;
 		else if (line.find("SetProjectileStats") != std::string::npos && args.size() >= 3)
+		{
+			_shotSpeed = number(1, 60.0f) / 3.6f;
 			_shotDamage = number(2, _shotDamage);
+		}
 	}
 }
 
@@ -341,7 +370,10 @@ WaspManager::Result WaspManager::Update(double dt, const Vector3& player, bool a
 				{
 					enter(wasp, kFiring);
 					wasp.nextShot = _time + (b.period > 0.0f ? b.period : 3.0f);
-					result.damage += _shotDamage;
+					// At where the player is now, chest high: a player who keeps
+					// moving is missed.
+					const Vector3 aim = player + Vector3(0.0f, 0.8f, 0.0f) - wasp.position;
+					_shots.push_back({wasp.position, aim.Normalized() * _shotSpeed, 0.0f, b.range + 5.0f});
 					Log::Info("WaspManager: '{}' fires at the player, {:.0f}m", wasp.id, distance);
 				}
 			}
@@ -372,15 +404,72 @@ WaspManager::Result WaspManager::Update(double dt, const Vector3& player, bool a
 		wasp.model->SetTransform(Matrix4x4::MakeTranslate(at) *
 		                         Matrix4x4(Quaternion::MakeFromEuler(Vector3(0.0f, wasp.yaw, 0.0f))));
 	}
+	// The shots fly on; one that reaches the player hits.
+	for (auto& shot : _shots)
+	{
+		const Vector3 step = shot.velocity * static_cast<float>(dt);
+		shot.position += step;
+		shot.travelled += step.Length();
+		if ((shot.position - (player + Vector3(0.0f, 0.8f, 0.0f))).Length() < 1.2f)
+		{
+			result.damage += _shotDamage;
+			shot.travelled = shot.range;
+		}
+	}
+	_shots.erase(std::remove_if(_shots.begin(), _shots.end(), [](const Shot& s) { return s.travelled >= s.range; }),
+	             _shots.end());
 	return result;
 }
 
-void WaspManager::Draw(GL::ShaderProgram& worldShader, const Matrix4x4& viewProj)
+void WaspManager::Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& billboardShader, const Matrix4x4& viewProj)
 {
 	for (const bool opaque : {true, false})
 		for (const auto& wasp : _wasps)
 			if (!wasp.gone)
 				wasp.model->Draw(worldShader, viewProj, wasp.model->GetTransform(), opaque);
+
+	// The glows where their joints are, the shots where they fly. The blending
+	// they set is put back after: the HUD drawn next relies on it, and left
+	// additive (or off) the whole frame washed white (or its text came out as
+	// solid boxes).
+	const GLboolean blending = glIsEnabled(GL_BLEND);
+	GLint source = GL_SRC_ALPHA, destination = GL_ONE_MINUS_SRC_ALPHA;
+	glGetIntegerv(GL_BLEND_SRC_RGB, &source);
+	glGetIntegerv(GL_BLEND_DST_RGB, &destination);
+	billboardShader.Bind();
+	for (const bool opaque : {true, false})
+	{
+		if (!opaque)
+			glEnable(GL_BLEND);
+		for (const auto& wasp : _wasps)
+		{
+			if (wasp.gone || wasp.destroyed)
+				continue;
+			for (const auto& [name, glow] : _glows)
+			{
+				const int joint = wasp.model->FindPropJoint(name);
+				if (joint < 0)
+					continue;
+				billboardShader.SetUniformValue(
+				    "viewProj", viewProj * wasp.model->GetTransform() * wasp.model->GetJointTransform(joint));
+				glow->Draw(billboardShader, opaque);
+			}
+		}
+		for (const auto& shot : _shots)
+		{
+			billboardShader.SetUniformValue("viewProj", viewProj * Matrix4x4::MakeTranslate(shot.position));
+			for (const auto& sprite : _shotSprites)
+				sprite->Draw(billboardShader, opaque);
+		}
+	}
+	billboardShader.SetUniformValue("viewProj", viewProj);
+	glBlendFunc(source, destination);
+	if (blending)
+		glEnable(GL_BLEND);
+	else
+		glDisable(GL_BLEND);
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
 }
 
 int WaspManager::GetDestroyed() const

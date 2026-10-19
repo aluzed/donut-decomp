@@ -56,6 +56,8 @@ public:
 	// The shader the level's own meshes are drawn with, uniforms as Draw left
 	// them -- what any other P3D Mesh (a car's, say) has to be drawn with too.
 	GL::ShaderProgram& GetWorldShader() const { return *_worldShader; }
+	// Its billboard program, with the frame's uniforms set by Draw.
+	GL::ShaderProgram& GetBillboardShader() { return *_billboardBatchShader; }
 	void LoadP3D(const std::string& filename);
 
 	void DynaLoadData(const std::string& dynaLoadData);
