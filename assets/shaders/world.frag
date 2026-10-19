@@ -33,5 +33,8 @@ void main()
     float fogFactor = 1.0 - exp(-fogDensity * dist);
     fogFactor = clamp(fogFactor, 0.0, 1.0);
 
-    fragColor = mix(color, fogColor, fogFactor);
+    // The fog tints the colour, not the coverage: mixing the alpha too gave
+    // every transparent texel a little opacity, and overlapping smoke puffs
+    // showed as stacks of squares.
+    fragColor = vec4(mix(color.rgb, fogColor.rgb, fogFactor), color.a);
 }
