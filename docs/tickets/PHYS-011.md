@@ -1,6 +1,6 @@
 # PHYS-011 — Props a car knocks about
 
-- **Status:** MOSTLY DONE (2026-10-20)
+- **Status:** DONE (2026-10-20)
 - **Priority:** P1
 - **Module:** Physics
 - **Depends on:** —
@@ -115,10 +115,10 @@ trees — and the car drove through every one.
 
 ## Not done
 
-- The particle types the table names but the effects file does not hold by a name we
-  know (`eParkingMeter`, `eCoconutsDropping...`, ...). Types 9, 10, 11, 14, 19 are the
-  dash's dust, a wheel's dirt and grass sprays (used since, PHYS-008), a car's damage
-  smoke, fire.
+- The table's effects with no particles: `eParkingMeter` and `ePopsicles` are in no file
+  of the game (no `InstParticleSystem` outside the levels' effects files, which hold
+  types 3, 4, 5, 6, 9, 10, 11, 14 and 19 only); `eCoconutsDroppingShort/Tall` are the
+  palms' own breakings (types 27, 28), which play.
 - The player on foot does not push them by walking into them (the character is a
   kinematic capsule); a kick does (below).
 - Traffic (kinematic) passes through the fixed ones, as before.

@@ -128,7 +128,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
 | PHYS-004 | ✅ | — | Collision callbacks | Contacts read after each step (`GetContacts`): props, breakables; car damage from its change of velocity, with a thud; pickups by distance (2026-10-20) |
-| PHYS-011 | 🟡 | P1 | Things to knock over | The `DynamicPhysics` props (269 on level 1) have bodies: mailboxes and bins fly off, lamp posts give way to a hard hit, hydrants and stop signs break (their `BreakableObject` breaking plays), trees shed leaves; letters, rubbish, leaves fly off (`InstParticleSystem`); masses from `atc.p3d`, sounds from `collide.spt` (2026-10-20). The `AnimDynamicPhysics` breakables (crates, vending machines, gas pumps) stand as bodies and break when run into. Missing: a few hit effects (`eParkingMeter`, coconuts) |
+| PHYS-011 | ✅ | — | Things to knock over | The `DynamicPhysics` props have bodies (mailboxes and bins fly, lamp posts give way, hydrants and stop signs break, trees shed leaves); the `AnimDynamicPhysics` breakables stand until run into; hit effects, masses and sounds from the game's tables. `eParkingMeter`, `ePopsicles` are in no file of the game (2026-10-20) |
 | PHYS-008 | ✅ | — | Grip per surface | Each wheel's friction from the ground's terrain type (`SurfaceTypeList`): grass, dirt, sand slip; the rear wheels throw up grass or earth; skid marks per ground (2026-10-20) |
 | PHYS-005 | ✅ | — | `BulletFenceShape` for fences | |
 | VEH-SINK | ✅ | — | The car drives, and the camera stays above ground | |
