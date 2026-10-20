@@ -173,7 +173,12 @@ from m7i, "hit, and down it goes"; the beam seen from the playground; the saucer
 ## Not done
 
 - `destroyboss`: the saucer's explosion is the game's sparks and dust, not the barrel's own
-  (`bombbarrel.p3d`'s `car_expl`); the barrel is not seen going up the beam; the beam's
+  (`bombbarrel.p3d`'s `car_expl`). Tried (2026-10-20): its two particle systems
+  (`BurstShape`, `bombbarrel9Shape`) load and play on their 121 frames, but `BurstShape`'s
+  `expl2_m` keeps some 100 sprites of 1.5 m alive at once, additive, coloured green over
+  their life, on a texture whose background is not black (5, 5, 5): they add up to a
+  saturated square. Whether the game shows fewer, or blends them otherwise, is not known;
+  left out; the barrel is not seen going up the beam; the beam's
   sparkles (its particle system) and the saucer's state props are not played. Level 7 m5 and
   m7 name a barrel they do not place: they go to where the last mission put it (m3's for
   m5, m6's for m7, in the story), or, loaded alone, have nowhere to go and are skipped.
