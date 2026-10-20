@@ -290,6 +290,12 @@ private:
 	// The current stage's objective is met: on to the next stage, or the end.
 	void objectiveComplete();
 	void missionComplete();
+	// The music script's event for this mission's `what` ("start", "win"):
+	// "M1_start", "Sunday_Drive_start", "StreetRace01_win", "Bonus_lose"; empty
+	// for a mission it has none for.
+	std::string musicEvent(const std::string& what) const;
+	// The mission's music has given way to its ending's.
+	bool _missionMusicEnded = true;
 	// Watches the objectives that are not met by driving through checkpoints.
 	void updateObjective(double dt);
 

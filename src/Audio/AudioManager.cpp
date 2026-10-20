@@ -178,15 +178,25 @@ void AudioManager::Update()
 	cleanupFinished();
 	processDialogueQueue();
 
-	// The next segment when one ends.
-	if (_music && !_playlist.empty())
+	// The next segment when one ends: the once tracks, then the loop round
+	// and round; a cue without a loop gives way to the last one with.
+	if (_music && (!_cue.once.empty() || !_cue.loop.empty()))
 	{
 		ALint state = AL_STOPPED;
 		alGetSourcei(_music->id, AL_SOURCE_STATE, &state);
 		if (state == AL_STOPPED)
 		{
-			_playlistIndex = (_playlistIndex + 1) % _playlist.size();
-			startMusicTrack(_playlist[_playlistIndex], false);
+			++_cueStep;
+			if (_cueStep >= _cue.once.size() + _cue.loop.size() && _cue.loop.empty())
+				ResumeMusicBase();
+			else
+			{
+				if (_cueStep >= _cue.once.size() + _cue.loop.size())
+					_cueStep = _cue.once.size();
+				const std::string& track = _cueStep < _cue.once.size() ? _cue.once[_cueStep]
+				                                                       : _cue.loop[_cueStep - _cue.once.size()];
+				startMusicTrack(track, false);
+			}
 		}
 	}
 }
@@ -268,21 +278,91 @@ bool AudioManager::startMusicTrack(const std::string& name, bool loop)
 
 void AudioManager::PlayMusic(const std::string& name)
 {
-	_playlist.clear();
+	_cue = {};
 	startMusicTrack(name, true);
 }
 
 void AudioManager::PlayMusicPlaylist(std::vector<std::string> tracks)
 {
-	_playlist = std::move(tracks);
-	_playlistIndex = 0;
-	if (_playlist.empty())
+	if (tracks.empty())
 	{
+		_cue = {};
 		releaseMusic();
 		return;
 	}
-	Log::Info("Audio: music, {} tracks from '{}'", _playlist.size(), _playlist.front());
-	startMusicTrack(_playlist.front(), false);
+	Log::Info("Audio: music, {} tracks from '{}'", tracks.size(), tracks.front());
+	MusicScript::Cue cue;
+	cue.loop = std::move(tracks);
+	_baseCue = cue;
+	startCue(std::move(cue));
+}
+
+bool AudioManager::startCue(MusicScript::Cue cue)
+{
+	// The tracks the archives hold: music02.rcf, which most of the main
+	// themes are in, does not come out of the CDs.
+	for (auto* tracks : {&cue.once, &cue.loop})
+		tracks->erase(std::remove_if(tracks->begin(), tracks->end(),
+		                             [&](const std::string& t) { return !_sounds.count(t); }),
+		              tracks->end());
+	if (cue.once.empty() && cue.loop.empty())
+		return false;
+	_cue = std::move(cue);
+	_cueStep = 0;
+	return startMusicTrack(_cue.once.empty() ? _cue.loop.front() : _cue.once.front(), false);
+}
+
+bool AudioManager::LoadMusicScript(int level)
+{
+	_musicScript.reset();
+	const std::string name = "sound\\music\\l" + std::to_string(level) + "_music.rms";
+	const auto found = _sounds.find(name);
+	if (found == _sounds.end())
+		return false;
+	auto stream = found->second->GetFileStream(name);
+	if (!stream)
+		return false;
+	std::vector<uint8_t> data(stream->Size());
+	stream->ReadBytes(data.data(), data.size());
+	auto script = std::make_unique<MusicScript>();
+	if (!script->Load(data))
+		return false;
+	_musicScript = std::move(script);
+	return true;
+}
+
+bool AudioManager::PlayMusicEvent(const std::string& event, bool keepBase)
+{
+	const MusicScript::Cue* cue = _musicScript ? _musicScript->Find(event) : nullptr;
+	if (!cue)
+		return false;
+	if (!startCue(*cue))
+	{
+		Log::Info("Audio: music event '{}', none of its music in the archives", event);
+		return false;
+	}
+	if (!keepBase && !_cue.loop.empty())
+		_baseCue = _cue;
+	Log::Info("Audio: music event '{}', {} once and {} looped tracks from '{}'", event, _cue.once.size(),
+	          _cue.loop.size(), _cue.once.empty() ? _cue.loop.front() : _cue.once.front());
+	return true;
+}
+
+void AudioManager::SetMusicBase(const std::string& event)
+{
+	if (const MusicScript::Cue* cue = _musicScript ? _musicScript->Find(event) : nullptr; cue && !cue->loop.empty())
+		_baseCue = *cue;
+}
+
+void AudioManager::ResumeMusicBase()
+{
+	MusicScript::Cue base = _baseCue;
+	base.once.clear();
+	if (!startCue(std::move(base)))
+	{
+		_cue = {};
+		releaseMusic();
+	}
 }
 
 std::string AudioManager::CarSoundFile(const std::string& car, const std::string& suffix) const
@@ -523,7 +603,8 @@ void AudioManager::PlayAmbience(const std::string& part)
 
 void AudioManager::StopMusic()
 {
-	_playlist.clear();
+	_cue = {};
+	_baseCue = {};
 	releaseMusic();
 }
 

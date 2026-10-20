@@ -139,7 +139,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 
 | ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
-| AUDIO-002 | 🟡 | P1 | Music | Each level's RSD segments chained in order. The `l<n>_music.rms` script (moods, transitions) is not read |
+| AUDIO-002 | ✅ | P1 | Music | The `l<n>_music.rms` script read by its names: exploring, missions (start, win, lose, out of the car), races, bonus, Hit & Run. Not on the beat; music02.rcf missing |
 | AUDIO-007 | 🟡 | P2 | Dialogue: subtitles and lip sync | Conversations, voice lines, doorbells, near-miss shouts are heard. No subtitles, no lip sync |
 | AUDIO-008 | ⬜ | P3 | EFX reverb per zone (inside/outside) | |
 | AUDIO-010 | ✅ | — | Footsteps and tyre squeal by the ground | The characters' own steps (concrete, metal, wood, dirt), landings; `skid`/`dirt_skid` looped while the player's car skids (2026-10-20) |

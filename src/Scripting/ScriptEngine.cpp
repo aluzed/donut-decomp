@@ -157,6 +157,8 @@ void ScriptEngine::CloseMission()
 	// the script re-ran, and it looped forever with no vehicle ever reachable.
 	// Completion belongs to gameplay -- see objectiveComplete.
 	Log::Info("ScriptEngine: mission '{}' loaded, {} stage(s)", _missionId, _stageScripts.size());
+	_game.GetAudioManager().PlayMusicEvent(musicEvent("start"));
+	_missionMusicEnded = false;
 	_missionElapsed = 0.0f;
 	if (!_stageScripts.empty())
 		beginStage(0);
@@ -698,7 +700,34 @@ void ScriptEngine::missionFailed(const std::string& reason, const std::string& h
 	_game.AddShake(2.0f);
 	_game.GetAudioManager().PlayRaw(SoundGenerator::Beep(150, 0.5f), 22050, 1, 16);
 	_game.SayLine("w_mfail");
+	// The mission's ending, then the level's music.
+	auto& audio = _game.GetAudioManager();
+	audio.SetMusicBase("OF_explore_mission");
+	const bool outOfCar = hint == "MISSION_FAILED_PLAYER_OUT_OF_VEHICLE_HINT1";
+	if (!(outOfCar && audio.PlayMusicEvent(musicEvent("get_out_of_car"), true)) &&
+	    !audio.PlayMusicEvent(musicEvent("lose"), true))
+		audio.ResumeMusicBase();
+	_missionMusicEnded = true;
 	_game.SetState(GameState::MissionFailed);
+}
+
+std::string ScriptEngine::musicEvent(const std::string& what) const
+{
+	// m1, m1sd (the drive to it), sr1, bm1.
+	const std::string& id = _missionId;
+	const auto digits = [&](std::size_t from, std::size_t to) {
+		return to > from && to <= id.size() &&
+		       std::all_of(id.begin() + from, id.begin() + to, [](unsigned char c) { return std::isdigit(c); });
+	};
+	if (id.size() > 3 && id.compare(id.size() - 2, 2, "sd") == 0)
+		return what == "get_out_of_car" ? "Sunday_Drive_Get_out_of_Car" : "Sunday_Drive_" + what;
+	if (id.size() > 1 && id[0] == 'm' && digits(1, id.size()))
+		return "M" + id.substr(1) + "_" + what;
+	if (id.size() > 2 && id.compare(0, 2, "sr") == 0 && digits(2, id.size()))
+		return "StreetRace0" + id.substr(2) + "_" + what;
+	if (id.size() > 2 && id.compare(0, 2, "bm") == 0 && digits(2, id.size()))
+		return "Bonus_" + what;
+	return {};
 }
 
 void ScriptEngine::ResetToHere()
@@ -712,6 +741,8 @@ bool ScriptEngine::RetryFromCheckpoint()
 		return false;
 
 	Log::Info("ScriptEngine: retrying '{}' from stage {}/{}", _missionId, _resetStage + 1, _stageScripts.size());
+	_game.GetAudioManager().PlayMusicEvent(musicEvent("start"));
+	_missionMusicEnded = false;
 	if (_hasPlayerStart)
 		_game.SetPlayerPosition(_playerStart);
 	// Every other car goes back to where it was declared. A stage replayed
@@ -878,6 +909,13 @@ void ScriptEngine::CleanupMission()
 	_missionActive = false;
 	_currentStage = -1;
 	_noTraffic = false;
+	// A mission given up: the level's music, at once.
+	if (!_missionMusicEnded)
+	{
+		_game.GetAudioManager().SetMusicBase("OF_explore_mission");
+		_game.GetAudioManager().ResumeMusicBase();
+		_missionMusicEnded = true;
+	}
 
 	Log::Info("ScriptEngine: mission cleaned up");
 }
@@ -1976,6 +2014,13 @@ void ScriptEngine::missionComplete()
 
 	Log::Info("ScriptEngine: stage complete! Time: {:.1f}s (best: {}){}", elapsed,
 	          _bestTime < 999.0f ? fmt::format("{:.1f}s", _bestTime) : "none", _isNewRecord ? " NEW RECORD!" : "");
+	// The mission's ending, then the level's music. A drive to a mission has
+	// none: the mission's own takes over.
+	auto& audio = _game.GetAudioManager();
+	audio.SetMusicBase("OF_explore_mission");
+	if (!audio.PlayMusicEvent(musicEvent("win"), true))
+		audio.ResumeMusicBase();
+	_missionMusicEnded = true;
 	_stageTimeRemaining = -1.0f;
 	_game.SetState(GameState::MissionComplete);
 }

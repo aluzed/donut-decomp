@@ -54,7 +54,7 @@ into a playable arcade racing game.
 
 ### Audio (OpenAL)
 - **Source Pool**: 24 simultaneous sounds; the listener is the camera
-- **Music**: each level's own score, its RSD segments chained in turn
+- **Music**: by the level's music script (l<n>_music.rms): exploring, each mission's theme and endings, races, Hit & Run
 - **Ambience**: each level's background loop outdoors, a room's indoors
 - **Cars**: the driven car's own engine loop, pitched with speed, and its own horn; its tyres
   squealing as it skids (scraping on loose ground)

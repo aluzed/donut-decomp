@@ -1,10 +1,10 @@
 # AUDIO-002 — Finir le streaming musique double-buffer
 
-- **Status:** PARTIAL (2026-10-18: the game's music plays)
+- **Status:** DONE (2026-10-20: the music script picks the music by game event)
 - **Priority:** P1
 - **Module:** Audio
 - **Depends on:** —
-- **Files:** `src/Audio/AudioManager.h:71-79,103`, `src/Audio/AudioManager.cpp` (PlayMusic)
+- **Files:** `src/Audio/MusicScript.{h,cpp}`, `src/Audio/AudioManager.{h,cpp}` (PlayMusicEvent), `src/Scripting/ScriptEngine.cpp` (musicEvent), `src/Game.cpp`
 
 ## Contexte
 La structure `MusicSource` (source OpenAL + 2 buffers de streaming) est déclarée (`AudioManager.h:71-79`) et les constantes `kStreamingBuffers=2` / `kStreamingBufferSize=65536` existent, mais `PlayMusic` est incomplet : la musique n'est pas streamée en continu via double-buffer.
@@ -86,3 +86,51 @@ regions and events: `silent_region`, `movie_region`, `pause_region`, `FE_region`
 To read it: the schema block, then each object by its type's field list; regions hold
 sequences of clips, events play or push regions through transitions on the beat.
 Several hours of work, and it needs listening to judge.
+
+## The music script, read by its names (2026-10-20)
+
+`MusicScript` does not decode the object graph (its pointers are run-time addresses).
+It reads the names the composition keeps after `my_comp`, in order, which come group
+by group:
+
+- the group's clips: a run of names with no bytes between them, each a sound file
+  followed by its clip (`Homer\Tuba_001`, `Tuba_001`; `Motown_Intro`, `M5_Intro`), or
+  a clip declared by another group, alone (the bonus missions replay level 1 m1's);
+- its regions (`M1_start_region`, `M1_end_Pos_region`), each followed by its data;
+- its events (`M1_start`, `M1_win`), each followed by its data.
+
+An event plays the region of its group its name calls for (`M1_start` the start or main
+region, `_win` the `end_Pos` one, `_lose` `end_Neg`, `_get_out_of_car` `end_Sus`,
+`StreetRace01_win` `win_street_race1`, a few by name: `Hit_and_Run` `Hit_Run`), and a
+region the clips of its group its name calls for: a start or main region its pickup or
+intro once, then the rest round and round; a drama region its drama; an ending its
+ending, once. Event names are matched without case or underscores (`M2_Win`).
+
+`AudioManager::PlayMusicEvent` plays an event's cue; one that loops becomes the music to
+go back to, and an ending gives the music back to it when it is over. The game's events:
+
+- the level loaded: `OF_explore_mission` (level 1 the 63 tubas, 4 Marge's lounge, 7
+  Halloween), or the old per-level set when the script has nothing the archives hold;
+- a mission: `M<n>_start` / `_win` / `_lose` / `_get_out_of_car` (failed out of the car),
+  `Sunday_Drive_*` for the drive to it (`m1sd`), `StreetRace0<n>_*`, `Bonus_*`; then
+  back to `OF_explore_mission`. A retry starts the mission's again; a mission given up
+  goes back at once;
+- Hit & Run: `Hit_and_Run` while the police chase (the level's music kept as the one to
+  go back to), `Hit_and_Run_Caught` when busted.
+
+All seven levels' scripts read (20-22 groups, 44-55 events with music). Checked by log on
+the seven levels (story, autopilot): level 1 `OF_explore_mission`, `M1_start`
+(collection02 pickup then main), `M1_win` (its `End_Pos`), then the tubas again; level 2
+`M3_start` (cbg pickup, main), level 7 `M1_start` (halloween_intro), `Sunday_Drive_start`.
+Validation unchanged: 32 won, 0 failed, 0 crash. Not heard: this machine was not
+listened to.
+
+Not done:
+- `music02.rcf` does not come out of the CDs (tools/extract_assets.sh): the tracks it holds
+  (`Sunday_Drive`, `PowerPlant`, `Vivaldi`, `Simpsons_Theme`, some mission themes) are
+  skipped, and the music stays as it was.
+- The transitions are not on the beat: a cue starts at once, after the segment playing
+  is cut. The script's fades, stitches and beat sets are not read.
+- The other events: the front end, buildings (`Entering_Building` fades out), the
+  Kwik-E-Mart's muzak, cards found, `_drama` and `_10sec_to_go`, the Super Sprint, the
+  credits. `ambience.rms` is not read either.

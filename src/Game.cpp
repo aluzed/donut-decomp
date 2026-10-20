@@ -1211,6 +1211,13 @@ void Game::updateHitAndRun(double dt)
 	// Indoors the police wait. Nor do they chase --autopilot, whose teleports
 	// across a target's path are not the player's driving: in the unattended
 	// level 4 run they rammed the traffic into a police chase.
+	// The chase's music gives way when the chase is over, however it ended:
+	// the police evaded, lost indoors, the meter reset.
+	if (_hitAndRunMusic && (!_hitAndRun || !_hitAndRun->IsChasing()))
+	{
+		_hitAndRunMusic = false;
+		_audioManager->ResumeMusicBase();
+	}
 	if (!_hitAndRun || !_character || !_interior.empty() || _autopilot)
 		return;
 	// A street race's stage: no meter, no police (DisableHitAndRun).
@@ -1269,7 +1276,9 @@ void Game::updateHitAndRun(double dt)
 	case HitAndRun::Event::ChaseStarted:
 		_audioManager->PlayRaw(SoundGenerator::Chirp(700.0f, 1400.0f, 0.6f, 44100), 44100, 1, 16);
 		alert("HIT_AND_RUN", "Hit & Run!");
+		_hitAndRunMusic = _audioManager->PlayMusicEvent("Hit_and_Run", true);
 		break;
+
 	case HitAndRun::Event::Busted:
 	{
 		// The fine is the game's 50 coins, or what the purse holds; a mission
@@ -1280,6 +1289,10 @@ void Game::updateHitAndRun(double dt)
 		Log::Info("Game: busted, fined {} coins", fine);
 		alert("BUSTED", "BUSTED!");
 		_hitAndRun->Reset();
+		// A mission under way plays its own ending.
+		_hitAndRunMusic = false;
+		if (!_audioManager->PlayMusicEvent("Hit_and_Run_Caught", true))
+			_audioManager->ResumeMusicBase();
 		_scriptEngine->FailMission("busted by the police", "MISSION_FAILED_HIT_N_RUN_HINT1");
 		break;
 	}
@@ -1735,11 +1748,13 @@ void Game::loadLevel()
 		Log::Info("Game: {} street races and bonus missions on offer", _bonusGivers.size());
 	}
 
-	// The level's music. The game chains short segments by a music script
-	// (l<n>_music.rms) that is not read here; the segments of the level's own
-	// set play in order instead: Homer's tubas on level 1, Lisa's on 3, Marge's
-	// lounge on 4, Halloween on 7. The other levels have no set of their own
-	// and get the main themes.
+	// The level's music: what its music script (l<n>_music.rms) plays while
+	// exploring. Without one, or with none of it in the archives, the
+	// segments of the level's own set play in order instead: Homer's tubas on
+	// level 1, Lisa's on 3, Marge's lounge on 4, Halloween on 7, the main
+	// themes on the others.
+	_audioManager->LoadMusicScript(_levelNumber);
+	if (!_audioManager->PlayMusicEvent("OF_explore_mission"))
 	{
 		static const std::map<int, std::string> kSets {
 		    {1, "\\homer\\"}, {3, "\\lisa\\"}, {4, "\\marge\\"}, {7, "\\halloween\\"}};

@@ -209,6 +209,8 @@ private:
 	// The marks skidding tyres leave.
 	std::unique_ptr<class SkidMarks> _skidMarks;
 	std::unique_ptr<class HitAndRun> _hitAndRun;
+	// The chase's music is playing (Hit_and_Run), to give way when it ends.
+	bool _hitAndRunMusic = false;
 	// Runs the Hit & Run meter: people run down, the police, busted.
 	void updateHitAndRun(double dt);
 	std::unique_ptr<GameInput> _gameInput;

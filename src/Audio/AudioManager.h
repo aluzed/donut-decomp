@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "Audio/MusicScript.h"
 #include "Core/Math/Vector3.h"
 #include "RCL/RCFFile.h"
 #include "RCL/RSDFile.h"
@@ -59,6 +60,19 @@ public:
 	// music is made of short segments chained together.
 	void PlayMusicPlaylist(std::vector<std::string> tracks);
 	void StopMusic();
+	// The level's music script (sound\\music\\l<n>_music.rms); false when
+	// there is none, or nothing in it the archives hold.
+	bool LoadMusicScript(int level);
+	// The music a game event of the script calls for ("OF_explore_mission",
+	// "M1_start", "M1_win"): its once tracks then its loop. A cue that loops
+	// becomes the music to go back to, unless `keepBase`; one that does not, an
+	// ending, gives the music back to it when it is over. False, the music
+	// unchanged, when the script has nothing the archives hold for it.
+	bool PlayMusicEvent(const std::string& event, bool keepBase = false);
+	// The music to go back to becomes this event's, without playing it.
+	void SetMusicBase(const std::string& event);
+	// Back to the music to go back to, its loop.
+	void ResumeMusicBase();
 
 	// A car's sounds, from its sound script (sound\\scripts\\<car>.spt):
 	// the engine loop and the horn it names. Empty when there is none.
@@ -140,7 +154,14 @@ private:
 	// The source speaking the current line, or -1.
 	int _dialogueSource = -1;
 	std::unique_ptr<MusicSource> _music;
-	std::vector<std::string> _playlist;
+	// The music playing: its once tracks, then its loop; and the last cue that
+	// looped, to go back to.
+	MusicScript::Cue _cue;
+	MusicScript::Cue _baseCue;
+	std::size_t _cueStep = 0;
+	std::unique_ptr<MusicScript> _musicScript;
+	// Plays `cue` from its first track; false when none of it plays.
+	bool startCue(MusicScript::Cue cue);
 	ALuint _engineSource = 0;
 	ALuint _ambienceSource = 0;
 	ALuint _ambienceBuffer = 0;
@@ -157,7 +178,6 @@ private:
 	// The sound scripts' text, by name ("homer"), as read; empty when there is
 	// no such script.
 	mutable std::unordered_map<std::string, std::string> _scriptTexts;
-	std::size_t _playlistIndex = 0;
 	// Stops and frees the music source, if any.
 	void releaseMusic();
 	// Decodes `name` whole and plays it once on a fresh music source.
