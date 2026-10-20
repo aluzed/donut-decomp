@@ -526,6 +526,7 @@ Game::Game(int argc, char** argv)
 
 	_hud = std::make_unique<Hud>();
 	_gameHud = std::make_unique<GameHud>();
+	_gameHud->LoadMap(_levelNumber);
 
 	// The game's own pause screen: "PAUSED", and its list, of which Continue,
 	// Restart Mission and Quit Game are ours.
@@ -2122,6 +2123,9 @@ void Game::loadLevel()
 	// here. This was level 1's list, written out.
 	for (const std::string& file : levelWorldFiles())
 		_level->LoadP3D(file);
+	// The radar's map of the level.
+	if (_gameHud)
+		_gameHud->LoadMap(_levelNumber);
 	// The mission art shared by the whole level: the coin, among others.
 	_level->LoadP3D(fmt::format("missions/{}/level.p3d", levelDirectory()));
 	// The level's effects file (art/l01_fx.p3d) holds the textures its particle
@@ -4716,8 +4720,10 @@ void Game::Run()
 				hud.checkpoint = _scriptEngine->GetCurrentCheckpoint();
 				hud.totalCheckpoints = static_cast<int>(_scriptEngine->GetCheckpoints().size());
 
+				// The other cars of the mission: the player's own has its own icon.
 				for (const auto& v : _scriptEngine->GetMissionVehicles())
-					hud.missionBlips.emplace_back(v->GetPosition().X, v->GetPosition().Z);
+					if (v.get() != _scriptEngine->GetPlayerCar() && v.get() != _activeVehicle)
+						hud.missionBlips.emplace_back(v->GetPosition().X, v->GetPosition().Z);
 
 				const auto& cps = _scriptEngine->GetCheckpoints();
 				for (const auto& cp : cps)

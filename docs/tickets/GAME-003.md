@@ -491,5 +491,16 @@ letters, top right) and their sets done ("LEVEL WASPS COMPLETE!"); a stage annou
 complete ("TASK COMPLETE!", two seconds). The old banners are not drawn for them.
 Checked by screenshots of each, raised by hand.
 
-Not done: the radar's map, its cone; mission complete and failed in the page's letters,
+The radar's map (2026-10-21): each level's `l<n>hudmap.p3d` (frontend `pure3d/`), the
+game's top-down roads and crossings, flat meshes in the world's coordinates (level 1's
+from -413 to 444 across), drawn each frame with the world's shader through a matrix of
+its own (the player in the middle, ahead up, the radar's range to the disc's rim) into
+a 256 x 256 texture, what lies outside the disc cleared a pair of rows at a time
+(`glScissor`: the window has no stencil asked for). It is shown in the page's own quad
+between the radar's disc and its icons, the cone's (`RadarConeBox0`), which the game
+had no other use for here. The disc itself is the page's (`hitnrun/radar.png`, a ring
+round a faint green): drawn into the texture under the roads, its alpha was squared away.
+The mission's cars no longer count the player's own, which sat under the arrow.
+
+Not done: the radar's cone; mission complete and failed in the page's letters,
 the proximity meter, the action button, the tutorial's walkie-talkie.

@@ -3,6 +3,12 @@
 #include "Core/FileSystem.h"
 #include "FrontendProject.h"
 #include "Game.h"
+#include "Level.h"
+#include "P3D/P3D.generated.h"
+#include "P3D/P3DFile.h"
+#include "Render/Mesh.h"
+#include "Render/OpenGL/ShaderProgram.h"
+#include "Render/OpenGL/glad/glad.h"
 #include "Render/OpenGL/VertexBinding.h"
 #include "Render/OpenGL/VertexBuffer.h"
 #include "Render/SpriteBatch.h"
@@ -102,7 +108,112 @@ GameHud::GameHud()
 	hideAll();
 }
 
-GameHud::~GameHud() = default;
+GameHud::~GameHud()
+{
+	if (_radarFrameBuffer)
+		glDeleteFramebuffers(1, &_radarFrameBuffer);
+}
+
+void GameHud::LoadMap(int level)
+{
+	_map.clear();
+	const std::string file = fmt::format("./art/frontend/scrooby2/resource/pure3d/l{}hudmap.p3d", level);
+	if (!FileSystem::exists(file))
+		return;
+	const P3D::P3DFile p3d(file);
+	auto& resources = Game::GetInstance().GetResourceManager();
+	for (const auto& chunk : p3d.GetRoot().GetChildren())
+	{
+		if (chunk->IsType(P3D::ChunkType::Texture))
+			resources.LoadTexture(*P3D::Texture::Load(*chunk));
+		else if (chunk->IsType(P3D::ChunkType::Shader))
+		{
+			if (auto shader = P3D::Shader::Load(*chunk); !resources.HasShader(shader->GetName()))
+				resources.LoadShader(*shader);
+		}
+		else if (chunk->IsType(P3D::ChunkType::Geometry))
+		{
+			auto mesh = std::make_unique<Mesh>(*P3D::Geometry::Load(*chunk));
+			mesh->Commit();
+			_map.push_back(std::move(mesh));
+		}
+	}
+}
+
+void GameHud::drawMap(const HudState& state)
+{
+	Level* level = Game::GetInstance().HasLevel() ? &Game::GetInstance().GetLevel() : nullptr;
+	if (_map.empty() || !level)
+		return;
+	// The radar sprite's box, 152 page pixels, its disc the middle 120.
+	constexpr int kSize = 256;
+	const float discRadius = kSize * 60.0f / 152.0f;
+	if (!_radarFrameBuffer)
+	{
+		_radarMap = std::make_unique<Texture>(nullptr, kSize, kSize, "hud_radar_map");
+		glGenFramebuffers(1, &_radarFrameBuffer);
+		glBindFramebuffer(GL_FRAMEBUFFER, _radarFrameBuffer);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, _radarMap->GetOpenGLHandle(), 0);
+	}
+	GLint frameBuffer = 0, viewport[4] = {};
+	GLfloat clearColour[4] = {};
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &frameBuffer);
+	glGetIntegerv(GL_VIEWPORT, viewport);
+	glGetFloatv(GL_COLOR_CLEAR_VALUE, clearColour);
+	glBindFramebuffer(GL_FRAMEBUFFER, _radarFrameBuffer);
+	glViewport(0, 0, kSize, kSize);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	// The roads: ahead up, the player in the middle, the radar's range to the
+	// disc's rim. The page's matrices are row by row, the GL's column by
+	// column: a point's x on the radar is the first column's dot with it.
+	const float k = state.radarRange > 0.0f ? (discRadius / (kSize * 0.5f)) / state.radarRange : 0.0f;
+	const float cs = std::cos(state.playerHeading), sn = std::sin(state.playerHeading);
+	const float px = state.playerXZ.X, pz = state.playerXZ.Y;
+	const Matrix4x4 viewProj(k * cs, k * sn, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -k * sn, k * cs, 0.0f, 0.0f,
+	                         -k * (cs * px - sn * pz), -k * (sn * px + cs * pz), 0.0f, 1.0f);
+	GL::ShaderProgram& shader = level->GetWorldShader();
+	shader.Bind();
+	shader.SetUniformValue("fogDensity", 0.0f);
+	shader.SetUniformValue("lightmapIntensity", 0.0f);
+	shader.SetUniformValue("viewProj", viewProj);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_BLEND);
+	for (const auto& mesh : _map)
+		mesh->Draw(shader, true);
+	for (const auto& mesh : _map)
+		mesh->Draw(shader, false);
+
+	// Round: what lies outside the disc cleared, two rows at a time.
+	glEnable(GL_SCISSOR_TEST);
+	for (int y = 0; y < kSize; y += 2)
+	{
+		const float dy = y + 1.0f - kSize * 0.5f;
+		const float half = std::abs(dy) < discRadius ? std::sqrt(discRadius * discRadius - dy * dy) : 0.0f;
+		const int left = static_cast<int>(kSize * 0.5f - half), right = static_cast<int>(std::ceil(kSize * 0.5f + half));
+		glScissor(0, y, left, 2);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glScissor(right, y, kSize - right, 2);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+	glDisable(GL_SCISSOR_TEST);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(frameBuffer));
+	glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+	glClearColor(clearColour[0], clearColour[1], clearColour[2], clearColour[3]);
+	// Over the radar's own disc, under its icons: in the place of its cone, a
+	// quad the page draws between them.
+	float x, y, w, h;
+	if (_page->GetSpriteBox("Radar0", x, y, w, h))
+	{
+		_page->SetSpriteTexture("RadarConeBox0", _radarMap.get());
+		_page->SetSpriteColor("RadarConeBox0", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+		_page->SetSpriteBox("RadarConeBox0", x, y, w, h);
+		_page->SetSpriteVisible("RadarConeBox0", true);
+	}
+}
 
 void GameHud::hideAll()
 {
@@ -198,6 +309,7 @@ void GameHud::Draw(const HudState& state, const Matrix4x4& proj, double dt)
 		return;
 	hideAll();
 	layOutRadar(state);
+	drawMap(state);
 
 	// Under the radar, the speed in the car: three digits, then the unit.
 	if (state.inVehicle)
@@ -301,8 +413,8 @@ void GameHud::Draw(const HudState& state, const Matrix4x4& proj, double dt)
 	_page->Draw(proj);
 
 	SpriteBatch batch;
-	// The roads under the radar's icons, as dots: there is no map drawn in it.
-	if (_page->GetSpriteBox("Radar0", x, y, w, h))
+	// Without the level's map, the roads under the radar's icons, as dots.
+	if (_map.empty() && _page->GetSpriteBox("Radar0", x, y, w, h))
 	{
 		const Vector2 centre(x + w * 0.5f, y + h * 0.5f);
 		const float radius = w * 60.0f / 152.0f;

@@ -98,6 +98,7 @@ public:
 	WorldPhysics& GetWorldPhysics() { return *_worldPhysics; }
 	LineRenderer& GetLineRenderer() { return *_lineRenderer; }
 	Level& GetLevel() { return *_level; }
+	bool HasLevel() const { return _level != nullptr; }
 	const PathGraph& GetPathGraph() const { return *_pathGraph; }
 
 	ScriptEngine& GetScriptEngine() { return *_scriptEngine; }

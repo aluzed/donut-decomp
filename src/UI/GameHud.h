@@ -5,11 +5,13 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace Donut
 {
 
 class Font;
+class Mesh;
 class FrontendProject;
 class SpriteBatch;
 class Texture;
@@ -42,6 +44,10 @@ public:
 	bool IsObjectiveShown() const { return _objectiveFor > 0.0; }
 	// `dt` times what is shown for a while.
 	void Draw(const HudState& state, const Matrix4x4& proj, double dt);
+	// The radar's map of `level` (art/frontend/scrooby2/resource/pure3d/
+	// l<level>hudmap.p3d: its roads and crossings, flat, in the world's
+	// coordinates).
+	void LoadMap(int level);
 
 private:
 	std::unique_ptr<FrontendProject> _page, _coins;
@@ -52,6 +58,12 @@ private:
 	int _coinCount = -1;
 	double _coinsFor = 0.0;
 
+	// The map, drawn round the player into a texture with the radar's disc
+	// under it, cut round, and given to the radar's sprite.
+	std::vector<std::unique_ptr<Mesh>> _map;
+	std::unique_ptr<Texture> _radarMap;
+	unsigned int _radarFrameBuffer = 0;
+	void drawMap(const HudState& state);
 	void hideAll();
 	void layOutRadar(const HudState& state);
 	// `text` in the page's letters, `height` page pixels high, its left at
