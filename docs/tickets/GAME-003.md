@@ -278,8 +278,7 @@ keeps every key and emits where the timeline stands (`Emitter::OffsetAt`); of th
 levels' emitters, logged as each level loaded, none other has such a path. Seen: a
 spark or two at a time, not looked into further.
 
-Not done: the vehicles' and clothes' galleries (`VehicleGallery.pag`,
-`SkinGallery.pag`), greyed on the contents.
+Not done: the clothes' gallery (`SkinGallery.pag`), greyed on the contents.
 
 ## The cards' gallery (2026-10-20)
 
@@ -328,3 +327,21 @@ level 7's first mission: level 1's seven pictures, its bonus locked, "Mission 3"
 The save now keeps the bonus missions and street races won and the clothes and vehicles
 bought (GAME-011): the scrapbook's stats count them, and a level's bonus mission won
 shows in the missions' gallery.
+
+## The vehicles' gallery (2026-10-20)
+
+Vehicles, on the scrapbook's contents (now three open entries, left and up going back
+through them, right and down on), opens the vehicles' gallery (`VehicleGallery.pag`): a
+level's six, `rewards.mfk`'s `BindReward(..., "car", ...)` in its order: the level's own
+car, the bonus mission's, the street races', three for sale. Each the player's shows its
+picture (`dynaload/images/cars2D/<car>.png`, 270 x 200, as large as its box holds), the
+others the page's silhouette (`silhouet/si_car.png`); the glow (`sbcursor.png`) under the
+one picked, its name the text bible's (`PLOWK_V`, Plow King), "?" locked. Keys and the
+mouse as in the other galleries, two rows of three.
+
+A level's own car is the player's from the start; the bonus mission's with its bonus
+mission won, the street races' with its three races won (the save's `won`); those for
+sale bought (`car:<level>`). The stats count them out of the 42 (`Vehicles 10/42`).
+Checked by screenshots with a save of level 1's bonus mission and three races won and
+the Plow King bought: level 1's four (Family Sedan, Pickup Truck, Electaurus, Plow
+King), two locked; level 2's own car alone; the stats' 10/42.

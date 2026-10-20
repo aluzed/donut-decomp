@@ -1465,12 +1465,46 @@ ScrapBookMenu::Stats Game::scrapBookStats() const
 		if (id.compare(0, 2, "bm") == 0 && won.size() > 1 && std::isdigit(won[1]))
 			stats.missionsWon.insert((won[1] - '1') * 8 + 7);
 	}
-	stats.vehicles = 0;
 	stats.clothing = 0;
 	for (int level = 1; level <= 7; ++level)
-	{
-		*stats.vehicles += static_cast<int>(_save.Entries(fmt::format("car:{}", level)).size());
 		*stats.clothing += static_cast<int>(_save.Entries(fmt::format("skin:{}", level)).size());
+	// The vehicles, rewards.mfk's BindReward("<car>", "<file>", "car",
+	// "<how>", <level>...): a level's own car is the player's from the start;
+	// the bonus mission's with the bonus mission won; the street races' with
+	// all three won; those for sale bought.
+	stats.vehicles = 0;
+	{
+		std::ifstream rewards("scripts/rewards.mfk");
+		for (std::string line; std::getline(rewards, line);)
+		{
+			const std::size_t at = line.find("BindReward(");
+			const std::size_t comment = line.find("//");
+			if (at == std::string::npos || (comment != std::string::npos && comment < at))
+				continue;
+			std::vector<std::string> quoted;
+			for (std::size_t open = line.find('"', at); open != std::string::npos; open = line.find('"', open + 1))
+			{
+				const std::size_t close = line.find('"', open + 1);
+				if (close == std::string::npos)
+					break;
+				quoted.push_back(line.substr(open + 1, close - open - 1));
+				open = close;
+			}
+			if (quoted.size() < 4 || quoted[2] != "car")
+				continue;
+			const std::size_t afterHow = line.find(quoted[3]) + quoted[3].size() + 1;
+			const int level = std::atoi(line.c_str() + line.find(',', afterHow) + 1);
+			int won = 0;
+			for (const std::string& entry : _save.Entries("won"))
+				if (entry.compare(0, 3, fmt::format("L{}:", level)) == 0 &&
+				    entry.compare(3, 2, quoted[3] == "bonusmission" ? "bm" : "sr") == 0)
+					++won;
+			const bool unlocked = quoted[3] == "defaultcar" || (quoted[3] == "bonusmission" && won > 0) ||
+			                      (quoted[3] == "streetrace" && won >= 3) ||
+			                      _save.Entries(fmt::format("car:{}", level)).count(quoted[0]) > 0;
+			stats.vehicleList.emplace_back(quoted[0], unlocked);
+			*stats.vehicles += unlocked;
+		}
 	}
 	// The story's missions: each level's AddMission list. The save
 	// keeps the level reached and where in its story, the drives to the

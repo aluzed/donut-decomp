@@ -9,6 +9,9 @@
 #include "ThirdParty/stb_image.h"
 #include "UI/TextBible.h"
 
+#include <algorithm>
+#include <cctype>
+
 #include <fmt/format.h>
 
 namespace Donut
@@ -22,6 +25,9 @@ constexpr const char* kScrapbookImages = "./art/frontend/scrooby2/resource/image
 // A level's cards: seven found in it, of eight in the deck (the eighth its
 // bonus card, given otherwise).
 constexpr int kCardsALevel = 7, kDeckALevel = 8, kLevels = 7;
+// A level's vehicles: its own car, the bonus mission's, the street races',
+// and three for sale.
+constexpr int kVehiclesALevel = 6;
 const Vector4 kPicked(1.0f, 0.84f, 0.0f, 1.0f);
 const Vector4 kGreyed(0.5f, 0.5f, 0.5f, 1.0f);
 
@@ -58,6 +64,90 @@ ScrapBookMenu::ScrapBookMenu(std::function<Texture*(const std::string&)> picture
 	_largeCard->LoadP3D(kFrontend, "HighResCard.pag");
 	_missions = std::make_unique<FrontendProject>();
 	_missions->LoadP3D(kFrontend, "MissionGallery.pag");
+	_vehicleGallery = std::make_unique<FrontendProject>();
+	_vehicleGallery->LoadP3D(kFrontend, "VehicleGallery.pag");
+}
+
+void ScrapBookMenu::layOutVehicles()
+{
+	// Each its picture (cars2D/<car>.png, 270 x 200) as large as its box holds,
+	// in its middle; locked, the page's own silhouette. The glow behind the
+	// one picked.
+	for (int i = 0; i < kVehiclesALevel; ++i)
+	{
+		const std::size_t index = static_cast<std::size_t>(_vehicleLevel * kVehiclesALevel + i);
+		const std::string name = fmt::format("Vehicle{}", i);
+		const bool unlocked = index < _vehicles.size() && _vehicles[index].second;
+		Texture* picture = unlocked ? image(fmt::format("./art/frontend/dynaload/images/cars2D/{}.png", _vehicles[index].first))
+		                            : image(std::string(kScrapbookImages) + "silhouet/si_car.png");
+		if (!picture)
+			continue;
+		_vehicleGallery->SetSpriteTexture(name, picture);
+		float x, y, w, h;
+		if (!_vehicleGallery->GetSpriteBox(name, x, y, w, h))
+			continue;
+		const float scale = std::min(w / picture->GetWidth(), h / picture->GetHeight());
+		const float pw = picture->GetWidth() * scale, ph = picture->GetHeight() * scale;
+		_vehicleGallery->SetSpriteBox(name, x + (w - pw) * 0.5f, y + (h - ph) * 0.5f, pw, ph);
+		if (i == _vehiclePicked)
+		{
+			float cx, cy, cw, ch;
+			if (_vehicleGallery->GetSpriteBox("VehicleCursor", cx, cy, cw, ch))
+				_vehicleGallery->SetSpriteBox("VehicleCursor", x + (w - cw) * 0.5f, y + (h - ch) * 0.5f + h * 0.15f, cw, ch);
+		}
+	}
+	for (int i = 0; i < kVehiclesALevel; ++i)
+		_vehicleGallery->BringSpriteToFront(fmt::format("Vehicle{}", i));
+	// Its name (the text bible's VEHICLES, "PLOWK_V": Plow King), unlocked.
+	const std::size_t picked = static_cast<std::size_t>(_vehicleLevel * kVehiclesALevel + _vehiclePicked);
+	std::string label = "?";
+	if (picked < _vehicles.size() && _vehicles[picked].second)
+	{
+		std::string key = _vehicles[picked].first;
+		std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) { return std::toupper(c); });
+		const std::string& named = Game::GetInstance().GetTextBible().Get(key);
+		label = named.empty() ? _vehicles[picked].first : named;
+	}
+	_vehicleGallery->SetText("VehicleName", label);
+}
+
+void ScrapBookMenu::drawVehicles(const GameIntent& intent, const Matrix4x4& proj, bool back)
+{
+	// Two rows of three: left and right from car to car, past a level's last
+	// to the next level's first; up and down from row to row.
+	const bool left = intent.moveLeft > 0.5f, right = intent.moveRight > 0.5f;
+	const bool up = intent.moveForward > 0.5f, down = intent.moveBackward > 0.5f;
+	const int all = kLevels * kVehiclesALevel;
+	int vehicle = _vehicleLevel * kVehiclesALevel + _vehiclePicked;
+	if (_shown && left && !_leftHeld)
+		vehicle = (vehicle + all - 1) % all;
+	if (_shown && right && !_rightHeld)
+		vehicle = (vehicle + 1) % all;
+	if (_shown && ((up && !_upHeld) || (down && !_downHeld)))
+		vehicle += vehicle % kVehiclesALevel < 3 ? 3 : -3;
+	_leftHeld = left;
+	_rightHeld = right;
+	_upHeld = up;
+	_downHeld = down;
+	const bool moved = _mouseX >= 0 && (intent.mouseX != _mouseX || intent.mouseY != _mouseY);
+	for (int i = 0; i < kVehiclesALevel; ++i)
+		if ((moved || intent.mouseLeftClick) && inside(*_vehicleGallery, fmt::format("Vehicle{}", i), intent.mouseX, intent.mouseY))
+			vehicle = _vehicleLevel * kVehiclesALevel + i;
+	_mouseX = intent.mouseX;
+	_mouseY = intent.mouseY;
+	if (vehicle != _vehicleLevel * kVehiclesALevel + _vehiclePicked)
+	{
+		_vehicleLevel = vehicle / kVehiclesALevel;
+		_vehiclePicked = vehicle % kVehiclesALevel;
+		layOutVehicles();
+	}
+	_vehicleGallery->Draw(proj);
+	_shown = true;
+	if (back)
+	{
+		_screen = Screen::Contents;
+		_shown = false;
+	}
 }
 
 void ScrapBookMenu::layOutMissions()
@@ -210,7 +300,7 @@ void ScrapBookMenu::Open(const Stats& stats)
 	set(*_stats, "StreetRaces_Unlocked", stats.streetRaces);
 	set(*_stats, "Cards_Unlocked", stats.cards);
 	set(*_stats, "Clothing_Unlocked", stats.clothing);
-	set(*_stats, "Vehicles_Unlocked", stats.vehicles);
+	set(*_stats, "Vehicles_Unlocked", stats.vehicles, static_cast<int>(stats.vehicleList.size()));
 	set(*_stats, "Wasps_Unlocked", stats.wasps);
 	set(*_stats, "Gags_Unlocked", stats.gags);
 	// The movies are not played (UI-FMV), nor is the whole reckoned.
@@ -222,7 +312,8 @@ void ScrapBookMenu::Open(const Stats& stats)
 	set(*_contents, "StoryMissions_Unlocked", stats.storyMissions, stats.storyMissionsTotal);
 	set(*_contents, "CollectorCards_Unlocked", stats.cards);
 	set(*_contents, "CharacterClothing_Unlocked", stats.clothing);
-	set(*_contents, "Vehicles_Unlocked", stats.vehicles);
+	set(*_contents, "Vehicles_Unlocked", stats.vehicles, static_cast<int>(stats.vehicleList.size()));
+	_vehicles = stats.vehicleList;
 }
 
 void ScrapBookMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
@@ -284,22 +375,30 @@ void ScrapBookMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 		drawMissions(intent, proj, back);
 		return;
 	}
+	if (_screen == Screen::Vehicles)
+	{
+		drawVehicles(intent, proj, back);
+		return;
+	}
 	if (_screen == Screen::Contents)
 	{
-		// Of the contents, the missions and the cards are open, any key
-		// going from one to the other; the clothes and vehicles' galleries
-		// are not done, greyed.
-		static const char* const kOpen[] = {"StoryMissions", "CollectorCards"};
+		// Of the contents, the missions, the vehicles and the cards are
+		// open, left and up going back through them, right and down on; the
+		// clothes' gallery is not done, greyed.
+		static const char* const kOpen[] = {"StoryMissions", "Vehicles", "CollectorCards"};
+		constexpr int kOpenCount = static_cast<int>(std::size(kOpen));
 		const bool left = intent.moveLeft > 0.5f, right = intent.moveRight > 0.5f;
 		const bool up = intent.moveForward > 0.5f, down = intent.moveBackward > 0.5f;
-		if (_shown && ((left && !_leftHeld) || (right && !_rightHeld) || (up && !_upHeld) || (down && !_downHeld)))
-			_contentsPicked = 1 - _contentsPicked;
+		if (_shown && ((left && !_leftHeld) || (up && !_upHeld)))
+			_contentsPicked = (_contentsPicked + kOpenCount - 1) % kOpenCount;
+		if (_shown && ((right && !_rightHeld) || (down && !_downHeld)))
+			_contentsPicked = (_contentsPicked + 1) % kOpenCount;
 		_leftHeld = left;
 		_rightHeld = right;
 		_upHeld = up;
 		_downHeld = down;
 		bool clicked = false;
-		for (int i = 0; i < 2; ++i)
+		for (int i = 0; i < kOpenCount; ++i)
 			for (const std::string& part : {std::string(kOpen[i]), std::string(kOpen[i]) + "_Unlocked"})
 				if (inside(*_contents, part, intent.mouseX, intent.mouseY) &&
 				    (intent.mouseLeftClick || intent.mouseX != _mouseX || intent.mouseY != _mouseY))
@@ -309,9 +408,8 @@ void ScrapBookMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 				}
 		_mouseX = intent.mouseX;
 		_mouseY = intent.mouseY;
-		for (const char* other : {"CharacterClothing", "Vehicles"})
-			_contents->SetTextColor(other, kGreyed);
-		for (int i = 0; i < 2; ++i)
+		_contents->SetTextColor("CharacterClothing", kGreyed);
+		for (int i = 0; i < kOpenCount; ++i)
 			if (i == _contentsPicked)
 				_contents->SetTextColor(kOpen[i], kPicked);
 			else
@@ -323,22 +421,30 @@ void ScrapBookMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 			_shown = false;
 			return;
 		}
-		if ((confirm || clicked) && _contentsPicked == 0)
-		{
-			_screen = Screen::Missions;
-			_missionLevel = 0;
-			_missionPicked = 0;
-			layOutMissions();
-			_shown = false;
-			return;
-		}
 		if (confirm || clicked)
 		{
-			_screen = Screen::Cards;
-			_cardLevel = 0;
-			_cardPicked = 0;
-			layOutCards();
 			_shown = false;
+			if (_contentsPicked == 0)
+			{
+				_screen = Screen::Missions;
+				_missionLevel = 0;
+				_missionPicked = 0;
+				layOutMissions();
+			}
+			else if (_contentsPicked == 1)
+			{
+				_screen = Screen::Vehicles;
+				_vehicleLevel = 0;
+				_vehiclePicked = 0;
+				layOutVehicles();
+			}
+			else
+			{
+				_screen = Screen::Cards;
+				_cardLevel = 0;
+				_cardPicked = 0;
+				layOutCards();
+			}
 			return;
 		}
 		_shown = true;

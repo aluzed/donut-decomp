@@ -7,6 +7,8 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace Donut
 {
@@ -38,6 +40,10 @@ public:
 		// The story's missions won, by their place in the gallery: eight a
 		// level, m1 to m7 then the bonus mission, level 1's m1 0.
 		std::set<int> missionsWon;
+		// Every level's six vehicles (rewards.mfk: its own car, the bonus
+		// mission's, the street races', three for sale), level by level, and
+		// whether each is the player's.
+		std::vector<std::pair<std::string, bool>> vehicleList;
 		std::optional<int> bonusMissions, streetRaces, clothing, vehicles;
 	};
 
@@ -62,6 +68,7 @@ public:
 		Cards,
 		Card,
 		Missions,
+		Vehicles,
 	};
 	Screen GetScreen() const { return _screen; }
 
@@ -71,8 +78,13 @@ private:
 	std::set<int> _missionsWon;
 	// The missions' level shown (0-6) and the one picked (0-7); the contents'
 	// entry picked (0 the missions, 1 the cards).
-	int _missionLevel = 0, _missionPicked = 0, _contentsPicked = 1;
+	int _missionLevel = 0, _missionPicked = 0, _contentsPicked = 0;
 	void drawMissions(const GameIntent& intent, const Matrix4x4& proj, bool back);
+	std::unique_ptr<FrontendProject> _vehicleGallery;
+	std::vector<std::pair<std::string, bool>> _vehicles;
+	int _vehicleLevel = 0, _vehiclePicked = 0;
+	void drawVehicles(const GameIntent& intent, const Matrix4x4& proj, bool back);
+	void layOutVehicles();
 	void layOutMissions();
 	std::set<int> _cardsFound;
 	// The cards' level shown (0-6), and the one picked on it (0-6).
