@@ -264,7 +264,6 @@ void ParticleSystem::Update(double dt, const Matrix4x4& placement, float timelin
 		const auto& e = *running.emitter;
 		const float rate = e.frameRate;
 		const float lifeFrames = std::max(1.0f, e.life.At(0.0f, 30.0f));
-		const float lifeSeconds = lifeFrames / rate;
 		const std::size_t most = static_cast<std::size_t>(std::max(0.0f, e.count.At(0.0f, 0.0f)));
 
 		// Moved on, and the dead dropped.
@@ -282,8 +281,12 @@ void ParticleSystem::Update(double dt, const Matrix4x4& placement, float timelin
 		                                       [](const Particle& p) { return p.age >= p.life; }),
 		                        running.particles.end());
 
-		// Given off at a rate that keeps about NUM alive, times the timeline's
-		// rate where it stands.
+		// Given off RAT a frame, the timeline's rate where it stands, at most NUM
+		// alive at once. The bursts say so: a bin's apples come at 7 a frame
+		// for a NUM of 7, the phone booth's bits at 30 for 30. Read as a
+		// multiplier of the rate that keeps NUM alive, a bin gave up an apple
+		// or two, and a car's damage fire (two emitters of 100 flames, 3 a
+		// frame, a sixth of a second each) was 200 flames added up to white.
 		float frame = timelineFrame;
 		if (frame < 0.0f)
 			frame = e.timelineFrames > 0.0f ? std::fmod(static_cast<float>(_age) * rate, e.timelineFrames) : 0.0f;
@@ -300,7 +303,7 @@ void ParticleSystem::Update(double dt, const Matrix4x4& placement, float timelin
 			timelineRate += std::max(0.0f, e.rate.At(from + (frame - from) * (i + 0.5f) / samples, 1.0f));
 		timelineRate /= static_cast<float>(samples);
 		if (emit)
-			running.owed += static_cast<float>(most) / lifeSeconds * step * timelineRate;
+			running.owed += timelineRate * rate * step;
 		while (running.owed >= 1.0f)
 		{
 			running.owed -= 1.0f;
