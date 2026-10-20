@@ -93,7 +93,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 |---|---|---|---|
 | P3D-004 | ✅ | P1 | Animation controllers. Pose animations play on composite models (`CompositeModel::Pose`), Vector1/2/3 and (compressed) quaternion channels: gags animate. Gag scenes' characters too (`SceneSkins`). The level's `Anim` and `AnimCollision` objects, never loaded before (69 on level 1: windmill, signs, butterflies, rivers, the power plant's platforms and fans), are drawn and go round. Doorbells play their button and switch when rung; breakables (crates, gas pumps) break when the car runs into them. The moving objects' collision moves with them (the power plant's platforms carry the player). The action triggers' objects too: the power plant's switched and automatic platforms and door, level 7's trapdoors (2026-10-21). Texture animations and blinks play. Left: the controllers' description in `p3d.json` (TOOL-004) |
 | P3D-001 | ✅ | P1 | Particle systems: the animated objects' effects (steam, smoke, the tire fire, torches), the wasp cameras', breakings', the props' hit effects, the wheels' sprays, a wrecked car's smoke; gravity read right; `RAT` particles a frame up to `NUM` alive; a strip's frames one a sprite; spin (2026-10-20). Weight (gravity scaled, over life) and drag (speed kept a second) too (2026-10-21). Nitro is the mini-game's |
-| P3D-006 | 🟡 | P1 | Entity variants: `InstancedStaticEntity` drawn (level 3's and 6's bushes, the street races' tyres and barriers: 85 were skipped); `Anim`/`AnimCollision` animated with their collision; `AnimDynamicPhysics` breakable. Not in `p3d.json` |
+| P3D-006 | ✅ | P1 | Entity variants: `InstancedStaticEntity` drawn (level 3's and 6's bushes, the street races' tyres and barriers: 85 were skipped); `Anim`/`AnimCollision` animated with their collision; `AnimDynamicPhysics` breakable. Their description in `p3d.json` is TOOL-004's |
 | P3D-008 | ✅ | — | Spline / LocatorMatrix / SurfaceTypeList | Layouts reversed and checked over 7892 occurrences, 13 camera rails exposed by name; `SurfaceTypeList` drives the grip, sprays, skid marks and footsteps |
 | P3D-009 | ✅ | — | CollisionWallVolume / CollisionEffect / Atc | `CollisionEffect` and `Atc` read by hand and used (PHYS-011); no `CollisionWallVolume` in the game. Not in `p3d.json` |
 | P3D-002 | ⬜ | P2 | Lights (headlights, dynamic lights) |
@@ -173,7 +173,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 |---|---|---|---|
 | ASSET-001..006 | ✅ | — | Extraction pipeline to the game tree | `tools/extract_assets.sh <dir of the CD images>`: the cabinets off the three ISOs (or their .7z), unshield, then `art/`, `scripts/`, DIALOGF.RCF in place; unshield and 7z fetched without root if missing (2026-10-20) |
 | TOOL-002 | ⬜ | P2 | Reverse `SIMPSONS.EXE` (Ghidra). No longer blocking: P3DZ was solved without it |
-| TOOL-004 | ⬜ | P2 | Run `donut-codegen` and enrich `p3d.json` (for the P3D-* chunks) |
+| TOOL-004 | ⬜ | P2 | Run `donut-codegen` and enrich `p3d.json` (for the P3D-* chunks) (and the entity variants `InstancedStaticEntity`, `Anim`, `AnimCollision`, `AnimDynamicPhysics`, read by hand: P3D-006; the frame and multi controllers: P3D-004) |
 | TOOL-007 | ⬜ | P3 | P3D unit tests (parse, reserialise, compare) |
 | TOOL-010 | ⬜ | P3 | CI (Linux, Windows) and clang-format |
 | TOOL-008 | ✅ | — | `.con` format documented (`SCRIPT_FORMAT.md`) |
