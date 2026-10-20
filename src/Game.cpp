@@ -656,6 +656,91 @@ PauseSundayMenu::Stats Game::levelStats(int storyWon, int storyTotal) const
 	return stats;
 }
 
+void Game::tutorial(const std::string& event)
+{
+	if (!_tutorialMode || _autopilot || _save.Entries("tutorial").count(event) ||
+	    std::find(_tutorialWaiting.begin(), _tutorialWaiting.end(), event) != _tutorialWaiting.end())
+		return;
+	_tutorialWaiting.push_back(event);
+}
+
+void Game::updateTutorial()
+{
+	if (!_tutorialMode || _autopilot || !_character)
+		return;
+	// What has happened since the last look.
+	TutorialSeen& seen = _tutorialSeen;
+	if (seen.started < 0.0)
+		seen.started = _elapsedSeconds;
+	if (_elapsedSeconds - seen.started > 6.0)
+		tutorial("start");
+	if (_inVehicle != seen.inVehicle)
+		tutorial(_inVehicle ? "incar" : "outcar");
+	seen.inVehicle = _inVehicle;
+	if (!_interior.empty() && !seen.inside)
+		tutorial("interior");
+	seen.inside = !_interior.empty();
+	if (seen.coins >= 0 && _coins > seen.coins)
+		tutorial("coin");
+	seen.coins = _coins;
+	const int cards = _collectibleManager ? _collectibleManager->GetCardsFound() : 0;
+	if (seen.cards >= 0 && cards > seen.cards)
+		tutorial("card");
+	seen.cards = cards;
+	const int gags = static_cast<int>(std::count_if(_gags.begin(), _gags.end(), [](const Gag& g) { return g.played; }));
+	if (seen.gags >= 0 && gags > seen.gags)
+		tutorial("gag");
+	seen.gags = gags;
+	const int wasps = _waspManager ? _waspManager->GetDestroyed() : 0;
+	if (seen.wasps >= 0 && wasps > seen.wasps)
+		tutorial("camera");
+	seen.wasps = wasps;
+	if (_inVehicle && _health < 50.0f)
+		tutorial("damaged");
+	if (_inVehicle && _health <= 0.0f)
+		tutorial("broken");
+	if (_hitAndRun && _hitAndRun->GetMeter() > 0.0f)
+		tutorial("hitrun");
+	const bool failed = _gameState == GameState::MissionFailed;
+	if (failed && !seen.failed)
+		tutorial("failed");
+	seen.failed = failed;
+	// Near what the level offers: a bonus mission, a street race, a time
+	// trial, Gil's cars, a wardrobe.
+	if (const BonusGiver* giver = bonusGiverNear())
+		tutorial(giver->mission.rfind("bm", 0) == 0 ? "bonus" : giver->mission.rfind("gr", 0) == 0 ? "timetrial" : "race");
+	const Vector3 me = _character->GetPosition();
+	for (const CarSeller& seller : _carSellers)
+		if ((seller.position - me).Length() < 6.0f)
+			tutorial("gil");
+	for (const auto& trigger : _level->GetTriggers())
+		if (trigger.action == "PurchaseSkin" && (trigger.position - me).Length() < 6.0f)
+			tutorial("clothes");
+
+	// The next one waiting, when no one is speaking: Bart's lines for it, the
+	// PC's from the Xbox's where the consoles have their own.
+	if (_audioManager->IsDialoguePlaying())
+		return;
+	_walkieTalkie = false;
+	if (_tutorialWaiting.empty() || _gameState != GameState::InGame)
+		return;
+	const std::string event = _tutorialWaiting.front();
+	_tutorialWaiting.erase(_tutorialWaiting.begin());
+	std::vector<std::string> lines;
+	for (const std::string& name : {event, event + "xbx"})
+		if (lines.empty())
+			for (const auto& sound : _audioManager->FindSounds("\\c_" + name + "_"))
+				if (sound.find("_tutorial_") != std::string::npos)
+					lines.push_back(sound);
+	std::sort(lines.begin(), lines.end());
+	for (const auto& line : lines)
+		_audioManager->QueueDialogue(line, AudioManager::DialoguePriority::Gameplay);
+	_walkieTalkie = !lines.empty();
+	_save.Add("tutorial", event);
+	_save.Save();
+	Log::Info("Game: tutorial '{}', {} line(s)", event, lines.size());
+}
+
 void Game::openSundayPause()
 {
 	if (!_pauseSunday || !_pauseSunday->IsLoaded())
@@ -2303,6 +2388,23 @@ void Game::loadLevel()
 	                                             *_level);
 	_ufo = UfoBoss::FromLevelScript(fmt::format("scripts/{}/leveli.mfk", levelDirectory()), *_level, *_worldPhysics);
 	_collectibleManager->SpawnOnPath();
+
+	// The tutorial: EnableTutorialMode(1) in the level's script (level 1).
+	_tutorialMode = false;
+	_tutorialWaiting.clear();
+	_tutorialSeen = {};
+	{
+		std::ifstream script(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
+		for (std::string line; std::getline(script, line);)
+		{
+			const std::size_t at = line.find("EnableTutorialMode(");
+			const std::size_t comment = line.find("//");
+			if (at == std::string::npos || (comment != std::string::npos && comment < at))
+				continue;
+			const std::string argument = line.substr(at + 19, line.find(')', at) - at - 19);
+			_tutorialMode = argument.find('1') != std::string::npos || argument.find("true") != std::string::npos;
+		}
+	}
 
 	// The level's ambient people: AddAmbientCharacter("ralph", "ambient_ralph", 1.3).
 	{
@@ -4314,6 +4416,7 @@ void Game::Run()
 				_health = 100.0f;
 			}
 			updateGags();
+			updateTutorial();
 			if (_ufo)
 			{
 				_ufo->Update(deltaTime);
@@ -4815,6 +4918,7 @@ void Game::Run()
 			if (gameHud)
 			{
 				hud.stageComplete = _elapsedSeconds < _stageCompleteUntil;
+				hud.walkieTalkie = _walkieTalkie;
 				if (_elapsedSeconds < _alertUntil)
 					hud.alertTerm = _alertTerm;
 				if (_elapsedSeconds < _cardMessageUntil)

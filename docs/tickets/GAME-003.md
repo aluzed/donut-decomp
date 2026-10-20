@@ -542,3 +542,24 @@ counts as on the pause's progress page (its story missions all won), the whole a
 percentage. Any key or a click goes on to the next level. The progress is saved first;
 under `--autopilot` there is no stop. Checked: the page with level 1's counts ("8/8",
 "11%"), and the confirm key on to level 2.
+
+## The tutorial (2026-10-21)
+
+Level 1's script turns the tutorial on (`EnableTutorialMode( 1 )`; the script is read
+by the game, not run, so the command's "1" was never seen). In it, Bart speaks on the
+walkie-talkie the first time each thing happens: his lines are the dialogue's
+`conversations\c_<event>_1_tutorial_brt_l1t1.rsd`, the consoles' own where they differ
+(`startxbx`, `incarxbx`...: the Xbox's taken for the PC, which has none; they name its
+pad's buttons). `Game::updateTutorial` tells what has changed each frame: the start (six
+seconds in), getting in and out of a car, going indoors, a coin, a card, a gag, a wasp
+camera, the car damaged (under half) or wrecked, the Hit & Run meter, a mission failed,
+near a bonus mission, a street race or the time trial, near Gil's cars or a wardrobe.
+Each once a save (the save's set "tutorial"), waiting while anyone else speaks; the
+HUD's walkie-talkie (Bart) shows while his line is said, its subtitle under it. None
+under `--autopilot`.
+
+Not tied to anything yet: the road arrows, the radar, traffic, vending machines, Krusty,
+the boxes and breakables, the reward, driving. The page's `TutorialMessage` (the text
+bible's TUTORIAL_000... in the page's letters, with the consoles' buttons) is not shown.
+
+Checked: level 1's start, Bart at the top, his line subtitled.

@@ -373,6 +373,7 @@ void GameHud::Draw(const HudState& state, const Matrix4x4& proj, double dt)
 		_page->SetTextIndex("WaspsComplete", state.itemsDone == "GAGS_COMPLETE" ? 1 : 0);
 	if (state.stageComplete)
 		_page->SetText("StageComplete", "");
+	_page->SetSpriteVisible("walkietalkie", state.walkieTalkie);
 
 	// The counters, top left, one under the other: the stage's clock, the
 	// place in a race, its laps, the car's damage.

@@ -292,6 +292,23 @@ private:
 	// place of the mission's pause while the story is at a drive.
 	std::unique_ptr<class PauseSundayMenu> _pauseSunday;
 	void openSundayPause();
+	// The tutorial (level 1's EnableTutorialMode(1)): Bart on the walkie-talkie
+	// the first time each thing happens (conversations\c_<event>_1_tutorial_
+	// brt_l1t1.rsd), once a save (its set "tutorial"); an event waits while
+	// someone else speaks. What it last saw, to tell what has changed.
+	bool _tutorialMode = false;
+	std::vector<std::string> _tutorialWaiting;
+	bool _walkieTalkie = false;
+	struct TutorialSeen
+	{
+		bool inVehicle = false;
+		bool inside = false;
+		int coins = -1, cards = -1, gags = -1, wasps = -1;
+		bool failed = false;
+		double started = -1.0;
+	} _tutorialSeen;
+	void tutorial(const std::string& event);
+	void updateTutorial();
 	// Where Abort Mission goes: the story entry to start (the drive before a
 	// story mission, or the story where a bonus mission left it), or -1.
 	int abortTo() const;

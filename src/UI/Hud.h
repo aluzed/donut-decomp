@@ -87,6 +87,8 @@ struct HudState
 	int cardFound = -1;
 	std::string itemsCount, itemsDone;
 	bool stageComplete = false;
+	// Bart on the walkie-talkie: the tutorial speaking.
+	bool walkieTalkie = false;
 
 	// free-form lines drawn under the HUD (control hints, help overlay)
 	std::vector<std::string> hints;
