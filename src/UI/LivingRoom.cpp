@@ -7,6 +7,7 @@
 #include "P3D/P3DFile.h"
 #include "Render/CompositeModel.h"
 #include "Render/Mesh.h"
+#include "Render/SceneSkins.h"
 #include "Render/OpenGL/ShaderProgram.h"
 #include "Render/SkinAnimation.h"
 #include "ResourceManager.h"
@@ -159,6 +160,11 @@ LivingRoom::LivingRoom(const std::string& file)
 		_models.push_back(std::move(loaded));
 	}
 
+	// Homer, his shaders and textures first: the skins' loader leaves them to
+	// whatever else the file holds.
+	loadFile(directory + "homer.p3d", "homer/", nullptr);
+	_homer = SceneSkins::Load(directory + "homer.p3d");
+
 	// The race car on the rug: not a composite but a scene graph, its
 	// locator1 driven round the track by the file's animation (FE_racing,
 	// 132 frames at 30 a second).
@@ -186,7 +192,7 @@ Vector3 LivingRoom::Path::At(float frame) const
 	return values[i - 1] + (values[i] - values[i - 1]) * t;
 }
 
-void LivingRoom::Draw(GL::ShaderProgram& worldShader, float aspect, double dt)
+void LivingRoom::Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& skinShader, float aspect, double dt)
 {
 	_time += dt;
 	// The camera along its flight, towards the frame it is sent to.
@@ -266,6 +272,13 @@ void LivingRoom::Draw(GL::ShaderProgram& worldShader, float aspect, double dt)
 				}
 			}
 		}
+	}
+	if (_homer)
+	{
+		glDisable(GL_BLEND);
+		_homer->Pose(static_cast<float>(_time) * 30.0f, true);
+		_homer->Draw(viewProj, Matrix4x4::Identity, skinShader);
+		glEnable(GL_BLEND);
 	}
 	glDisable(GL_DEPTH_TEST);
 	if (culling)

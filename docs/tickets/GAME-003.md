@@ -106,7 +106,7 @@ on, which culled the 2D drawn after it; the room's draw puts it back as it was.
 The television's screen (`TVscreen.p3d`, a composite of its own) shows its static,
 running: the file's texture animation, its eight frames round and round.
 
-Not done: Homer on the couch, the glows and the sparkles.
+Not done: the glows and the sparkles.
 
 ## The options and the sound (2026-10-20)
 
@@ -197,3 +197,15 @@ a second, its position and aim interpolated between keys. Checked by screenshots
 room, the flight half way, the options over the donuts, the sound page over the radio.
 
 The pad (frame 560) comes out black: not looked into.
+
+## Homer (2026-10-20)
+
+Homer is in the room: `homer.p3d` (`FE_Homer`), his four skins (`hom_high_*`) on a
+skeleton, posed by `PTRN_Motion_Root` (`FE_HomerController`, 61 frames at 30 a second,
+round and round), drawn with the skins' program (`SceneSkins`, as the gags' characters).
+He sits on the floor before the television, legs out, arms folded, head back, mouth open:
+asleep. `SceneSkins` leaves a file's shaders and textures to its other loaders, and
+Homer drew nothing until the room loaded them. Checked by screenshots from the room's
+view, the flight to the television, and from beside the television facing him (his
+bind pose, standing, drawn too, to tell a posing fault from the pose: the pose is the
+file's). Not on the couch: the couch has its own glow, Homer his.

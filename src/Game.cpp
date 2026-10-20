@@ -4265,7 +4265,8 @@ void Game::Run()
 			// The menu stands over the Simpsons' living room, not the level.
 			updateLivingRoomCamera();
 			if (_livingRoom && _livingRoom->IsLoaded() && _level)
-				_livingRoom->Draw(_level->GetWorldShader(), static_cast<float>(viewportWidth) / std::max(1, viewportHeight),
+				_livingRoom->Draw(_level->GetWorldShader(), *_skinShaderProgram,
+				                  static_cast<float>(viewportWidth) / std::max(1, viewportHeight),
 				                  deltaTime);
 			if (_optionsMenu && _optionsMenu->IsOpen())
 				_optionsMenu->Draw(intent, proj);

@@ -14,6 +14,7 @@ namespace Donut
 
 class CompositeModel;
 class Mesh;
+class SceneSkins;
 class SkinAnimation;
 namespace P3D
 {
@@ -35,9 +36,9 @@ public:
 	~LivingRoom();
 
 	bool IsLoaded() const { return !_placed.empty(); }
-	// Clears the screen and draws the room with the world program, for a
-	// viewport of that aspect.
-	void Draw(GL::ShaderProgram& worldShader, float aspect, double dt);
+	// Clears the screen and draws the room with the world program, Homer with
+	// the skins', for a viewport of that aspect.
+	void Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& skinShader, float aspect, double dt);
 	// The camera's flight (camset.p3d's FE_CameraController, 1036 frames at
 	// 30 a second): where it is, and where it is going, played forwards or
 	// backwards at that rate until it is there.
@@ -74,6 +75,9 @@ private:
 		std::unique_ptr<SkinAnimation> animation;
 	};
 	std::vector<AnimatedScene> _scenes;
+	// Homer on the couch (homer.p3d: his skins on a skeleton, FE_HomerController
+	// a loop of 61 frames at 30 a second).
+	std::unique_ptr<SceneSkins> _homer;
 	// The textures, shaders and meshes of `file` (its camera, FE_Camera, the
 	// room's) and its scene graph; with `scene`, the scene graph's nodes and
 	// the animation that moves them as well. Its meshes go by `prefix` and
