@@ -341,15 +341,24 @@ std::string AudioManager::ScriptSoundFile(const std::string& script, const std::
 
 AudioManager::ScriptSound AudioManager::FindScriptSound(const std::string& script, const std::string& resource) const
 {
-	const std::string path = "sound\\scripts\\" + script + ".spt";
-	const auto found = _sounds.find(path);
-	if (found == _sounds.end())
+	// Read once: a footstep a stride would read its script out of the
+	// archive four times a second.
+	auto cached = _scriptTexts.find(script);
+	if (cached == _scriptTexts.end())
+	{
+		std::string text;
+		const std::string path = "sound\\scripts\\" + script + ".spt";
+		if (const auto found = _sounds.find(path); found != _sounds.end())
+			if (auto stream = found->second->GetFileStream(path))
+			{
+				text.resize(stream->Size());
+				stream->ReadBytes(reinterpret_cast<uint8_t*>(text.data()), text.size());
+			}
+		cached = _scriptTexts.emplace(script, std::move(text)).first;
+	}
+	const std::string& text = cached->second;
+	if (text.empty())
 		return {};
-	auto stream = found->second->GetFileStream(path);
-	if (!stream)
-		return {};
-	std::string text(stream->Size(), '\0');
-	stream->ReadBytes(reinterpret_cast<uint8_t*>(text.data()), text.size());
 
 	// create daSoundResourceData named car_hit_stopsign
 	//     AddFilename ( "sound/soundfx/collisions/stopsign_hit_02.rsd" 1.000000 ) ...

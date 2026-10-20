@@ -154,6 +154,9 @@ private:
 		ALuint buffer = 0;
 	};
 	std::unordered_map<std::string, Loop> _loops;
+	// The sound scripts' text, by name ("homer"), as read; empty when there is
+	// no such script.
+	mutable std::unordered_map<std::string, std::string> _scriptTexts;
 	std::size_t _playlistIndex = 0;
 	// Stops and frees the music source, if any.
 	void releaseMusic();
