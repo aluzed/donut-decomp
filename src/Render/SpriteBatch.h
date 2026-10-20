@@ -29,7 +29,8 @@ class SpriteBatch
 public:
 	SpriteBatch(size_t = 1000);
 
-	void Flush(const Matrix4x4&, float = 1.0f);
+	// The sprites' positions times `scale`, then moved by `offset`.
+	void Flush(const Matrix4x4&, float = 1.0f, const Vector2& offset = Vector2::Zero);
 	// `scale` on the font's own size (a text shrunk to fit its box).
 	void DrawText(const class Font*, const std::string&, const Vector2&, const Vector4&, float scale = 1.0f);
 	void Draw(Texture*, const Vector2&, float, const Vector4&);

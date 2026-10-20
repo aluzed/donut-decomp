@@ -439,7 +439,7 @@ void SpriteBatch::Draw9Slice(Texture* texture, const Vector2& position, const Ve
 	}
 }
 
-void SpriteBatch::Flush(const Matrix4x4& proj, float scale)
+void SpriteBatch::Flush(const Matrix4x4& proj, float scale, const Vector2& offset)
 {
 	if (_spritesToDraw.empty())
 	{
@@ -534,8 +534,8 @@ void SpriteBatch::Flush(const Matrix4x4& proj, float scale)
 				size_t bufferIndex = j * vertSize;
 				size_t vertexIndex = faceIndices[j];
 
-				buffer[bufferIndex] = vertexPositions[vertexIndex].X * scale;
-				buffer[bufferIndex + 1] = vertexPositions[vertexIndex].Y * scale;
+				buffer[bufferIndex] = vertexPositions[vertexIndex].X * scale + offset.X;
+				buffer[bufferIndex + 1] = vertexPositions[vertexIndex].Y * scale + offset.Y;
 				buffer[bufferIndex + 2] = vertexTextureCoords[vertexIndex].X;
 				buffer[bufferIndex + 3] = vertexTextureCoords[vertexIndex].Y;
 			}

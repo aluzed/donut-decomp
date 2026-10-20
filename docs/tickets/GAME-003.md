@@ -131,6 +131,17 @@ bar was a quarter of its width and the knob twice its size, behind it. The volum
 setting shows stereo, what OpenAL is given. Checked by screenshots of both pages, the
 effects at 0.3 and the voices at nothing.
 
-Not done: Controller (the key bindings: `PCKeyboardConfig.pag`), Display (resolution,
-full screen: `Display.pag`), View Movies (the cutscenes are not played: UI-FMV), the
+The display page (`Display.pag`): the resolution, among the screen's sizes from 640 x 480
+up (SDL's display modes, each once), and the window or full screen (the text bible's
+`WINDOW`, `FULL_SCREEN`), changed with left and right or their arrows, taken by Accept
+(`ACCEPT`); the colour depth shows 32-bit, greyed. Kept in `donut_settings.dat` with the
+volumes and put back at start. Checked by screenshots: the page, and the game opened at
+1024 x 768 and 1280 x 720 from the settings.
+
+The game's pages were drawn at twice their 640 x 480, whatever the window: at another
+size they ran off it. They are now as large as the window holds, centred
+(`FrontendProject`: the scale and offset of its last draw, for the mouse too). At the
+1280 x 960 the game opens at, nothing moves.
+
+Not done: Controller (the key bindings: `PCKeyboardConfig.pag`), View Movies (the cutscenes are not played: UI-FMV), the
 game settings (`GameSettings.pag`: mouse look and sensitivity).

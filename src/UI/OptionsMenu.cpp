@@ -4,7 +4,11 @@
 #include "Core/FileSystem.h"
 #include "Core/Log.h"
 #include "FrontendProject.h"
+#include "Game.h"
 #include "Game/GameInput.h"
+#include "UI/TextBible.h"
+
+#include <fmt/format.h>
 
 #include <algorithm>
 #include <cmath>
@@ -45,10 +49,22 @@ bool inside(const FrontendProject& page, const std::string& name, int mouseX, in
 }
 } // namespace
 
-OptionsMenu::OptionsMenu(AudioManager& audio, std::function<void()> viewCredits)
-    : _audio(audio), _viewCredits(std::move(viewCredits))
+OptionsMenu::OptionsMenu(AudioManager& audio, SDL_Window* window, std::function<void()> viewCredits)
+    : _audio(audio), _window(window), _viewCredits(std::move(viewCredits))
 {
 	load();
+	applyDisplay();
+	// The screen's sizes, each once (it lists them by refresh rate too), from
+	// the game's own 640 x 480 up.
+	const int display = _window ? std::max(0, SDL_GetWindowDisplayIndex(_window)) : 0;
+	for (int i = SDL_GetNumDisplayModes(display) - 1; i >= 0; --i)
+	{
+		SDL_DisplayMode mode;
+		if (SDL_GetDisplayMode(display, i, &mode) == 0 && mode.w >= 640 && mode.h >= 480 &&
+		    std::find(_sizes.begin(), _sizes.end(), std::make_pair(mode.w, mode.h)) == _sizes.end())
+			_sizes.emplace_back(mode.w, mode.h);
+	}
+	std::sort(_sizes.begin(), _sizes.end());
 	if (!FileSystem::exists(kFrontend))
 		return;
 	_options = std::make_unique<FrontendProject>();
@@ -72,6 +88,21 @@ OptionsMenu::OptionsMenu(AudioManager& audio, std::function<void()> viewCredits)
 			if (part[1] == 'I' || part[1] == 'O')
 				_sound->BringSpriteToFront(name);
 		}
+	_display = std::make_unique<FrontendProject>();
+	_display->LoadP3D(kFrontend, "Display.pag");
+	// Its colours: the screen's, which the game does not choose.
+	_display->SetText("ColourDepth_Value", "32-bit");
+	_display->SetSpriteVisible("ColourDepth_ArrowL", false);
+	_display->SetSpriteVisible("ColourDepth_ArrowR", false);
+	// Its arrows at their boxes' size, not their images' twice that.
+	for (const char* arrow : {"Resolution_ArrowL", "Resolution_ArrowR", "DisplayMode_ArrowL", "DisplayMode_ArrowR"})
+	{
+		float x, y, w, h;
+		if (_display->GetSpriteBox(arrow, x, y, w, h))
+			_display->SetSpriteBox(arrow, x, y, w, h);
+	}
+	const std::string& accept = Game::GetInstance().GetTextBible().Get("ACCEPT");
+	_display->SetText("ApplyChanges", accept.empty() ? "Accept" : accept);
 	// Stereo, which is what OpenAL is given.
 	_sound->SetText("SurroundSound_Value", "STEREO SOUND");
 	_sound->SetSpriteVisible("SurroundSound_LArrow", false);
@@ -160,7 +191,7 @@ void OptionsMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 		                                    {"Sound", true},
 		                                    {"ViewMovies", false},
 		                                    {"ViewCredits", !_fromPause && _viewCredits != nullptr},
-		                                    {"Display", false}};
+		                                    {"Display", _window != nullptr && !_sizes.empty()}};
 		const int clicked = _shown ? pick(*_options, entries, intent) : -1;
 		if (!_shown)
 			colour(*_options, entries);
@@ -180,11 +211,31 @@ void OptionsMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 			_choice = 0;
 			_shown = false;
 		}
+		else if (chosen == "Display")
+		{
+			// The page shows the window as it is.
+			int width = 0, height = 0;
+			SDL_GetWindowSize(_window, &width, &height);
+			_fullScreen = (SDL_GetWindowFlags(_window) & SDL_WINDOW_FULLSCREEN) != 0;
+			_size = 0;
+			for (std::size_t i = 0; i < _sizes.size(); ++i)
+				if (_sizes[i].first <= width && _sizes[i].second <= height)
+					_size = i;
+			_screen = Screen::Display;
+			_choice = 0;
+			_shown = false;
+		}
 		else if (chosen == "ViewCredits")
 		{
 			_screen = Screen::Closed;
 			_viewCredits();
 		}
+		return;
+	}
+
+	if (_screen == Screen::Display)
+	{
+		drawDisplay(intent, proj, back, confirm, rightPressed ? 1 : leftPressed ? -1 : 0);
 		return;
 	}
 
@@ -242,15 +293,86 @@ void OptionsMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 	}
 }
 
+void OptionsMenu::drawDisplay(const GameIntent& intent, const Matrix4x4& proj, bool back, bool confirm, int by)
+{
+	// Top to bottom; a value changes with left and right, or a click on its
+	// arrows, and is only taken by Accept.
+	const std::vector<Entry> entries = {
+	    {"Resolution", true}, {"ColourDepth", false}, {"DisplayMode", true}, {"ApplyChanges", true}};
+	const int clicked = _shown ? pick(*_display, entries, intent) : -1;
+	if (!_shown)
+		colour(*_display, entries);
+	for (const char* entry : {"Resolution", "DisplayMode"})
+	{
+		if (!_shown || !intent.mouseLeftClick)
+			break;
+		if (inside(*_display, std::string(entry) + "_ArrowL", intent.mouseX, intent.mouseY))
+			by = -1, _choice = entry[0] == 'R' ? 0 : 2;
+		else if (inside(*_display, std::string(entry) + "_ArrowR", intent.mouseX, intent.mouseY))
+			by = 1, _choice = entry[0] == 'R' ? 0 : 2;
+	}
+	if (by != 0 && _choice == 0)
+		_size = static_cast<std::size_t>(std::clamp(static_cast<int>(_size) + by, 0, static_cast<int>(_sizes.size()) - 1));
+	if (by != 0 && _choice == 2)
+		_fullScreen = !_fullScreen;
+	colour(*_display, entries);
+	_display->SetText("Resolution_Value", fmt::format("{} x {}", _sizes[_size].first, _sizes[_size].second));
+	const TextBible& bible = Game::GetInstance().GetTextBible();
+	const std::string& mode = bible.Get(_fullScreen ? "FULL_SCREEN" : "WINDOW");
+	_display->SetText("DisplayMode_Value", mode.empty() ? (_fullScreen ? "Full Screen" : "Window") : mode);
+	_display->Draw(proj);
+	_shown = true;
+	if ((confirm || clicked == 3) && _choice == 3)
+	{
+		_keptWidth = _sizes[_size].first;
+		_keptHeight = _sizes[_size].second;
+		_keptFullScreen = _fullScreen;
+		applyDisplay();
+		save();
+	}
+	if (back)
+	{
+		_screen = Screen::Options;
+		_choice = 4;
+		_shown = false;
+	}
+}
+
+void OptionsMenu::applyDisplay()
+{
+	if (!_window || _keptWidth <= 0 || _keptHeight <= 0)
+		return;
+	// Out of full screen first: a window's size is not the screen's mode.
+	SDL_SetWindowFullscreen(_window, 0);
+	SDL_SetWindowSize(_window, _keptWidth, _keptHeight);
+	if (_keptFullScreen)
+	{
+		SDL_DisplayMode mode {SDL_PIXELFORMAT_UNKNOWN, _keptWidth, _keptHeight, 0, nullptr};
+		SDL_SetWindowDisplayMode(_window, &mode);
+		SDL_SetWindowFullscreen(_window, SDL_WINDOW_FULLSCREEN);
+	}
+	else
+		SDL_SetWindowPosition(_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+	Log::Info("Options: display {} x {}, {}", _keptWidth, _keptHeight, _keptFullScreen ? "full screen" : "window");
+}
+
 void OptionsMenu::load()
 {
 	std::ifstream file(kSettings);
 	std::string key;
 	float value;
 	while (file >> key >> value)
+	{
 		for (const Slider& slider : kSliders)
 			if (key == slider.key)
 				_audio.SetChannelVolume(slider.channel, value);
+		if (key == "width")
+			_keptWidth = static_cast<int>(value);
+		else if (key == "height")
+			_keptHeight = static_cast<int>(value);
+		else if (key == "fullscreen")
+			_keptFullScreen = value != 0.0f;
+	}
 }
 
 void OptionsMenu::save() const
@@ -258,6 +380,9 @@ void OptionsMenu::save() const
 	std::ofstream file(kSettings);
 	for (const Slider& slider : kSliders)
 		file << slider.key << ' ' << _audio.GetChannelVolume(slider.channel) << '\n';
+	if (_keptWidth > 0 && _keptHeight > 0)
+		file << "width " << _keptWidth << "\nheight " << _keptHeight << "\nfullscreen " << (_keptFullScreen ? 1 : 0)
+		     << '\n';
 	Log::Info("Options: volumes saved, music {:.1f}, effects {:.1f}, vehicle {:.1f}, voice {:.1f}",
 	          _audio.GetChannelVolume(AudioManager::Channel::Music),
 	          _audio.GetChannelVolume(AudioManager::Channel::Effects),

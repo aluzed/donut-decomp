@@ -441,8 +441,8 @@ Game::Game(int argc, char** argv)
 			_gameState = GameState::InGame;
 		});
 	}
-	// The options: the sound's volumes; the credits.
-	_optionsMenu = std::make_unique<OptionsMenu>(*_audioManager, [this]() {
+	// The options: the sound's volumes, the window's size; the credits.
+	_optionsMenu = std::make_unique<OptionsMenu>(*_audioManager, *_window, [this]() {
 		_gameState = _creditsPage ? GameState::Credits : GameState::MainMenu;
 		_creditsTime = 0.0;
 		if (_creditsPage)

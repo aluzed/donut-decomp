@@ -2,6 +2,8 @@
 
 #include "Core/Math/Matrix4x4.h"
 
+#include <SDL.h>
+
 #include <functional>
 #include <memory>
 #include <string>
@@ -17,15 +19,16 @@ struct GameIntent;
 // The game's options (scrooby2's Options.pag) and its sound page (Sound.pag),
 // from the main menu or the pause screen. The options list Controller, Sound,
 // View Movies, View Credits and Display; the sound page the volume of the
-// music, the effects, the cars and the voices, each a slider. What is not
+// music, the effects, the cars and the voices, each a slider; the display page
+// (Display.pag) the window's size and whether it fills the screen. What is not
 // done here is shown greyed and passed over.
 //
-// The volumes are kept in donut_settings.dat.
+// The volumes and the display are kept in donut_settings.dat.
 class OptionsMenu
 {
 public:
 	// `viewCredits` rolls the credits; none, from the pause screen.
-	OptionsMenu(AudioManager& audio, std::function<void()> viewCredits);
+	OptionsMenu(AudioManager& audio, SDL_Window* window, std::function<void()> viewCredits);
 	~OptionsMenu();
 
 	bool IsLoaded() const { return _options != nullptr; }
@@ -41,6 +44,7 @@ private:
 		Closed,
 		Options,
 		Sound,
+		Display,
 	};
 	struct Entry
 	{
@@ -48,9 +52,19 @@ private:
 		bool enabled;
 	};
 	AudioManager& _audio;
+	SDL_Window* _window;
 	std::function<void()> _viewCredits;
 	std::unique_ptr<FrontendProject> _options;
 	std::unique_ptr<FrontendProject> _sound;
+	std::unique_ptr<FrontendProject> _display;
+	// The screen's sizes, smallest first; the one picked and whether the game
+	// fills the screen, as the page shows them until they are accepted.
+	std::vector<std::pair<int, int>> _sizes;
+	std::size_t _size = 0;
+	bool _fullScreen = false;
+	// As kept: the window's size (0: as it was opened) and full screen.
+	int _keptWidth = 0, _keptHeight = 0;
+	bool _keptFullScreen = false;
 	Screen _screen = Screen::Closed;
 	bool _fromPause = false;
 	int _choice = 0;
@@ -64,6 +78,9 @@ private:
 	// on, or -1.
 	int pick(FrontendProject& page, const std::vector<Entry>& entries, const GameIntent& intent);
 	void colour(FrontendProject& page, const std::vector<Entry>& entries);
+	void drawDisplay(const GameIntent& intent, const Matrix4x4& proj, bool back, bool confirm, int by);
+	// The window at the size and mode kept.
+	void applyDisplay();
 	void load();
 	void save() const;
 };

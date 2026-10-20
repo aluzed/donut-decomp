@@ -298,19 +298,19 @@ bool FrontendProject::GetRect(const std::string& name, float& x, float& y, float
 	for (const auto& sprite : _sprites)
 		if (sprite.name == name)
 		{
-			x = sprite.positionX * kScale;
-			y = sprite.positionY * kScale;
-			width = sprite.width * kScale;
-			height = sprite.height * kScale;
+			x = sprite.positionX * _scale + _offset.X;
+			y = sprite.positionY * _scale + _offset.Y;
+			width = sprite.width * _scale;
+			height = sprite.height * _scale;
 			return true;
 		}
 	for (const auto& text : _texts)
 		if (text.name == name)
 		{
-			x = text.x * kScale;
-			y = text.y * kScale;
-			width = text.width * kScale;
-			height = text.height * kScale;
+			x = text.x * _scale + _offset.X;
+			y = text.y * _scale + _offset.Y;
+			width = text.width * _scale;
+			height = text.height * _scale;
 			return true;
 		}
 	return false;
@@ -455,7 +455,14 @@ void FrontendProject::Draw(const Matrix4x4& proj)
 		_spriteBatch.DrawText(text.font, value, Vector2(x, y), text.color, scale);
 	}
 
+	GLint viewport[4];
+	glGetIntegerv(GL_VIEWPORT, viewport);
+	if (viewport[2] > 0 && viewport[3] > 0)
+	{
+		_scale = std::min(viewport[2] / 640.0f, viewport[3] / 480.0f);
+		_offset = Vector2((viewport[2] - 640.0f * _scale) * 0.5f, (viewport[3] - 480.0f * _scale) * 0.5f);
+	}
 	glBindSampler(0, _sampler);
-	_spriteBatch.Flush(proj, kScale);
+	_spriteBatch.Flush(proj, _scale, _offset);
 }
 } // namespace Donut

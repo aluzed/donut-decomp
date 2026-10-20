@@ -61,7 +61,10 @@ public:
 	// y down; the page is drawn at `scale`): false when it has none of that
 	// name.
 	bool GetRect(const std::string& name, float& x, float& y, float& width, float& height) const;
-	static constexpr float kScale = 2.0f;
+	// The page's 640 x 480 on the screen: as large as it fits, centred. Kept
+	// from the last draw, for the mouse.
+	mutable float _scale = 2.0f;
+	mutable Vector2 _offset = Vector2::Zero;
 
 private:
 	void AddGroup(const P3D::FrontendGroup& group, int32_t resX, int32_t resY);
