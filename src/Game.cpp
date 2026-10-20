@@ -12,6 +12,7 @@
 #include "UI/MoviePlayer.h"
 #include "UI/OptionsMenu.h"
 #include "UI/GameHud.h"
+#include "UI/PauseSundayMenu.h"
 #include "UI/PhoneBoothMenu.h"
 #include "UI/ShopMenu.h"
 #include "Core/FpsTimer.h"
@@ -557,6 +558,125 @@ Game::Game(int argc, char** argv)
 		if (_optionsMenu)
 			_optionsMenu->Open(true);
 	});
+	// Out of the mission: a bonus mission's (or one played again) back to the
+	// story where it was; a story mission's back to the drive before it.
+	_pauseMenu->AddButton("Abort", 0, 0, 200, 40, [this]() {
+		const int to = abortTo();
+		if (to < 0)
+			return;
+		_bonusReturn = -1;
+		startStoryMission(to);
+		_gameState = GameState::InGame;
+	});
+	PauseSundayMenu::Actions sunday;
+	sunday.resume = [this]() { _gameState = GameState::InGame; };
+	sunday.options = [this]() {
+		if (_optionsMenu)
+			_optionsMenu->Open(true);
+	};
+	sunday.quit = []() {
+		SDL_Event quitEvent;
+		quitEvent.type = SDL_QUIT;
+		SDL_PushEvent(&quitEvent);
+	};
+	// A mission won played again, as a bonus mission is: the story back where
+	// it was after it, won or lost, its progress unsaved.
+	sunday.replay = [this](int story) {
+		_bonusReturn = _storyIndex;
+		startStoryMission(story);
+		_gameState = GameState::InGame;
+	};
+	_pauseSunday = std::make_unique<PauseSundayMenu>(std::move(sunday));
+}
+
+int Game::abortTo() const
+{
+	if (_bonusReturn >= 0)
+		return _bonusReturn;
+	// The drive to it, just before it in the story.
+	if (_storyIndex > 0 && _storyIndex < static_cast<int>(_story.size()))
+	{
+		const std::string& before = _story[_storyIndex - 1];
+		if (before.size() > 7 && before.compare(before.size() - 7, 7, "sdi.mfk") == 0 &&
+		    _story[_storyIndex].size() > 7 && _story[_storyIndex].compare(_story[_storyIndex].size() - 7, 7, "sdi.mfk") != 0)
+			return _storyIndex - 1;
+	}
+	return -1;
+}
+
+void Game::openSundayPause()
+{
+	if (!_pauseSunday || !_pauseSunday->IsLoaded())
+		return;
+	const ScrapBookMenu::Stats book = scrapBookStats();
+	const int first = (_levelNumber - 1) * 8;
+	// m1 to m7: won or not, and where each is in the story.
+	std::vector<PauseSundayMenu::Mission> missions(7);
+	int storyWon = 0, storyTotal = 0;
+	for (int n = 1; n <= 7; ++n)
+	{
+		const std::string file = fmt::format("/m{}i.mfk", n);
+		for (int i = 0; i < static_cast<int>(_story.size()); ++i)
+			if (_story[i].size() >= file.size() && _story[i].compare(_story[i].size() - file.size(), file.size(), file) == 0)
+				missions[n - 1].story = i;
+		missions[n - 1].won = book.missionsWon.count(first + n - 1) > 0;
+		if (missions[n - 1].story >= 0)
+		{
+			++storyTotal;
+			storyWon += missions[n - 1].won;
+		}
+	}
+	// The level's counts.
+	PauseSundayMenu::Stats stats;
+	int done = 0, all = 0;
+	const auto count = [&](const char* name, int have, int total) {
+		stats.counts.emplace_back(name, fmt::format("{}/{}", have, total));
+		done += std::min(have, total);
+		all += total;
+	};
+	int bonus = 0, races = 0;
+	for (const std::string& won : _save.Entries("won"))
+	{
+		if (won.compare(0, 3, fmt::format("L{}:", _levelNumber)) != 0)
+			continue;
+		if (won.compare(3, 2, "bm") == 0)
+			++bonus;
+		else if (won.compare(3, 2, "sr") == 0)
+			++races;
+	}
+	int cars = 0, carsTotal = 0, skins = 0, skinsTotal = 0;
+	for (const Reward& reward : rewards("car"))
+		if (reward.level == _levelNumber)
+		{
+			cars += reward.unlocked;
+			++carsTotal;
+		}
+	for (const Reward& reward : rewards("skin"))
+		if (reward.level == _levelNumber && reward.how == "forsale")
+		{
+			skins += reward.unlocked;
+			++skinsTotal;
+		}
+	std::vector<int> cards(7, -1);
+	int cardsFound = 0;
+	for (int n = 0; n < 7; ++n)
+		if (book.cardsFound.count(first + n))
+		{
+			cards[n] = first + n;
+			++cardsFound;
+		}
+	const int gagsFound = static_cast<int>(std::count_if(_gags.begin(), _gags.end(), [](const Gag& g) { return g.played; }));
+	count("StoryMissions_Unlocked", storyWon, storyTotal);
+	count("BonusMissions_Unlocked", std::min(bonus, 1), 1);
+	count("StreetRaces_Unlocked", std::min(races, 3), 3);
+	count("Cards_Unlocked", cardsFound, 7);
+	count("Clothing_Unlocked", skins, skinsTotal);
+	count("Vehicles_Unlocked", cars, carsTotal);
+	if (_waspManager)
+		count("Wasps_Unlocked", _waspManager->GetDestroyed(), _waspManager->GetTotal());
+	count("Gags_Unlocked", gagsFound, static_cast<int>(_gags.size()));
+	stats.percent = all > 0 ? done * 100 / all : 0;
+	_pauseSunday->Open(_levelNumber, std::move(missions), std::move(stats), std::move(cards));
 }
 
 Game::~Game()
@@ -964,19 +1084,21 @@ void Game::drawPausePage(const GameIntent& intent, const Matrix4x4& proj)
 	// The page's entries, top to bottom, and which of ours each is (-1: none,
 	// shown greyed and passed over).
 	static const std::pair<const char*, int> kEntries[] = {
-	    {"Continue", 0}, {"RestartMission", 1}, {"AbortMission", -1}, {"Options", 3}, {"QuitGame", 2}};
+	    {"Continue", 0}, {"RestartMission", 1}, {"AbortMission", 4}, {"Options", 3}, {"QuitGame", 2}};
+	// Abort only where there is somewhere to go back to.
+	const bool canAbort = abortTo() >= 0;
 	constexpr int kCount = static_cast<int>(sizeof(kEntries) / sizeof(kEntries[0]));
 	const auto step = [&](int from, int by) {
 		int at = from;
 		for (int i = 0; i < kCount; ++i)
 		{
 			at = (at + by + kCount) % kCount;
-			if (kEntries[at].second >= 0)
+			if (kEntries[at].second >= 0 && (kEntries[at].second != 4 || canAbort))
 				return at;
 		}
 		return from;
 	};
-	if (kEntries[_pauseChoice].second < 0)
+	if (kEntries[_pauseChoice].second < 0 || (kEntries[_pauseChoice].second == 4 && !canAbort))
 		_pauseChoice = step(_pauseChoice, 1);
 	const bool up = intent.moveForward > 0.5f, down = intent.moveBackward > 0.5f;
 	if (up && !_menuUpHeld)
@@ -990,7 +1112,8 @@ void Game::drawPausePage(const GameIntent& intent, const Matrix4x4& proj)
 	for (int i = 0; i < kCount; ++i)
 	{
 		float x, y, w, h;
-		if (kEntries[i].second >= 0 && _pausePage->GetRect(kEntries[i].first, x, y, w, h) && intent.mouseX >= x &&
+		if (kEntries[i].second >= 0 && (kEntries[i].second != 4 || canAbort) &&
+		    _pausePage->GetRect(kEntries[i].first, x, y, w, h) && intent.mouseX >= x &&
 		    intent.mouseX <= x + w && intent.mouseY >= y && intent.mouseY <= y + h)
 		{
 			// Moved over it, not merely left there when the screen opened.
@@ -1003,7 +1126,7 @@ void Game::drawPausePage(const GameIntent& intent, const Matrix4x4& proj)
 	_pauseMouseY = intent.mouseY;
 	for (int i = 0; i < kCount; ++i)
 	{
-		if (kEntries[i].second < 0)
+		if (kEntries[i].second < 0 || (kEntries[i].second == 4 && !canAbort))
 			_pausePage->SetTextColor(kEntries[i].first, Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 		else if (i == _pauseChoice)
 			_pausePage->SetTextColor(kEntries[i].first, Vector4(1.0f, 0.84f, 0.0f, 1.0f));
@@ -4247,11 +4370,22 @@ void Game::Run()
 		debugAboutMenu();
 		drawControlsWindow();
 
-		// Escape in the options goes back a page, not out of the pause.
-		if (intent.pauseToggle && !(_optionsMenu && _optionsMenu->IsOpen()))
+		// Escape in the options goes back a page, not out of the pause; nor
+		// in the pause between missions, which has pages of its own.
+		if (intent.pauseToggle && !(_optionsMenu && _optionsMenu->IsOpen()) &&
+		    !(_pauseSunday && _pauseSunday->IsOpen()))
 		{
 			if (_gameState == GameState::InGame)
+			{
 				_gameState = GameState::Paused;
+				// Driving about between missions (the story at a drive, no
+				// bonus mission on): the pause of the Sunday drive.
+				const bool drive = _bonusReturn < 0 && _storyIndex >= 0 && _storyIndex < static_cast<int>(_story.size()) &&
+				                   _story[_storyIndex].size() > 7 &&
+				                   _story[_storyIndex].compare(_story[_storyIndex].size() - 7, 7, "sdi.mfk") == 0;
+				if (drive)
+					openSundayPause();
+			}
 			else if (_gameState == GameState::Paused)
 				_gameState = GameState::InGame;
 		}
@@ -4881,6 +5015,8 @@ void Game::Run()
 				sprites.Flush(proj);
 				if (_optionsMenu && _optionsMenu->IsOpen())
 					_optionsMenu->Draw(intent, proj);
+				else if (_pauseSunday && _pauseSunday->IsOpen())
+					_pauseSunday->Draw(intent, proj);
 				else
 					drawPausePage(intent, proj);
 				_window->Swap();

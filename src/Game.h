@@ -284,6 +284,14 @@ private:
 	bool _menuUpHeld = false, _menuDownHeld = false;
 	int _pauseMouseX = -1, _pauseMouseY = -1;
 	void drawPausePage(const struct GameIntent& intent, const Matrix4x4& proj);
+	// The pause between missions, driving about (PauseSunday.pag), with the
+	// level's missions to play again, its progress and its cards; opened in
+	// place of the mission's pause while the story is at a drive.
+	std::unique_ptr<class PauseSundayMenu> _pauseSunday;
+	void openSundayPause();
+	// Where Abort Mission goes: the story entry to start (the drive before a
+	// story mission, or the story where a bonus mission left it), or -1.
+	int abortTo() const;
 	// For `level`, with its picture.
 	void showLoadingScreen(int level);
 	// A mission's briefing picture, loaded once (nothing when there is none).

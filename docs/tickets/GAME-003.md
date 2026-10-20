@@ -504,3 +504,31 @@ The mission's cars no longer count the player's own, which sat under the arrow.
 
 Not done: the radar's cone; mission complete and failed in the page's letters,
 the proximity meter, the action button, the tutorial's walkie-talkie.
+
+## The pause between missions, and Abort Mission (2026-10-21)
+
+Paused while the story is at a drive (an `sdi.mfk` entry, no bonus mission on), the game
+has its own pause (`ingame.p3d`'s `PauseSunday.pag`, under `Pause.pag` over
+`PauseBgd.pag`), now `UI/PauseSundayMenu`: Continue; Mission Select
+(`MissionSelect.pag` on `BigBoard.pag`: the level's seven missions, their titles from
+the page's strings for this level, a check for each won, a dash before; the highlight
+bar on the one picked; the confirm key plays a won mission again); Level Progress
+(`LevelStats.pag`: the level's story missions, bonus mission, street races, cards,
+clothes, vehicles, wasp cameras and gags, each won of all, and the whole as a
+percentage; any key goes back); View Cards (`PauseViewCards.pag`: the level's seven
+cards, those found their picture, the others the Buzz Cola back, `cardyell.png`, the
+frame about the one picked, left and right); Options; Save Game, greyed: the game saves
+as it goes; Quit Game. Escape goes back a page, or resumes from the first.
+
+A mission played again is played as a bonus mission is (`_bonusReturn`): the story is
+back where it was after it, won or lost, and its progress is not saved, which would
+otherwise have gone back to it.
+
+The mission's pause now has Abort Mission: out of a story mission to the drive before
+it; out of a bonus mission (or one played again) to the story where it was. Greyed where
+there is nowhere to go back to (a drive, or a mission with none before it).
+
+Checked by screenshots with the save at level 7's first mission and a test save's
+level 1 (missions won, two cards found): the pause, the missions all checked, "18%" of
+level 1 done, the two cards and five backs; Abort from level 1's m1 back to its drive
+(story entry 3 to 2), and none from the drive.
