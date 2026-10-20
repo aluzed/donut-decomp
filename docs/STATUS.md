@@ -186,7 +186,7 @@ cmake --build build -j$(nproc)
 | `--autostart` | Skip the splash and main menu, straight into the mission |
 | `--quit-after <secs>` | Close the window after that much wall time |
 | `--mission <script>` | Run that mission script instead of `M1race.con`. Given a game set-up script (`<id>i.mfk`), its loader (`<id>l.mfk`) runs first |
-| `--autopilot` | Move the player onto each objective in turn, to run a whole mission unattended; never onto a traffic car (put down beside it), which threw the car out wrecked |
+| `--autopilot` | Move the player onto each objective in turn, to run a whole mission unattended; never onto a traffic car (put down beside it), which threw the car out wrecked; onto something to pick up on the ground rather than at its height, unless it is high above it |
 | `--story` | Start on level 1's first story mission (m0) and go on to the next after each win, through m7. Needs `scripts/level01` (see docs/ASSETS.md) |
 | `--language <E\|F\|G\|I\|S>` | Language of the game's own text (objectives), from its phrase table. English by default |
 

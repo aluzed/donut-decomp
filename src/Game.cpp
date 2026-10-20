@@ -135,6 +135,9 @@ constexpr float kStride = 1.1f;
 constexpr float kFeetBelowCentre = 0.9f;
 // How fast the credits roll, pixels a second.
 constexpr float kCreditsSpeed = 60.0f;
+// How far above the ground something to pick up must be for the autopilot to
+// put the car down at its height rather than on the ground.
+constexpr float kHighPickup = 3.0f;
 // How near a traffic car the autopilot may put the player's car down.
 constexpr float kTrafficClearance = 6.0f;
 // The effects file's dust of a dash.
@@ -282,6 +285,18 @@ Game::Game(int argc, char** argv)
 		}
 	}
 
+	// The game's loading screen, shown while a level loads: the fuse burning
+	// down to the dynamite, "LOADING".
+	if (FileSystem::exists("./art/frontend/scrooby2/backend.p3d"))
+	{
+		_loadingPage = std::make_unique<FrontendProject>();
+		_loadingPage->LoadP3D("./art/frontend/scrooby2/backend.p3d", "Loading.pag");
+		// The level's picture, which the game puts in at run time: the page
+		// holds a blank in its place.
+		_loadingPage->SetSpriteVisible("Loading", false);
+	}
+	// The first level too, from the start.
+	showLoadingScreen(_levelNumber);
 	loadLevel();
 	_gameInput = std::make_unique<GameInput>();
 	Input::CaptureTextEntry(this, &Game::OnInputTextEntry);
@@ -372,16 +387,6 @@ Game::Game(int argc, char** argv)
 				from = at + 1;
 			}
 		}
-	}
-	// The game's loading screen, shown while a level loads: the fuse burning
-	// down to the dynamite, "LOADING".
-	if (FileSystem::exists("./art/frontend/scrooby2/backend.p3d"))
-	{
-		_loadingPage = std::make_unique<FrontendProject>();
-		_loadingPage->LoadP3D("./art/frontend/scrooby2/backend.p3d", "Loading.pag");
-		// The level's picture, which the game puts in at run time: the page
-		// holds a blank in its place.
-		_loadingPage->SetSpriteVisible("Loading", false);
 	}
 	// The game's own main menu page: its arrows, and the entry shown between
 	// them in its font.
@@ -1547,11 +1552,20 @@ void Game::runAutopilot(double dt)
 	if (_inVehicle && _activeVehicle)
 		target = clearSpotNear(target);
 	Log::Info("Game: autopilot to ({:.1f}, {:.1f}, {:.1f})", target.X, target.Y, target.Z);
-	// Something to pick up is taken where it is, at its height: level 4 m3's
-	// ketchup hangs 11m above the road, for a jump the autopilot cannot make.
-	const bool pickup = objective == "delivery" || objective == "dump";
+	// Something to pick up high above the ground is taken where it is, at its
+	// height: level 4 m3's ketchup hangs 11m above the road, for a jump the
+	// autopilot cannot make. One near the ground -- what a truck rammed drops,
+	// at the height of its middle -- is driven to on the ground: put down at
+	// that height, the car was half in the road, thrown off it, and never
+	// came within reach (level 4 m1, the stage timed out).
+	bool high = false;
+	if (objective == "delivery" || objective == "dump")
+	{
+		float ground = 0.0f;
+		high = !_worldPhysics->FindGroundHeight(target, 1.0f, 30.0f, ground, true) || target.Y - ground > kHighPickup;
+	}
 	if (_inVehicle && _activeVehicle)
-		_activeVehicle->Teleport(target, _activeVehicle->GetRotation(), !pickup);
+		_activeVehicle->Teleport(target, _activeVehicle->GetRotation(), !high);
 	else
 		SetPlayerPosition(target + Vector3(0.0f, 1.0f, 0.0f));
 }

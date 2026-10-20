@@ -60,7 +60,9 @@ burning down as the level loads.
 
 The level's picture is shown in the place the page leaves blank: `dynaload/images/
 loading<n>.p3d`, a sprite of DDS tiles (P3D-017), fitted to the page's box -- level 2's
-is the Springfield Shopper, "LOW LEVEL EMPLOYEE HARASSES MILLIONAIRE, HOUNDS RELEASED".
+is the Springfield Shopper, "LOW LEVEL EMPLOYEE HARASSES MILLIONAIRE, HOUNDS RELEASED";
+level 3's, "BART SIMPSON DISAPPEARS IN BRIGHT LIGHT". It shows from the game's start too,
+over the first level's load.
 
 ## The pause screen (2026-10-20)
 
