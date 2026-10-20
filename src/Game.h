@@ -36,7 +36,9 @@ enum class GameState
 	// One of the game's movies, from the options' View Movies.
 	Movie,
 	// The phone booth's car select, over the game standing still.
-	PhoneBooth
+	PhoneBooth,
+	// A shop (cars or clothes), likewise.
+	Shop
 };
 
 class Window;
@@ -306,18 +308,37 @@ private:
 	ScrapBookMenu::Screen _livingRoomBook = ScrapBookMenu::Screen::Closed;
 	// The scrapbook's counts, from the save files.
 	ScrapBookMenu::Stats scrapBookStats() const;
-	// Every car the game rewards (rewards.mfk's BindReward "car", level by
-	// level: its own, the bonus mission's, the street races', three for sale),
-	// whether the player has it, its stats (SetCarAttributes).
-	struct CarReward
+	// Every car and outfit the game rewards (rewards.mfk's BindReward, level
+	// by level: a level's own car and skin, the bonus mission's car, the street
+	// races', and three cars and three outfits for sale), its price and shop
+	// when for sale ("gil", "simpson", "interior"), whether the player has it,
+	// a car's stats (SetCarAttributes).
+	struct Reward
 	{
-		std::string car;
+		std::string kind; // "car" or "skin"
+		std::string car;  // its name
 		int level = 1;
 		std::string how;
+		int price = 0;
+		std::string shop;
 		bool unlocked = false;
 		float stars[4] = {};
 	};
-	std::vector<CarReward> carRewards() const;
+	std::vector<Reward> rewards(const std::string& kind) const;
+	// The shops: a car seller (leveli.mfk's AddPurchaseCarReward: Gil, or
+	// Barney for the "simpson" cars) where they stand, and where a car bought
+	// from them is left; an interior's wardrobe (a PurchaseSkin trigger).
+	struct CarSeller
+	{
+		std::string shop;
+		Vector3 position;
+		Vector3 carSpot;
+	};
+	std::vector<CarSeller> _carSellers;
+	std::unique_ptr<class ShopMenu> _shop;
+	// The seller of the shop open, or none for the wardrobe.
+	const CarSeller* _shopSeller = nullptr;
+	bool openShop();
 	std::unique_ptr<class PhoneBoothMenu> _phoneBooth;
 	// Where the booth's car is brought: the road nearest it.
 	Vector3 _phoneBoothRoad;

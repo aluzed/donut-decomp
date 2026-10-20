@@ -12,6 +12,7 @@
 #include "UI/MoviePlayer.h"
 #include "UI/OptionsMenu.h"
 #include "UI/PhoneBoothMenu.h"
+#include "UI/ShopMenu.h"
 #include "Core/FpsTimer.h"
 #include "Core/Math/Math.h"
 #include "FreeCamera.h"
@@ -484,6 +485,21 @@ Game::Game(int argc, char** argv)
 	if (_gameState == GameState::Splash && !_noMovies)
 		playMovies({"RADLOGO.RMV", "FOXLOGO.RMV", "GRACIE.RMV", "VUGLOGO.RMV", "INTRO.RMV"}, GameState::Splash, true);
 	_phoneBooth = std::make_unique<PhoneBoothMenu>([this](const std::string& car) { callCar(car); });
+	// A shop's item had: an outfit worn, a car left by its seller, the player
+	// at its wheel.
+	_shop = std::make_unique<ShopMenu>([this](const ShopMenu::Item& item) {
+		if (!item.car)
+			return BuySkin(item.name);
+		if (!BuyCar(item.name))
+			return false;
+		if (_shopSeller)
+		{
+			Vehicle& vehicle = _scriptEngine->SummonPlayerCar(item.name, _shopSeller->carSpot);
+			_health = 100.0f;
+			PutPlayerInVehicle(&vehicle);
+		}
+		return true;
+	});
 	_scrapBook = std::make_unique<ScrapBookMenu>([this](const std::string& file) { return presentationPicture(file); });
 	if (_scrapBook->IsLoaded())
 	{
@@ -1719,35 +1735,13 @@ ScrapBookMenu::Stats Game::scrapBookStats() const
 	// sale, three a level, bought.
 	stats.vehicles = 0;
 	stats.clothing = 0;
-	{
-		std::ifstream rewards("scripts/rewards.mfk");
-		for (std::string line; std::getline(rewards, line);)
+	for (const Reward& reward : rewards("skin"))
+		if (reward.how == "forsale")
 		{
-			const std::size_t at = line.find("BindReward(");
-			const std::size_t comment = line.find("//");
-			if (at == std::string::npos || (comment != std::string::npos && comment < at))
-				continue;
-			std::vector<std::string> quoted;
-			for (std::size_t open = line.find('"', at); open != std::string::npos; open = line.find('"', open + 1))
-			{
-				const std::size_t close = line.find('"', open + 1);
-				if (close == std::string::npos)
-					break;
-				quoted.push_back(line.substr(open + 1, close - open - 1));
-				open = close;
-			}
-			if (quoted.size() < 4 || quoted[2] != "skin")
-				continue;
-			const std::size_t afterHow = line.find(quoted[3]) + quoted[3].size() + 1;
-			const int level = std::atoi(line.c_str() + line.find(',', afterHow) + 1);
-			if (quoted[3] != "forsale")
-				continue;
-			const bool bought = _save.Entries(fmt::format("skin:{}", level)).count(quoted[0]) > 0;
-			stats.skinList.emplace_back(quoted[0], bought);
-			*stats.clothing += bought;
+			stats.skinList.emplace_back(reward.car, reward.unlocked);
+			*stats.clothing += reward.unlocked;
 		}
-	}
-	for (const CarReward& reward : carRewards())
+	for (const Reward& reward : rewards("car"))
 	{
 		stats.vehicleList.emplace_back(reward.car, reward.unlocked);
 		*stats.vehicles += reward.unlocked;
@@ -2197,6 +2191,44 @@ void Game::loadLevel()
 			}
 		}
 		Log::Info("Game: {} people about level {}", _ambientNpcs.size(), _levelNumber);
+	}
+
+	// The car sellers: AddPurchaseCarReward("gil", "gil", "npd", "gil_loc",
+	// 1.3, "gil_car"): the shop, who keeps it, where they stand, where the car
+	// bought is left. Stood among the level's people.
+	_carSellers.clear();
+	{
+		std::ifstream script(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
+		for (std::string line; std::getline(script, line);)
+		{
+			const std::size_t at = line.find("AddPurchaseCarReward(");
+			const std::size_t comment = line.find("//");
+			if (at == std::string::npos || (comment != std::string::npos && comment < at))
+				continue;
+			std::vector<std::string> args;
+			for (std::size_t q = line.find('"', at); q != std::string::npos; q = line.find('"', q + 1))
+			{
+				const std::size_t end = line.find('"', q + 1);
+				if (end == std::string::npos)
+					break;
+				args.push_back(line.substr(q + 1, end - q - 1));
+				q = end;
+			}
+			if (args.size() < 5)
+				continue;
+			const Vector3 spot = _level->GetLocatorPosition(args[3]);
+			const Vector3 carSpot = _level->GetLocatorPosition(args[4]);
+			if (spot == Vector3::Zero || carSpot == Vector3::Zero)
+				continue;
+			_carSellers.push_back({args[0], spot, carSpot});
+			if (!_ambientNpcs.count(args[1]))
+				if (auto npc = makeNpc(args[1]))
+				{
+					npc->SetPosition(spot);
+					_ambientNpcs.emplace(args[1], std::move(npc));
+				}
+		}
+		Log::Info("Game: {} car seller(s)", _carSellers.size());
 	}
 
 	// Who offers the street races and the bonus mission:
@@ -3140,14 +3172,14 @@ void Game::updateGags()
 	_gagsPrimed = true;
 }
 
-std::vector<Game::CarReward> Game::carRewards() const
+std::vector<Game::Reward> Game::rewards(const std::string& kind) const
 {
-	// rewards.mfk's BindReward("<car>", "<file>", "car", "<how>", <level>...)
-	// and SetCarAttributes("<car>", speed, acceleration, toughness, stability).
-	// A level's own car is the player's from the start; the bonus mission's
-	// with the bonus mission won; the street races' with all three won; those
-	// for sale bought.
-	std::vector<CarReward> rewards;
+	// rewards.mfk's BindReward("<name>", "<file>", "car"|"skin", "<how>",
+	// <level>[, <price>, "<shop>"]) and SetCarAttributes("<car>", speed,
+	// acceleration, toughness, stability). A level's own car and skin are the
+	// player's from the start; the bonus mission's car with the bonus mission
+	// won; the street races' with all three won; those for sale bought.
+	std::vector<Reward> found;
 	std::map<std::string, std::array<float, 4>> stars;
 	std::ifstream file("scripts/rewards.mfk");
 	for (std::string line; std::getline(file, line);)
@@ -3178,28 +3210,77 @@ std::vector<Game::CarReward> Game::carRewards() const
 			stars[quoted[0]] = values;
 			continue;
 		}
-		if (quoted.size() < 4 || quoted[2] != "car")
+		if (quoted.size() < 4 || quoted[2] != kind)
 			continue;
 		const std::size_t afterHow = line.find(quoted[3]) + quoted[3].size() + 1;
-		CarReward reward;
+		Reward reward;
+		reward.kind = kind;
 		reward.car = quoted[0];
 		reward.how = quoted[3];
-		reward.level = std::atoi(line.c_str() + line.find(',', afterHow) + 1);
-		int won = 0;
-		for (const std::string& entry : _save.Entries("won"))
-			if (entry.compare(0, 3, fmt::format("L{}:", reward.level)) == 0 &&
-			    entry.compare(3, 2, reward.how == "bonusmission" ? "bm" : "sr") == 0)
-				++won;
-		reward.unlocked = reward.how == "defaultcar" || (reward.how == "bonusmission" && won > 0) ||
-		                  (reward.how == "streetrace" && won >= 3) ||
-		                  _save.Entries(fmt::format("car:{}", reward.level)).count(reward.car) > 0 ||
-		                  (reward.level == _levelNumber && _ownedCars.count(reward.car) > 0);
-		rewards.push_back(reward);
+		// The numbers after the way it is had: its level, then its price.
+		std::istringstream numbers(line.substr(line.find(',', afterHow) + 1));
+		numbers >> reward.level;
+		numbers.ignore(8, ',');
+		numbers >> reward.price;
+		if (quoted.size() > 4)
+			reward.shop = quoted[4];
+		if (kind == "skin")
+			reward.unlocked = reward.how == "defaultskin" ||
+			                  _save.Entries(fmt::format("skin:{}", reward.level)).count(reward.car) > 0 ||
+			                  (reward.level == _levelNumber && _ownedSkins.count(reward.car) > 0);
+		else
+		{
+			int won = 0;
+			for (const std::string& entry : _save.Entries("won"))
+				if (entry.compare(0, 3, fmt::format("L{}:", reward.level)) == 0 &&
+				    entry.compare(3, 2, reward.how == "bonusmission" ? "bm" : "sr") == 0)
+					++won;
+			reward.unlocked = reward.how == "defaultcar" || (reward.how == "bonusmission" && won > 0) ||
+			                  (reward.how == "streetrace" && won >= 3) ||
+			                  _save.Entries(fmt::format("car:{}", reward.level)).count(reward.car) > 0 ||
+			                  (reward.level == _levelNumber && _ownedCars.count(reward.car) > 0);
+		}
+		found.push_back(reward);
 	}
-	for (CarReward& reward : rewards)
-		if (const auto found = stars.find(reward.car); found != stars.end())
-			std::copy(found->second.begin(), found->second.end(), reward.stars);
-	return rewards;
+	for (Reward& reward : found)
+		if (const auto attributes = stars.find(reward.car); attributes != stars.end())
+			std::copy(attributes->second.begin(), attributes->second.end(), reward.stars);
+	return found;
+}
+
+bool Game::openShop()
+{
+	if (!_character || _inVehicle || !_shop || !_shop->IsLoaded() || _autopilot)
+		return false;
+	const Vector3 me = _character->GetPosition();
+	// A car seller within reach: their shop's cars of this level.
+	_shopSeller = nullptr;
+	for (const CarSeller& seller : _carSellers)
+		if ((seller.position - me).Length() < 2.5f)
+			_shopSeller = &seller;
+	bool wardrobe = false;
+	if (!_shopSeller)
+		for (const auto& trigger : _level->GetTriggers())
+			if (trigger.action == "PurchaseSkin" && (trigger.Contains(me) || (trigger.position - me).Length() < 2.0f))
+				wardrobe = true;
+	if (!_shopSeller && !wardrobe)
+		return false;
+	std::vector<ShopMenu::Item> items;
+	for (const Reward& reward : rewards(_shopSeller ? "car" : "skin"))
+	{
+		if (reward.level != _levelNumber || reward.how != "forsale" ||
+		    (_shopSeller ? reward.shop != _shopSeller->shop : reward.shop != "interior"))
+			continue;
+		ShopMenu::Item item {reward.car, reward.price, reward.unlocked, _shopSeller != nullptr};
+		std::copy(std::begin(reward.stars), std::end(reward.stars), item.stars);
+		items.push_back(item);
+	}
+	if (items.empty())
+		return false;
+	Log::Info("Game: shop '{}', {} on sale", _shopSeller ? _shopSeller->shop : "interior", items.size());
+	_shop->Open(std::move(items));
+	_gameState = GameState::Shop;
+	return true;
 }
 
 void Game::callCar(const std::string& car)
@@ -3233,7 +3314,7 @@ bool Game::usePhoneBooth()
 		if (_phoneBooth && _phoneBooth->IsLoaded() && !_autopilot)
 		{
 			std::vector<PhoneBoothMenu::Car> cars;
-			for (const CarReward& reward : carRewards())
+			for (const Reward& reward : rewards("car"))
 			{
 				PhoneBoothMenu::Car car {reward.car, reward.level, reward.unlocked};
 				std::copy(std::begin(reward.stars), std::end(reward.stars), car.stars);
@@ -3450,7 +3531,7 @@ void Game::Run()
 			charMove += Vector3::Right * intent.moveRight;
 
 			// A phone booth answers the action button before anything else.
-			if (intent.interact && (usePhoneBooth() || ringDoorbell() || useGag() || startBonusMission()))
+			if (intent.interact && (usePhoneBooth() || openShop() || ringDoorbell() || useGag() || startBonusMission()))
 				intent.interact = false;
 
 			if (intent.interact)
@@ -3682,8 +3763,8 @@ void Game::Run()
 
 		// Pause has to stop the world, not just hide it: this used to keep running
 		// every frame while paused, so physics and scripts ticked behind the overlay.
-		const bool simulate =
-		    _gameState != GameState::Paused && _gameState != GameState::Movie && _gameState != GameState::PhoneBooth;
+		const bool simulate = _gameState != GameState::Paused && _gameState != GameState::Movie &&
+		                      _gameState != GameState::PhoneBooth && _gameState != GameState::Shop;
 
 		if (simulate)
 		{
@@ -4886,6 +4967,12 @@ void Game::Run()
 		{
 			_phoneBooth->Draw(intent, proj);
 			if (!_phoneBooth->IsOpen() && _gameState == GameState::PhoneBooth)
+				_gameState = GameState::InGame;
+		}
+		if (_gameState == GameState::Shop)
+		{
+			_shop->Draw(intent, proj);
+			if (!_shop->IsOpen())
 				_gameState = GameState::InGame;
 		}
 		if (_gameState == GameState::Splash)

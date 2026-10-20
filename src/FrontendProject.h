@@ -52,6 +52,8 @@ public:
 	// Shows or hides a sprite of the page (one the game fills at run time, as
 	// the loading screen's level picture; its text "Loading" is another).
 	void SetSpriteVisible(const std::string& name, bool visible);
+	// Its tint (a polygon's colour, when it is given a picture to show).
+	void SetSpriteColor(const std::string& name, const Vector4& color);
 	// The first sprite named `name` named `newName` instead: a page with two
 	// of one name (GameSettings.pag's mouse icons).
 	void RenameSprite(const std::string& name, const std::string& newName);

@@ -416,3 +416,35 @@ Not shown: a damaged car's repair cost (`DamagedInfo`; the booth repairs for not
 Checked by screenshots with a save of level 1's bonus mission and races won and the Plow
 King bought: the Family Sedan's page (1, 1.5, 2.5 and 4 stars), the Duff Truck locked,
 "LEVEL 1"; the Plow King called, by the booth, the player at its wheel.
+
+## The shops (2026-10-20)
+
+Cars and clothes for sale can be bought outside the missions now, as in the game.
+
+- The car sellers: leveli.mfk's `AddPurchaseCarReward("gil", "gil", "npd", "gil_loc",
+  1.3, "gil_car")`, the shop, who keeps it, where they stand and where a car bought is
+  left. They stand among the level's people (Gil; Barney, Homer, Otto... for the
+  "simpson" cars). Worked by hand within 2.5 m, they open their shop: this level's cars
+  for sale with that shop (rewards.mfk's `BindReward(..., "forsale", <level>, <price>,
+  "<shop>")`).
+- The wardrobe: an interior's `PurchaseSkin` action trigger (the school's
+  `int_ele_skin`, the Kwik-E-Mart's `int_kwik_skin`) opens this level's outfits for sale
+  ("interior").
+
+The shop is the game's page (`ingame.p3d`'s `Rewards.pag`, with `Buy.pag` and
+`Cancel.pag`) over the game darkened, which stands still (`GameState::Shop`): one item
+at a time between two arrows, its name, its price ("125 coins", "to purchase"); a car's
+stats as stars in place of its picture with up or down ("View stats", "View model").
+Where the game turned a 3D model over its showroom, the item's picture (`cars2D`,
+`skins2D`) is shown, in the page's light cover quad (its tint made white:
+`FrontendProject::SetSpriteColor`). The confirm key buys (coins spent; refused without
+enough) or, had already, takes it ("Change"): an outfit is worn, a car is left at its
+seller's spot with the player at its wheel and becomes theirs; Escape leaves.
+
+All the rewards are read in one place now, cars and outfits, their prices and shops
+(`Game::rewards`), for the scrapbook, the phone booth and the shops.
+
+Checked: level 1's two sellers (Gil: the Duff Truck and another, 125 coins; Barney: the
+Plow King, "Change" with it bought) and the school's wardrobe (three outfits, "Homer -
+Casual" 100 coins), by screenshots; a purchase at Gil's with 500 coins: the Duff Truck
+bought for 125 (375 left), left at `gil_car`, the player at its wheel.
