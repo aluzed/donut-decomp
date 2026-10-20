@@ -78,6 +78,10 @@ public:
 	};
 	Screen GetScreen() const { return _screen; }
 
+	// A PNG picture (a car's, cars2D/<car>.png), loaded once into the
+	// resource manager by its path; null if it cannot be read.
+	static Texture* image(const std::string& path);
+
 private:
 	std::unique_ptr<FrontendProject> _hub, _contents, _stats, _gallery, _card, _largeCard, _missions;
 	std::function<Texture*(const std::string&)> _picture;
@@ -108,7 +112,6 @@ private:
 	// A card's picture (resource/images/cards/db/cardNN.png), or the card not
 	// found yet (cardred.png).
 	static Texture* cardPicture(int card);
-	static Texture* image(const std::string& path);
 	Screen _screen = Screen::Closed;
 	int _choice = 0;
 	bool _upHeld = false, _downHeld = false;

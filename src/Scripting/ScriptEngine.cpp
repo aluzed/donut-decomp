@@ -1095,6 +1095,17 @@ void ScriptEngine::PlacePlayerCar(const std::string& car, const std::string& loc
 	_playerCar = &spawnVehicle(model, locator, pos);
 }
 
+Vehicle& ScriptEngine::SummonPlayerCar(const std::string& model, const Vector3& position)
+{
+	if (_playerCar != nullptr && _playerCar->GetName() == model)
+	{
+		_playerCar->Teleport(position, _playerCar->GetRotation());
+		return *_playerCar;
+	}
+	_playerCar = &spawnVehicle(model, "", position);
+	return *_playerCar;
+}
+
 void ScriptEngine::AddCollectible(const std::string& locator, const std::string& type)
 {
 	// A "dump"'s items fall out of a vehicle the player rams (m6's ten

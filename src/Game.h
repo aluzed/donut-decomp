@@ -34,7 +34,9 @@ enum class GameState
 	MissionFailed,
 	Credits,
 	// One of the game's movies, from the options' View Movies.
-	Movie
+	Movie,
+	// The phone booth's car select, over the game standing still.
+	PhoneBooth
 };
 
 class Window;
@@ -304,6 +306,22 @@ private:
 	ScrapBookMenu::Screen _livingRoomBook = ScrapBookMenu::Screen::Closed;
 	// The scrapbook's counts, from the save files.
 	ScrapBookMenu::Stats scrapBookStats() const;
+	// Every car the game rewards (rewards.mfk's BindReward "car", level by
+	// level: its own, the bonus mission's, the street races', three for sale),
+	// whether the player has it, its stats (SetCarAttributes).
+	struct CarReward
+	{
+		std::string car;
+		int level = 1;
+		std::string how;
+		bool unlocked = false;
+		float stars[4] = {};
+	};
+	std::vector<CarReward> carRewards() const;
+	std::unique_ptr<class PhoneBoothMenu> _phoneBooth;
+	// Where the booth's car is brought: the road nearest it.
+	Vector3 _phoneBoothRoad;
+	void callCar(const std::string& car);
 	std::unique_ptr<Hud> _hud;
 	std::unique_ptr<GL::ShaderProgram> _postProcessShader;
 	std::unique_ptr<GL::FrameBuffer> _sceneFBO;

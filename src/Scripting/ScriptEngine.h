@@ -245,6 +245,10 @@ public:
 	std::string GetVehicleDriver(const Vehicle* vehicle) const;
 	// The car the mission gave the player (SetMissionResetPlayerInCar/OutCar), or null.
 	Vehicle* GetPlayerCar() const { return _playerCar; }
+	// The phone booth's car brought to `position`: the player's own moved
+	// there, or another put in its place as the player's (the one before is
+	// left where it is).
+	Vehicle& SummonPlayerCar(const std::string& model, const Vector3& position);
 
 private:
 	Game& _game;

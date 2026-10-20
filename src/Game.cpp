@@ -11,6 +11,7 @@
 #include "UI/LivingRoom.h"
 #include "UI/MoviePlayer.h"
 #include "UI/OptionsMenu.h"
+#include "UI/PhoneBoothMenu.h"
 #include "Core/FpsTimer.h"
 #include "Core/Math/Math.h"
 #include "FreeCamera.h"
@@ -482,6 +483,7 @@ Game::Game(int argc, char** argv)
 	// a key skips them all.
 	if (_gameState == GameState::Splash && !_noMovies)
 		playMovies({"RADLOGO.RMV", "FOXLOGO.RMV", "GRACIE.RMV", "VUGLOGO.RMV", "INTRO.RMV"}, GameState::Splash, true);
+	_phoneBooth = std::make_unique<PhoneBoothMenu>([this](const std::string& car) { callCar(car); });
 	_scrapBook = std::make_unique<ScrapBookMenu>([this](const std::string& file) { return presentationPicture(file); });
 	if (_scrapBook->IsLoaded())
 	{
@@ -1734,30 +1736,21 @@ ScrapBookMenu::Stats Game::scrapBookStats() const
 				quoted.push_back(line.substr(open + 1, close - open - 1));
 				open = close;
 			}
-			if (quoted.size() < 4 || (quoted[2] != "car" && quoted[2] != "skin"))
+			if (quoted.size() < 4 || quoted[2] != "skin")
 				continue;
 			const std::size_t afterHow = line.find(quoted[3]) + quoted[3].size() + 1;
 			const int level = std::atoi(line.c_str() + line.find(',', afterHow) + 1);
-			if (quoted[2] == "skin")
-			{
-				if (quoted[3] != "forsale")
-					continue;
-				const bool bought = _save.Entries(fmt::format("skin:{}", level)).count(quoted[0]) > 0;
-				stats.skinList.emplace_back(quoted[0], bought);
-				*stats.clothing += bought;
+			if (quoted[3] != "forsale")
 				continue;
-			}
-			int won = 0;
-			for (const std::string& entry : _save.Entries("won"))
-				if (entry.compare(0, 3, fmt::format("L{}:", level)) == 0 &&
-				    entry.compare(3, 2, quoted[3] == "bonusmission" ? "bm" : "sr") == 0)
-					++won;
-			const bool unlocked = quoted[3] == "defaultcar" || (quoted[3] == "bonusmission" && won > 0) ||
-			                      (quoted[3] == "streetrace" && won >= 3) ||
-			                      _save.Entries(fmt::format("car:{}", level)).count(quoted[0]) > 0;
-			stats.vehicleList.emplace_back(quoted[0], unlocked);
-			*stats.vehicles += unlocked;
+			const bool bought = _save.Entries(fmt::format("skin:{}", level)).count(quoted[0]) > 0;
+			stats.skinList.emplace_back(quoted[0], bought);
+			*stats.clothing += bought;
 		}
+	}
+	for (const CarReward& reward : carRewards())
+	{
+		stats.vehicleList.emplace_back(reward.car, reward.unlocked);
+		*stats.vehicles += reward.unlocked;
 	}
 	// The story's missions: each level's AddMission list. The save
 	// keeps the level reached and where in its story, the drives to the
@@ -3147,6 +3140,82 @@ void Game::updateGags()
 	_gagsPrimed = true;
 }
 
+std::vector<Game::CarReward> Game::carRewards() const
+{
+	// rewards.mfk's BindReward("<car>", "<file>", "car", "<how>", <level>...)
+	// and SetCarAttributes("<car>", speed, acceleration, toughness, stability).
+	// A level's own car is the player's from the start; the bonus mission's
+	// with the bonus mission won; the street races' with all three won; those
+	// for sale bought.
+	std::vector<CarReward> rewards;
+	std::map<std::string, std::array<float, 4>> stars;
+	std::ifstream file("scripts/rewards.mfk");
+	for (std::string line; std::getline(file, line);)
+	{
+		const std::size_t comment = line.find("//");
+		const std::size_t bind = line.find("BindReward("), attributes = line.find("SetCarAttributes(");
+		const std::size_t at = bind != std::string::npos ? bind : attributes;
+		if (at == std::string::npos || (comment != std::string::npos && comment < at))
+			continue;
+		std::vector<std::string> quoted;
+		for (std::size_t open = line.find('"', at); open != std::string::npos; open = line.find('"', open + 1))
+		{
+			const std::size_t close = line.find('"', open + 1);
+			if (close == std::string::npos)
+				break;
+			quoted.push_back(line.substr(open + 1, close - open - 1));
+			open = close;
+		}
+		if (attributes != std::string::npos && quoted.size() == 1)
+		{
+			std::array<float, 4> values {};
+			std::istringstream numbers(line.substr(line.find(',', at) + 1));
+			for (float& value : values)
+			{
+				numbers >> value;
+				numbers.ignore(8, ',');
+			}
+			stars[quoted[0]] = values;
+			continue;
+		}
+		if (quoted.size() < 4 || quoted[2] != "car")
+			continue;
+		const std::size_t afterHow = line.find(quoted[3]) + quoted[3].size() + 1;
+		CarReward reward;
+		reward.car = quoted[0];
+		reward.how = quoted[3];
+		reward.level = std::atoi(line.c_str() + line.find(',', afterHow) + 1);
+		int won = 0;
+		for (const std::string& entry : _save.Entries("won"))
+			if (entry.compare(0, 3, fmt::format("L{}:", reward.level)) == 0 &&
+			    entry.compare(3, 2, reward.how == "bonusmission" ? "bm" : "sr") == 0)
+				++won;
+		reward.unlocked = reward.how == "defaultcar" || (reward.how == "bonusmission" && won > 0) ||
+		                  (reward.how == "streetrace" && won >= 3) ||
+		                  _save.Entries(fmt::format("car:{}", reward.level)).count(reward.car) > 0 ||
+		                  (reward.level == _levelNumber && _ownedCars.count(reward.car) > 0);
+		rewards.push_back(reward);
+	}
+	for (CarReward& reward : rewards)
+		if (const auto found = stars.find(reward.car); found != stars.end())
+			std::copy(found->second.begin(), found->second.end(), reward.stars);
+	return rewards;
+}
+
+void Game::callCar(const std::string& car)
+{
+	// The car chosen, the player's from now on, brought round; repaired.
+	_gameState = GameState::InGame;
+	_currentCar = car;
+	savePurchases();
+	Vehicle& vehicle = _scriptEngine->SummonPlayerCar(car, _phoneBoothRoad);
+	_health = 100.0f;
+	PutPlayerInVehicle(&vehicle);
+	_audioManager->PlayRaw(SoundGenerator::Beep(1200, 0.2f), 22050, 1, 16);
+	Log::Info("Game: phone booth sends '{}' to ({:.0f}, {:.0f}, {:.0f}), repaired", car, _phoneBoothRoad.X,
+	          _phoneBoothRoad.Y, _phoneBoothRoad.Z);
+}
+
 bool Game::usePhoneBooth()
 {
 	if (!_character || _inVehicle)
@@ -3158,16 +3227,31 @@ bool Game::usePhoneBooth()
 		    !(trigger.Contains(me) || (trigger.position - me).Length() < 3.0f))
 			continue;
 
-		// The game offers every car the player owns; there is no garage here,
-		// so it is the car the mission gave them.
+		const int node = _pathGraph->FindNearestRoadNode(trigger.position);
+		const Vector3 road = node >= 0 ? _pathGraph->GetNodes()[node].position : trigger.position;
+		// The game's car select, every car it rewards, from the one driven.
+		if (_phoneBooth && _phoneBooth->IsLoaded() && !_autopilot)
+		{
+			std::vector<PhoneBoothMenu::Car> cars;
+			for (const CarReward& reward : carRewards())
+			{
+				PhoneBoothMenu::Car car {reward.car, reward.level, reward.unlocked};
+				std::copy(std::begin(reward.stars), std::end(reward.stars), car.stars);
+				cars.push_back(car);
+			}
+			_phoneBoothRoad = road;
+			_phoneBooth->Open(std::move(cars), GetPlayerCarModel());
+			_gameState = GameState::PhoneBooth;
+			Log::Info("Game: phone booth '{}'", trigger.locator);
+			return true;
+		}
+		// Unattended: the car the mission gave the player.
 		Vehicle* car = _scriptEngine->GetPlayerCar();
 		if (car == nullptr)
 		{
 			Log::Info("Game: phone booth '{}', but no car to send", trigger.locator);
 			return true;
 		}
-		const int node = _pathGraph->FindNearestRoadNode(trigger.position);
-		const Vector3 road = node >= 0 ? _pathGraph->GetNodes()[node].position : trigger.position;
 		car->Teleport(road, car->GetRotation());
 		_health = 100.0f;
 		PutPlayerInVehicle(car);
@@ -3598,7 +3682,8 @@ void Game::Run()
 
 		// Pause has to stop the world, not just hide it: this used to keep running
 		// every frame while paused, so physics and scripts ticked behind the overlay.
-		const bool simulate = _gameState != GameState::Paused && _gameState != GameState::Movie;
+		const bool simulate =
+		    _gameState != GameState::Paused && _gameState != GameState::Movie && _gameState != GameState::PhoneBooth;
 
 		if (simulate)
 		{
@@ -4797,6 +4882,12 @@ void Game::Run()
 		sprites.Flush(proj);
 		if (_gameState == GameState::InGame || _gameState == GameState::Paused)
 			drawTransition(proj, viewportWidth, viewportHeight);
+		if (_gameState == GameState::PhoneBooth)
+		{
+			_phoneBooth->Draw(intent, proj);
+			if (!_phoneBooth->IsOpen() && _gameState == GameState::PhoneBooth)
+				_gameState = GameState::InGame;
+		}
 		if (_gameState == GameState::Splash)
 			_frontend->Draw(proj);
 

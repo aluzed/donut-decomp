@@ -389,3 +389,30 @@ of its own (2990119), sorted, with their offsets into its UTF-16 text; the hash 
 
 Checked by screenshots: the controller's page over the pad; the settings with X at 0.8
 and Y inverted.
+
+## The phone booth (2026-10-20)
+
+A phone booth, worked by hand, opens the game's car select (`ingame.p3d`'s
+`PhoneBooth.pag`) over the game, which stands still (`GameState::PhoneBooth`): every
+car the game rewards, one at a time between two arrows, from the one the player drives.
+Each its picture (`cars2D/<car>.png`, fitted to the page's box), its name (the text
+bible's), and its four stats as five stars each, whole, half or grey (`carstar`,
+`halfstar`, `greystar`): rewards.mfk's `SetCarAttributes(car, speed, acceleration,
+toughness, stability)`, the order read from the Plow King's 5 for toughness. A car not
+had yet is under the page's lock, with its level ("LEVEL 1"). Left and right (or a click
+on an arrow) go from car to car, the confirm key (or a click on the picture) calls one
+the player has, Escape hangs up.
+
+The car called becomes the player's (`current-car:<level>` in the save, what the
+missions' "current" is), brought to the road nearest the booth, repaired, the player at
+its wheel (`ScriptEngine::SummonPlayerCar`); the car before is left where it is.
+
+Which cars the player has is one rule now, shared with the scrapbook's vehicles
+(`Game::carRewards`): a level's own car always; the bonus mission's with it won; the
+street races' with the three won; those for sale bought. Under `--autopilot` the booth
+still sends the mission's car straight away.
+
+Not shown: a damaged car's repair cost (`DamagedInfo`; the booth repairs for nothing).
+Checked by screenshots with a save of level 1's bonus mission and races won and the Plow
+King bought: the Family Sedan's page (1, 1.5, 2.5 and 4 stars), the Duff Truck locked,
+"LEVEL 1"; the Plow King called, by the booth, the player at its wheel.
