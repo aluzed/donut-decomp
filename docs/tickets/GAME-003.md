@@ -196,7 +196,14 @@ display page to the screen, the keyboard page to the pad, and back
 a second, its position and aim interpolated between keys. Checked by screenshots: the
 room, the flight half way, the options over the donuts, the sound page over the radio.
 
-The pad (frame 560) comes out black: not looked into.
+The camera's clipping planes move too: `CAM_FE_Camera`'s `NCLP` and `FCLP` (float
+channels, which the generated reader does not keep, read from the chunks) bring the near
+plane from 0.1 to 0.01 m, and the far from 100 to 10, for each close look (the newspaper,
+the television, the VCR, the pad, the track). Held at 0.1, the pad's close-up (the
+camera 10 cm off the floor) cut the floor and the pad away, and came out black. At the
+trip's middle (560) the camera is against the pad, the view all purple; the keyboard
+page stops three frames before (557), the pad filling the view, and goes back from the
+frame as far past it (563). Checked by screenshots at 550, 554, 557 and 560.
 
 ## Homer (2026-10-20)
 

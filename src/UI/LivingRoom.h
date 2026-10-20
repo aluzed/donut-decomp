@@ -117,6 +117,11 @@ private:
 		Vector3 At(float frame) const;
 	};
 	Path _eyePath, _lookPath;
+	// Its clipping planes over the flight (CAM_FE_Camera's NCLP and FCLP):
+	// 0.01 to 10 m for a close look (the game pad, 10 cm off the floor, was
+	// cut away by the 0.1 m near plane, leaving black), 0.1 to 100 m else.
+	// The near plane in `x`, the far in `y`.
+	Path _clipPath;
 	float _cameraFrame = 0.0f, _cameraTarget = 0.0f;
 	Vector3 _eye, _forward = Vector3(0.0f, 0.0f, 1.0f), _up = Vector3(0.0f, 1.0f, 0.0f);
 	float _fov = 1.0f, _near = 0.1f, _far = 1000.0f;

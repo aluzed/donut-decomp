@@ -11,11 +11,13 @@
 #include "Render/SceneSkins.h"
 #include "Render/OpenGL/ShaderProgram.h"
 #include "Render/SkinAnimation.h"
+#include "Core/MemoryStream.h"
 #include "ResourceManager.h"
 
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <set>
 
 namespace Donut
 {
@@ -132,6 +134,48 @@ LivingRoom::LivingRoom(const std::string& file)
 			if (!chunk->IsType(P3D::ChunkType::Animation))
 				continue;
 			const auto animation = P3D::Animation::Load(*chunk);
+			if (animation->GetName() == "CAM_FE_Camera")
+			{
+				// Its float channels, which the generated reader does not keep:
+				// version, name, key count, the frames, the values.
+				std::map<std::string, std::vector<std::pair<float, float>>> curves;
+				const std::function<void(const P3D::P3DChunk&)> read = [&](const P3D::P3DChunk& part) {
+					if (part.IsType(P3D::ChunkType::Float1Channel))
+					{
+						MemoryStream stream(part.GetData());
+						stream.Read<uint32_t>();
+						std::string param = stream.ReadString(4);
+						param = param.substr(0, param.find('\0'));
+						std::vector<uint16_t> frames(stream.Read<uint32_t>());
+						for (auto& frame : frames)
+							frame = stream.Read<uint16_t>();
+						for (const uint16_t frame : frames)
+							curves[param].emplace_back(static_cast<float>(frame), stream.Read<float>());
+						return;
+					}
+					for (const auto& child : part.GetChildren())
+						read(*child);
+				};
+				read(*chunk);
+				const auto& nears = curves["NCLP"];
+				const auto& fars = curves["FCLP"];
+				const auto at = [](const std::vector<std::pair<float, float>>& keys, float frame, float otherwise) {
+					if (keys.empty())
+						return otherwise;
+					const auto next = std::upper_bound(keys.begin(), keys.end(), std::make_pair(frame, 1e30f));
+					return next == keys.begin() ? keys.front().second : std::prev(next)->second;
+				};
+				// Both on the frames either is keyed at, each held to its next key.
+				std::set<float> frames;
+				for (const auto& keys : {nears, fars})
+					for (const auto& key : keys)
+						frames.insert(key.first);
+				for (const float frame : frames)
+				{
+					_clipPath.frames.push_back(frame);
+					_clipPath.values.emplace_back(at(nears, frame, _near), at(fars, frame, _far), 0.0f);
+				}
+			}
 			Path* path = animation->GetName() == "STRN_CAM"             ? &_eyePath
 			             : animation->GetName() == "STRN_CAM_INTEREST1" ? &_lookPath
 			                                                            : nullptr;
@@ -238,6 +282,12 @@ void LivingRoom::Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& skinSha
 		else
 			_cameraFrame = std::max(_cameraTarget, _cameraFrame - step);
 		_eye = _eyePath.At(_cameraFrame);
+		if (!_clipPath.frames.empty())
+		{
+			const Vector3 clip = _clipPath.At(_cameraFrame);
+			_near = std::max(0.005f, clip.X);
+			_far = std::max(_near + 1.0f, clip.Y);
+		}
 		if (const Vector3 look = _lookPath.At(_cameraFrame) - _eye; look.LengthSquared() > 1e-6f)
 			_forward = look.Normalized();
 	}

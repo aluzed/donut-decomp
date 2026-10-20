@@ -1429,16 +1429,21 @@ void Game::updateLivingRoomCamera()
 	// trips, each 60 frames: out from the room's view, or from the options'
 	// plate of donuts, to an object, and back. A page opening plays the way
 	// out, closing it the way back.
+	// Out to `to`, back from `back` (where the way out is the way back) to
+	// the trip's end.
 	struct Trip
 	{
 		OptionsMenu::Screen screen;
-		float from, to;
+		float from, to, back, end;
 	};
 	static const Trip kTrips[] = {
-	    {OptionsMenu::Screen::Options, 80.0f, 110.0f},  // the room to the donuts
-	    {OptionsMenu::Screen::Display, 460.0f, 490.0f}, // the donuts to the television's screen
-	    {OptionsMenu::Screen::Keys, 530.0f, 560.0f},    // to the game pad by the television
-	    {OptionsMenu::Screen::Sound, 660.0f, 690.0f},   // to Krusty's radio
+	    {OptionsMenu::Screen::Options, 80.0f, 110.0f, 110.0f, 140.0f},  // the room to the donuts
+	    {OptionsMenu::Screen::Display, 460.0f, 490.0f, 490.0f, 520.0f}, // the donuts to the television's screen
+	    // To the game pad by the television: at the trip's middle (560) the
+	    // camera is against it, the view all purple; three frames before,
+	    // the pad fills it.
+	    {OptionsMenu::Screen::Keys, 530.0f, 557.0f, 563.0f, 590.0f},
+	    {OptionsMenu::Screen::Sound, 660.0f, 690.0f, 690.0f, 720.0f}, // to Krusty's radio
 	};
 	const auto trip = [](OptionsMenu::Screen screen) -> const Trip* {
 		for (const Trip& t : kTrips)
@@ -1458,7 +1463,7 @@ void Game::updateLivingRoomCamera()
 		if (deeper)
 			_livingRoom->Play(t->from, t->to);
 		else
-			_livingRoom->Play(t->to, t->to + (t->to - t->from));
+			_livingRoom->Play(t->back, t->end);
 	}
 	_livingRoomScreen = screen;
 }
