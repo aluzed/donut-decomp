@@ -1377,6 +1377,98 @@ int Level::PlayAnimatedObject(const std::string& name)
 	return started;
 }
 
+bool Level::DriveAnimatedObject(const std::string& name, float speed, bool wraps)
+{
+	bool found = false;
+	for (auto& object : _animatedObjects)
+		if (object.name == name && !object.pooled)
+		{
+			if (!object.driven)
+				object.clock = 0.0;
+			object.driven = true;
+			object.speed = speed;
+			object.wraps = wraps;
+			found = true;
+		}
+	return found;
+}
+
+bool Level::GetAnimatedObjectPosition(const std::string& name, Vector3& position) const
+{
+	for (const auto& object : _animatedObjects)
+		if (object.name == name && !object.pooled)
+		{
+			const auto& model = *_compositeModels[object.index];
+			position = (model.GetTransform() * model.GetJointTransform(model.FirstPropJoint())).Translation();
+			return true;
+		}
+	return false;
+}
+
+float Level::GetAnimatedObjectSpeed(const std::string& name) const
+{
+	for (const auto& object : _animatedObjects)
+		if (object.name == name && object.driven)
+			return object.speed;
+	return 0.0f;
+}
+
+std::string Level::FindAnimatedObject(const std::string& locator, const std::string& target) const
+{
+	const auto lower = [](std::string text) {
+		std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) { return std::tolower(c); });
+		return text;
+	};
+	// The locator less the power plant's "PP_"; the data's one typo
+	// ("PP_Splatfrom5") read as meant.
+	std::string key = lower(locator);
+	if (key.rfind("pp_", 0) == 0)
+		key = key.substr(3);
+	if (const std::size_t typo = key.find("platfrom"); typo != std::string::npos)
+		key.replace(typo, 8, "platform");
+	for (const std::string& wanted : {key, lower(target)})
+	{
+		if (wanted.empty())
+			continue;
+		for (const auto& object : _animatedObjects)
+			if (!object.pooled && !object.breaks && lower(object.name) == wanted)
+				return object.name;
+		for (const auto& object : _animatedObjects)
+			if (!object.pooled && !object.breaks && lower(object.name).rfind(wanted, 0) == 0)
+				return object.name;
+		for (const auto& object : _animatedObjects)
+			if (!object.pooled && !object.breaks && lower(object.name).find(wanted) != std::string::npos)
+				return object.name;
+	}
+	return {};
+}
+
+std::string Level::FindAnimatedObjectEnding(const std::string& suffix, const std::string& besides, const Vector3& near) const
+{
+	const auto lower = [](std::string text) {
+		std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) { return std::tolower(c); });
+		return text;
+	};
+	const std::string wanted = lower(suffix);
+	std::string nearest;
+	float closest = 0.0f;
+	for (const auto& object : _animatedObjects)
+	{
+		const std::string name = lower(object.name);
+		Vector3 at;
+		if (object.pooled || object.name == besides || name.size() < wanted.size() ||
+		    name.compare(name.size() - wanted.size(), wanted.size(), wanted) != 0 || !GetAnimatedObjectPosition(object.name, at))
+			continue;
+		const float distance = (at - near).Length();
+		if (nearest.empty() || distance < closest)
+		{
+			nearest = object.name;
+			closest = distance;
+		}
+	}
+	return nearest;
+}
+
 bool Level::HasBreakableNear(const Vector3& position, float radius) const
 {
 	for (const auto& object : _animatedObjects)
@@ -1456,7 +1548,15 @@ void Level::Update(double deltatime)
 	for (auto& object : _animatedObjects)
 	{
 		auto& model = *_compositeModels[object.index];
-		if (object.loops)
+		if (object.driven)
+		{
+			const double end = model.GetAnimationFrames() / std::max(1.0f, model.GetAnimationFrameRate());
+			object.clock += deltatime * object.speed;
+			if (!object.wraps)
+				object.clock = std::clamp(object.clock, 0.0, end);
+			model.Pose(static_cast<float>(object.clock) * model.GetAnimationFrameRate(), object.wraps);
+		}
+		else if (object.loops)
 			model.Pose(static_cast<float>(_animationTime) * model.GetAnimationFrameRate(), true);
 		else if (object.startedAt >= 0.0)
 		{

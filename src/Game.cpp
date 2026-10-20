@@ -656,6 +656,89 @@ PauseSundayMenu::Stats Game::levelStats(int storyWon, int storyTotal) const
 	return stats;
 }
 
+void Game::bindWorkedObjects()
+{
+	_workedObjects.clear();
+	const auto& triggers = _level->GetTriggers();
+	for (std::size_t i = 0; i < triggers.size(); ++i)
+	{
+		const auto& trigger = triggers[i];
+		const std::string& action = trigger.action;
+		if (action != "ToggleOnOff" && action != "AutoPlayAnim" && action != "AutomaticDoor" && action != "PlayAnim")
+			continue;
+		// What it works, and a switch's lever ("switch1": z6switch1), thrown as
+		// it is used: each near it (names repeat about the level: Wiggum's
+		// doorbell has a switch4 too), and not worked by another trigger.
+		const auto near = [&](const std::string& name) {
+			Vector3 at;
+			return !name.empty() && _level->GetAnimatedObjectPosition(name, at) && (at - trigger.position).Length() < 60.0f &&
+			       std::none_of(_workedObjects.begin(), _workedObjects.end(),
+			                    [&](const WorkedObject& w) { return w.object == name || w.lever == name; });
+		};
+		WorkedObject worked {i, action, _level->FindAnimatedObject(trigger.locator, trigger.actionTarget), {}};
+		if (!near(worked.object))
+			worked.object.clear();
+		if (action == "ToggleOnOff" || action == "PlayAnim")
+			worked.lever = _level->FindAnimatedObjectEnding(trigger.actionTarget, worked.object, trigger.position);
+		if (!near(worked.lever))
+			worked.lever.clear();
+		if (worked.object.empty() && worked.lever.empty())
+			continue;
+		// They stand still until worked; a door shut.
+		if (action != "PlayAnim" && !worked.object.empty())
+			_level->DriveAnimatedObject(worked.object, 0.0f, action != "AutomaticDoor");
+		Log::Info("Game: {} '{}' works '{}'{}", action, trigger.locator, worked.object,
+		          worked.lever.empty() ? "" : fmt::format(", lever '{}'", worked.lever));
+		_workedObjects.push_back(std::move(worked));
+	}
+}
+
+void Game::updateWorkedObjects()
+{
+	if (!_character)
+		return;
+	const Vector3 me = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : _character->GetPosition();
+	const auto& triggers = _level->GetTriggers();
+	for (const WorkedObject& worked : _workedObjects)
+	{
+		const bool inside = triggers[worked.trigger].Contains(me);
+		if (worked.object.empty())
+			continue;
+		if (worked.action == "AutoPlayAnim")
+			_level->DriveAnimatedObject(worked.object, inside ? 1.0f : 0.0f, true);
+		else if (worked.action == "AutomaticDoor")
+			_level->DriveAnimatedObject(worked.object, inside ? 1.0f : -1.0f, false);
+	}
+}
+
+bool Game::useSwitch()
+{
+	if (!_character || _inVehicle)
+		return false;
+	const Vector3 me = _character->GetPosition();
+	const auto& triggers = _level->GetTriggers();
+	for (const WorkedObject& worked : _workedObjects)
+	{
+		const auto& trigger = triggers[worked.trigger];
+		if ((worked.action != "ToggleOnOff" && worked.action != "PlayAnim") ||
+		    !(trigger.Contains(me) || (trigger.position - me).Length() < 2.0f))
+			continue;
+		if (!worked.lever.empty())
+			_level->PlayAnimatedObject(worked.lever);
+		if (worked.action == "ToggleOnOff" && !worked.object.empty())
+		{
+			const float speed = _level->GetAnimatedObjectSpeed(worked.object) != 0.0f ? 0.0f : 1.0f;
+			_level->DriveAnimatedObject(worked.object, speed, true);
+			Log::Info("Game: switch '{}': '{}' {}", trigger.locator, worked.object, speed != 0.0f ? "on" : "off");
+		}
+		else if (!worked.object.empty())
+			_level->PlayAnimatedObject(worked.object);
+		playPlayerAnimation("hit_switch", false);
+		return true;
+	}
+	return false;
+}
+
 void Game::tutorial(const std::string& event)
 {
 	if (!_tutorialMode || _autopilot || _save.Entries("tutorial").count(event) ||
@@ -2389,6 +2472,8 @@ void Game::loadLevel()
 	_ufo = UfoBoss::FromLevelScript(fmt::format("scripts/{}/leveli.mfk", levelDirectory()), *_level, *_worldPhysics);
 	_collectibleManager->SpawnOnPath();
 
+	bindWorkedObjects();
+
 	// The tutorial: EnableTutorialMode(1) in the level's script (level 1).
 	_tutorialMode = false;
 	_tutorialWaiting.clear();
@@ -3779,7 +3864,8 @@ void Game::Run()
 			charMove += Vector3::Right * intent.moveRight;
 
 			// A phone booth answers the action button before anything else.
-			if (intent.interact && (usePhoneBooth() || openShop() || ringDoorbell() || useGag() || startBonusMission()))
+			if (intent.interact &&
+			    (usePhoneBooth() || openShop() || ringDoorbell() || useSwitch() || useGag() || startBonusMission()))
 				intent.interact = false;
 
 			if (intent.interact)
@@ -4417,6 +4503,7 @@ void Game::Run()
 			}
 			updateGags();
 			updateTutorial();
+			updateWorkedObjects();
 			if (_ufo)
 			{
 				_ufo->Update(deltaTime);

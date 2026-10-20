@@ -308,6 +308,21 @@ private:
 		double started = -1.0;
 	} _tutorialSeen;
 	void tutorial(const std::string& event);
+	// The objects the level's action triggers work: the power plant's switched
+	// platforms and door (ToggleOnOff: the action key starts or stops it, its
+	// lever thrown), its automatic ones and level 7's trapdoors (AutoPlayAnim:
+	// moving while the player is in the trigger), its sliding door
+	// (AutomaticDoor: open while the player is near, closing after), the Duff
+	// truck's switch (PlayAnim: played once).
+	struct WorkedObject
+	{
+		std::size_t trigger;
+		std::string action, object, lever;
+	};
+	std::vector<WorkedObject> _workedObjects;
+	void bindWorkedObjects();
+	void updateWorkedObjects();
+	bool useSwitch();
 	void updateTutorial();
 	// Where Abort Mission goes: the story entry to start (the drive before a
 	// story mission, or the story where a bonus mission left it), or -1.

@@ -50,6 +50,21 @@ public:
 	// Plays, once, the animated objects of that name that wait to be worked
 	// (a doorbell's button, its porch light switch). How many there were.
 	int PlayAnimatedObject(const std::string& name);
+	// The objects the level's action triggers work (the power plant's
+	// platforms and doors, level 7's TD trapdoors): each on its own clock,
+	// run (`speed` 1), stopped (0) or run back (-1); `wraps` round and round,
+	// else held at either end. False when there is no such object.
+	bool DriveAnimatedObject(const std::string& name, float speed, bool wraps);
+	float GetAnimatedObjectSpeed(const std::string& name) const;
+	// Where an animated object stands (its first prop, now); false when none.
+	bool GetAnimatedObjectPosition(const std::string& name, Vector3& position) const;
+	// The object an action trigger works: the one its locator names
+	// ("PP_Splatform1": Splatform1Trans), else its target; empty when none.
+	std::string FindAnimatedObject(const std::string& locator, const std::string& target) const;
+	// Another object whose name ends with `suffix` ("switch1": the lever
+	// z6switch1), other than `besides`, the nearest `near` of them; empty when
+	// none.
+	std::string FindAnimatedObjectEnding(const std::string& suffix, const std::string& besides, const Vector3& near) const;
 	// Breaks the breakable objects within `radius` of `position` (crates,
 	// vending machines, gas pumps): each plays its animation once and stays
 	// as it ends. `solid` too, those that stand as bodies, which a car breaks
@@ -252,6 +267,12 @@ private:
 		std::string name;
 		bool loops;
 		double startedAt = -1.0;
+		// Worked by an action trigger: its own clock, how fast it runs (1,
+		// 0 stopped, -1 back), and whether round and round or held at its ends.
+		bool driven = false;
+		double clock = 0.0;
+		float speed = 0.0f;
+		bool wraps = true;
 		// Played once and left as it ends: a crate run into stays broken.
 		bool breaks = false;
 		bool broken = false;
