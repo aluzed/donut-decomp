@@ -211,6 +211,8 @@ private:
 	std::unique_ptr<class HitAndRun> _hitAndRun;
 	// The chase's music is playing (Hit_and_Run), to give way when it ends.
 	bool _hitAndRunMusic = false;
+	// The building's music is playing (the Kwik-E-Mart's), to give way outside.
+	bool _interiorMusic = false;
 	// Runs the Hit & Run meter: people run down, the police, busted.
 	void updateHitAndRun(double dt);
 	std::unique_ptr<GameInput> _gameInput;

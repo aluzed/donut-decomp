@@ -1958,6 +1958,10 @@ void Game::enterInterior(const Level::Trigger& door)
 	if (_hitAndRun)
 		_hitAndRun->Reset();
 	Log::Info("Game: player goes into '{}'", _interior);
+	// The Kwik-E-Mart has its muzak; the other buildings keep the music.
+	std::string place = _interior;
+	std::transform(place.begin(), place.end(), place.begin(), [](unsigned char c) { return std::tolower(c); });
+	_interiorMusic = place.find("kwik") != std::string::npos && _audioManager->PlayMusicEvent("OF_KiwkEMart", true);
 	SetPlayerPosition(_interiorLayout.entry);
 	// Facing into the room: the camera kept the heading from outside, which
 	// for the school looked back out through the door at nothing.
@@ -1983,6 +1987,9 @@ void Game::updateInterior()
 		return;
 
 	Log::Info("Game: player comes out of '{}'", _interior);
+	if (_interiorMusic)
+		_audioManager->ResumeMusicBase();
+	_interiorMusic = false;
 	_interior.clear();
 	_level->SetDrawOnly({});
 	SetPlayerPosition(_interiorReturn);
@@ -3194,6 +3201,8 @@ void Game::Run()
 						// The credits roll, then the main menu.
 						_gameState = _creditsPage ? GameState::Credits : GameState::MainMenu;
 						_creditsTime = 0.0;
+						if (_creditsPage)
+							_audioManager->PlayMusicEvent("Credits");
 					}
 					else if (!failed && _storyIndex >= 0 && _storyIndex + 1 < static_cast<int>(_story.size()))
 					{

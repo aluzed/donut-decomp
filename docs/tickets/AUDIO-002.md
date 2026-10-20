@@ -116,7 +116,10 @@ go back to, and an ending gives the music back to it when it is over. The game's
   back to `OF_explore_mission`. A retry starts the mission's again; a mission given up
   goes back at once;
 - Hit & Run: `Hit_and_Run` while the police chase (the level's music kept as the one to
-  go back to), `Hit_and_Run_Caught` when busted.
+  go back to), `Hit_and_Run_Caught` when busted;
+- a stage's last ten seconds: `M<n>_10sec_to_go` (level 1 m4);
+- the Kwik-E-Mart: `OF_KiwkEMart` inside (its muzak), the level's music outside;
+- the credits, at the story's end: `Credits` (Land of Chocolate).
 
 All seven levels' scripts read (20-22 groups, 44-55 events with music). Checked by log on
 the seven levels (story, autopilot): level 1 `OF_explore_mission`, `M1_start`
@@ -131,6 +134,7 @@ Not done:
   skipped, and the music stays as it was.
 - The transitions are not on the beat: a cue starts at once, after the segment playing
   is cut. The script's fades, stitches and beat sets are not read.
-- The other events: the front end, buildings (`Entering_Building` fades out), the
-  Kwik-E-Mart's muzak, cards found, `_drama` and `_10sec_to_go`, the Super Sprint, the
-  credits. `ambience.rms` is not read either.
+- The other events: the front end, the other buildings (`Entering_Building` fades
+  out), cards found, `_drama`, the Super Sprint. `ambience.rms` is not read either.
+- The Kwik-E-Mart's muzak and the `10sec` tracks are in `music02.rcf`: hooked, logged
+  (`OF_KiwkEMart`, none of its music in the archives), silent here.

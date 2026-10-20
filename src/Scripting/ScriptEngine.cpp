@@ -966,7 +966,11 @@ void ScriptEngine::Update(double dt)
 		return;
 	}
 
+	// The last ten seconds have music of their own (level 1 m4's).
+	const bool tenSeconds = _stageTimeRemaining > 10.0f;
 	_stageTimeRemaining -= static_cast<float>(dt);
+	if (tenSeconds && _stageTimeRemaining <= 10.0f && _stageTimeRemaining > 0.0f)
+		_game.GetAudioManager().PlayMusicEvent(musicEvent("10sec_to_go"), true);
 	if (_stageTimeRemaining <= 0.0f)
 	{
 		missionFailed("stage timer expired", "MISSION_FAILED_TIME_OUT_HINT1");
