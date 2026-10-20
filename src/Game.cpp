@@ -1003,6 +1003,53 @@ void Game::drawPausePage(const GameIntent& intent, const Matrix4x4& proj)
 	}
 }
 
+void Game::drawTransition(const Matrix4x4& proj, int width, int height)
+{
+	float closed = 0.0f;
+	const ScriptEngine::Transition transition = _scriptEngine->GetTransition(closed);
+	if (transition == ScriptEngine::Transition::None || closed <= 0.0f)
+		return;
+	// Black, and an iris: a disc clear in a black square, as wide as the
+	// screen's diagonal when open and none when shut, black about it.
+	if (!_blackTexture)
+	{
+		const uint8_t pixel[] = {0, 0, 0, 255};
+		_blackTexture = std::make_unique<Texture>(pixel, 1, 1, "transition_black");
+		constexpr int kSize = 256;
+		std::vector<uint8_t> iris(kSize * kSize * 4, 0);
+		for (int y = 0; y < kSize; ++y)
+			for (int x = 0; x < kSize; ++x)
+			{
+				const float dx = x + 0.5f - kSize * 0.5f, dy = y + 0.5f - kSize * 0.5f;
+				const float edge = std::sqrt(dx * dx + dy * dy) - (kSize * 0.5f - 2.0f);
+				iris[(y * kSize + x) * 4 + 3] = static_cast<uint8_t>(std::clamp(edge, 0.0f, 1.0f) * 255.0f);
+			}
+		_irisTexture = std::make_unique<Texture>(iris.data(), kSize, kSize, "transition_iris");
+	}
+	SpriteBatch batch;
+	if (transition == ScriptEngine::Transition::Fade)
+		batch.Draw(_blackTexture.get(), Vector2(0.0f, 0.0f), Vector2(static_cast<float>(width), static_cast<float>(height)),
+		           Vector4(1.0f, 1.0f, 1.0f, closed));
+	else
+	{
+		const float radius = (1.0f - closed) * std::sqrt(static_cast<float>(width * width + height * height)) * 0.5f;
+		const float cx = width * 0.5f, cy = height * 0.5f;
+		const float left = cx - radius, top = cy - radius, right = cx + radius, bottom = cy + radius;
+		const Vector4 white(1.0f, 1.0f, 1.0f, 1.0f);
+		batch.Draw(_irisTexture.get(), Vector2(left, top), Vector2(radius * 2.0f, radius * 2.0f), white);
+		const float w = static_cast<float>(width), h = static_cast<float>(height);
+		if (top > 0.0f)
+			batch.Draw(_blackTexture.get(), Vector2(0.0f, 0.0f), Vector2(w, top), white);
+		if (bottom < h)
+			batch.Draw(_blackTexture.get(), Vector2(0.0f, bottom), Vector2(w, h - bottom), white);
+		if (left > 0.0f)
+			batch.Draw(_blackTexture.get(), Vector2(0.0f, top), Vector2(left, bottom - top), white);
+		if (right < w)
+			batch.Draw(_blackTexture.get(), Vector2(right, top), Vector2(w - right, bottom - top), white);
+	}
+	batch.Flush(proj);
+}
+
 void Game::drawSubtitle(const Matrix4x4& proj, int width, int height)
 {
 	const AudioManager::Subtitle* subtitle = _audioManager->GetSubtitle();
@@ -4394,7 +4441,8 @@ void Game::Run()
 		// Not under the game's own main menu page: its entry stands where the
 		// mission's objective is.
 		if (_textureFontP3D != nullptr && !(_gameState == GameState::MainMenu && _mainMenuPage) &&
-		    !(_gameState == GameState::Credits && _creditsPage) && _gameState != GameState::Movie)
+		    !(_gameState == GameState::Credits && _creditsPage) && _gameState != GameState::Movie &&
+		    _scriptEngine->IsHudShown())
 		{
 			auto font = _resourceManager->GetFont("boulder_16");
 			const bool pad = intent.gamepadConnected;
@@ -4747,6 +4795,8 @@ void Game::Run()
 		    _gameState == GameState::MissionComplete || _gameState == GameState::MissionFailed)
 			drawSubtitle(proj, viewportWidth, viewportHeight);
 		sprites.Flush(proj);
+		if (_gameState == GameState::InGame || _gameState == GameState::Paused)
+			drawTransition(proj, viewportWidth, viewportHeight);
 		if (_gameState == GameState::Splash)
 			_frontend->Draw(proj);
 

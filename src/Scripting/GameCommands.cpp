@@ -317,7 +317,10 @@ void GameCommands::SetFollowDistances(int32_t param0, int32_t param1)
 {
 	Game::GetInstance().GetScriptEngine().SetFollowDistances(static_cast<float>(param0), static_cast<float>(param1));
 }
-void GameCommands::SetFadeOut(float param0) {}
+void GameCommands::SetFadeOut(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetStageTransition(ScriptEngine::Transition::Fade, param0);
+}
 void GameCommands::StayInBlack(int32_t param0 /*= 0*/) {}
 void GameCommands::AddStageCharacter(const std::string& param0, const std::string& param1, const std::string& param2,
                                      const std::string& param3, const std::string& param4)
@@ -365,7 +368,10 @@ void GameCommands::SetObjDistance(int32_t param0)
 	Game::GetInstance().GetScriptEngine().SetObjDistance(static_cast<float>(param0));
 }
 void GameCommands::SetMusicState(const std::string& param0, const std::string& param1) {}
-void GameCommands::SetIrisWipe(float param0) {}
+void GameCommands::SetIrisWipe(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetStageTransition(ScriptEngine::Transition::Iris, param0);
+}
 void GameCommands::RemoveDriver(const std::string& param0) {}
 void GameCommands::RemoveNPC(const std::string& param0) {}
 void GameCommands::AddDriver(const std::string& param0, const std::string& param1) {}
@@ -397,7 +403,10 @@ void GameCommands::SetPickupTarget(const std::string& param0)
 }
 void GameCommands::SetObjTargetBoss(const std::string& param0) {}
 void GameCommands::AllowRockOut(int32_t param0 /*= 0*/) {}
-void GameCommands::ShowHUD(const std::string& param0) {}
+void GameCommands::ShowHUD(const std::string& param0)
+{
+	Game::GetInstance().GetScriptEngine().ShowHUD(param0 != "false" && param0 != "FALSE");
+}
 void GameCommands::SetGameOver(int32_t param0 /*= 0*/) {}
 void GameCommands::GoToPsScreenWhenDone(int32_t param0 /*= 0*/) {}
 void GameCommands::SetMass(float param0)

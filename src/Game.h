@@ -247,6 +247,10 @@ private:
 	void drawCredits(const struct GameIntent& intent, const Matrix4x4& proj, double dt, int width, int height);
 	// The line being said (AudioManager::GetSubtitle), low on the screen.
 	void drawSubtitle(const Matrix4x4& proj, int width, int height);
+	// A stage's transition (SetFadeOut, SetIrisWipe) closing or opening the
+	// screen, over the game and its HUD.
+	std::unique_ptr<Texture> _blackTexture, _irisTexture;
+	void drawTransition(const Matrix4x4& proj, int width, int height);
 	// The movies: the one playing, those to play after it, whether a skip
 	// skips them too, the state they go back to, whether the music stays off
 	// after them; which may be seen (0 the introduction, 1 to 8 View Movies'

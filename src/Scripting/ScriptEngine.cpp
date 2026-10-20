@@ -34,6 +34,7 @@ void ScriptEngine::SelectMission(const std::string& id)
 
 	_missionActive = true;
 	_missionId = id;
+	_hudShown = true;
 
 	// Mission locators (spawn points, car starts, AI path nodes, race_finish...)
 	// live in the mission's own P3D files, which nothing loaded: level.p3d holds
@@ -160,6 +161,8 @@ void ScriptEngine::CloseMission()
 	_game.GetAudioManager().PlayMusicEvent(musicEvent("start"));
 	_missionMusicEnded = false;
 	_missionElapsed = 0.0f;
+	// A transition left from the mission before does not carry over.
+	_transition = Transition::None;
 	if (!_stageScripts.empty())
 		beginStage(0);
 }
@@ -205,6 +208,8 @@ void ScriptEngine::beginStage(std::size_t index)
 	_parTime = 0.0f;
 	_stageMessage = -1;
 	_coinFee = 0;
+	_stageTransition = Transition::None;
+	_stageTransitionSeconds = 0.0f;
 
 	for (const auto& statement : _stageScripts[index])
 		Commands::RunLine(statement);
@@ -229,10 +234,41 @@ void ScriptEngine::objectiveComplete()
 	if (_announceStageComplete)
 		_game.GetAudioManager().PlayRaw(SoundGenerator::Chirp(500, 900, 0.25f), 22050, 1, 16);
 
+	// Closed first, if the stage says so; the next stage once it is.
+	if (_stageTransition != Transition::None && _stageTransitionSeconds > 0.0f)
+	{
+		_transition = _stageTransition;
+		_transitionSeconds = _stageTransitionSeconds;
+		_transitionElapsed = 0.0f;
+		_transitionOpening = false;
+		_objectiveType.clear();
+		return;
+	}
+	nextStage();
+}
+
+void ScriptEngine::nextStage()
+{
 	if (_stageCursor + 1 < _stageScripts.size())
 		beginStage(_stageCursor + 1);
 	else
 		missionComplete();
+}
+
+void ScriptEngine::SetStageTransition(Transition transition, float seconds)
+{
+	_stageTransition = transition;
+	_stageTransitionSeconds = seconds;
+}
+
+ScriptEngine::Transition ScriptEngine::GetTransition(float& closed) const
+{
+	closed = 0.0f;
+	if (_transition == Transition::None)
+		return Transition::None;
+	const float along = std::clamp(_transitionElapsed / _transitionSeconds, 0.0f, 1.0f);
+	closed = _transitionOpening ? 1.0f - along : along;
+	return _transition;
 }
 
 void ScriptEngine::updateObjective(double dt)
@@ -945,6 +981,24 @@ void ScriptEngine::SetStageTime(float seconds)
 
 void ScriptEngine::Update(double dt)
 {
+	// A stage's transition: the script waits while the screen closes, the
+	// next stage begins when it is shut, and it opens again in half a second.
+	if (_transition != Transition::None)
+	{
+		_transitionElapsed += static_cast<float>(dt);
+		if (!_transitionOpening && _transitionElapsed >= _transitionSeconds)
+		{
+			_transitionOpening = true;
+			_transitionElapsed = 0.0f;
+			_transitionSeconds = 0.5f;
+			nextStage();
+		}
+		else if (_transitionOpening && _transitionElapsed >= _transitionSeconds)
+			_transition = Transition::None;
+		if (!_transitionOpening)
+			return;
+	}
+
 	// The stage clock starts when the countdown has run out.
 	if (_countdownElapsed < countdownLength())
 	{
@@ -1836,6 +1890,10 @@ void ScriptEngine::updateChasers(double dt)
 
 void ScriptEngine::UpdateAI(double dt)
 {
+	// The stage is done while the screen closes: its cars decide nothing (a
+	// car followed to its end would else win a race with no one).
+	if (_transition != Transition::None && !_transitionOpening)
+		return;
 	if (!_chasers.empty() && !IsRaceHeld())
 		updateChasers(dt);
 	if (_raceOpponents.empty())

@@ -163,6 +163,23 @@ public:
 	// Brings a car declared earlier into this stage's action ("race", "evade",
 	// "target" race against the player).
 	void ActivateVehicle(const std::string& name, const std::string& behaviour);
+	// SetFadeOut / SetIrisWipe: the stage, done, closes the screen over so
+	// many seconds (to black, or a circle closing on its middle) before the
+	// next one begins, which opens it again; what changes between them (a car
+	// swapped) is not seen.
+	enum class Transition
+	{
+		None,
+		Fade,
+		Iris,
+	};
+	void SetStageTransition(Transition transition, float seconds);
+	// ShowHUD("false"): the mission plays without the HUD (level 7's last, a
+	// movie); shown again with the next mission.
+	void ShowHUD(bool shown) { _hudShown = shown; }
+	bool IsHudShown() const { return _hudShown; }
+	// The one under way, and how much of the screen it has closed, 0 to 1.
+	Transition GetTransition(float& closed) const;
 	// The script's ShowStageComplete(): announce the stage when it is done. It
 	// does not complete anything itself.
 	void AnnounceStageComplete();
@@ -309,6 +326,15 @@ private:
 	std::map<std::string, Vector3> _npcPositions;
 	float _objectiveElapsed = 0.0f;
 	float _objectiveDuration = 0.0f;
+	bool _hudShown = true;
+	Transition _stageTransition = Transition::None;
+	float _stageTransitionSeconds = 0.0f;
+	// Under way: closing (the stage done, the next waiting) or opening.
+	Transition _transition = Transition::None;
+	float _transitionSeconds = 0.0f, _transitionElapsed = 0.0f;
+	bool _transitionOpening = false;
+	// The next stage, or the mission complete after the last.
+	void nextStage();
 	std::string _fmvFile;
 	bool _fmvStopMusic = false, _fmvStarted = false;
 	bool _announceStageComplete = false;

@@ -213,7 +213,7 @@ car, rewards), not through the commands.
 | SCRIPT-E | ✅ | Gags and collectibles: read from `level.mfk` (GAME-010); state props for `pickupitem` |
 | SCRIPT-F | 🟡 | Hit & Run: decay and chase model read from `leveli.mfk`; `SetHitAndRunMeter`, interior decay are stubs |
 | SCRIPT-G | 🟡 | Traffic and pedestrians: models read from `leveli.mfk`; `SetMaxTraffic`, `CreatePedGroup` are stubs |
-| SCRIPT-H | 🟡 | UI: `SetPresentationBitmap` shown; `ShowHUD`, `SetFadeOut`, `SetIrisWipe` are stubs |
+| SCRIPT-H | ✅ | UI: `SetPresentationBitmap` shown; `SetFadeOut` and `SetIrisWipe` close the screen at a stage's end, `ShowHUD` hides the HUD. The car swaps behind the fades are stubs |
 | SCRIPT-I | 🟡 | Buying, dialogue, bonus missions, FMV done; `GagCheckCollCards` not |
 
 ### C.3 — RENDER-008: LOD and culling
