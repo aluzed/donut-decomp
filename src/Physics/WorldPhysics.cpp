@@ -99,9 +99,13 @@ struct LevelRayCallback : btCollisionWorld::ClosestRayResultCallback
 	bool needsCollision(btBroadphaseProxy* proxy) const override
 	{
 		// A prop is not the level, even standing: a lamp post by the road
-		// held a passing van up on its top.
+		// held a passing van up on its top. Nor is a body moved by hand (the
+		// traffic's cars): massless, Bullet flags it static as well, and each
+		// traffic car found its own roof for ground, rising 1.4m a frame
+		// until the ray started above it, then dropping: the traffic hopped.
 		const auto* object = static_cast<btCollisionObject*>(proxy->m_clientObject);
-		if (staticOnly && (!object->isStaticObject() || object->getUserIndex() == kPropBody))
+		if (staticOnly &&
+		    (!object->isStaticObject() || object->isKinematicObject() || object->getUserIndex() == kPropBody))
 			return false;
 		return ClosestRayResultCallback::needsCollision(proxy);
 	}
