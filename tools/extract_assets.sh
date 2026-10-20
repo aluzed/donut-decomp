@@ -86,11 +86,57 @@ isoinfo -i "$ISO3" -x "/DATA4.CAB;1" >"$WORK/cabs/DATA4.CAB"
 echo "extracting the cabinets"
 UNSHIELD="$(tool unshield unshield libunshield0)"
 rm -rf "$WORK/extracted"
-# A couple of files do not come out of these CDs (card38_t.p3d, music02.rcf):
-# unshield says so and fails; the game runs without them.
-"$UNSHIELD" -d "$WORK/extracted" x "$WORK/cabs/DATA1.CAB" >/dev/null ||
-	echo "unshield could not extract some files (above); going on" >&2
+# A couple of files do not come out (card38_t.p3d, music02.rcf): unshield says
+# so and fails; the game runs without them, and they are mended below.
+"$UNSHIELD" -D 3 -d "$WORK/extracted" x "$WORK/cabs/DATA1.CAB" >"$WORK/unshield.log" 2>&1 ||
+	echo "unshield could not extract some files; going on" >&2
 EX="$WORK/extracted"
+
+# A file stored whole across two cabinets, the end of one and the start of the
+# next (music02.rcf: DATA3.CAB then DATA4.CAB), fails to come out: unshield
+# looks for all of it in the first. Stored, not compressed, it is the end of
+# the one and the start of the other, put back together from where unshield's
+# log says each part starts.
+"$UNSHIELD" l "$WORK/cabs/DATA1.CAB" >"$WORK/unshield.list" 2>/dev/null || true
+python3 -I - "$WORK" <<'PYTHON'
+import os, re, sys
+work = sys.argv[1]
+log = open(os.path.join(work, "unshield.log"), errors="replace").read()
+sizes = {}
+for line in open(os.path.join(work, "unshield.list"), errors="replace"):
+    m = re.match(r"\s*(\d+)\s+(\S.*\S)\s*$", line)
+    if m:
+        sizes[m.group(2)] = int(m.group(1))
+# Each volume's first and last file, and where they start in it.
+volumes = {}
+for m in re.finditer(r"Open volume (\d+)\n.*?First file index = (\d+), last file index = (\d+)\n"
+                     r".*?First file offset = ([0-9a-f]+), last file offset = ([0-9a-f]+)", log):
+    volumes[int(m.group(1))] = tuple(int(g, 16) if i > 1 else int(g) for i, g in enumerate(m.groups()[1:]))
+for m in set(re.findall(r"of file (\d+) \((.+?)\) from volume (\d+)", log)):
+    index, name, volume = int(m[0]), m[1], int(m[2])
+    path = next((p for p in sizes if p.replace("\\", "/").endswith("/" + name) or p == name), None)
+    first, second = volumes.get(volume), volumes.get(volume + 1)
+    if not path or not first or not second or first[1] != index or second[0] != index:
+        print(f"{name}: not mended")
+        continue
+    cabs = os.path.join(work, "cabs")
+    one = os.path.join(cabs, f"DATA{volume}.CAB")
+    other = os.path.join(cabs, f"DATA{volume + 1}.CAB")
+    with open(one, "rb") as f:
+        f.seek(first[3])
+        data = f.read()
+    with open(other, "rb") as f:
+        f.seek(second[2])
+        data += f.read(max(0, sizes[path] - len(data)))
+    # Only an archive whose header shows it was stored as it is.
+    if len(data) != sizes[path] or not (name.lower().endswith(".rcf") and data.startswith(b"RADCORE CEMENT LIBRARY")):
+        print(f"{name}: not mended")
+        continue
+    target = os.path.join(work, "extracted", *path.split("\\"))
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+    open(target, "wb").write(data)
+    print(f"{name}: mended from DATA{volume}.CAB and DATA{volume + 1}.CAB")
+PYTHON
 
 echo "placing the game's files in $TARGET"
 mkdir -p "$TARGET/art/audio/music" "$TARGET/art/audio/dialog"

@@ -129,12 +129,12 @@ Validation unchanged: 32 won, 0 failed, 0 crash. Not heard: this machine was not
 listened to.
 
 Not done:
-- `music02.rcf` does not come out of the CDs (tools/extract_assets.sh): the tracks it holds
-  (`Sunday_Drive`, `PowerPlant`, `Vivaldi`, `Simpsons_Theme`, some mission themes) are
-  skipped, and the music stays as it was.
 - The transitions are not on the beat: a cue starts at once, after the segment playing
   is cut. The script's fades, stitches and beat sets are not read.
 - The other events: the front end, the other buildings (`Entering_Building` fades
   out), cards found, `_drama`, the Super Sprint. `ambience.rms` is not read either.
-- The Kwik-E-Mart's muzak and the `10sec` tracks are in `music02.rcf`: hooked, logged
-  (`OF_KiwkEMart`, none of its music in the archives), silent here.
+
+`music02.rcf` (Sunday Drive, the Power Plant, Vivaldi, the main theme, the Kwik-E-Mart's
+muzak, some mission themes) did not come out of the CDs; `tools/extract_assets.sh` now
+mends it (docs/ASSETS.md). With it, every event the seven levels' validation runs into
+has its music (Sunday_Drive_start: sunday_drive_intro then sunday_drive).

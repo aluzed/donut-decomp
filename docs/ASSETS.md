@@ -55,8 +55,12 @@ tools/extract_assets.sh files/ /some/other/dir   # or elsewhere
 ```
 
 It does what the steps below do, in about ten seconds. Two files do not come out of
-these CDs (`card38_t.p3d`, `music02.rcf`): unshield says so, the game runs without
-them.
+these CDs with unshield (`card38_t.p3d`, `music02.rcf`): it says so, and the game runs
+without them. `music02.rcf` (Sunday Drive, the Power Plant, the Kwik-E-Mart's muzak,
+the main theme...) is stored whole across two cabinets, the end of `DATA3.CAB` and the
+start of `DATA4.CAB`, and unshield looks for all of it in the first: the script puts it
+back together from where unshield's log says each part starts (byte for byte: its 139
+RSD headers all fall on 2048-byte boundaries, either side of the join).
 
 The steps, by hand:
 
