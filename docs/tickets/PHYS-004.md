@@ -1,6 +1,6 @@
 # PHYS-004 — Callbacks de collision (dégâts / ramassage / son)
 
-- **Status:** PARTIAL (2026-10-18: impact damage)
+- **Status:** DONE (2026-10-20)
 - **Priority:** P1
 - **Module:** Physics
 - **Depends on:** REGR-001
@@ -43,3 +43,18 @@ over before, so a car worn down in one mission started the next close to failing
 
 Verified: sr2 driven at full throttle into the scenery, one impact, 9 m/s lost, -20; the
 story run by `--autopilot`, m0 to m5, no impact at all.
+
+## Closed (2026-10-20)
+
+What the ticket asked for is done, by other means than a `ContactResultCallback`:
+
+- **Contacts after each step**: `WorldPhysics::GetContacts` lists every pair of bodies in
+  touch and the impulse they took; `Level::UpdateCollisions` reads it right after the
+  step to knock props loose, break them and the animated breakables (PHYS-011).
+- **Damage**: from the car's change of velocity (above), with a thud and a shake; the
+  props a car breaks give it back its speed before that is judged, so they cost nothing.
+- **Sounds**: an impact's thud; each prop's own sound (`collide.spt`) as it is hit.
+- **Pickups**: the collectibles are taken by distance (`CollectibleManager`).
+
+`Physics/CollisionCallbacks.h` (a callback list and a `VehicleDamage` nothing used) is
+removed.
