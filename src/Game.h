@@ -3,6 +3,7 @@
 #pragma once
 
 #include "UI/OptionsMenu.h"
+#include "UI/ScrapBookMenu.h"
 
 #include "Level.h"
 #include "UI/TextBible.h"
@@ -263,6 +264,10 @@ private:
 	std::vector<std::string> _mainMenuGlows;
 	std::unique_ptr<GameMenu> _pauseMenu;
 	std::unique_ptr<class OptionsMenu> _optionsMenu;
+	std::unique_ptr<ScrapBookMenu> _scrapBook;
+	ScrapBookMenu::Screen _livingRoomBook = ScrapBookMenu::Screen::Closed;
+	// The scrapbook's counts, from the save files.
+	ScrapBookMenu::Stats scrapBookStats() const;
 	std::unique_ptr<Hud> _hud;
 	std::unique_ptr<GL::ShaderProgram> _postProcessShader;
 	std::unique_ptr<GL::FrameBuffer> _sceneFBO;

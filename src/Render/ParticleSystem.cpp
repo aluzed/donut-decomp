@@ -43,6 +43,8 @@ struct Channels
 {
 	std::map<std::string, ParticleFactory::Curve> curves;
 	std::map<std::string, Vector3> vectors;
+	// Every key of each vector channel, by frame.
+	std::map<std::string, std::vector<std::pair<float, Vector3>>> vectorKeys;
 	std::map<std::string, std::vector<std::pair<float, uint32_t>>> colors;
 	float frames = 0.0f;
 };
@@ -71,8 +73,11 @@ void readChannels(const P3D::P3DChunk& chunk, Channels& out)
 			frame = stream.Read<uint16_t>();
 		if (type == P3D::ChunkType::Vector3Channel)
 		{
+			auto& keys = out.vectorKeys[param];
+			for (const uint16_t frame : frames)
+				keys.emplace_back(static_cast<float>(frame), stream.Read<Vector3>());
 			if (count > 0)
-				out.vectors[param] = stream.Read<Vector3>();
+				out.vectors[param] = keys.front().second;
 		}
 		else if (type == P3D::ChunkType::Color)
 		{
@@ -99,6 +104,21 @@ float uniform(std::mt19937& random, float from, float to)
 	return std::uniform_real_distribution<float>(from, to)(random);
 }
 } // namespace
+
+Vector3 ParticleFactory::Emitter::OffsetAt(float frame) const
+{
+	if (path.empty())
+		return offset;
+	if (frame <= path.front().first)
+		return path.front().second;
+	for (std::size_t i = 1; i < path.size(); ++i)
+		if (frame < path[i].first)
+		{
+			const float t = (frame - path[i - 1].first) / std::max(1e-6f, path[i].first - path[i - 1].first);
+			return path[i - 1].second + (path[i].second - path[i - 1].second) * t;
+		}
+	return path.back().second;
+}
 
 float ParticleFactory::Curve::At(float frame, float otherwise) const
 {
@@ -186,6 +206,9 @@ std::unique_ptr<ParticleFactory> ParticleFactory::FromChunk(const P3D::P3DChunk&
 					emitter.spinVariance = curve("SPIV");
 					if (const auto found = channels.vectors.find("TRA"); found != channels.vectors.end())
 						emitter.offset = found->second;
+					if (const auto found = channels.vectorKeys.find("TRA");
+					    found != channels.vectorKeys.end() && found->second.size() > 1)
+						emitter.path = found->second;
 					if (const auto found = channels.colors.find("CLR"); found != channels.colors.end() && !found->second.empty())
 						emitter.color = P3D::P3DUtil::ConvertColor(found->second.front().second);
 					emitter.rate = curve("RAT");
@@ -322,7 +345,7 @@ void ParticleSystem::Update(double dt, const Matrix4x4& placement, float timelin
 			if (running.particles.size() >= most)
 				continue;
 			Particle p;
-			const Vector3 local = e.offset + Vector3(uniform(_random, -0.5f, 0.5f) * e.width, 0.0f,
+			const Vector3 local = e.OffsetAt(frame) + Vector3(uniform(_random, -0.5f, 0.5f) * e.width, 0.0f,
 			                                         uniform(_random, -0.5f, 0.5f) * e.height);
 			p.position = placement * local;
 			// Straight up, tipped within the spreads.

@@ -14,6 +14,8 @@ namespace Donut
 {
 
 class BillboardBatch;
+class ParticleFactory;
+class ParticleSystem;
 class CompositeModel;
 class Mesh;
 class SceneSkins;
@@ -45,6 +47,9 @@ public:
 	// The glow about one of the room's objects, the main menu's entry's
 	// ("tv", "homr", "sofa", "vcr", "mini", "book": glow<name>.p3d), or none.
 	void SetGlow(const std::string& name) { _glow = name; }
+	// The scrapbook's border and its sparkles (sparkles.p3d), shown before the
+	// album.
+	void SetBorder(bool shown) { _borderShown = shown; }
 	// The camera's flight (camset.p3d's FE_CameraController, 1036 frames at
 	// 30 a second): where it is, and where it is going, played forwards or
 	// backwards at that rate until it is there.
@@ -93,6 +98,19 @@ private:
 		std::optional<BillboardAnimation> animation;
 	};
 	std::map<std::string, Glow> _glows;
+	// The scrapbook's border (sparkles.p3d, FE_Border): a gilt frame on the
+	// album's page, and a particle system whose emitter runs round it (111
+	// frames at 30 a second).
+	Glow _border;
+	bool _borderShown = false;
+	std::unique_ptr<ParticleFactory> _sparkleFactory;
+	std::unique_ptr<ParticleSystem> _sparkles;
+	Matrix4x4 _sparklesTransform;
+	// A glow's quad, its animation and where its file's scene graph puts the
+	// drawable named `drawable` (the first, with none); and `otherDrawable`.
+	Glow loadGlow(const std::string& file, const std::string& drawable, Matrix4x4* other = nullptr,
+	              const std::string& otherDrawable = {});
+	void drawGlow(Glow& glow, GL::ShaderProgram& billboardShader, const Matrix4x4& viewProj);
 	std::string _glow;
 	// The textures, shaders and meshes of `file` (its camera, FE_Camera, the
 	// room's) and its scene graph; with `scene`, the scene graph's nodes and

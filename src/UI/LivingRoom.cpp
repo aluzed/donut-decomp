@@ -8,6 +8,7 @@
 #include "Render/BillboardBatch.h"
 #include "Render/CompositeModel.h"
 #include "Render/Mesh.h"
+#include "Render/ParticleSystem.h"
 #include "Render/SceneSkins.h"
 #include "Render/OpenGL/ShaderProgram.h"
 #include "Render/SkinAnimation.h"
@@ -212,34 +213,20 @@ LivingRoom::LivingRoom(const std::string& file)
 
 	// The glows, each about the object of a main menu's entry.
 	for (const char* name : {"tv", "homr", "sofa", "vcr", "mini", "book"})
-	{
-		const std::string glowFile = directory + "glow" + name + ".p3d";
-		if (!FileSystem::exists(glowFile))
-			continue;
-		loadFile(glowFile, std::string("glow") + name + "/", nullptr);
-		const P3D::P3DFile p3d(glowFile);
-		Glow glow;
-		for (const auto& chunk : p3d.GetRoot().GetChildren())
-		{
-			if (chunk->IsType(P3D::ChunkType::BillboardQuadGroup))
-				glow.batch = std::make_unique<BillboardBatch>(*P3D::BillboardQuadGroup::Load(*chunk));
-			else if (chunk->IsType(P3D::ChunkType::Animation))
-				glow.animation = BillboardAnimation::FromChunk(*chunk);
-			else if (chunk->IsType(P3D::ChunkType::SceneGraph))
-			{
-				// The one transform the quad group hangs from.
-				const auto graph = P3D::SceneGraph::Load(*chunk);
-				std::vector<P3D::SceneGraphDrawable*> drawables;
-				std::vector<Matrix4x4> transforms;
-				if (graph->GetRoot() && graph->GetRoot()->GetBranch())
-					for (const auto& child : graph->GetRoot()->GetBranch()->GetChildren())
-						P3D::P3DUtil::GetDrawables(child, drawables, transforms, Matrix4x4::Identity);
-				if (!transforms.empty())
-					glow.transform = transforms.front();
-			}
-		}
-		if (glow.batch)
+		if (Glow glow = loadGlow(directory + "glow" + name + ".p3d", {}); glow.batch)
 			_glows[name] = std::move(glow);
+	// The scrapbook's border, and the sparkles round it.
+	_border = loadGlow(directory + "sparkles.p3d", "borderShape", &_sparklesTransform, "sparklesShape");
+	if (FileSystem::exists(directory + "sparkles.p3d"))
+	{
+		const P3D::P3DFile p3d(directory + "sparkles.p3d");
+		for (const auto& chunk : p3d.GetRoot().GetChildren())
+			if (chunk->IsType(P3D::ChunkType::ParticleSystemFactory))
+				if (auto factory = ParticleFactory::FromChunk(*chunk); !factory->GetEmitters().empty())
+				{
+					_sparkleFactory = std::move(factory);
+					_sparkles = std::make_unique<ParticleSystem>(*_sparkleFactory);
+				}
 	}
 
 	// The race car on the rug: not a composite but a scene graph, its
@@ -254,6 +241,63 @@ LivingRoom::LivingRoom(const std::string& file)
 }
 
 LivingRoom::~LivingRoom() = default;
+
+LivingRoom::Glow LivingRoom::loadGlow(const std::string& file, const std::string& drawable, Matrix4x4* other,
+                                      const std::string& otherDrawable)
+{
+	Glow glow;
+	if (!FileSystem::exists(file))
+		return glow;
+	loadFile(file, file + "/", nullptr);
+	const P3D::P3DFile p3d(file);
+	for (const auto& chunk : p3d.GetRoot().GetChildren())
+	{
+		if (chunk->IsType(P3D::ChunkType::BillboardQuadGroup))
+			glow.batch = std::make_unique<BillboardBatch>(*P3D::BillboardQuadGroup::Load(*chunk));
+		else if (chunk->IsType(P3D::ChunkType::Animation))
+		{
+			if (auto animation = BillboardAnimation::FromChunk(*chunk))
+				glow.animation = std::move(animation);
+		}
+		else if (chunk->IsType(P3D::ChunkType::SceneGraph))
+		{
+			// Where the scene graph hangs the quad group (and the other).
+			const auto graph = P3D::SceneGraph::Load(*chunk);
+			std::vector<P3D::SceneGraphDrawable*> drawables;
+			std::vector<Matrix4x4> transforms;
+			if (graph->GetRoot() && graph->GetRoot()->GetBranch())
+				for (const auto& child : graph->GetRoot()->GetBranch()->GetChildren())
+					P3D::P3DUtil::GetDrawables(child, drawables, transforms, Matrix4x4::Identity);
+			for (std::size_t i = 0; i < drawables.size(); ++i)
+			{
+				if (drawable.empty() ? i == 0 : drawables[i]->GetDrawableName() == drawable)
+					glow.transform = transforms[i];
+				if (other && drawables[i]->GetDrawableName() == otherDrawable)
+					*other = transforms[i];
+			}
+		}
+	}
+	return glow;
+}
+
+void LivingRoom::drawGlow(Glow& glow, GL::ShaderProgram& billboardShader, const Matrix4x4& viewProj)
+{
+	if (glow.animation)
+	{
+		const float frame =
+		    std::fmod(static_cast<float>(_time) * glow.animation->frameRate, std::max(1.0f, glow.animation->frames));
+		for (const auto& quad : glow.animation->quads)
+			if (const int index = glow.batch->FindQuad(quad.name); index >= 0)
+			{
+				glow.batch->SetQuadSize(index, quad.SizeAt(frame, glow.batch->GetQuadSize(index)));
+				if (const auto color = quad.ColorAt(frame))
+					glow.batch->SetQuadColor(index, *color);
+			}
+	}
+	billboardShader.SetUniformValue("viewProj", viewProj * glow.transform);
+	glow.batch->Draw(billboardShader, true);
+	glow.batch->Draw(billboardShader, false);
+}
 
 Vector3 LivingRoom::Path::At(float frame) const
 {
@@ -364,28 +408,14 @@ void LivingRoom::Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& skinSha
 		_homer->Draw(viewProj, Matrix4x4::Identity, skinShader);
 		glEnable(GL_BLEND);
 	}
-	// The glow, over what it is about, pulsing.
-	if (const auto glow = _glows.find(_glow); glow != _glows.end())
+	// The glow, over what it is about, pulsing; the scrapbook's border and
+	// its sparkles.
 	{
-		Glow& shown = glow->second;
-		if (shown.animation)
-		{
-			const float frame = std::fmod(static_cast<float>(_time) * shown.animation->frameRate,
-			                              std::max(1.0f, shown.animation->frames));
-			for (const auto& quad : shown.animation->quads)
-				if (const int index = shown.batch->FindQuad(quad.name); index >= 0)
-				{
-					shown.batch->SetQuadSize(index, quad.SizeAt(frame, shown.batch->GetQuadSize(index)));
-					if (const auto color = quad.ColorAt(frame))
-						shown.batch->SetQuadColor(index, *color);
-				}
-		}
 		billboardShader.Bind();
 		// Its own uniforms, which the level sets only when it draws: no
 		// lightmap (at 1, the quad came out black, nothing added).
 		billboardShader.SetUniformValue("fogDensity", 0.0f);
 		billboardShader.SetUniformValue("lightmapIntensity", 0.0f);
-		billboardShader.SetUniformValue("viewProj", viewProj * shown.transform);
 		glEnable(GL_BLEND);
 		// Facing the camera whichever way its corners turn, and over what it
 		// is about: the television's outline is the television's, Homer
@@ -394,8 +424,17 @@ void LivingRoom::Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& skinSha
 		GLint depthFunc = GL_LESS;
 		glGetIntegerv(GL_DEPTH_FUNC, &depthFunc);
 		glDepthFunc(GL_ALWAYS);
-		shown.batch->Draw(billboardShader, true);
-		shown.batch->Draw(billboardShader, false);
+		if (const auto glow = _glows.find(_glow); glow != _glows.end())
+			drawGlow(glow->second, billboardShader, viewProj);
+		if (_borderShown && _border.batch)
+			drawGlow(_border, billboardShader, viewProj);
+		if (_sparkles)
+		{
+			// Running out its sparks when the book closes.
+			_sparkles->Update(dt, _sparklesTransform, -1.0f, _borderShown);
+			billboardShader.SetUniformValue("viewProj", viewProj);
+			_sparkles->Draw(billboardShader);
+		}
 		glDepthFunc(depthFunc);
 		billboardShader.SetUniformValue("fogDensity", 0.0004f);
 	}

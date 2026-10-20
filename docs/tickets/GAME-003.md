@@ -106,7 +106,7 @@ on, which culled the 2D drawn after it; the room's draw puts it back as it was.
 The television's screen (`TVscreen.p3d`, a composite of its own) shows its static,
 running: the file's texture animation, its eight frames round and round.
 
-Not done: the scrapbook's border and sparkles (below).
+Not done: the scrapbook's galleries (below).
 
 ## The options and the sound (2026-10-20)
 
@@ -253,3 +253,31 @@ For when there is: the border is a billboard quad drawn as the glows are; the pa
 system needs its emitter's offset taken along its `TRA` keys over the timeline
 (`ParticleFactory` reads the first key only, as a fixed offset), which would move any
 level emitter keyed the same way.
+
+## The scrapbook (2026-10-20)
+
+The main menu has a Scrapbook entry (the text bible's `SCRAP_BOOK`), the album aglow
+(`glowbook`). It flies the camera to the album (321-350; back 350-380) and opens the
+game's pages over it, the gilt border and its sparkles about them (`sparkles.p3d`,
+above, now shown): `ScrapBook.pag`, Open Book and Game Stats (up and down, the mouse,
+the confirm key; Escape back); `ScrapBookContents.pag`, the story's missions, clothes,
+vehicles and cards, so many of each; `ScrapBookStats.pag`, the story missions, bonus
+missions, street races, cards, clothing, vehicles, wasp cameras, gags, movies and the
+game complete (`UI/ScrapBookMenu`).
+
+The counts are the save files': the story's missions won from `donut_progress.dat`
+("<mission> <level>", the drives to the missions counted in, as the story plays them)
+out of every level's `AddMission` list (54: 8 on levels 1, 2, 5, 6 and 7, 7 on 3 and 4),
+the cards, gags and wasp cameras a line each in theirs. What no file keeps (the bonus
+missions and street races won, the clothes and vehicles bought: GAME-011), the movies
+(not played) and the whole (not reckoned) are greyed, a dash. Checked by screenshots of
+the three pages: 46/54 for a save at level 7's first mission.
+
+The sparkles' emitter is keyed along a path (`TRA`, 21 keys): `ParticleFactory` now
+keeps every key and emits where the timeline stands (`Emitter::OffsetAt`); of the seven
+levels' emitters, logged as each level loaded, none other has such a path. Seen: a
+spark or two at a time, not looked into further.
+
+Not done: the galleries the contents lead to (`CardGallery.pag`, `ViewCard.pag`,
+`MissionGallery.pag`, `VehicleGallery.pag`, `SkinGallery.pag`); the contents are read,
+not picked from.

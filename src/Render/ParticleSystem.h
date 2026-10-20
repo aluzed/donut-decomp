@@ -79,6 +79,11 @@ public:
 		float startAngle = 0.0f;
 		Vector4 color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 		Vector3 offset = Vector3::Zero;
+		// Where the emitter goes over its timeline (TRA keyed more than once:
+		// the scrapbook's sparkles running round their border); empty, it
+		// stays at `offset`.
+		std::vector<std::pair<float, Vector3>> path;
+		Vector3 OffsetAt(float frame) const;
 		float width = 0.0f, height = 0.0f, horizontalSpread = 0.0f, verticalSpread = 0.0f;
 		// Its texture, a strip of frames side by side (a flame's four): how
 		// many, and how a sprite goes through them, at so many a second --

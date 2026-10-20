@@ -456,6 +456,14 @@ Game::Game(int argc, char** argv)
 		if (_creditsPage)
 			_audioManager->PlayMusicEvent("Credits", true);
 	});
+	_scrapBook = std::make_unique<ScrapBookMenu>();
+	if (_scrapBook->IsLoaded())
+	{
+		const std::string& book = _textBible.Get("SCRAP_BOOK");
+		_mainMenuGlows.push_back("book");
+		_mainMenu->AddButton(book.empty() ? "Scrapbook" : book, 0, 0, 200, 40,
+		                     [this]() { _scrapBook->Open(scrapBookStats()); });
+	}
 	if (_optionsMenu->IsLoaded())
 	{
 		const std::string& options = _textBible.Get("OPTIONS");
@@ -1421,6 +1429,50 @@ void Game::bossBlast(const Vector3& blast, bool last)
 	                         blast);
 }
 
+ScrapBookMenu::Stats Game::scrapBookStats() const
+{
+	ScrapBookMenu::Stats stats;
+	// Lines in a save file: a card, a gag, a wasp each.
+	const auto lines = [](const char* file) {
+		int count = 0;
+		std::ifstream in(file);
+		for (std::string line; std::getline(in, line);)
+			count += !line.empty();
+		return count;
+	};
+	stats.cards = lines("donut_cards.dat");
+	stats.gags = lines("donut_gags.dat");
+	stats.wasps = lines("donut_wasps.dat");
+	// The story's missions: each level's AddMission list. donut_progress.dat
+	// keeps the level reached and where in its story, the drives to the
+	// missions (<id>sd) counted in, as startStoryMission plays them.
+	const StoryProgress progress = loadStoryProgress();
+	for (int level = 1; level <= 7; ++level)
+	{
+		const std::string directory = fmt::format("level{:02}", level);
+		std::ifstream script(fmt::format("scripts/{}/level.mfk", directory));
+		int entry = 0;
+		for (std::string line; std::getline(script, line);)
+		{
+			const std::size_t at = line.find("AddMission(");
+			const std::size_t comment = line.find("//");
+			const std::size_t open = line.find('"', at);
+			const std::size_t close = open == std::string::npos ? open : line.find('"', open + 1);
+			if (at == std::string::npos || (comment != std::string::npos && comment < at) || close == std::string::npos)
+				continue;
+			const std::string id = line.substr(open + 1, close - open - 1);
+			++stats.storyMissionsTotal;
+			if (FileSystem::exists(fmt::format("scripts/{}/{}sdi.mfk", directory, id)))
+				++entry;
+			// Won: on a level before the one reached, or past it in its story.
+			if (level < progress.level || (level == progress.level && entry < progress.mission))
+				++stats.storyMissions;
+			++entry;
+		}
+	}
+	return stats;
+}
+
 void Game::updateLivingRoomCamera()
 {
 	if (!_livingRoom || !_optionsMenu)
@@ -1451,6 +1503,19 @@ void Game::updateLivingRoomCamera()
 				return &t;
 		return nullptr;
 	};
+	// The scrapbook: out to the album (321-350), its pages read there, the
+	// border and its sparkles about them, and back (350-380).
+	if (_scrapBook)
+	{
+		const ScrapBookMenu::Screen book = _scrapBook->GetScreen();
+		const bool open = book != ScrapBookMenu::Screen::Closed;
+		if (open != (_livingRoomBook != ScrapBookMenu::Screen::Closed))
+			_livingRoom->Play(open ? 321.0f : 350.0f, open ? 350.0f : 380.0f);
+		_livingRoomBook = book;
+		_livingRoom->SetBorder(open);
+		if (open)
+			_livingRoom->SetGlow({});
+	}
 	const OptionsMenu::Screen screen = _optionsMenu->GetScreen();
 	// The options over the room: no entry of the main menu's is picked.
 	if (screen != OptionsMenu::Screen::Closed)
@@ -4290,6 +4355,8 @@ void Game::Run()
 				                  deltaTime);
 			if (_optionsMenu && _optionsMenu->IsOpen())
 				_optionsMenu->Draw(intent, proj);
+			else if (_scrapBook && _scrapBook->IsOpen())
+				_scrapBook->Draw(intent, proj);
 			else
 				drawMainMenuPage(intent, proj);
 		}
