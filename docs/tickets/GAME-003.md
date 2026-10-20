@@ -107,8 +107,7 @@ The television's screen (`TVscreen.p3d`, a composite of its own) shows its stati
 running: the file's texture animation, its eight frames round and round.
 
 Not done: the camera's animation (`FE_CameraController`: it moves as the menu turns),
-Homer on the couch, the race car going round (`racecar.p3d` is loaded, not seen: its
-animation is not played), the glows and the sparkles.
+Homer on the couch, the glows and the sparkles.
 
 ## The options and the sound (2026-10-20)
 
@@ -156,3 +155,20 @@ by a screenshot; a key captured was not, there being no keyboard to press.
 
 Not done: View Movies (the cutscenes are not played: UI-FMV), the
 game settings (`GameSettings.pag`: mouse look and sensitivity).
+
+## The race car on the rug (2026-10-20)
+
+Krusty's race track has its car going round: `racecar.p3d` is not a composite (it was
+loaded as one, and nothing of it was seen) but a mesh hung in a scene graph under
+`locator1`, under a visibility node (`locator1_SceneGraphVis`) the generated reader
+skips; its animation `STRN_locator1` (in the multicontroller `FE_racing`, 132 frames at
+30 a second) moves `locator1` round the figure of eight, over the bridge and through
+the banked loop. The living room reads the scene graph from its chunks (transforms,
+through visibility nodes), builds the animation's tracks by the transforms' names with
+`SkinAnimation::FromP3D` (as a skeleton's), and draws each node where its parent and
+the animation put it, round and round (`LivingRoom::AnimatedScene`).
+
+On the way: the car's mesh is `f1_polySurfaceShape1`, as is one of `camset.p3d`'s,
+and the one loaded last replaced the other in the room's meshes; a file's meshes now go
+by a prefix ("racecar/"). Checked by screenshots at 3, 3.5 and 4 s: the car on the right
+loop, coming out of it, on the top straight, along the track each time.

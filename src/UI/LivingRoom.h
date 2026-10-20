@@ -14,6 +14,11 @@ namespace Donut
 
 class CompositeModel;
 class Mesh;
+class SkinAnimation;
+namespace P3D
+{
+class SceneGraph;
+}
 namespace GL
 {
 class ShaderProgram;
@@ -42,8 +47,31 @@ private:
 		Matrix4x4 transform;
 	};
 	std::vector<Placed> _placed;
-	// The models beside the room (the television's screen, the race car on
-	// the rug), each where its own skeleton puts it.
+	// A scene graph whose transforms an animation moves (racecar.p3d: the
+	// race car round its track on the rug): each node, its parent's index
+	// before it, where it stands at rest, and the meshes it carries.
+	struct Node
+	{
+		std::string name;
+		int parent;
+		Matrix4x4 local;
+		std::vector<Mesh*> meshes;
+	};
+	struct AnimatedScene
+	{
+		std::vector<Node> nodes;
+		std::unique_ptr<SkinAnimation> animation;
+	};
+	std::vector<AnimatedScene> _scenes;
+	// The textures, shaders and meshes of `file` (its camera, FE_Camera, the
+	// room's) and its scene graph; with `scene`, the scene graph's nodes and
+	// the animation that moves them as well. Its meshes go by `prefix` and
+	// their names: Maya's names ("f1_polySurfaceShape1") are in more than one
+	// file.
+	std::unique_ptr<P3D::SceneGraph> loadFile(const std::string& file, const std::string& prefix,
+	                                          AnimatedScene* scene);
+	// The models beside the room (the television's screen), each where its
+	// own skeleton puts it.
 	std::vector<std::unique_ptr<CompositeModel>> _models;
 	// Their texture animations (the television's static), round and round,
 	// and the texture each shows now.

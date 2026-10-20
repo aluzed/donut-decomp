@@ -8,20 +8,24 @@
 #include "Render/CompositeModel.h"
 #include "Render/Mesh.h"
 #include "Render/OpenGL/ShaderProgram.h"
+#include "Render/SkinAnimation.h"
 #include "ResourceManager.h"
 
 #include <cmath>
+#include <functional>
 
 namespace Donut
 {
 
-LivingRoom::LivingRoom(const std::string& file)
+std::unique_ptr<P3D::SceneGraph> LivingRoom::loadFile(const std::string& file, const std::string& prefix,
+                                                      AnimatedScene* scene)
 {
 	if (!FileSystem::exists(file))
-		return;
+		return nullptr;
 	const P3D::P3DFile p3d(file);
 	auto& resources = Game::GetInstance().GetResourceManager();
-	const P3D::P3DChunk* sceneGraph = nullptr;
+	std::unique_ptr<P3D::SceneGraph> sceneGraph;
+	std::vector<std::unique_ptr<P3D::Animation>> animations;
 	for (const auto& chunk : p3d.GetRoot().GetChildren())
 	{
 		if (chunk->IsType(P3D::ChunkType::Texture))
@@ -36,7 +40,7 @@ LivingRoom::LivingRoom(const std::string& file)
 			const auto geometry = P3D::Geometry::Load(*chunk);
 			auto mesh = std::make_unique<Mesh>(*geometry);
 			mesh->Commit();
-			_meshes[geometry->GetName()] = std::move(mesh);
+			_meshes[prefix + geometry->GetName()] = std::move(mesh);
 		}
 		else if (chunk->IsType(P3D::ChunkType::Camera))
 		{
@@ -52,13 +56,61 @@ LivingRoom::LivingRoom(const std::string& file)
 			}
 		}
 		else if (chunk->IsType(P3D::ChunkType::SceneGraph))
-			sceneGraph = chunk.get();
+		{
+			sceneGraph = P3D::SceneGraph::Load(*chunk);
+			if (scene)
+			{
+				// The transforms, read from the chunks: the generated reader
+				// keeps a transform's transforms only, and the race car's
+				// locator1 hangs under a visibility node.
+				const std::function<void(const P3D::P3DChunk&, int)> add = [&](const P3D::P3DChunk& parent, int index) {
+					for (const auto& child : parent.GetChildren())
+					{
+						if (child->IsType(P3D::ChunkType::SceneGraphTransform))
+						{
+							const auto transform = P3D::SceneGraphTransform::Load(*child);
+							Node node {transform->GetName(), index, transform->GetTransform(), {}};
+							for (const auto& drawable : transform->GetDrawables())
+								if (const auto mesh = _meshes.find(prefix + drawable->GetDrawableName()); mesh != _meshes.end())
+									node.meshes.push_back(mesh->second.get());
+							scene->nodes.push_back(std::move(node));
+							add(*child, static_cast<int>(scene->nodes.size()) - 1);
+						}
+						else
+							add(*child, index);
+					}
+				};
+				add(*chunk, -1);
+			}
+		}
+		else if (scene && chunk->IsType(P3D::ChunkType::Animation))
+			animations.push_back(P3D::Animation::Load(*chunk));
 	}
-	if (!sceneGraph)
-		return;
+	// The first animation that moves a transform of the scene graph.
+	if (scene && !scene->nodes.empty())
+	{
+		std::vector<std::string> names;
+		std::vector<Matrix4x4> rests;
+		for (const Node& node : scene->nodes)
+		{
+			names.push_back(node.name);
+			rests.push_back(node.local);
+		}
+		for (const auto& animation : animations)
+			if (animation->GetGroupList())
+			{
+				scene->animation = SkinAnimation::FromP3D(*animation, names, rests);
+				break;
+			}
+	}
+	return sceneGraph;
+}
+
+LivingRoom::LivingRoom(const std::string& file)
+{
 	// Where its scene graph puts each mesh.
-	const auto graph = P3D::SceneGraph::Load(*sceneGraph);
-	if (!graph->GetRoot() || !graph->GetRoot()->GetBranch())
+	const auto graph = loadFile(file, "", nullptr);
+	if (!graph || !graph->GetRoot() || !graph->GetRoot()->GetBranch())
 		return;
 	std::vector<P3D::SceneGraphDrawable*> drawables;
 	std::vector<Matrix4x4> transforms;
@@ -67,22 +119,30 @@ LivingRoom::LivingRoom(const std::string& file)
 	for (std::size_t i = 0; i < drawables.size(); ++i)
 		if (const auto mesh = _meshes.find(drawables[i]->GetDrawableName()); mesh != _meshes.end())
 			_placed.push_back({mesh->second.get(), transforms[i]});
-	// The television's screen and the race car, beside it.
 	const std::string directory = file.substr(0, file.find_last_of('/') + 1);
-	for (const char* model : {"TVscreen.p3d", "racecar.p3d"})
-		if (auto loaded = CompositeModel::LoadP3D(directory + model))
-		{
-			const P3D::P3DFile animations(directory + model);
-			for (const auto& chunk : animations.GetRoot().GetChildren())
-				if (chunk->IsType(P3D::ChunkType::Animation))
-					if (auto animation = TextureAnimation::FromChunk(*chunk))
-						_textureAnimations.emplace_back(std::move(*animation), std::string());
-			if (loaded->IsAnimated())
-				loaded->Pose(0.0f, false);
-			_models.push_back(std::move(loaded));
-		}
-	Log::Info("LivingRoom: {} meshes placed of {}, {} models, camera at {} fov {:.2f}", _placed.size(), _meshes.size(),
-	          _models.size(), _eye.ToString(), _fov);
+
+	// The television's screen, beside the room.
+	if (auto loaded = CompositeModel::LoadP3D(directory + "TVscreen.p3d"))
+	{
+		const P3D::P3DFile animations(directory + "TVscreen.p3d");
+		for (const auto& chunk : animations.GetRoot().GetChildren())
+			if (chunk->IsType(P3D::ChunkType::Animation))
+				if (auto animation = TextureAnimation::FromChunk(*chunk))
+					_textureAnimations.emplace_back(std::move(*animation), std::string());
+		if (loaded->IsAnimated())
+			loaded->Pose(0.0f, false);
+		_models.push_back(std::move(loaded));
+	}
+
+	// The race car on the rug: not a composite but a scene graph, its
+	// locator1 driven round the track by the file's animation (FE_racing,
+	// 132 frames at 30 a second).
+	AnimatedScene race;
+	loadFile(directory + "racecar.p3d", "racecar/", &race);
+	if (!race.nodes.empty())
+		_scenes.push_back(std::move(race));
+	Log::Info("LivingRoom: {} meshes placed of {}, {} models, {} animated scenes, camera at {} fov {:.2f}",
+	          _placed.size(), _meshes.size(), _models.size(), _scenes.size(), _eye.ToString(), _fov);
 }
 
 LivingRoom::~LivingRoom() = default;
@@ -138,6 +198,23 @@ void LivingRoom::Draw(GL::ShaderProgram& worldShader, float aspect, double dt)
 		}
 		for (const auto& model : _models)
 			model->Draw(worldShader, viewProj, model->GetTransform(), opaque);
+		for (const auto& scene : _scenes)
+		{
+			// Each node where its parent and the animation put it.
+			std::vector<Matrix4x4> world(scene.nodes.size());
+			const float frame = static_cast<float>(_time) * (scene.animation ? scene.animation->GetFrameRate() : 0.0f);
+			for (std::size_t i = 0; i < scene.nodes.size(); ++i)
+			{
+				const Node& node = scene.nodes[i];
+				const Matrix4x4 local = scene.animation ? scene.animation->Evaluate(i, frame, true) : node.local;
+				world[i] = node.parent >= 0 ? world[node.parent] * local : local;
+				for (Mesh* mesh : node.meshes)
+				{
+					worldShader.SetUniformValue("viewProj", viewProj * world[i]);
+					mesh->Draw(worldShader, opaque);
+				}
+			}
+		}
 	}
 	glDisable(GL_DEPTH_TEST);
 	if (culling)
