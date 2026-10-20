@@ -4,18 +4,23 @@
 
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 
 namespace Donut
 {
 
 class FrontendProject;
+class Texture;
 struct GameIntent;
 
 // The game's scrapbook, from the main menu (scrooby2's ScrapBook.pag): Open
 // Book, the contents (ScrapBookContents.pag: the story's missions, clothes,
 // vehicles and cards, so many of each unlocked), and the game's stats
-// (ScrapBookStats.pag). The galleries the contents lead to are not done.
+// (ScrapBookStats.pag). Of the galleries the contents lead to, the cards'
+// (CardGallery.pag: a level's seven, those found and those not; ViewCard.pag
+// and HighResCard.pag: one, large, with its title, episode, description and
+// quotes).
 class ScrapBookMenu
 {
 public:
@@ -24,6 +29,10 @@ public:
 	{
 		int storyMissions = 0, storyMissionsTotal = 0;
 		int cards = 0, gags = 0, wasps = 0;
+		// The cards found, by their place in the game's deck: eight a level,
+		// the level's seven then its bonus card, level 1's first 0
+		// (CARD_TITLE_00, card00.png).
+		std::set<int> cardsFound;
 		std::optional<int> bonusMissions, streetRaces, clothing, vehicles;
 	};
 
@@ -43,11 +52,25 @@ public:
 		Hub,
 		Contents,
 		Stats,
+		Cards,
+		Card,
 	};
 	Screen GetScreen() const { return _screen; }
 
 private:
-	std::unique_ptr<FrontendProject> _hub, _contents, _stats;
+	std::unique_ptr<FrontendProject> _hub, _contents, _stats, _gallery, _card, _largeCard;
+	std::set<int> _cardsFound;
+	// The cards' level shown (0-6), and the one picked on it (0-6).
+	int _cardLevel = 0, _cardPicked = 0;
+	bool _leftHeld = false, _rightHeld = false;
+	void drawCards(const GameIntent& intent, const Matrix4x4& proj, bool back, bool confirm);
+	void drawCard(const GameIntent& intent, const Matrix4x4& proj, bool back, bool confirm);
+	// The gallery's cards for the level shown, the frame about the one picked.
+	void layOutCards();
+	// A card's picture (resource/images/cards/db/cardNN.png), or the card not
+	// found yet (cardred.png).
+	static Texture* cardPicture(int card);
+	static Texture* image(const std::string& path);
 	Screen _screen = Screen::Closed;
 	int _choice = 0;
 	bool _upHeld = false, _downHeld = false;

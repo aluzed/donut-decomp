@@ -278,6 +278,30 @@ keeps every key and emits where the timeline stands (`Emitter::OffsetAt`); of th
 levels' emitters, logged as each level loaded, none other has such a path. Seen: a
 spark or two at a time, not looked into further.
 
-Not done: the galleries the contents lead to (`CardGallery.pag`, `ViewCard.pag`,
-`MissionGallery.pag`, `VehicleGallery.pag`, `SkinGallery.pag`); the contents are read,
-not picked from.
+Not done: the missions', vehicles' and clothes' galleries (`MissionGallery.pag`,
+`VehicleGallery.pag`, `SkinGallery.pag`), greyed on the contents.
+
+## The cards' gallery (2026-10-20)
+
+Cards, on the scrapbook's contents, opens the cards' gallery (`CardGallery.pag`): a
+level's seven, in two rows of four and three, each found card's picture
+(`resource/images/cards/db/cardNN.png`) and the card not found yet (`cardred.png`, a
+question mark) for the others, the frame of stars (`frame.png`) about the one picked.
+Left and right go from card to card, past a level's last to the next level's first; up
+and down from row to row; the mouse picks. A card found opens large (`ViewCard.pag` and
+`HighResCard.pag`): its picture, title, episode, description and quotes.
+
+The deck is the text bible's: eight a level (`CARD_TITLE_00` "1-1" HOME MADE FOOTBALL
+... `CARD_TITLE_07` "1-8" LEVEL 1 BONUS CARD), the seventh found in the level, the
+eighth its bonus card, never placed. A card found is kept in `donut_cards.dat` by its
+locator's name, `card<level><n>` (`card12`: level 1's second), at (level - 1) * 8 +
+n - 1 in the deck. The pages' boxes are the full card's, 191 x 245, the slots 120
+apart: the cards are drawn the size of the frame's picture, 84 x 108. The description
+and the quotes are wrapped to their boxes, a line their boxes' height
+(`FrontendProject::SetTextWrapped`); the text bible's spreadsheet quoting (a phrase in
+quotes, each quote doubled) is undone. The small cards and the quotes' speakers on
+`ViewCard.pag` are not shown.
+
+Checked by screenshots with a cards file of four (1-1, 1-3, 1-7, 2-1, put in for the
+run): the gallery, and the home made football, large, "Episode 8F13: Homer at Bat".
+Not shown: which level the gallery is on.

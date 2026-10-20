@@ -290,7 +290,43 @@ void FrontendProject::SetText(const std::string& name, const std::string& text)
 {
 	for (auto& entry : _texts)
 		if (entry.name == name)
+		{
 			entry.shown = text;
+			entry.wrapped = false;
+		}
+}
+
+void FrontendProject::SetTextWrapped(const std::string& name, const std::string& text)
+{
+	for (auto& entry : _texts)
+	{
+		if (entry.name != name || !entry.font || entry.height <= 0)
+			continue;
+		// Lines at the size that makes one the box's height: as many words a
+		// line as its width holds there.
+		const float scale = std::min(1.0f, entry.height / entry.font->GetHeight());
+		const float most = entry.width / scale;
+		std::string lines, line;
+		std::size_t at = 0;
+		while (at < text.size())
+		{
+			const std::size_t end = std::min(text.find(' ', at), text.size());
+			const std::string word = text.substr(at, end - at);
+			at = end + 1;
+			const std::string longer = line.empty() ? word : line + " " + word;
+			if (!line.empty() && entry.font->MeasureWidth(longer) > most)
+			{
+				lines += (lines.empty() ? "" : "\n") + line;
+				line = word;
+			}
+			else
+				line = longer;
+		}
+		if (!line.empty())
+			lines += (lines.empty() ? "" : "\n") + line;
+		entry.shown = lines.empty() ? " " : lines;
+		entry.wrapped = true;
+	}
 }
 
 bool FrontendProject::GetRect(const std::string& name, float& x, float& y, float& width, float& height) const
@@ -440,7 +476,7 @@ void FrontendProject::Draw(const Matrix4x4& proj)
 		// its font than the main menu's box between the arrows.
 		const float natural = text.font->MeasureWidth(value);
 		float scale = natural > text.width && text.width > 0 ? text.width / natural : 1.0f;
-		if (_fitHeight && text.height > 0 && text.font->GetHeight() * scale > text.height)
+		if ((_fitHeight || text.wrapped) && text.height > 0 && text.font->GetHeight() * scale > text.height)
 			scale = text.height / text.font->GetHeight();
 		const float width = natural * scale;
 		const float height = text.font->GetHeight() * scale;

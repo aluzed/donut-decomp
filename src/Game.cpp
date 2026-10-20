@@ -1441,6 +1441,15 @@ ScrapBookMenu::Stats Game::scrapBookStats() const
 		return count;
 	};
 	stats.cards = lines("donut_cards.dat");
+	// Each card found by its name, "card<level><n>" (card12: level 1's
+	// second), at its place in the deck: eight a level.
+	{
+		std::ifstream in("donut_cards.dat");
+		for (std::string line; std::getline(in, line);)
+			if (line.size() >= 6 && line.compare(0, 4, "card") == 0 && std::isdigit(line[4]) && std::isdigit(line[5]) &&
+			    line[4] >= '1' && line[5] >= '1')
+				stats.cardsFound.insert((line[4] - '1') * 8 + (line[5] - '1'));
+	}
 	stats.gags = lines("donut_gags.dat");
 	stats.wasps = lines("donut_wasps.dat");
 	// The story's missions: each level's AddMission list. donut_progress.dat

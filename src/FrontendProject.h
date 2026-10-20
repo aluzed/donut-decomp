@@ -39,6 +39,9 @@ public:
 	// A text of the page, by name ("MainMenu"): shows `text` in place of its
 	// own strings; empty, its own again.
 	void SetText(const std::string& name, const std::string& text);
+	// Its text in lines as wide as its box, each as high as the box: a card's
+	// description, a quote.
+	void SetTextWrapped(const std::string& name, const std::string& text);
 	// A text's colour, in place of its own (an entry highlighted); its own
 	// again with `reset`.
 	void SetTextColor(const std::string& name, const Vector4& color);
@@ -114,6 +117,8 @@ private:
 		Vector4 color;
 		std::string shown;
 		Vector4 ownColor;
+		// In lines (SetTextWrapped), each its box's height.
+		bool wrapped = false;
 	};
 	std::vector<Text> _texts;
 
