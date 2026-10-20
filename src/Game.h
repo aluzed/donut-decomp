@@ -344,6 +344,9 @@ private:
 	Vector3 _phoneBoothRoad;
 	void callCar(const std::string& car);
 	std::unique_ptr<Hud> _hud;
+	// The game's own HUD page, in place of the old one's bars and radar when
+	// it loads; the old one still draws the call-outs.
+	std::unique_ptr<class GameHud> _gameHud;
 	std::unique_ptr<GL::ShaderProgram> _postProcessShader;
 	std::unique_ptr<GL::FrameBuffer> _sceneFBO;
 	std::shared_ptr<GL::VertexBuffer> _fullscreenQuadVB;

@@ -126,6 +126,9 @@ public:
 	// ("COLLECT LISA'S SCIENCE PROJECT") or else "Objective: <type>", and how
 	// far along a delivery is ("... 3/9").
 	std::string GetObjectiveText() const;
+	// The stage's objective icon (SetHUDIcon: "apu", "kwik"...), the name of
+	// a picture of msnicons/; empty when none.
+	const std::string& GetHUDIcon() const { return _hudIcon; }
 	// The mission's name and summary from the phrase table ("S-M-R-T", "RACE
 	// PRINCIPAL SKINNER TO THE SCHOOL..."), empty when it has none.
 	std::string GetMissionTitle(bool info = false) const;
@@ -331,6 +334,7 @@ private:
 	float _objectiveElapsed = 0.0f;
 	float _objectiveDuration = 0.0f;
 	bool _hudShown = true;
+	std::string _hudIcon;
 	Transition _stageTransition = Transition::None;
 	float _stageTransitionSeconds = 0.0f;
 	// Under way: closing (the stage done, the next waiting) or opening.

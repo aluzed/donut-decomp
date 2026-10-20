@@ -71,6 +71,14 @@ struct HudState
 	// What the marker is ("Next checkpoint", "Talk to lisa"...).
 	std::string nextCheckpointLabel = "Next checkpoint";
 	float radarRange = 120.0f;
+	// For the game's own HUD page (GameHud): the stage's objective icon
+	// (SetHUDIcon, "apu"), the player's car on the radar while on foot, and
+	// where the level's phone booths, shops, bonus missions and street races
+	// are.
+	std::string objectiveIcon;
+	bool showPlayerCar = false;
+	Vector2 playerCarXZ;
+	std::vector<Vector2> phoneBooths, shops, bonusMissions, streetRaces;
 
 	// free-form lines drawn under the HUD (control hints, help overlay)
 	std::vector<std::string> hints;
@@ -92,6 +100,9 @@ public:
 	~Hud();
 
 	void Draw(SpriteBatch& sprites, const Font* font, const HudState& state);
+	// The centred call-outs alone (a mission's title, its picture and
+	// summary, an alert): what the game's own HUD page has no place for.
+	void DrawCallouts(SpriteBatch& sprites, const Font* font, const HudState& state);
 
 private:
 	void drawShadowedText(SpriteBatch&, const Font*, const std::string&, const Vector2&, const Vector4&);

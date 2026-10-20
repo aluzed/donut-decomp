@@ -448,3 +448,42 @@ Checked: level 1's two sellers (Gil: the Duff Truck and another, 125 coins; Barn
 Plow King, "Change" with it bought) and the school's wardrobe (three outfits, "Homer -
 Casual" 100 coins), by screenshots; a purchase at Gil's with 500 coins: the Duff Truck
 bought for 125 (375 left), left at `gil_car`, the player at its wheel.
+
+## The game's HUD (2026-10-21)
+
+The HUD is the game's own page now (`ingame.p3d`'s `Hud.pag`, and `Coins.pag`), drawn by
+`UI/GameHud` from the same `HudState` the old one read; the old one (`UI/Hud`) still
+draws the call-outs the page has no place for (a mission's title card, alerts) and is
+used whole when the page does not load. The control hints are gone, but for the help
+overlay's and those that say what is at hand ("Press E to enter vehicle!").
+
+- The radar, bottom right: the page's frame, the player's arrow in its middle, and
+  about it the page's icons, each kind from its pool of sprites: the mission's cars, the
+  police (kept on the edge when far), the objective's blue flag (likewise), a race's
+  checkered flags, the phone booths, the shops (car sellers and wardrobes, "$"), the
+  bonus missions, the street races, the player's own car while on foot. The page's map
+  is a 3D object the game drew under it; the roads are drawn as dots instead. Ahead is
+  up, `radarRange` metres to its rim.
+- Round it, the Hit & Run meter: its eight sectors (one picture, `hrsector`, the page
+  placing all eight alike: the game turned them), lit an eighth of the meter each,
+  turned 45 degrees apiece; under it, at the wheel, the speed in three digits and "kmh".
+- Top left, one under the other: the stage's clock ("1:57"), the place in a race
+  ("2ND"), its laps ("LAP 1/2"), and in a mission car its damage, the meter's grey bar
+  at the car's health. Top right, the coins ("$65"), for four seconds after they change.
+  These, and the countdown in the middle, are in the page's letters: the counters'
+  multi-sprites hold a picture a character (`letters/0.png`, `letterA.png`,
+  `colon.png`...), which the game draws one after another; `GameHud::drawLetters`
+  does, each its own width at the counter's height, a fifth of it overlapping.
+- Bottom left, the objective: its box (`helptext`), its text wrapped in it, the stage's
+  icon (`SetHUDIcon`, now kept by the script engine: `msnicons/<char|location|object|
+  vehicle>/<name>.png`), for five seconds after the objective changes. The subtitles go
+  above it while it is up, and keep to the left half, clear of the radar.
+
+Checked by screenshots: on foot (radar, phone booths, the Kwik-E-Mart's objective and
+icon), a timed mission ("3:21", the couplings' objective wrapped), at the wheel ("1:57",
+"2ND", "LAP 1/2", the damage at 60 %, "$65", "000 kmh").
+
+Not done: the radar's map, its cone; the Hit & Run ticket and "BUSTED", the card found
+(`CardCollected`, `CardTitle`), stage and mission complete in the page's letters, the
+proximity meter, the action button, the tutorial's walkie-talkie: those still show as
+the old call-outs or not at all.

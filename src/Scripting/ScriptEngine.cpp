@@ -210,6 +210,7 @@ void ScriptEngine::beginStage(std::size_t index)
 	_coinFee = 0;
 	_stageTransition = Transition::None;
 	_stageTransitionSeconds = 0.0f;
+	_hudIcon.clear();
 
 	for (const auto& statement : _stageScripts[index])
 		Commands::RunLine(statement);
@@ -1618,7 +1619,7 @@ void ScriptEngine::UsePedGroup(int group)
 
 void ScriptEngine::SetHUDIcon(const std::string& icon)
 {
-	Log::Info("ScriptEngine: HUD icon = '{}'", icon);
+	_hudIcon = icon;
 }
 
 void ScriptEngine::AddObjective(const std::string& type, const std::string& argument)

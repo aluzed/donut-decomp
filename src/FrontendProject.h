@@ -75,6 +75,10 @@ public:
 	// y down; the page is drawn at `scale`): false when it has none of that
 	// name.
 	bool GetRect(const std::string& name, float& x, float& y, float& width, float& height) const;
+	// A point of the page (640 x 480, y down) on the screen, and how much
+	// larger the page is drawn, as at its last Draw.
+	Vector2 ToScreen(const Vector2& point) const { return point * _scale + _offset; }
+	float GetScale() const { return _scale; }
 	// The page's 640 x 480 on the screen: as large as it fits, centred. Kept
 	// from the last draw, for the mouse.
 	mutable float _scale = 2.0f;

@@ -11,6 +11,7 @@
 #include "UI/LivingRoom.h"
 #include "UI/MoviePlayer.h"
 #include "UI/OptionsMenu.h"
+#include "UI/GameHud.h"
 #include "UI/PhoneBoothMenu.h"
 #include "UI/ShopMenu.h"
 #include "Core/FpsTimer.h"
@@ -524,6 +525,7 @@ Game::Game(int argc, char** argv)
 	});
 
 	_hud = std::make_unique<Hud>();
+	_gameHud = std::make_unique<GameHud>();
 
 	// The game's own pause screen: "PAUSED", and its list, of which Continue,
 	// Restart Mission and Quit Game are ours.
@@ -1078,7 +1080,11 @@ void Game::drawSubtitle(const Matrix4x4& proj, int width, int height)
 	// four fifths of its width, the speaker's name before it in yellow; a
 	// shadow under it to read it over anything.
 	const std::string prefix = subtitle->speaker.empty() ? "" : subtitle->speaker + ": ";
-	const float most = width * 0.8f;
+	// Clear of the game HUD's radar, bottom right: half the screen wide, left
+	// of its middle.
+	const bool radar = _gameHud && _gameHud->IsLoaded();
+	const float most = width * (radar ? 0.5f : 0.8f);
+	const float middle = width * (radar ? 0.42f : 0.5f);
 	std::vector<std::string> lines(1, prefix);
 	std::istringstream words(subtitle->text);
 	for (std::string word; words >> word;)
@@ -1090,12 +1096,14 @@ void Game::drawSubtitle(const Matrix4x4& proj, int width, int height)
 			lines.back() = longer;
 	}
 	const float lineHeight = font->GetHeight() + 4.0f;
-	float y = height * 0.86f - lineHeight * (lines.size() - 1);
+	// Above the objective's box while it is up.
+	const float bottom = _gameHud && _gameHud->IsObjectiveShown() ? 0.66f : 0.86f;
+	float y = height * bottom - lineHeight * (lines.size() - 1);
 	SpriteBatch batch;
 	for (std::size_t i = 0; i < lines.size(); ++i, y += lineHeight)
 	{
 		const std::string& line = lines[i];
-		const float x = (width - font->MeasureWidth(line)) * 0.5f;
+		const float x = middle - font->MeasureWidth(line) * 0.5f;
 		batch.DrawText(font, line, Vector2(x + 2.0f, y + 2.0f), Vector4(0.0f, 0.0f, 0.0f, 0.8f));
 		if (i == 0 && !prefix.empty())
 		{
@@ -4723,6 +4731,27 @@ void Game::Run()
 			                              ? _activeVehicle->GetPosition()
 			                              : (_character ? _character->GetPosition() : Vector3::Zero);
 			hud.playerXZ = Vector2(playerPos.X, playerPos.Z);
+			// For the game's radar: the stage's icon, the player's car while
+			// on foot, the phone booths, shops, bonus missions and races.
+			hud.objectiveIcon = _scriptEngine->GetHUDIcon();
+			if (const Vehicle* car = _scriptEngine->GetPlayerCar(); car && !_inVehicle)
+			{
+				hud.showPlayerCar = true;
+				hud.playerCarXZ = Vector2(car->GetPosition().X, car->GetPosition().Z);
+			}
+			if (_level)
+				for (const auto& trigger : _level->GetTriggers())
+				{
+					if (trigger.action == "SummonVehiclePhone")
+						hud.phoneBooths.emplace_back(trigger.position.X, trigger.position.Z);
+					else if (trigger.action == "PurchaseSkin")
+						hud.shops.emplace_back(trigger.position.X, trigger.position.Z);
+				}
+			for (const CarSeller& seller : _carSellers)
+				hud.shops.emplace_back(seller.position.X, seller.position.Z);
+			for (const BonusGiver& giver : _bonusGivers)
+				(giver.mission.rfind("bm", 0) == 0 ? hud.bonusMissions : hud.streetRaces)
+				    .emplace_back(giver.position.X, giver.position.Z);
 			// The way the player faces: the car's heading at the wheel (it used
 			// to be the on-foot camera's, whatever the car did).
 			hud.playerHeading = _inVehicle && _activeVehicle ? _activeVehicle->GetRotation().Yaw() : _camYaw;
@@ -4734,18 +4763,23 @@ void Game::Run()
 						hud.roadPoints.emplace_back(node.position.X, node.position.Z);
 				}
 
+			// The game's HUD has no control hints of its own: only the help
+			// overlay's and those that say what is at hand.
+			const bool gameHud = _gameHud && _gameHud->IsLoaded();
 			if (_inVehicle)
 			{
 				hud.hintColour = Vector4(0.5f, 0.8f, 1.0f, 1.0f);
-				hud.hints.push_back(fmt::format("{}: Drive | {}: Boost | {}: Horn | {}: Exit",
-					ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Boost, pad),
-					ControlLabel(GameAction::Honk, pad), ControlLabel(GameAction::Interact, pad)));
+				if (!gameHud)
+					hud.hints.push_back(fmt::format("{}: Drive | {}: Boost | {}: Horn | {}: Exit",
+						ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Boost, pad),
+						ControlLabel(GameAction::Honk, pad), ControlLabel(GameAction::Interact, pad)));
 			}
 			else if (_gameState == GameState::InGame)
 			{
-				hud.hints.push_back(fmt::format("{}: Move | {}: Action | {}: Restart | {}: Pause",
-					ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Interact, pad),
-					ControlLabel(GameAction::RestartMission, pad), ControlLabel(GameAction::PauseToggle, pad)));
+				if (!gameHud)
+					hud.hints.push_back(fmt::format("{}: Move | {}: Action | {}: Restart | {}: Pause",
+						ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Interact, pad),
+						ControlLabel(GameAction::RestartMission, pad), ControlLabel(GameAction::PauseToggle, pad)));
 
 				if (_showHelp)
 				{
@@ -4768,8 +4802,10 @@ void Game::Run()
 					for (const auto& v : _scriptEngine->GetMissionVehicles())
 					{
 						const float dist = (v->GetPosition() - _character->GetPosition()).Length();
-						hud.hints.push_back(dist < 5.0f ? "Press E to enter vehicle!"
-						                                : fmt::format("Vehicle: {:.0f}m", dist));
+						if (dist < 5.0f)
+							hud.hints.push_back("Press E to enter vehicle!");
+						else if (!gameHud)
+							hud.hints.push_back(fmt::format("Vehicle: {:.0f}m", dist));
 						break;
 					}
 				}
@@ -4781,7 +4817,24 @@ void Game::Run()
 			// Not under the game's pause screen, whose title stands where the
 			// objective does.
 			if (!(_gameState == GameState::Paused && _pausePage))
-				_hud->Draw(sprites, font, hud);
+			{
+				if (gameHud)
+				{
+					_gameHud->Draw(hud, proj, deltaTime);
+					_hud->DrawCallouts(sprites, font, hud);
+					float hintY = viewportHeight * 0.32f;
+					for (const auto& hint : hud.hints)
+					{
+						sprites.DrawText(font, hint, Vector2(12.0f, hintY), hud.hintColour);
+						hintY += font != nullptr ? font->GetHeight() + 4.0f : 20.0f;
+					}
+					if (hud.fps > 0)
+						sprites.DrawText(font, fmt::format("{} fps", hud.fps),
+						                 Vector2(viewportWidth * 0.5f - 40.0f, 4.0f), Vector4(1.0f, 0.84f, 0.0f, 1.0f));
+				}
+				else
+					_hud->Draw(sprites, font, hud);
+			}
 
 
 			if (_gameState == GameState::Paused && _pausePage)

@@ -298,6 +298,11 @@ void Hud::Draw(SpriteBatch& sprites, const Font* font, const HudState& state)
 		                 go ? Vector4(0.2f, 1.0f, 0.2f, 1.0f) : Vector4(1.0f, 0.85f, 0.1f, 1.0f));
 	}
 
+	DrawCallouts(sprites, font, state);
+}
+
+void Hud::DrawCallouts(SpriteBatch& sprites, const Font* font, const HudState& state)
+{
 	if (!state.banner.empty() && state.bannerPicture && state.bannerPicture->GetWidth() > 0)
 	{
 		// Over the banner, a third of the screen wide, its own shape kept.
