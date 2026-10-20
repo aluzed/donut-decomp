@@ -1,6 +1,6 @@
 # RENDER-006 — AnimObjectWrapper : remplir `_shaders` / `_textures`
 
-- **Status:** TODO
+- **Status:** DONE (2026-10-20): nothing to fill
 - **Priority:** P1
 - **Module:** Render
 - **Depends on:** —
@@ -37,3 +37,11 @@ tombent sur des shaders manquants.
       `AnimObjectWrapper`.
 - [ ] Plus de membres `_shaders`/`_textures` inutilisés (ou bien réellement
       peuplés).
+
+## Closed (2026-10-20)
+
+No `AnimObjectWrapper` (0x3F00010) in any of the game's files holds a `Shader` (0x11000)
+or a `Texture` (0x19000): checked over every `.p3d` under `art/`. Their shaders and
+textures are the file's own, loaded with it, and the models drawn through the wrapper
+(the crates, vending machines, gas pumps) find them by name. The empty vectors are
+right.
