@@ -119,7 +119,9 @@ go back to, and an ending gives the music back to it when it is over. The game's
   go back to), `Hit_and_Run_Caught` when busted;
 - a stage's last ten seconds: `M<n>_10sec_to_go` (level 1 m4);
 - the Kwik-E-Mart: `OF_KiwkEMart` inside (its muzak), the level's music outside;
-- the credits, at the story's end: `Credits` (Land of Chocolate).
+- the credits, at the story's end: `Credits` (Land of Chocolate);
+- the main menu: the show's theme (`simpsons_theme.rsd`, in `music02.rcf`), looped; the
+  level's music back after it.
 
 All seven levels' scripts read (20-22 groups, 44-55 events with music). Checked by log on
 the seven levels (story, autopilot): level 1 `OF_explore_mission`, `M1_start`
@@ -131,7 +133,7 @@ listened to.
 Not done:
 - The transitions are not on the beat: a cue starts at once, after the segment playing
   is cut. The script's fades, stitches and beat sets are not read.
-- The other events: the front end, the other buildings (`Entering_Building` fades
+- The other events: the front end's transitions, the other buildings (`Entering_Building` fades
   out), cards found, `_drama`, the Super Sprint. `ambience.rms` is not read either.
 
 `music02.rcf` (Sunday Drive, the Power Plant, Vivaldi, the main theme, the Kwik-E-Mart's

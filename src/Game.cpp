@@ -4186,6 +4186,17 @@ void Game::Run()
 			}
 		}
 
+		// The main menu has the show's theme (music02.rcf), the level's music
+		// back after it.
+		if ((_gameState == GameState::MainMenu) != _menuMusic)
+		{
+			_menuMusic = !_menuMusic;
+			static const std::string kTheme = "sound\\music\\simpsons_theme.rsd";
+			if (!_menuMusic)
+				_audioManager->ResumeMusicBase();
+			else if (!_audioManager->FindSounds(kTheme).empty())
+				_audioManager->PlayMusic(kTheme);
+		}
 		if (_gameState == GameState::Credits && _creditsPage)
 			drawCredits(intent, proj, deltaTime, viewportWidth, viewportHeight);
 		if (_gameState == GameState::MainMenu && _mainMenuPage && !_mainMenu->GetButtons().empty())

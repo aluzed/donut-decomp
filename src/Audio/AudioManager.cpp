@@ -279,7 +279,8 @@ bool AudioManager::startMusicTrack(const std::string& name, bool loop)
 void AudioManager::PlayMusic(const std::string& name)
 {
 	_cue = {};
-	startMusicTrack(name, true);
+	if (startMusicTrack(name, true))
+		Log::Info("Audio: music '{}', looped", name);
 }
 
 void AudioManager::PlayMusicPlaylist(std::vector<std::string> tracks)

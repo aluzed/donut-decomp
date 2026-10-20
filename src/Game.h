@@ -213,6 +213,8 @@ private:
 	bool _hitAndRunMusic = false;
 	// The building's music is playing (the Kwik-E-Mart's), to give way outside.
 	bool _interiorMusic = false;
+	// The main menu's theme is playing.
+	bool _menuMusic = false;
 	// Runs the Hit & Run meter: people run down, the police, busted.
 	void updateHitAndRun(double dt);
 	std::unique_ptr<GameInput> _gameInput;
