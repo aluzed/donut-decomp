@@ -194,6 +194,11 @@ private:
 	};
 	std::map<const Vehicle*, std::array<WheelSpray, 2>> _wheelSprays;
 	void updateWheelSprays(double dt);
+	// The player's car near wrecked smokes and burns from under its hood (the
+	// effects file's car damage effect).
+	std::unique_ptr<ParticleSystem> _carSmoke;
+	const Vehicle* _carSmokeVehicle = nullptr;
+	void updateCarSmoke(double dt);
 	// The marks skidding tyres leave.
 	std::unique_ptr<class SkidMarks> _skidMarks;
 	std::unique_ptr<class HitAndRun> _hitAndRun;

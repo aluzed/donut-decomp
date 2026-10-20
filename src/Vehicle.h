@@ -78,6 +78,9 @@ public:
 	// Where the driver sits (the model's "dl" joint), in the world; false when
 	// the model does not say.
 	bool GetDriverSeat(Vector3& seat) const;
+	// Where its engine smokes from when it is wrecked: the hood's joint
+	// ("HoodTrans"), in the world, or over the front of the car.
+	Vector3 GetHoodPosition() const;
 	// A truck, a van: its seat stands well above its wheels' hubs (over 0.5m;
 	// a car's is level with them). Climbed into with the "_high" animations.
 	bool IsHigh() const { return _high; }
@@ -145,6 +148,7 @@ private:
 	int _doorJoint = -1;
 	float _driverSide = -1.0f;
 	int _seatJoint = -1;
+	int _hoodJoint = -1;
 	bool _high = false;
 	struct Light
 	{

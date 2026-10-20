@@ -317,6 +317,30 @@ void Level::LoadP3D(const std::string& filename)
 				Game::GetInstance().GetWorldPhysics().AddCollisionVolume(*volume);
 			break;
 		}
+		case P3D::ChunkType::InstancedStaticEntity:
+		{
+			// Scenery with no collision of its own, a mesh drawn at many places
+			// (level 3's bushes and ferns, the street races' tyre stacks and
+			// barriers): its geometry, then its instance list. No generated
+			// parser; read by hand, as InstancedStaticPhysics is.
+			std::unique_ptr<P3D::Geometry> geometry;
+			std::unique_ptr<P3D::InstanceList> instanceList;
+			for (const auto& child : chunk->GetChildren())
+			{
+				if (child->IsType(P3D::ChunkType::Geometry) && !geometry)
+					geometry = P3D::Geometry::Load(*child);
+				else if (child->IsType(P3D::ChunkType::InstanceList) && !instanceList)
+					instanceList = P3D::InstanceList::Load(*child);
+			}
+			if (!geometry || !instanceList)
+				break;
+			std::vector<P3D::SceneGraphDrawable*> drawables;
+			std::vector<Matrix4x4> transforms;
+			P3D::P3DUtil::GetDrawables(instanceList, drawables, transforms);
+			if (!transforms.empty())
+				_instances.emplace_back(std::make_unique<InstancedStaticEntity>(*geometry, transforms));
+			break;
+		}
 		case P3D::ChunkType::InstancedStaticPhysics:
 		{
 			const auto& staticPhys = P3D::InstancedStaticPhysics::Load(*chunk);
@@ -496,6 +520,40 @@ void Level::LoadP3D(const std::string& filename)
 					AnimatedObject object {_compositeModels.size(), dynaPhys->GetName(), false};
 					object.breaks = true;
 					object.position = transform.Translation();
+					// It stands in the way, until run into hard enough: its
+					// collision (in its wrapper) as static geometry, its
+					// collision effect's class, row and sound.
+					std::unique_ptr<P3D::CollisionObject> collision;
+					uint32_t attributeRow = 0;
+					for (const auto& child : chunk->GetChildren())
+					{
+						if (child->IsType(P3D::ChunkType::CollisionEffect))
+						{
+							MemoryStream stream(child->GetData());
+							stream.Read<uint32_t>();
+							attributeRow = stream.Read<uint32_t>();
+							const std::string sound = stream.ReadLPString();
+							object.sound = sound.substr(0, sound.find('\0'));
+						}
+						for (const auto& part : child->GetChildren())
+							if (!collision && part->IsType(P3D::ChunkType::CollisionObject))
+								collision = P3D::CollisionObject::Load(*part);
+					}
+					if (collision && collision->GetVolume())
+					{
+						loadCollisionAttributes();
+						if (attributeRow < _collisionAttributes.size())
+						{
+							object.mass = std::clamp(_collisionAttributes[attributeRow].mass, 5.0f, 5000.0f);
+							object.effect = _collisionAttributes[attributeRow].particle;
+						}
+						object.body = Game::GetInstance()
+						                  .GetWorldPhysics()
+						                  .AddPropBody(*collision->GetVolume(), transform, object.mass, true)
+						                  .body;
+						if (object.body)
+							_breakingBodies[object.body] = _animatedObjects.size();
+					}
 					// Its breaking's particle effects (a vending machine's cans,
 					// a crate's dust), from the effect list of its drawable:
 					// name, translucent, joint.
@@ -1327,17 +1385,57 @@ bool Level::HasBreakableNear(const Vector3& position, float radius) const
 	return false;
 }
 
-int Level::BreakObjectsNear(const Vector3& position, float radius)
+int Level::BreakObjectsNear(const Vector3& position, float radius, bool solid)
 {
 	int broke = 0;
 	for (auto& object : _animatedObjects)
-		if (object.breaks && !object.pooled && !object.broken && (object.position - position).Length() < radius)
+		if (object.breaks && !object.pooled && !object.broken && (solid || !object.body) &&
+		    (object.position - position).Length() < radius)
 		{
-			object.broken = true;
-			object.startedAt = _animationTime;
+			breakObject(object, nullptr);
 			++broke;
 		}
 	return broke;
+}
+
+void Level::breakObject(AnimatedObject& object, const btCollisionObject* hitter)
+{
+	object.broken = true;
+	object.startedAt = _animationTime;
+	if (object.body)
+	{
+		Game::GetInstance().GetWorldPhysics().RemoveProp(object.body, object.mass, hitter);
+		_breakingBodies.erase(object.body);
+		object.body = nullptr;
+		_knockedProps.push_back({object.sound, object.effect, object.position + Vector3(0.0f, 0.7f, 0.0f)});
+	}
+}
+
+void Level::UpdateCollisions()
+{
+	updateProps();
+	updateBreakingBodies();
+}
+
+void Level::updateBreakingBodies()
+{
+	if (_breakingBodies.empty())
+		return;
+	// Run into as hard as a fixed prop must be to give way (a crate, a
+	// vending machine stopped a car dead before).
+	std::vector<std::pair<std::size_t, const btCollisionObject*>> hit;
+	for (const auto& contact : Game::GetInstance().GetWorldPhysics().GetContacts())
+		for (const auto& [mine, other] : {std::pair(contact.a, contact.b), std::pair(contact.b, contact.a)})
+		{
+			const auto found = _breakingBodies.find(mine);
+			if (found == _breakingBodies.end() || other->isStaticObject())
+				continue;
+			if (contact.impulse > std::max(300.0f, _animatedObjects[found->second].mass * 3.0f))
+				hit.emplace_back(found->second, other);
+		}
+	for (const auto& [index, other] : hit)
+		if (_animatedObjects[index].body)
+			breakObject(_animatedObjects[index], other);
 }
 
 void Level::Update(double deltatime)
@@ -1401,7 +1499,6 @@ void Level::Update(double deltatime)
 
 	// The animated objects' collision, where they now stand.
 	moveVolumes();
-	updateProps();
 
 	for (auto& placed : _particles)
 	{

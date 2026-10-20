@@ -463,6 +463,8 @@ void WorldPhysics::RemoveProp(btRigidBody* body, float mass, const btCollisionOb
 
 btVector3 WorldPhysics::giveBackSpeed(const btCollisionObject* hitter, float mass)
 {
+	if (!hitter)
+		return btVector3(0, 0, 0);
 	auto* other = const_cast<btRigidBody*>(btRigidBody::upcast(hitter));
 	const auto before = _velocitiesBefore.find(hitter);
 	if (!other || other->getInvMass() <= 0.0f || before == _velocitiesBefore.end())

@@ -135,6 +135,10 @@ constexpr float kStride = 1.1f;
 constexpr float kFeetBelowCentre = 0.9f;
 // The effects file's dust of a dash.
 constexpr uint32_t kDashDust = 9;
+// The effects file's car damage effect (smoke, then fire), and the health the
+// player's car starts giving it off below.
+constexpr uint32_t kCarDamageEffect = 14;
+constexpr float kCarSmokesBelow = 25.0f;
 // A wheel going sideways over the ground faster than this, m/s, skids and
 // marks it, black at twice that; so does one braking hard. How wide its mark.
 constexpr float kSkidSlide = 3.5f;
@@ -832,6 +836,8 @@ void Game::switchLevel(int level)
 	_dust.reset();
 	_wheelSprays.clear();
 	_dashDust.reset();
+	_carSmoke.reset();
+	_carSmokeVehicle = nullptr;
 	if (_audioManager)
 		_audioManager->SetLoop("skid", "");
 	if (_skidMarks)
@@ -2128,6 +2134,29 @@ bool Game::useGag()
 	return false;
 }
 
+void Game::updateCarSmoke(double dt)
+{
+	// The car the player has, and only while it is one of the cars there are.
+	const Vehicle* car = nullptr;
+	if (_activeVehicle && _scriptEngine->IsMissionActive())
+		for (const auto& vehicle : _scriptEngine->GetMissionVehicles())
+			if (vehicle.get() == _activeVehicle)
+				car = _activeVehicle;
+	if (car != _carSmokeVehicle)
+	{
+		_carSmoke.reset();
+		_carSmokeVehicle = car;
+	}
+	if (!car)
+		return;
+	const bool smoking = _health < kCarSmokesBelow;
+	if (smoking && !_carSmoke && _level)
+		if (const ParticleFactory* damage = _level->GetHitParticleFactory(kCarDamageEffect))
+			_carSmoke = std::make_unique<ParticleSystem>(*damage);
+	if (_carSmoke)
+		_carSmoke->Update(dt, Matrix4x4::MakeTranslate(car->GetHoodPosition()), -1.0f, smoking);
+}
+
 void Game::updateWheelSprays(double dt)
 {
 	// The cars there are now; those gone take their sprays with them.
@@ -2709,7 +2738,11 @@ void Game::Run()
 		const bool simulate = _gameState != GameState::Paused;
 
 		if (simulate)
+		{
 			_worldPhysics->Update(static_cast<float>(deltaTime));
+			if (_level)
+				_level->UpdateCollisions();
+		}
 
 		// The listener is the camera; it was never placed, and every sound given
 		// a position was heard from the world's origin, if at all. OpenAL takes
@@ -2759,10 +2792,11 @@ void Game::Run()
 		if (simulate)
 		{
 			// The car smashes what it runs into: crates, vending machines, gas
-			// pumps play their breaking and stay broken. They have no body to
-			// stop it (PHYS-011).
+			// pumps play their breaking and stay broken. Those with a body break
+			// as the car hits it (Level::updateBreakingBodies); the others, as
+			// it comes by.
 			if (_inVehicle && _activeVehicle && std::abs(_activeVehicle->GetSpeedKmh()) > 15.0f)
-				if (const int broke = _level->BreakObjectsNear(_activeVehicle->GetPosition(), 2.5f); broke > 0)
+				if (const int broke = _level->BreakObjectsNear(_activeVehicle->GetPosition(), 2.5f, false); broke > 0)
 				{
 					AddShake(0.3f);
 					_audioManager->PlayRaw(SoundGenerator::Chirp(220.0f, 80.0f, 0.2f, 44100), 44100, 1, 16);
@@ -3456,6 +3490,7 @@ void Game::Run()
 			_sparks->Update(deltaTime, Matrix4x4::Identity);
 			_dust->Update(deltaTime, Matrix4x4::Identity);
 			updateWheelSprays(deltaTime);
+			updateCarSmoke(deltaTime);
 			// The dust a dash kicks up, the level's own (its effects file's type 9).
 			if (_dashKicksUpDust && !_dashDust && _level)
 				if (const ParticleFactory* dash = _level->GetHitParticleFactory(kDashDust))
@@ -3479,6 +3514,8 @@ void Game::Run()
 							system->Draw(billboards);
 			if (_dashDust)
 				_dashDust->Draw(billboards);
+			if (_carSmoke)
+				_carSmoke->Draw(billboards);
 			if (!blending)
 				glDisable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

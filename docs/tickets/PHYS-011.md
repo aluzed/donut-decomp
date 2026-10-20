@@ -69,6 +69,20 @@ trees — and the car drove through every one.
   a bin, a lamp post already down -- off at some 5 m/s, a little up and turning over;
   one within reach makes the attack button strike rather than jump, as a crate does.
 
+- **The animated breakables** (`AnimDynamicPhysics`, 0x3F0000E: crates, vending
+  machines, gas pumps, bus-stop phones, round shrubs, hay bales, the lemonade stand,
+  power boxes; some 110 on level 1) stand as static bodies of the collision object in
+  their wrapper (0x3F00010 > 0x7010000), with their collision effect's sound
+  (`car_hit_crate`) and their attribute row's mass. Run into as hard as a fixed prop must
+  be, one plays its breaking, its body goes and the car goes on, given back its speed;
+  its sound is heard. They broke before when the car merely came within 2.5 m, and the
+  car drove through them; those without a collision object still do. On foot, a strike
+  breaks them as before, and their body goes with them.
+- **Resolved right after the physics step** (`Level::UpdateCollisions`): the car stopped
+  dead by a prop for that step is given its speed back before its damage is judged from
+  its change of speed. A crate (or a lamp post knocked loose) cost the car a crash's
+  damage, 13 health for a lemonade stand at 40 km/h; none now.
+
 ## What it took besides
 
 - **Particle gravity** (`GRA`) is in m/s², up: debris fall (a crate's bits at -2, glass at
@@ -83,6 +97,9 @@ trees — and the car drove through every one.
   traffic van found a prop's top for the ground.
 
 ## Checked
+
+- Homer's car at 40 km/h into the lemonade stand: it flies apart in planks, `crate_smash`
+  is heard, the car goes on at 37 km/h and loses no health.
 
 - A car at 50 km/h into a mailbox: it is pushed, tips and flies 19 m off.
 - Into a lamp post: it leans, falls and lies on the pavement; the car goes on at about
@@ -102,8 +119,6 @@ trees — and the car drove through every one.
   know (`eParkingMeter`, `eCoconutsDropping...`, ...). Types 9, 10, 11, 14, 19 are the
   dash's dust, a wheel's dirt and grass sprays (used since, PHYS-008), a car's damage
   smoke, fire.
-- The `AnimDynamicPhysics` objects (crates, vending machines) still have no body: they
-  break when the car comes near (`Level::BreakObjectsNear`).
 - The player on foot does not push them by walking into them (the character is a
   kinematic capsule); a kick does (below).
 - Traffic (kinematic) passes through the fixed ones, as before.

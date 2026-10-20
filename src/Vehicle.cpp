@@ -93,6 +93,7 @@ void Vehicle::LoadModel(const std::string& modelPath)
 		}
 		_doorJoint = _model->FindJoint("DoorDRot");
 		_seatJoint = _model->FindJoint("dl");
+		_hoodJoint = _model->FindJoint("HoodTrans");
 		if (const int hub = _model->FindJoint("w0"); hub >= 0 && _seatJoint >= 0)
 			_high = _model->GetJointRestPosition(_seatJoint).Y - _model->GetJointRestPosition(hub).Y > 0.5f;
 		// Its lights: brake1Shape..brake4Shape, rev1Shape..rev4Shape.
@@ -293,6 +294,14 @@ bool Vehicle::GetDriverSeat(Vector3& seat) const
 		return false;
 	seat = _model->GetTransform() * _model->GetJointRestPosition(_seatJoint);
 	return true;
+}
+
+Vector3 Vehicle::GetHoodPosition() const
+{
+	const Matrix4x4 placement = Matrix4x4::MakeTranslate(_position) * Matrix4x4(_rotation);
+	if (!_model || _hoodJoint < 0)
+		return placement * Vector3(0.0f, 0.8f, 1.6f);
+	return _model->GetTransform() * _model->GetJointRestPosition(_hoodJoint);
 }
 
 void Vehicle::SetDoorOpen(float amount)

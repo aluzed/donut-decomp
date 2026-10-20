@@ -63,3 +63,26 @@ heard from there, faint or not at all. The listener is now the camera, every fra
 takes right as forward x up; in this world +X is on the right looking down +Z (checked on
 the radar), so "up" is given as -Y for left and right to come out the right way round.
 Not heard.
+
+## The music script, looked at (2026-10-20)
+
+`sound\music\l<n>_music.rms` (in the music RCFs, 52 to 62 KB; `sound\ambience\ambience.rms`
+too) is a Radical "radmusic" composition: a serialized object graph that carries its own
+schema first -- type and field names (`radmusic_comp`, `group`, `fade_transition`,
+`stitch_transition`, `event`, `event_matrix`, `state`, `rsd_file`, `stream`, `clip`,
+`region`, `sequence`, `layer`, the `event_*` variants -- volume, pitch, their random
+ranges, positional, callbacks, `logic_and/or/repeat` -- and the actions
+`play/push/pop_region`, `start/stop_layer`, `rand_state`), each with its fields
+(`source_region_ref`, `target_region_ref`, `source_time`, `beat_set`, `bpm`,
+`time_sig_numerator`...). Then a table of offsets, and the objects. Level 1's names its
+regions and events: `silent_region`, `movie_region`, `pause_region`, `FE_region`,
+`OF_explore_region`, `OF_found_card_region`, `OF_time_out_region`,
+`Win_3Street_Races_region`, `Level_Completed_region`, `Destroy_Camera_Bonus_region`,
+`Gated_Mission_region`, `KwikEmart_region`, `Entering_Building_region`, and its clips
+(`Homer\Tuba_001`..`069`, `Horn_triumph`, `Harp_Music04/05`, `Generic\Horn_Blast`,
+`Apu\Kwik_E_Mart_Muzak`); events `OF_explore_mission`, `OF_found_card`, `OF_time_out`,
+`Gated_Mission`, `OF_House`, `OF_KiwkEMart`, `OF_School`, `OF_Moes`...
+
+To read it: the schema block, then each object by its type's field list; regions hold
+sequences of clips, events play or push regions through transitions on the beat.
+Several hours of work, and it needs listening to judge.

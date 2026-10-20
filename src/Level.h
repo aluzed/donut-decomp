@@ -17,6 +17,7 @@
 #include <unordered_map>
 #include <vector>
 
+class btCollisionObject;
 class btRigidBody;
 
 namespace Donut
@@ -51,8 +52,15 @@ public:
 	int PlayAnimatedObject(const std::string& name);
 	// Breaks the breakable objects within `radius` of `position` (crates,
 	// vending machines, gas pumps): each plays its animation once and stays
-	// as it ends. How many broke.
-	int BreakObjectsNear(const Vector3& position, float radius);
+	// as it ends. `solid` too, those that stand as bodies, which a car breaks
+	// by running into them instead. How many broke.
+	// What the last physics step's contacts did to the props and the
+	// breakable objects: knocked loose, broken, the car that hit them given
+	// its speed back. Right after the step, before the car's damage is judged
+	// from its speed: a crate run into stopped it dead for a step, and the
+	// car took a crash's damage for it.
+	void UpdateCollisions();
+	int BreakObjectsNear(const Vector3& position, float radius, bool solid = true);
 	// Whether one stands unbroken within `radius`.
 	bool HasBreakableNear(const Vector3& position, float radius) const;
 	// The props the player can kick about (a mailbox, a bin, a lamp post
@@ -252,7 +260,21 @@ private:
 		// is hit and hidden once played; free when not playing.
 		bool pooled = false;
 		bool free = true;
+		// Its collision, standing as static geometry until it breaks (a
+		// crate, a vending machine): null when it has none. Its mass, and what
+		// is heard and seen as it goes (its collision effect's sound, its
+		// attribute row's particle effect).
+		btRigidBody* body = nullptr;
+		float mass = 100.0f;
+		std::string sound, effect;
 	};
+	// Those that stand as bodies, by body.
+	std::unordered_map<const btCollisionObject*, std::size_t> _breakingBodies;
+	// Breaks one: its breaking plays, its body goes; `hitter`, given its
+	// speed back, is what broke it (none, the player on foot).
+	void breakObject(AnimatedObject& object, const btCollisionObject* hitter);
+	// The animated objects run into hard enough break.
+	void updateBreakingBodies();
 	// The breakings of each breakable type: the game's breakable enum, the
 	// first field of a BreakableObject (0x3001000), to the animated objects
 	// that play it.
