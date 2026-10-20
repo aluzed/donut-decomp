@@ -93,7 +93,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 |---|---|---|---|
 | P3D-004 | 🟡 | P1 | Animation controllers. Pose animations play on composite models (`CompositeModel::Pose`), Vector1/2/3 and (compressed) quaternion channels: gags animate. Gag scenes' characters too (`SceneSkins`). The level's `Anim` and `AnimCollision` objects, never loaded before (69 on level 1: windmill, signs, butterflies, rivers, the power plant's platforms and fans), are drawn and go round. Doorbells play their button and switch when rung; breakables (crates, gas pumps) break when the car runs into them. The moving objects' collision moves with them (the power plant's platforms carry the player). Missing: the power plant's own switches, `FrameController`/`MultiController` timing, texture animations |
 | P3D-001 | 🟡 | P1 | Particle systems: the animated objects' effects (steam, smoke, the tire fire, torches) run and draw (2026-10-19); the wasp cameras', breakings', and the props' hit effects (0x3001001); gravity read right, so debris fall (2026-10-20). Missing: weight, spin, drag, nitro |
-| P3D-006 | 🟡 | P1 | Entity variants: `AnimDynamicPhysicsWrapper` accepted and drawn (with or without its wrapper); `AnimCollision` still ignored |
+| P3D-006 | 🟡 | P1 | Entity variants: `InstancedStaticEntity` drawn (level 3's and 6's bushes, the street races' tyres and barriers: 85 were skipped); `Anim`/`AnimCollision` animated with their collision; `AnimDynamicPhysics` breakable. Not in `p3d.json` |
 | P3D-008 | 🟡 | P1 | Spline / LocatorMatrix / SurfaceTypeList: layouts reversed and checked over 7892 occurrences, 13 camera rails exposed by name. `SurfaceTypeList` read per triangle for the grip (PHYS-008) |
 | P3D-009 | 🟡 | P1 | CollisionWallVolume / CollisionEffect / Atc: `CollisionEffect` (class, attribute row, sound) and the `Atc` table (sound, particle, breakable, friction, mass, elasticity) read by hand for PHYS-011 (2026-10-20). `CollisionWallVolume` not done |
 | P3D-002 | ⬜ | P2 | Lights (headlights, dynamic lights) |
@@ -128,7 +128,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
 | PHYS-004 | 🟡 | P1 | Collision callbacks | Car damage from the change of velocity, with a thud, a voice line, Hit & Run. No contact callbacks |
-| PHYS-011 | 🟡 | P1 | Things to knock over | The `DynamicPhysics` props (269 on level 1) have bodies: mailboxes and bins fly off, lamp posts give way to a hard hit, hydrants and stop signs break (their `BreakableObject` breaking plays), trees shed leaves; letters, rubbish, leaves fly off (`InstParticleSystem`); masses from `atc.p3d`, sounds from `collide.spt` (2026-10-20). Missing: a few hit effects (`eParkingMeter`, coconuts), `AnimDynamicPhysics` bodies |
+| PHYS-011 | 🟡 | P1 | Things to knock over | The `DynamicPhysics` props (269 on level 1) have bodies: mailboxes and bins fly off, lamp posts give way to a hard hit, hydrants and stop signs break (their `BreakableObject` breaking plays), trees shed leaves; letters, rubbish, leaves fly off (`InstParticleSystem`); masses from `atc.p3d`, sounds from `collide.spt` (2026-10-20). The `AnimDynamicPhysics` breakables (crates, vending machines, gas pumps) stand as bodies and break when run into. Missing: a few hit effects (`eParkingMeter`, coconuts) |
 | PHYS-008 | ✅ | — | Grip per surface | Each wheel's friction from the ground's terrain type (`SurfaceTypeList`): grass, dirt, sand slip; the rear wheels throw up grass or earth; skid marks per ground (2026-10-20) |
 | PHYS-005 | ✅ | — | `BulletFenceShape` for fences | |
 | VEH-SINK | ✅ | — | The car drives, and the camera stays above ground | |
@@ -171,7 +171,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 
 | ID | Status | Pri | Subject |
 |---|---|---|---|
-| ASSET-001..006 | 🟡 | P1 | Extraction pipeline to the game tree. Done by hand once (`docs/ASSETS.md`); not scripted |
+| ASSET-001..006 | ✅ | — | Extraction pipeline to the game tree | `tools/extract_assets.sh <dir of the CD images>`: the cabinets off the three ISOs (or their .7z), unshield, then `art/`, `scripts/`, DIALOGF.RCF in place; unshield and 7z fetched without root if missing (2026-10-20) |
 | TOOL-002 | ⬜ | P2 | Reverse `SIMPSONS.EXE` (Ghidra). No longer blocking: P3DZ was solved without it |
 | TOOL-004 | ⬜ | P2 | Run `donut-codegen` and enrich `p3d.json` (for the P3D-* chunks) |
 | TOOL-007 | ⬜ | P3 | P3D unit tests (parse, reserialise, compare) |
@@ -242,10 +242,8 @@ car, rewards), not through the commands.
 1. **Animated props** (P3D-004, then RENDER-006/007): gags, doors and level props come to
    life; the biggest visible gain.
 2. **The game's own screens** (GAME-003, UI-TEXT, UI-LOADING, AUDIO-007 subtitles).
-3. **Gameplay left**: the `AnimDynamicPhysics` props' bodies (PHYS-011), one save slot
-   (GAME-011).
-4. **World look**: particles' emission rate (P3D-001: what `NUM` and `RAT` are, then a
-   wrecked car's smoke), lights (P3D-002), lightmaps (RENDER-014/015), fog (LEVEL-FOG),
+3. **Gameplay left**: one save slot (GAME-011).
+4. **World look**: lights (P3D-002), lightmaps (RENDER-014/015), fog (LEVEL-FOG),
    sun halo (RENDER-011).
 5. **Scale**: LEVEL-STREAM, then the spatial tree (RENDER-008b; the frustum culling is
    done).

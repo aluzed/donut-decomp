@@ -1,6 +1,6 @@
 # ASSET-006 — Charger les vraies textures et shaders depuis les P3D des CAB
 
-- **Status:** TODO
+- **Status:** DONE (2026-10-20)
 - **Priority:** P1
 - **Module:** Tools
 - **Depends on:** ASSET-004
@@ -19,3 +19,12 @@ Les textures du jeu sont stockées dans les chunks des P3D (Sprite, Texture/Imag
 - [ ] Textures chargées directement depuis les chunks P3D (plus de `.png` externes pour le frontend).
 - [ ] Définitions de shader lues depuis les P3D et appliquées.
 - [ ] Un niveau et le frontend s'affichent avec leurs textures réelles.
+
+## Done
+
+`tools/extract_assets.sh <dir of the CD images>` (docs/ASSETS.md): unshield, fetched
+without root when missing; the cabinets off the three ISOs (or their .7z) side by side;
+the whole set extracted, then `art/`, `art/audio/`, DIALOGF.RCF, `scripts/cars`,
+`scripts/level0N`, `movies/` placed. Run from scratch into an empty directory, the
+engine plays level 1's story from it. The models, textures and shaders have long been
+read from the P3D files themselves.

@@ -1,77 +1,122 @@
-#!/bin/bash
-# Extract Simpsons Hit & Run assets from original PC CD ISOs
-# Usage: ./tools/extract_assets.sh <path_to_cd1_7z> <path_to_cd2_7z> <path_to_cd3_7z> <output_dir>
+#!/usr/bin/env bash
+# Extract the game's data from the three PC CDs of The Simpsons: Hit & Run and
+# put it where the engine reads it (docs/ASSETS.md):
+#
+#   art/                    the models, levels, menus, missions and sounds
+#   art/audio/dialog/       DIALOGF.RCF, in the clear on CD1
+#   scripts/cars/           each car's tuning
+#   scripts/level0N/        the game's missions; scripts/rewards.mfk
+#   movies/                 the cutscenes (.RMV)
+#
+# Usage: tools/extract_assets.sh <source dir> [target dir]
+#
+#   <source dir>  holds the three CD images, as .iso or as the .7z archives they
+#                 come in, at any depth ("Hit & Run 1.iso", "...cd1-pcwin.7z")
+#   [target dir]  where art/ and scripts/ go; the project root by default
+#
+# The cabinets are InstallShield archives, not Microsoft CAB: unshield reads
+# them, cabextract does not. They span the three CDs (DATA1.HDR drives
+# DATA1..4.CAB), so they are gathered in one directory first. isoinfo
+# (genisoimage) reads the images; unshield and 7z, when missing, are unpacked
+# into deps/sysroot without root, as tools/fetch_deps.sh does.
+set -euo pipefail
 
-set -e
-
-if [ $# -lt 4 ]; then
-    echo "Usage: $0 <cd1.7z> <cd2.7z> <cd3.7z> <output_dir>"
-    exit 1
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [ $# -lt 1 ]; then
+	sed -n '2,21p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+	exit 1
 fi
+SOURCE="$(cd "$1" && pwd)"
+TARGET="$(mkdir -p "${2:-$ROOT}" && cd "${2:-$ROOT}" && pwd)"
+WORK="$TARGET/files"
+SYSROOT="$ROOT/deps/sysroot"
 
-CD1="$1"
-CD2="$2"
-CD3="$3"
-OUT="$4"
-TMP="/tmp/donut_extract_$$"
+# A tool, from the system or unpacked into deps/sysroot from its packages.
+tool() {
+	local name="$1"
+	shift
+	if command -v "$name" >/dev/null 2>&1; then
+		command -v "$name"
+		return
+	fi
+	if [ ! -x "$SYSROOT/usr/bin/$name" ]; then
+		mkdir -p "$ROOT/deps/debs" "$SYSROOT"
+		(cd "$ROOT/deps/debs" && for pkg in "$@"; do
+			ls "${pkg}"_*.deb >/dev/null 2>&1 || apt-get download "$pkg" >&2
+			dpkg -x "$(ls "${pkg}"_*.deb | head -1)" "$SYSROOT"
+		done)
+	fi
+	echo "$SYSROOT/usr/bin/$name"
+}
+export LD_LIBRARY_PATH="$SYSROOT/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
-mkdir -p "$OUT/art/level" "$OUT/art/chars" "$OUT/art/frontend" "$OUT/art/cars"
-mkdir -p "$OUT/audio/dialog" "$OUT/audio/music" "$OUT/audio/ambience"
-mkdir -p "$OUT/audio/soundfx" "$OUT/audio/nis" "$OUT/audio/scripts" "$OUT/audio/carsound"
-mkdir -p "$OUT/movies"
-mkdir -p "$TMP"
-
-extract_iso() {
-    local archive="$1"
-    local dest="$2"
-    echo "Extracting $archive..."
-    mkdir -p "$dest"
-    7z x "$archive" -o"$dest" -y > /dev/null
+command -v isoinfo >/dev/null 2>&1 || {
+	echo "isoinfo is needed: sudo apt install genisoimage" >&2
+	exit 1
 }
 
-extract_cabs() {
-    local iso_dir="$1"
-    echo "Extracting CAB files from $iso_dir..."
-    for cab in "$iso_dir"/*.CAB; do
-        [ -f "$cab" ] && cabextract "$cab" -d "$OUT" 2>/dev/null || true
-    done
-    for cab in "$iso_dir"/DATA*.CAB; do
-        [ -f "$cab" ] && cabextract "$cab" -d "$OUT" 2>/dev/null || true
-    done
+# The three images: the ISOs, or else the .7z archives, unpacked once.
+find_iso() {
+	{ find "$SOURCE" "$WORK/cd" -iname "*$1.iso" 2>/dev/null || true; } | head -1
 }
+for n in 1 2 3; do
+	if [ -z "$(find_iso "$n")" ]; then
+		archive="$({ find "$SOURCE" -iname "*cd$n*.7z" || true; } | head -1)"
+		if [ -z "$archive" ]; then
+			echo "no image of CD$n under $SOURCE (an .iso ending in $n, or a .7z with cd$n)" >&2
+			exit 1
+		fi
+		echo "unpacking $(basename "$archive")"
+		"$(tool 7z 7zip)" x "$archive" -o"$WORK/cd" -y >/dev/null
+	fi
+done
+ISO1="$(find_iso 1)"
+ISO2="$(find_iso 2)"
+ISO3="$(find_iso 3)"
 
-copy_rcf() {
-    local iso_dir="$1"
-    echo "Copying RCF files from $iso_dir..."
-    for rcf in "$iso_dir"/*.RCF; do
-        [ -f "$rcf" ] && cp "$rcf" "$OUT/audio/dialog/"
-    done
-    for rcf in "$iso_dir"/DIALOG*.RCF; do
-        [ -f "$rcf" ] && cp "$rcf" "$OUT/audio/dialog/"
-    done
-}
+# The cabinets, side by side: CD1 holds DATA1.CAB, DATA1.HDR, DATA2.CAB; CD2
+# DATA3.CAB; CD3 DATA4.CAB.
+mkdir -p "$WORK/cabs"
+for f in DATA1.CAB DATA1.HDR DATA2.CAB; do
+	isoinfo -i "$ISO1" -x "/$f;1" >"$WORK/cabs/$f"
+done
+isoinfo -i "$ISO2" -x "/DATA3.CAB;1" >"$WORK/cabs/DATA3.CAB"
+isoinfo -i "$ISO3" -x "/DATA4.CAB;1" >"$WORK/cabs/DATA4.CAB"
 
-copy_movies() {
-    local iso_dir="$1"
-    if [ -d "$iso_dir/MOVIES" ]; then
-        echo "Copying movies from $iso_dir..."
-        cp "$iso_dir"/MOVIES/*.RMV "$OUT/movies/" 2>/dev/null || true
-    fi
-}
+echo "extracting the cabinets"
+UNSHIELD="$(tool unshield unshield libunshield0)"
+rm -rf "$WORK/extracted"
+# A couple of files do not come out of these CDs (card38_t.p3d, music02.rcf):
+# unshield says so and fails; the game runs without them.
+"$UNSHIELD" -d "$WORK/extracted" x "$WORK/cabs/DATA1.CAB" >/dev/null ||
+	echo "unshield could not extract some files (above); going on" >&2
+EX="$WORK/extracted"
 
-# Process each CD
-for i in 1 2 3; do
-    var="CD$i"
-    archive="${!var}"
-    [ -z "$archive" ] && continue
-    extract_iso "$archive" "$TMP/cd$i"
-    extract_cabs "$TMP/cd$i"
-    copy_rcf "$TMP/cd$i"
-    copy_movies "$TMP/cd$i"
+echo "placing the game's files in $TARGET"
+mkdir -p "$TARGET/art/audio/music" "$TARGET/art/audio/dialog"
+cp -a "$EX/Art/." "$TARGET/art/"
+cp -a "$EX"/Sound/*.rcf "$TARGET/art/audio/"
+cp -a "$EX/Sound/sound" "$TARGET/art/audio/"
+cp -a "$EX"/Music1/*.rcf "$EX"/Music2/*.rcf "$TARGET/art/audio/music/"
+isoinfo -i "$ISO1" -x "/DIALOGF.RCF;1" >"$TARGET/art/audio/dialog/DIALOGF.RCF"
+
+# The cutscenes (Radical's .RMV, not played yet: UI-FMV), outside the cabinets.
+mkdir -p "$TARGET/movies"
+for iso in "$ISO1" "$ISO2" "$ISO3"; do
+	{ isoinfo -f -i "$iso" | grep -i '^/MOVIES/.*\.RMV;1$' || true; } | while read -r movie; do
+		name="$(basename "${movie%;1}")"
+		isoinfo -i "$iso" -x "$movie" >"$TARGET/movies/$name"
+	done
 done
 
-rm -rf "$TMP"
+# The cars' tuning and the game's missions, which the repository does not
+# carry (scripts/Missions is ours).
+mkdir -p "$TARGET/scripts/cars"
+cp -a "$EX"/Scripts/cars/*.con "$TARGET/scripts/cars/"
+for n in 1 2 3 4 5 6 7; do
+	rm -rf "$TARGET/scripts/level0$n"
+	cp -a "$EX/Scripts/missions/level0$n" "$TARGET/scripts/level0$n"
+done
+cp -a "$EX/Scripts/missions/rewards.mfk" "$TARGET/scripts/rewards.mfk"
 
-echo "Done! Assets extracted to $OUT"
-echo "Run: cd donut && ln -s $OUT assets"
-echo "Or copy: cp -r $OUT/* assets/"
+echo "done: $(find "$TARGET/art" -type f | wc -l) files under $TARGET/art"

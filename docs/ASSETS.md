@@ -45,6 +45,21 @@ The PC version ships on 3 CDs with InstallShield CAB archives.
 
 ### Linux
 
+One command, from the directory holding the three CD images (the `.iso` files, or
+the `.7z` archives they come in, at any depth):
+
+```bash
+sudo apt install genisoimage      # isoinfo; unshield and 7z are fetched if missing
+tools/extract_assets.sh files/    # into art/ and scripts/ at the project root
+tools/extract_assets.sh files/ /some/other/dir   # or elsewhere
+```
+
+It does what the steps below do, in about ten seconds. Two files do not come out of
+these CDs (`card38_t.p3d`, `music02.rcf`): unshield says so, the game runs without
+them.
+
+The steps, by hand:
+
 The three cabinets are **InstallShield** archives, not Microsoft CAB: cabextract
 refuses them and unshield is the tool that reads them. The whole set is driven by
 DATA1.HDR, so every DATA*.CAB has to sit in one directory next to it before

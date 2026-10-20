@@ -1,6 +1,6 @@
 # ASSET-005 — Charger un vrai modèle de personnage (P3D) à la place de SimpleMesh
 
-- **Status:** TODO
+- **Status:** DONE (2026-10-20)
 - **Priority:** P1
 - **Module:** Tools
 - **Depends on:** ASSET-004
@@ -19,3 +19,12 @@ Le joueur est rendu via un `SimpleMesh` placeholder (`src/Game.h:112`). Il faut 
 - [ ] `homer_m.p3d` chargé et affiché à la place du `SimpleMesh`.
 - [ ] Skinning correct (pose et déformations valides).
 - [ ] Animations idle/walk jouées sur le squelette du modèle.
+
+## Done
+
+`tools/extract_assets.sh <dir of the CD images>` (docs/ASSETS.md): unshield, fetched
+without root when missing; the cabinets off the three ISOs (or their .7z) side by side;
+the whole set extracted, then `art/`, `art/audio/`, DIALOGF.RCF, `scripts/cars`,
+`scripts/level0N`, `movies/` placed. Run from scratch into an empty directory, the
+engine plays level 1's story from it. The models, textures and shaders have long been
+read from the P3D files themselves.

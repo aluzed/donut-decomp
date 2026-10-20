@@ -1,6 +1,6 @@
 # ASSET-004 — Extraction complète des CAB et arborescence art/ audio/ movies/
 
-- **Status:** TODO
+- **Status:** DONE (2026-10-20)
 - **Priority:** P1
 - **Module:** Tools
 - **Depends on:** ASSET-001, ASSET-002, ASSET-003
@@ -21,3 +21,12 @@ Après validation unitaire (ASSET-003), extraire tous les CAB des 3 CD et organi
 - [ ] Arborescence `art/ audio/ movies/` peuplée et organisée par catégorie.
 - [ ] Script idempotent (relançable sans casser un état existant).
 - [ ] `assets/` accessible depuis le projet (symlink ou copie).
+
+## Done
+
+`tools/extract_assets.sh <dir of the CD images>` (docs/ASSETS.md): unshield, fetched
+without root when missing; the cabinets off the three ISOs (or their .7z) side by side;
+the whole set extracted, then `art/`, `art/audio/`, DIALOGF.RCF, `scripts/cars`,
+`scripts/level0N`, `movies/` placed. Run from scratch into an empty directory, the
+engine plays level 1's story from it. The models, textures and shaders have long been
+read from the P3D files themselves.

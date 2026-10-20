@@ -1,6 +1,6 @@
 # ASSET-002 — Extraire data1.cab + data2.cab de l'ISO CD1 via 7z
 
-- **Status:** TODO
+- **Status:** DONE (2026-10-20)
 - **Priority:** P0
 - **Module:** Tools
 - **Depends on:** —
@@ -19,3 +19,12 @@ Le CD1 est livré comme `.7z` dans `files/` ; il contient une ISO d'où il faut 
 - [ ] L'ISO CD1 est extraite depuis le `.7z` de `files/`.
 - [ ] `data1.cab`, `data1.hdr`, `data2.cab` extraits dans le dossier de travail.
 - [ ] Les fichiers ont une taille non nulle et sont co-localisés pour unshield.
+
+## Done
+
+`tools/extract_assets.sh <dir of the CD images>` (docs/ASSETS.md): unshield, fetched
+without root when missing; the cabinets off the three ISOs (or their .7z) side by side;
+the whole set extracted, then `art/`, `art/audio/`, DIALOGF.RCF, `scripts/cars`,
+`scripts/level0N`, `movies/` placed. Run from scratch into an empty directory, the
+engine plays level 1's story from it. The models, textures and shaders have long been
+read from the P3D files themselves.

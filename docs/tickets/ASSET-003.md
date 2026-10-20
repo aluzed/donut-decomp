@@ -1,6 +1,6 @@
 # ASSET-003 — Extraction test d'un P3D et ouverture dans P3DFile
 
-- **Status:** TODO
+- **Status:** DONE (2026-10-20)
 - **Priority:** P0
 - **Module:** Tools
 - **Depends on:** ASSET-001, ASSET-002
@@ -18,3 +18,12 @@ Avant l'extraction complète, valider la chaîne bout-en-bout : sortir un seul P
 - [ ] `Art/b00.p3d` extrait du CAB via unshield.
 - [ ] `P3DFile` ouvre le fichier sans crash et énumère ses chunks.
 - [ ] Un P3DZ compressé (si rencontré) est décompressé correctement.
+
+## Done
+
+`tools/extract_assets.sh <dir of the CD images>` (docs/ASSETS.md): unshield, fetched
+without root when missing; the cabinets off the three ISOs (or their .7z) side by side;
+the whole set extracted, then `art/`, `art/audio/`, DIALOGF.RCF, `scripts/cars`,
+`scripts/level0N`, `movies/` placed. Run from scratch into an empty directory, the
+engine plays level 1's story from it. The models, textures and shaders have long been
+read from the P3D files themselves.

@@ -47,3 +47,4 @@ donut_wasps.dat
 
 # build dependencies unpacked without root (tools/fetch_deps.sh)
 /deps/
+/movies/
