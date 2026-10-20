@@ -209,6 +209,17 @@ private:
 	// The game's main menu page (scrooby2's MainMenu.pag) and the entry it
 	// shows; left and right as they were last frame.
 	std::unique_ptr<FrontendProject> _mainMenuPage;
+	// The game's loading screen (backend.p3d's Loading.pag), and one frame of
+	// it drawn before a level loads.
+	std::unique_ptr<FrontendProject> _loadingPage;
+	// The game's pause screen (ingame.p3d's Pause.pag and PauseMission.pag):
+	// its entry picked, and up and down and the mouse as they were.
+	std::unique_ptr<FrontendProject> _pausePage;
+	int _pauseChoice = 0;
+	bool _menuUpHeld = false, _menuDownHeld = false;
+	int _pauseMouseX = -1, _pauseMouseY = -1;
+	void drawPausePage(const struct GameIntent& intent, const Matrix4x4& proj);
+	void showLoadingScreen();
 	std::size_t _menuChoice = 0;
 	bool _menuLeftHeld = false, _menuRightHeld = false;
 	bool _menuShown = false;

@@ -349,6 +349,16 @@ Game::Game(int argc, char** argv)
 		_coins = 0;
 
 	_mainMenu = std::make_unique<GameMenu>();
+	// The game's loading screen, shown while a level loads: the fuse burning
+	// down to the dynamite, "LOADING".
+	if (FileSystem::exists("./art/frontend/scrooby2/backend.p3d"))
+	{
+		_loadingPage = std::make_unique<FrontendProject>();
+		_loadingPage->LoadP3D("./art/frontend/scrooby2/backend.p3d", "Loading.pag");
+		// The level's picture, which the game puts in at run time: the page
+		// holds a blank in its place.
+		_loadingPage->SetSpriteVisible("Loading", false);
+	}
 	// The game's own main menu page: its arrows, and the entry shown between
 	// them in its font.
 	if (FileSystem::exists("./art/frontend/scrooby2/frontend.p3d"))
@@ -405,6 +415,15 @@ Game::Game(int argc, char** argv)
 
 	_hud = std::make_unique<Hud>();
 
+	// The game's own pause screen: "PAUSED", and its list, of which Continue,
+	// Restart Mission and Quit Game are ours.
+	if (FileSystem::exists("./art/frontend/scrooby2/ingame.p3d"))
+	{
+		_pausePage = std::make_unique<FrontendProject>();
+		_pausePage->LoadP3D("./art/frontend/scrooby2/ingame.p3d", "PauseBgd.pag");
+		_pausePage->LoadP3D("./art/frontend/scrooby2/ingame.p3d", "Pause.pag");
+		_pausePage->LoadP3D("./art/frontend/scrooby2/ingame.p3d", "PauseMission.pag");
+	}
 	_pauseMenu = std::make_unique<GameMenu>();
 	_pauseMenu->AddButton("Resume", 0, 0, 200, 40, [this]() {
 		_gameState = GameState::InGame;
@@ -823,9 +842,94 @@ bool Game::levelAvailable(int level) const
 	return FileSystem::exists(fmt::format("scripts/level{:02}/level.mfk", level));
 }
 
+void Game::drawPausePage(const GameIntent& intent, const Matrix4x4& proj)
+{
+	// The page's entries, top to bottom, and which of ours each is (-1: none,
+	// shown greyed and passed over).
+	static const std::pair<const char*, int> kEntries[] = {
+	    {"Continue", 0}, {"RestartMission", 1}, {"AbortMission", -1}, {"Options", -1}, {"QuitGame", 2}};
+	constexpr int kCount = static_cast<int>(sizeof(kEntries) / sizeof(kEntries[0]));
+	const auto step = [&](int from, int by) {
+		int at = from;
+		for (int i = 0; i < kCount; ++i)
+		{
+			at = (at + by + kCount) % kCount;
+			if (kEntries[at].second >= 0)
+				return at;
+		}
+		return from;
+	};
+	if (kEntries[_pauseChoice].second < 0)
+		_pauseChoice = step(_pauseChoice, 1);
+	const bool up = intent.moveForward > 0.5f, down = intent.moveBackward > 0.5f;
+	if (up && !_menuUpHeld)
+		_pauseChoice = step(_pauseChoice, -1);
+	if (down && !_menuDownHeld)
+		_pauseChoice = step(_pauseChoice, 1);
+	_menuUpHeld = up;
+	_menuDownHeld = down;
+	// The mouse over an entry picks it.
+	bool clickedEntry = false;
+	for (int i = 0; i < kCount; ++i)
+	{
+		float x, y, w, h;
+		if (kEntries[i].second >= 0 && _pausePage->GetRect(kEntries[i].first, x, y, w, h) && intent.mouseX >= x &&
+		    intent.mouseX <= x + w && intent.mouseY >= y && intent.mouseY <= y + h)
+		{
+			// Moved over it, not merely left there when the screen opened.
+			if (_pauseMouseX >= 0 && (intent.mouseX != _pauseMouseX || intent.mouseY != _pauseMouseY))
+				_pauseChoice = i;
+			clickedEntry = clickedEntry || (intent.uiClick && _pauseChoice == i);
+		}
+	}
+	_pauseMouseX = intent.mouseX;
+	_pauseMouseY = intent.mouseY;
+	for (int i = 0; i < kCount; ++i)
+	{
+		if (kEntries[i].second < 0)
+			_pausePage->SetTextColor(kEntries[i].first, Vector4(0.5f, 0.5f, 0.5f, 1.0f));
+		else if (i == _pauseChoice)
+			_pausePage->SetTextColor(kEntries[i].first, Vector4(1.0f, 0.84f, 0.0f, 1.0f));
+		else
+			_pausePage->ResetTextColor(kEntries[i].first);
+	}
+	_pausePage->Draw(proj);
+	if (intent.uiConfirm || clickedEntry)
+	{
+		const int button = kEntries[_pauseChoice].second;
+		if (button >= 0 && button < static_cast<int>(_pauseMenu->GetButtons().size()) &&
+		    _pauseMenu->GetButtons()[button].action)
+		{
+			_pauseChoice = 0;
+			_pauseMouseX = _pauseMouseY = -1;
+			_pauseMenu->GetButtons()[button].action();
+		}
+	}
+}
+
+void Game::showLoadingScreen()
+{
+	if (!_loadingPage || !_window)
+		return;
+	// One frame of it, drawn before the load holds everything up.
+	int width = 0, height = 0;
+	SDL_GL_GetDrawableSize(*_window, &width, &height);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glViewport(0, 0, width, height);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	_loadingPage->Draw(Matrix4x4::MakeOrtho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
+	_window->Swap();
+	glEnable(GL_DEPTH_TEST);
+}
+
 void Game::switchLevel(int level)
 {
 	Log::Info("Game: leaving level {} for level {}", _levelNumber, level);
+	showLoadingScreen();
 
 	// Everything that lives in the physics world goes before it: the mission's
 	// cars and drivers, the NPCs, the pedestrians and the player.
@@ -3783,9 +3887,19 @@ void Game::Run()
 			if (_gameState == GameState::Splash)
 				hud.banner = "PRESS ENTER TO START";
 
-			_hud->Draw(sprites, font, hud);
+			// Not under the game's pause screen, whose title stands where the
+			// objective does.
+			if (!(_gameState == GameState::Paused && _pausePage))
+				_hud->Draw(sprites, font, hud);
 
 
+			if (_gameState == GameState::Paused && _pausePage)
+			{
+				sprites.Flush(proj);
+				drawPausePage(intent, proj);
+				_window->Swap();
+				continue;
+			}
 			if (_gameState == GameState::Paused)
 			{
 				const float pauseLineHeight = font != nullptr ? font->GetHeight() : 16.0f;

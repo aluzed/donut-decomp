@@ -11,9 +11,11 @@
 #include <Render/Texture.h>
 #include <ResourceManager.h>
 #include "Core/FileSystem.h"
+#include "Core/MemoryStream.h"
 #include "ThirdParty/stb_image.h"
 #include "UI/TextBible.h"
 
+#include <algorithm>
 #include <cstdint>
 
 namespace Donut
@@ -123,7 +125,34 @@ void FrontendProject::AddMultiText(const P3D::FrontendMultiText& multiText, int3
 	text.alignX = multiText.GetAlignX();
 	text.alignY = multiText.GetAlignY();
 	text.color = P3D::P3DUtil::ConvertColor(multiText.GetColor());
+	text.ownColor = text.color;
 	_texts.push_back(std::move(text));
+}
+
+void FrontendProject::AddPolygon(const P3D::FrontendPolygon& polygon, int32_t resX, int32_t resY)
+{
+	const auto& points = polygon.GetPoints();
+	if (points.empty())
+		return;
+	if (!_white)
+	{
+		const uint8_t pixel[4] = {255, 255, 255, 255};
+		_white = std::make_unique<Texture>(pixel, 1, 1, "frontend_white");
+	}
+	float left = points[0].X, right = points[0].X, bottom = points[0].Y, top = points[0].Y;
+	for (const auto& point : points)
+	{
+		left = std::min(left, point.X);
+		right = std::max(right, point.X);
+		bottom = std::min(bottom, point.Y);
+		top = std::max(top, point.Y);
+	}
+	const Vector4 color = polygon.GetColors().empty() ? Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+	                                                  : P3D::P3DUtil::ConvertColor(polygon.GetColors()[0]);
+	// Points y up, as the sprites'.
+	_sprites.push_back(Sprite {_white.get(), static_cast<int32_t>(left), static_cast<int32_t>(resY - top),
+	                           static_cast<int32_t>(right - left), static_cast<int32_t>(top - bottom), color,
+	                           polygon.GetName()});
 }
 
 void FrontendProject::loadImages(const P3D::FrontendPage& page)
@@ -147,6 +176,56 @@ void FrontendProject::loadImages(const P3D::FrontendPage& page)
 		resources.AddTexture(name, std::make_unique<Texture>(pixels, width, height, name));
 		stbi_image_free(pixels);
 	}
+}
+
+void FrontendProject::SetSpriteVisible(const std::string& name, bool visible)
+{
+	for (auto& sprite : _sprites)
+		if (sprite.name == name)
+			sprite.visible = visible;
+}
+
+void FrontendProject::loadTextStyles(const P3D::P3DChunk& chunk)
+{
+	auto& resources = Game::GetInstance().GetResourceManager();
+	for (const auto& child : chunk.GetChildren())
+	{
+		if (child->IsType(P3D::ChunkType::FrontendTextStyleResource))
+		{
+			// Name, version, font file, the font's own name.
+			MemoryStream stream(child->GetData());
+			std::string name = stream.ReadLPString();
+			name = name.substr(0, name.find('\0'));
+			stream.Read<uint32_t>();
+			std::string file = stream.ReadLPString();
+			file = file.substr(0, file.find('\0'));
+			std::replace(file.begin(), file.end(), '\\', '/');
+			if (resources.GetFont(name) || !FileSystem::exists(_resourceDir + file))
+				continue;
+			const P3D::P3DFile fonts(_resourceDir + file);
+			for (const auto& font : fonts.GetRoot().GetChildren())
+				if (font->IsType(P3D::ChunkType::TextureFont))
+				{
+					resources.AddFont(name, std::make_unique<Font>(*P3D::TextureFont::Load(*font)));
+					break;
+				}
+		}
+		loadTextStyles(*child);
+	}
+}
+
+void FrontendProject::SetTextColor(const std::string& name, const Vector4& color)
+{
+	for (auto& text : _texts)
+		if (text.name == name)
+			text.color = color;
+}
+
+void FrontendProject::ResetTextColor(const std::string& name)
+{
+	for (auto& text : _texts)
+		if (text.name == name)
+			text.color = text.ownColor;
 }
 
 void FrontendProject::SetText(const std::string& name, const std::string& text)
@@ -183,6 +262,7 @@ void FrontendProject::AddGroup(const P3D::FrontendGroup& group, int32_t resX, in
 {
 	for (const auto& multiSprite : group.GetMultiSprites()) { AddMultiSprite(*multiSprite, resX, resY); }
 
+	for (const auto& polygon : group.GetPolygons()) { AddPolygon(*polygon, resX, resY); }
 	for (const auto& multiText : group.GetMultiTexts()) { AddMultiText(*multiText, resX, resY); }
 
 	for (const auto& group : group.GetChildren()) { AddGroup(*group, resX, resY); }
@@ -229,6 +309,7 @@ void FrontendProject::LoadP3D(const std::string& filename, const std::string& pa
 		{
 		case P3D::ChunkType::FrontendProject:
 		{
+			loadTextStyles(*chunk);
 			auto project = P3D::FrontendProject::Load(*chunk);
 			auto resX = (int32_t)project->GetResX();
 			auto resY = (int32_t)project->GetResY();
@@ -241,6 +322,7 @@ void FrontendProject::LoadP3D(const std::string& filename, const std::string& pa
 				loadImages(*page);
 				for (const auto& layer : page->GetLayers())
 				{
+					for (const auto& polygon : layer->GetPolygons()) { AddPolygon(*polygon, resX, resY); }
 					for (const auto& group : layer->GetGroups()) { AddGroup(*group, resX, resY); }
 
 					for (const auto& multiSprite : layer->GetMultiSprites()) { AddMultiSprite(*multiSprite, resX, resY); }
@@ -276,6 +358,8 @@ void FrontendProject::Draw(const Matrix4x4& proj)
 {
 	for (const auto& sprite : _sprites)
 	{
+		if (!sprite.visible)
+			continue;
 		_spriteBatch.Draw(sprite.texture, Vector2(sprite.positionX, sprite.positionY), Vector2(sprite.width, sprite.height),
 		                  sprite.color);
 	}

@@ -17,10 +17,12 @@ class Font;
 
 namespace P3D
 {
+class P3DChunk;
 class FrontendGroup;
 class FrontendMultiSprite;
 class FrontendMultiText;
 class FrontendPage;
+class FrontendPolygon;
 } // namespace P3D
 
 class FrontendProject
@@ -37,6 +39,13 @@ public:
 	// A text of the page, by name ("MainMenu"): shows `text` in place of its
 	// own strings; empty, its own again.
 	void SetText(const std::string& name, const std::string& text);
+	// A text's colour, in place of its own (an entry highlighted); its own
+	// again with `reset`.
+	void SetTextColor(const std::string& name, const Vector4& color);
+	void ResetTextColor(const std::string& name);
+	// Shows or hides a sprite of the page (one the game fills at run time, as
+	// the loading screen's level picture; its text "Loading" is another).
+	void SetSpriteVisible(const std::string& name, bool visible);
 	// Where an element of the page is drawn, in the page's pixels (top left,
 	// y down; the page is drawn at `scale`): false when it has none of that
 	// name.
@@ -47,9 +56,16 @@ private:
 	void AddGroup(const P3D::FrontendGroup& group, int32_t resX, int32_t resY);
 	void AddMultiSprite(const P3D::FrontendMultiSprite& multiSprite, int32_t resX, int32_t resY);
 	void AddMultiText(const P3D::FrontendMultiText& multiText, int32_t resX, int32_t resY);
+	// A polygon (the pause screen's dark overlay, the loading screen's fuse):
+	// drawn as the rectangle its points span, in their first colour.
+	void AddPolygon(const P3D::FrontendPolygon& polygon, int32_t resX, int32_t resY);
+	std::unique_ptr<Texture> _white;
 	// The page's images (images\LArrowG.png), from the frontend's resource
 	// directory beside the project file, by their names.
 	void loadImages(const P3D::FrontendPage& page);
+	// The text styles its pages name (FrontendTextStyleResource, 0x18104:
+	// "fontB_16" is fonts\\font0_16.p3d), registered as fonts by that name.
+	void loadTextStyles(const P3D::P3DChunk& chunk);
 	std::string _resourceDir;
 
 	struct Sprite
@@ -61,6 +77,7 @@ private:
 		int32_t height;
 		Vector4 color;
 		std::string name;
+		bool visible = true;
 	};
 	// A text: its strings (the text bible's, by key) and which shows, in its
 	// font, aligned in its box (top left, y down).
@@ -74,6 +91,7 @@ private:
 		uint32_t alignX, alignY;
 		Vector4 color;
 		std::string shown;
+		Vector4 ownColor;
 	};
 	std::vector<Text> _texts;
 

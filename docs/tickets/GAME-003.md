@@ -44,3 +44,29 @@ starts level 1's first mission.
 
 Not done: the 3D frontend behind it (the Simpsons' house, `3dFE.pag`), the other screens
 (options, scrapbook, load game), the screen transitions.
+
+## The loading screen (2026-10-20)
+
+A level switch shows the game's loading screen first (`scrooby2/backend.p3d`,
+`Loading.pag`): its burst background, the fire at the fuse's end, Scratchy tied to the
+dynamite, "LOADING" in its font; one frame drawn before the load holds everything up.
+The page's text names its style (`fontB_16`), which the page itself maps to a font file
+(`FrontendTextStyleResource`, 0x18104: name, version, `fonts\\font0_16.p3d`, the font's
+own name); the frontend registers those. The level's own picture, which the game puts
+in at run time, is a blank in the page (eight white pixels): hidden.
+
+The fuse is drawn too, from the fire to the dynamite (a polygon, below). Not done: it
+burning down as the level loads; the level pictures.
+
+## The pause screen (2026-10-20)
+
+Paused, the game's own screen shows (`ingame.p3d`: `PauseBgd.pag`, its dark overlay;
+`Pause.pag`, "PAUSE MENU"; `PauseMission.pag`, its list): CONTINUE, RESTART MISSION,
+CANCEL MISSION, OPTIONS, QUIT GAME. Ours are Continue, Restart and Quit; the other two
+are shown greyed and passed over. The entry picked is yellow; up and down, or the mouse
+moved over one, pick; the confirm key or a click takes it. The mouse left where it was
+when the screen opened picks nothing. The HUD is not drawn under it.
+
+**Polygons** (`FrontendPolygon`, 0x18009) are drawn, as the rectangle their points span
+in their first colour: the pause screen's overlay, the loading screen's background and
+fuse.

@@ -46,8 +46,10 @@ car's health forced to 0: "MISSION FAILED!", the reason, the E-brake hint, then 
   "PRESS START" stands at y 60 of 480), in its colour. Too wide for its box, it is shrunk
   to fit (`SpriteBatch::DrawText` takes a scale), as "RESUME GAME" is between the main
   menu's arrows.
-- **Fonts**: a page names its text style ("font0_24"), the font file its font
-  ("boulder_24"); the frontend's `resource/fonts/*.p3d` are loaded under both names.
+- **Fonts**: a page names its text style ("font0_24", "fontB_16"), the font file its
+  font ("boulder_24"); the frontend's `resource/fonts/*.p3d` are loaded under both names,
+  and each text style a page declares (`FrontendTextStyleResource`, 0x18104) under its
+  own.
 - **Images**: a page's image resources (`FrontendImageResource`, 0x18100: name and
   `images\LArrowG.png`) are read from the frontend's `resource/` directory, by name.
 - `SetText` shows a text of ours in place of a page's strings; `GetRect` gives where an
