@@ -242,11 +242,13 @@ car, rewards), not through the commands.
 1. **Animated props** (P3D-004, then RENDER-006/007): gags, doors and level props come to
    life; the biggest visible gain.
 2. **The game's own screens** (GAME-003, UI-TEXT, UI-LOADING, AUDIO-007 subtitles).
-3. **Gameplay left**: wasp cameras (GAME-WASP), hit particles
-   (PHYS-011), grip per surface (PHYS-008), one save slot (GAME-011).
-4. **World look**: particles (P3D-001), lights (P3D-002), lightmaps (RENDER-014/015), fog
-   (LEVEL-FOG), sun halo (RENDER-011).
-5. **Scale**: LEVEL-STREAM, then culling (RENDER-008).
+3. **Gameplay left**: the `AnimDynamicPhysics` props' bodies (PHYS-011), one save slot
+   (GAME-011).
+4. **World look**: particles' emission rate (P3D-001: what `NUM` and `RAT` are, then a
+   wrecked car's smoke), lights (P3D-002), lightmaps (RENDER-014/015), fog (LEVEL-FOG),
+   sun halo (RENDER-011).
+5. **Scale**: LEVEL-STREAM, then the spatial tree (RENDER-008b; the frustum culling is
+   done).
 6. **Debt** (in parallel): GAME-001b..e, CI and tests (TOOL-007/010).
 
 ---
