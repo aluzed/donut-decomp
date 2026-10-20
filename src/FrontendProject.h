@@ -54,6 +54,9 @@ public:
 	void SetSpriteBox(const std::string& name, float x, float y, float width, float height);
 	// Drawn last, over the others: a slider's knob over its bar.
 	void BringSpriteToFront(const std::string& name);
+	// Its texts shrunk to their boxes' height too, not only their width: the
+	// keyboard page's, 15 high, in a font twice that.
+	void SetTextsFitHeight(bool fit) { _fitHeight = fit; }
 	// Shows `texture` in a sprite's place, filling its box (the loading
 	// screen's level picture, which the page leaves blank).
 	void SetSpriteTexture(const std::string& name, Texture* texture);
@@ -64,6 +67,7 @@ public:
 	// The page's 640 x 480 on the screen: as large as it fits, centred. Kept
 	// from the last draw, for the mouse.
 	mutable float _scale = 2.0f;
+	bool _fitHeight = false;
 	mutable Vector2 _offset = Vector2::Zero;
 
 private:

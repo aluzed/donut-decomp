@@ -439,7 +439,9 @@ void FrontendProject::Draw(const Matrix4x4& proj)
 		// Shrunk to fit its box, as the game's are: "RESUME GAME" is wider in
 		// its font than the main menu's box between the arrows.
 		const float natural = text.font->MeasureWidth(value);
-		const float scale = natural > text.width && text.width > 0 ? text.width / natural : 1.0f;
+		float scale = natural > text.width && text.width > 0 ? text.width / natural : 1.0f;
+		if (_fitHeight && text.height > 0 && text.font->GetHeight() * scale > text.height)
+			scale = text.height / text.font->GetHeight();
 		const float width = natural * scale;
 		const float height = text.font->GetHeight() * scale;
 		float x = static_cast<float>(text.x);

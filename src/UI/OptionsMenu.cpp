@@ -6,6 +6,8 @@
 #include "FrontendProject.h"
 #include "Game.h"
 #include "Game/GameInput.h"
+#include "Input/Input.h"
+#include "Input/Keymap.h"
 #include "UI/TextBible.h"
 
 #include <fmt/format.h>
@@ -37,6 +39,27 @@ constexpr Slider kSliders[] = {
     {"Engine", "vehicle", AudioManager::Channel::Engine},
     {"Voice", "voice", AudioManager::Channel::Voice},
 };
+
+// The keyboard page's rows, top to bottom, and the action each sets; Count:
+// none here (first person, attack, the camera's zoom, resetting the car), and
+// jumping is the action key's. Moving and driving are the same actions.
+constexpr GameAction kKeyRows[] = {
+    GameAction::MoveForward, GameAction::MoveBackward, GameAction::MoveLeft,     GameAction::MoveRight,
+    GameAction::Count,       GameAction::Count,        GameAction::Count,        GameAction::Boost,
+    GameAction::Interact,    GameAction::Count,        GameAction::MoveForward,  GameAction::MoveBackward,
+    GameAction::Honk,        GameAction::Count,
+};
+constexpr int kKeyRowCount = static_cast<int>(std::size(kKeyRows));
+
+// An action's keys (keyboard and mouse), in the order bound.
+std::vector<InputSource> keysOf(GameAction action)
+{
+	std::vector<InputSource> keys;
+	for (const InputSource& source : Input::GetKeymap()[static_cast<std::size_t>(action)])
+		if (source.kind == InputSourceKind::Key)
+			keys.push_back(source);
+	return keys;
+}
 
 bool inside(const FrontendProject& page, const std::string& name, int mouseX, int mouseY, float* along = nullptr)
 {
@@ -101,6 +124,9 @@ OptionsMenu::OptionsMenu(AudioManager& audio, SDL_Window* window, std::function<
 		if (_display->GetSpriteBox(arrow, x, y, w, h))
 			_display->SetSpriteBox(arrow, x, y, w, h);
 	}
+	_keys = std::make_unique<FrontendProject>();
+	_keys->LoadP3D(kFrontend, "PCKeyboardConfig.pag");
+	_keys->SetTextsFitHeight(true);
 	const std::string& accept = Game::GetInstance().GetTextBible().Get("ACCEPT");
 	_display->SetText("ApplyChanges", accept.empty() ? "Accept" : accept);
 	// Stereo, which is what OpenAL is given.
@@ -187,7 +213,7 @@ void OptionsMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 
 	if (_screen == Screen::Options)
 	{
-		const std::vector<Entry> entries = {{"Controller", false},
+		const std::vector<Entry> entries = {{"Controller", true},
 		                                    {"Sound", true},
 		                                    {"ViewMovies", false},
 		                                    {"ViewCredits", !_fromPause && _viewCredits != nullptr},
@@ -209,6 +235,13 @@ void OptionsMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 		{
 			_screen = Screen::Sound;
 			_choice = 0;
+			_shown = false;
+		}
+		else if (chosen == "Controller")
+		{
+			_screen = Screen::Keys;
+			_choice = 0;
+			_column = 0;
 			_shown = false;
 		}
 		else if (chosen == "Display")
@@ -233,6 +266,11 @@ void OptionsMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 		return;
 	}
 
+	if (_screen == Screen::Keys)
+	{
+		drawKeys(intent, proj, back, confirm, rightPressed ? 1 : leftPressed ? -1 : 0);
+		return;
+	}
 	if (_screen == Screen::Display)
 	{
 		drawDisplay(intent, proj, back, confirm, rightPressed ? 1 : leftPressed ? -1 : 0);
@@ -336,6 +374,124 @@ void OptionsMenu::drawDisplay(const GameIntent& intent, const Matrix4x4& proj, b
 		_choice = 4;
 		_shown = false;
 	}
+}
+
+void OptionsMenu::drawKeys(const GameIntent& intent, const Matrix4x4& proj, bool back, bool confirm, int by)
+{
+	const auto cell = [](int column, int row) { return fmt::format("Map{}Label{:02}", column + 1, row); };
+	// A key pressed for the cell picked: it takes the cell's place among its
+	// action's keys, the action's other inputs (the pad's) kept.
+	if (_capturing)
+	{
+		InputSource captured;
+		if (Input::ConsumeCapturedInput(captured))
+		{
+			_capturing = false;
+			if (captured.kind == InputSourceKind::Key)
+			{
+				const GameAction action = kKeyRows[_choice];
+				Keymap keymap = Input::GetKeymap();
+				std::vector<InputSource> keys = keysOf(action);
+				if (_column < static_cast<int>(keys.size()))
+					keys[_column] = captured;
+				else
+					keys.push_back(captured);
+				auto& bindings = keymap[static_cast<std::size_t>(action)];
+				bindings.erase(std::remove_if(bindings.begin(), bindings.end(),
+				                              [](const InputSource& s) { return s.kind == InputSourceKind::Key; }),
+				               bindings.end());
+				bindings.insert(bindings.begin(), keys.begin(), keys.end());
+				Input::SetKeymap(keymap);
+				Input::SaveKeymap("keymap.conf");
+				Log::Info("Options: row {}, key {} bound to {}", _choice, _column + 1, KeymapConfig::HumanLabel(captured));
+			}
+			// The key that was bound does not act on the page as well.
+			_shown = false;
+		}
+		else if (!Input::IsCapturing())
+		{
+			// Escape: nothing bound.
+			_capturing = false;
+			_shown = false;
+		}
+	}
+	else
+	{
+		// Up and down pick a row, left and right a column; the mouse a cell.
+		const bool up = intent.moveForward > 0.5f, down = intent.moveBackward > 0.5f;
+		const auto step = [&](int from, int delta) {
+			int at = from;
+			for (int i = 0; i < kKeyRowCount; ++i)
+			{
+				at = (at + delta + kKeyRowCount) % kKeyRowCount;
+				if (kKeyRows[at] != GameAction::Count)
+					return at;
+			}
+			return from;
+		};
+		if (kKeyRows[_choice] == GameAction::Count)
+			_choice = step(_choice, 1);
+		if (_shown && up && !_upHeld)
+			_choice = step(_choice, -1);
+		if (_shown && down && !_downHeld)
+			_choice = step(_choice, 1);
+		_upHeld = up;
+		_downHeld = down;
+		if (_shown && by != 0)
+			_column = 1 - _column;
+		bool clicked = false;
+		const bool moved = _mouseX >= 0 && (intent.mouseX != _mouseX || intent.mouseY != _mouseY);
+		for (int row = 0; row < kKeyRowCount; ++row)
+			for (int column = 0; column < 2; ++column)
+				if (kKeyRows[row] != GameAction::Count && inside(*_keys, cell(column, row), intent.mouseX, intent.mouseY))
+				{
+					if (moved || intent.mouseLeftClick)
+						_choice = row, _column = column;
+					clicked = clicked || (_shown && intent.mouseLeftClick);
+				}
+		_mouseX = intent.mouseX;
+		_mouseY = intent.mouseY;
+		if (back)
+		{
+			_screen = Screen::Options;
+			_choice = 0;
+			_shown = false;
+			return;
+		}
+		if (_shown && (confirm || clicked))
+		{
+			Input::BeginCapture();
+			_capturing = true;
+		}
+	}
+
+	for (int row = 0; row < kKeyRowCount; ++row)
+	{
+		const std::string label = fmt::format("Label{:02}", row);
+		const bool used = kKeyRows[row] != GameAction::Count;
+		const std::vector<InputSource> keys = used ? keysOf(kKeyRows[row]) : std::vector<InputSource>();
+		if (used)
+			_keys->ResetTextColor(label);
+		else
+			_keys->SetTextColor(label, Vector4(0.5f, 0.5f, 0.5f, 1.0f));
+		for (int column = 0; column < 2; ++column)
+		{
+			const std::string name = cell(column, row);
+			const bool picked = used && row == _choice && column == _column;
+			if (picked && _capturing)
+				_keys->SetText(name, "...");
+			else if (used)
+				_keys->SetText(name, column < static_cast<int>(keys.size()) ? KeymapConfig::HumanLabel(keys[column]) : "-");
+			if (!used)
+				_keys->SetTextColor(name, Vector4(0.5f, 0.5f, 0.5f, 1.0f));
+			else if (picked)
+				_keys->SetTextColor(name, Vector4(1.0f, 0.84f, 0.0f, 1.0f));
+			else
+				_keys->ResetTextColor(name);
+		}
+	}
+	_keys->Draw(proj);
+	_shown = true;
 }
 
 void OptionsMenu::applyDisplay()

@@ -20,10 +20,12 @@ struct GameIntent;
 // from the main menu or the pause screen. The options list Controller, Sound,
 // View Movies, View Credits and Display; the sound page the volume of the
 // music, the effects, the cars and the voices, each a slider; the display page
-// (Display.pag) the window's size and whether it fills the screen. What is not
+// (Display.pag) the window's size and whether it fills the screen; Controller
+// the keys (PCKeyboardConfig.pag), two for each of the game's commands. What is not
 // done here is shown greyed and passed over.
 //
-// The volumes and the display are kept in donut_settings.dat.
+// The volumes and the display are kept in donut_settings.dat, the keys in
+// keymap.conf.
 class OptionsMenu
 {
 public:
@@ -45,6 +47,7 @@ private:
 		Options,
 		Sound,
 		Display,
+		Keys,
 	};
 	struct Entry
 	{
@@ -57,6 +60,7 @@ private:
 	std::unique_ptr<FrontendProject> _options;
 	std::unique_ptr<FrontendProject> _sound;
 	std::unique_ptr<FrontendProject> _display;
+	std::unique_ptr<FrontendProject> _keys;
 	// The screen's sizes, smallest first; the one picked and whether the game
 	// fills the screen, as the page shows them until they are accepted.
 	std::vector<std::pair<int, int>> _sizes;
@@ -78,6 +82,10 @@ private:
 	// on, or -1.
 	int pick(FrontendProject& page, const std::vector<Entry>& entries, const GameIntent& intent);
 	void colour(FrontendProject& page, const std::vector<Entry>& entries);
+	// The key cell picked waits for a key (Input's capture), or none.
+	bool _capturing = false;
+	int _column = 0;
+	void drawKeys(const GameIntent& intent, const Matrix4x4& proj, bool back, bool confirm, int by);
 	void drawDisplay(const GameIntent& intent, const Matrix4x4& proj, bool back, bool confirm, int by);
 	// The window at the size and mode kept.
 	void applyDisplay();

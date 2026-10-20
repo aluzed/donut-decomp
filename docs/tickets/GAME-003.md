@@ -143,5 +143,16 @@ size they ran off it. They are now as large as the window holds, centred
 (`FrontendProject`: the scale and offset of its last draw, for the mouse too). At the
 1280 x 960 the game opens at, nothing moves.
 
-Not done: Controller (the key bindings: `PCKeyboardConfig.pag`), View Movies (the cutscenes are not played: UI-FMV), the
+Controller opens the keyboard page (`PCKeyboardConfig.pag`): the game's fourteen
+commands, two keys each. Moving, sprinting (`Boost`), the action key (`Interact`), driving
+(the same actions as moving) and the horn show their keys from `keymap.conf`; first
+person, attack, jump (the action key's here), the camera's zoom and resetting the car
+are not the engine's, greyed. Up and down pick a row, left and right a column, the
+mouse a cell; the confirm key or a click waits for a key ("..."), which takes that
+cell's place among the action's keys (the pad's kept), saved to `keymap.conf`; Escape
+binds nothing. The page's texts are 15 high in a font twice that: they are shrunk to
+their boxes' height (`FrontendProject::SetTextsFitHeight`), on this page only. Checked
+by a screenshot; a key captured was not, there being no keyboard to press.
+
+Not done: View Movies (the cutscenes are not played: UI-FMV), the
 game settings (`GameSettings.pag`: mouse look and sensitivity).
