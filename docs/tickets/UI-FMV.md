@@ -1,10 +1,11 @@
 # UI-FMV — The game's movies
 
-- **Status:** IN PROGRESS (View Movies done; the movies in the story not yet)
+- **Status:** DONE
 - **Priority:** P3
 - **Module:** UI
 - **Files:** `src/UI/MoviePlayer.{h,cpp}`, `src/UI/OptionsMenu.cpp` (View Movies),
-  `src/Game.cpp` (`GameState::Movie`, `movieUnlocked`, `playMovie`),
+  `src/Game.cpp` (`GameState::Movie`, `playMovies`, `PlayStoryMovie`, `movieUnlocked`, the
+  gags'), `src/Scripting/ScriptEngine.cpp` (the `fmv` stage),
   `tools/extract_assets.sh` (`MOVIES/*.RMV` copied to `movies/`), `tools/fetch_deps.sh`
 
 ## The format
@@ -51,8 +52,37 @@ Checked: `FMV2` played, its clock 0.05 s behind the frames' time throughout; thr
 screenshots of it; `FMV1A` to its end, back to the page and the theme; the page with the
 save at level 7's first mission: up to Level 6 Movie open, Level 7 and Bonus greyed.
 
+## The movies in the game (2026-10-20)
+
+`Game::playMovies` plays a list of them, one after another, over the whole screen, the
+game standing still (`GameState::Movie`: no physics, no scripts) and the music off; at
+the end, back to where they were played from: the start-up's splash, View Movies (the
+show's theme), the game (the level's music back, unless the stage said `stopmusic`).
+The confirm key or Escape skips one, or, at start-up, all of them.
+
+- At start-up: the studios' logos, then the game's introduction: `RADLOGO`, `FOXLOGO`,
+  `GRACIE`, `VUGLOGO`, `INTRO`. The executable lists them in that order backwards, as it
+  does View Movies' (`fmv8` ... `intro`); that the introduction follows the logos is
+  assumed.
+- A new game: level 1's introduction (`FMV1A`) before the tutorial.
+- The `fmv` stage (`SetFMVInfo("fmv3.rmv")`): the movie, the stage over at its end
+  (levels 1, 2, 4, 5, 6 and 7; level 7's with `stopmusic`).
+- The gags: `GagPlayFMV` (the observatory's telescope, `TELE`, levels 3 and 6; Larry the
+  Looter at the Kwik-E-Mart, `LOOT`, levels 4 and 7) plays its movie in place of its
+  sound. `GagCheckMovie` (the Aztec's box office, level 3) plays the Itchy & Scratchy
+  Movie (`FMV8`) to who holds its ticket, all 49 cards found; to the others, one of the
+  clerk's refusals (`c_aztec1` to `c_aztec4`, their lines in turn). It is not a gag
+  found.
+
+None under `--autopilot` (the validation's runs, which would wait through them) nor with
+`--no-movies`; `--autostart` has no start-up.
+
+Checked: the start-up's logos in turn (Radical, then Fox, then Gracie, at 2, 6, 20 s);
+level 2's `m8sd` (`FMV3`, 55 s), the stage complete after it and the game on; the
+telescope's movie, then the game; the Aztec without the cards: refused (`aztec2`).
+
 ## Not done
 
-- The movies in the story: the `fmv` objective (`SetFMVInfo`), `SetPostLevelFMV`, the
-  gags' (`GagPlayFMV("tele.rmv")`, `GagCheckMovie`), the introduction on a new game.
-- The logos at start-up, the credits' movie.
+- The credits' movie (`CREDITS.RMV`); `SetPostLevelFMV` (commented out in every level's
+  script).
+- `GagCheckCollCards` (the Comic Book Guy's cards reward, level 3).

@@ -189,6 +189,8 @@ void ScriptEngine::beginStage(std::size_t index)
 	_hasDestination = false;
 	_talkToTarget.clear();
 	_objectiveElapsed = 0.0f;
+	_fmvFile.clear();
+	_fmvStopMusic = _fmvStarted = false;
 	_objectiveDuration = 0.0f;
 	_stageTimeRemaining = -1.0f;
 	_initialStageTime = 0.0f;
@@ -409,8 +411,16 @@ void ScriptEngine::updateObjective(double dt)
 	}
 	else if (_objectiveType == "fmv")
 	{
-		// Nothing holds the player here: no movies to sit through.
-		objectiveComplete();
+		// Its movie, over the game, which waits for it; none to play (no
+		// player or file, an unattended run), on at once.
+		if (!_fmvStarted)
+		{
+			_fmvStarted = true;
+			if (!_game.PlayStoryMovie(_fmvFile, _fmvStopMusic))
+				objectiveComplete();
+		}
+		else if (!_game.IsMoviePlaying())
+			objectiveComplete();
 	}
 	else if (_objectiveType == "timer")
 	{
@@ -531,6 +541,12 @@ void ScriptEngine::SetTalkToTarget(const std::string& npc)
 void ScriptEngine::SetDurationTime(float seconds)
 {
 	_objectiveDuration = seconds;
+}
+
+void ScriptEngine::SetFMVInfo(const std::string& file, const std::string& option)
+{
+	_fmvFile = file;
+	_fmvStopMusic = option == "stopmusic";
 }
 
 void ScriptEngine::ActivateVehicle(const std::string& name, const std::string& behaviour)
@@ -1553,6 +1569,8 @@ void ScriptEngine::AddObjective(const std::string& type, const std::string& argu
 	_hasDestination = false;
 	_talkToTarget.clear();
 	_objectiveElapsed = 0.0f;
+	_fmvFile.clear();
+	_fmvStopMusic = _fmvStarted = false;
 	_currentCheckpoint = 0;
 	_currentLap = 0;
 	_totalLaps = kDefaultRaceLaps;

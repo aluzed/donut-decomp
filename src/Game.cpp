@@ -188,6 +188,7 @@ Game::Game(int argc, char** argv)
 	//   --clean              the game alone: no debug windows, lines or skeletons
 	//   --from <k>           with --story, start at the level's k-th story mission (from 0)
 	//   --language <E|F|G|I|S>  language of the game's own text (English)
+	//   --no-movies          no movies at start-up or in the story
 	for (int i = 1; i < argc; ++i)
 	{
 		const std::string_view arg = argv[i];
@@ -208,6 +209,8 @@ Game::Game(int argc, char** argv)
 			_storyFrom = std::max(0, std::atoi(argv[++i]));
 		else if (arg == "--clean")
 			_clean = true;
+		else if (arg == "--no-movies")
+			_noMovies = true;
 		else if (arg == "--level" && i + 1 < argc)
 			_levelNumber = std::max(1, std::atoi(argv[++i]));
 		else if (arg == "--language" && i + 1 < argc)
@@ -439,6 +442,9 @@ Game::Game(int argc, char** argv)
 		if (!_story.empty())
 			startStoryMission(0);
 		_gameState = GameState::InGame;
+		// Level 1's introduction (FMV1A) before its first mission.
+		if (!_noMovies && !_autopilot)
+			playMovies({"FMV1A.RMV"}, GameState::InGame);
 	});
 	// Any level the scripts were copied for, from its story's start.
 	for (int level = 2; level <= 7; ++level)
@@ -469,6 +475,10 @@ Game::Game(int argc, char** argv)
 	    },
 	    movies ? std::function<bool(int)>([this](int movie) { return movieUnlocked(movie); }) : nullptr,
 	    movies ? std::function<void(int)>([this](int movie) { playMovie(movie); }) : nullptr);
+	// At start-up, as the game: the studios' logos, then its introduction;
+	// a key skips them all.
+	if (_gameState == GameState::Splash && !_noMovies)
+		playMovies({"RADLOGO.RMV", "FOXLOGO.RMV", "GRACIE.RMV", "VUGLOGO.RMV", "INTRO.RMV"}, GameState::Splash, true);
 	_scrapBook = std::make_unique<ScrapBookMenu>([this](const std::string& file) { return presentationPicture(file); });
 	if (_scrapBook->IsLoaded())
 	{
@@ -1086,30 +1096,74 @@ bool Game::movieUnlocked(int movie)
 
 void Game::playMovie(int movie)
 {
-	if (movie < 0 || movie >= static_cast<int>(std::size(kMovieFiles)))
-		return;
-	// Its soundtrack in the game's language: English, French, German,
-	// Spanish.
+	if (movie >= 0 && movie < static_cast<int>(std::size(kMovieFiles)))
+		playMovies({fmt::format("{}.RMV", kMovieFiles[movie])}, GameState::MainMenu);
+}
+
+bool Game::PlayStoryMovie(const std::string& file, bool stopMusic)
+{
+	if (_noMovies || _autopilot || !playMovies({file}, GameState::InGame))
+		return false;
+	_moviesStopMusic = stopMusic;
+	return true;
+}
+
+bool Game::IsMoviePlaying() const
+{
+	return _gameState == GameState::Movie;
+}
+
+bool Game::playMovies(std::vector<std::string> files, GameState after, bool skipTogether)
+{
+	// The first that opens: its soundtrack in the game's language
+	// (English, French, German, Spanish), at the music's volume. The
+	// scripts' names are lower case, the CDs' upper.
+	if (!_moviePlayer)
+		return false;
 	const int track = _language == 'F' ? 1 : _language == 'G' || _language == 'D' ? 2 : _language == 'S' ? 3 : 0;
-	const std::string path = fmt::format("movies/{}.RMV", kMovieFiles[movie]);
-	if (!_moviePlayer->Open(path, track, _audioManager->GetChannelVolume(AudioManager::Channel::Music)))
-		return;
-	_audioManager->StopMusic();
-	_gameState = GameState::Movie;
+	while (!files.empty())
+	{
+		std::string upper = files.front();
+		std::transform(upper.begin(), upper.end(), upper.begin(), [](unsigned char c) { return std::toupper(c); });
+		files.erase(files.begin());
+		const std::string path = "movies/" + upper;
+		if (!FileSystem::exists(path) ||
+		    !_moviePlayer->Open(path, track, _audioManager->GetChannelVolume(AudioManager::Channel::Music)))
+			continue;
+		if (_gameState != GameState::Movie)
+		{
+			_afterMovies = after;
+			_moviesSkipTogether = skipTogether;
+			_moviesStopMusic = false;
+			_audioManager->StopMusic();
+			_gameState = GameState::Movie;
+		}
+		_moviesNext = std::move(files);
+		return true;
+	}
+	return false;
 }
 
 void Game::drawMovie(const GameIntent& intent, const Matrix4x4& proj, double dt, int width, int height)
 {
 	_moviePlayer->Update(dt);
 	_moviePlayer->Draw(proj, width, height);
-	// Over at its end, or skipped; not on the frame it begins. Back to View
-	// Movies, the show's theme with it.
-	if (!_moviePlayer->IsPlaying() || (_moviePlayer->GetTime() > 0.5 && (intent.uiConfirm || intent.pauseToggle)))
-	{
-		_moviePlayer->Stop();
-		_gameState = GameState::MainMenu;
+	// Over at its end, or skipped (not on the frame it begins): the next, or
+	// back to where it was played from. To View Movies with the show's
+	// theme; to the game with the level's music, unless the movie stopped it.
+	const bool skipped = _moviePlayer->GetTime() > 0.5 && (intent.uiConfirm || intent.pauseToggle);
+	if (_moviePlayer->IsPlaying() && !skipped)
+		return;
+	_moviePlayer->Stop();
+	if (skipped && _moviesSkipTogether)
+		_moviesNext.clear();
+	if (!_moviesNext.empty() && playMovies(std::move(_moviesNext), _afterMovies, _moviesSkipTogether))
+		return;
+	_gameState = _afterMovies;
+	if (_afterMovies == GameState::MainMenu)
 		_menuMusic = false;
-	}
+	else if (_afterMovies == GameState::InGame && !_moviesStopMusic)
+		_audioManager->ResumeMusicBase();
 }
 
 Texture* Game::presentationPicture(const std::string& path)
@@ -2581,6 +2635,7 @@ bool Game::ringDoorbell()
 void Game::loadGags()
 {
 	_gags.clear();
+	_movieGags.clear();
 	_gagsPrimed = false;
 	std::ifstream script(fmt::format("scripts/{}/level.mfk", levelDirectory()));
 	if (!script)
@@ -2588,6 +2643,7 @@ void Game::loadGags()
 	// Found in an earlier session (the save's, every level's).
 	const std::set<std::string>& found = _save.Entries("gag");
 	std::optional<Gag> gag;
+	std::string checkMovie, refusal;
 	int unplaced = 0;
 	for (std::string line; std::getline(script, line);)
 	{
@@ -2632,6 +2688,14 @@ void Game::loadGags()
 			gag->cycle = args[0];
 		else if (command == "GagSetCameraShake")
 			gag->shakes = true;
+		else if (command == "GagPlayFMV" && !args.empty())
+			gag->movie = args[0];
+		else if (command == "GagCheckMovie" && args.size() >= 4)
+		{
+			// (char1, char2, fmv, reject).
+			checkMovie = args[2];
+			refusal = args[3];
+		}
 		else if (command == "GagSetCoins" && !args.empty())
 			gag->coins = std::atoi(args[0].c_str());
 		else if (command == "GagSetTrigger" && args.size() == 3)
@@ -2654,6 +2718,10 @@ void Game::loadGags()
 		}
 		else if (command == "GagEnd")
 		{
+			if (gag->sound.empty() && !checkMovie.empty() && gag->position != Vector3::Zero)
+				_movieGags.push_back({gag->position, gag->radius, checkMovie, refusal});
+			checkMovie.clear();
+			refusal.clear();
 			if (!gag->sound.empty())
 			{
 				// A model of its own: an animated one is posed gag by gag.
@@ -2706,7 +2774,9 @@ void Game::playGag(Gag& gag)
 		if (parent != "french" && parent != "german" && parent != "spanish" && (rest[0] == '.' || numbered))
 			sounds.push_back(sound);
 	}
-	if (!sounds.empty())
+	// Its movie, if it has one, in place of its sound.
+	const bool movie = !gag.movie.empty() && PlayStoryMovie(gag.movie, false);
+	if (!sounds.empty() && !movie)
 		_audioManager->QueueDialogue(sounds[static_cast<std::size_t>(rand()) % sounds.size()],
 		                             AudioManager::DialoguePriority::Gameplay);
 	gag.lastPlayed = _elapsedSeconds;
@@ -2800,7 +2870,36 @@ bool Game::useGag()
 			playGag(gag);
 			return true;
 		}
+	for (const auto& gag : _movieGags)
+		if ((gag.position - me).Length() < gag.radius + 1.0f)
+		{
+			useMovieGag(gag);
+			return true;
+		}
 	return false;
+}
+
+void Game::useMovieGag(const MovieGag& gag)
+{
+	if (_save.Entries("card").size() >= 49 && PlayStoryMovie(gag.movie, false))
+		return;
+	// One of the refusals (c_aztec1 to c_aztec4), its lines in turn.
+	std::map<std::string, std::vector<std::pair<int, std::string>>> refusals;
+	for (const auto& sound : _audioManager->FindSounds("\\c_" + gag.refusal))
+	{
+		const std::size_t at = sound.find("\\c_" + gag.refusal) + 3;
+		const std::size_t line = sound.find('_', at);
+		if (line == std::string::npos)
+			continue;
+		refusals[sound.substr(at, line - at)].emplace_back(std::atoi(sound.c_str() + line + 1), sound);
+	}
+	if (refusals.empty())
+		return;
+	auto picked = std::next(refusals.begin(), rand() % static_cast<int>(refusals.size()));
+	std::sort(picked->second.begin(), picked->second.end());
+	for (const auto& [n, sound] : picked->second)
+		_audioManager->QueueDialogue(sound, AudioManager::DialoguePriority::Gameplay);
+	Log::Info("Game: no ticket for '{}', refused ({})", gag.movie, picked->first);
 }
 
 void Game::updateCarSmoke(double dt)
@@ -3404,7 +3503,7 @@ void Game::Run()
 
 		// Pause has to stop the world, not just hide it: this used to keep running
 		// every frame while paused, so physics and scripts ticked behind the overlay.
-		const bool simulate = _gameState != GameState::Paused;
+		const bool simulate = _gameState != GameState::Paused && _gameState != GameState::Movie;
 
 		if (simulate)
 		{
@@ -4534,7 +4633,8 @@ void Game::Run()
 
 		// The main menu has the show's theme (music02.rcf), the level's music
 		// back after it.
-		if ((_gameState == GameState::MainMenu || _gameState == GameState::Movie) != _menuMusic)
+		if ((_gameState == GameState::MainMenu || (_gameState == GameState::Movie && _afterMovies == GameState::MainMenu)) !=
+		    _menuMusic)
 		{
 			_menuMusic = !_menuMusic;
 			static const std::string kTheme = "sound\\music\\simpsons_theme.rsd";

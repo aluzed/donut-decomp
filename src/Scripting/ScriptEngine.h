@@ -157,6 +157,9 @@ public:
 	void SetPickupTarget(const std::string& prop);
 	void SetTalkToTarget(const std::string& npc);
 	void SetDurationTime(float seconds);
+	// The "fmv" stage's movie ("fmv2.rmv"), and whether the music stays off
+	// after it ("stopmusic").
+	void SetFMVInfo(const std::string& file, const std::string& option);
 	// Brings a car declared earlier into this stage's action ("race", "evade",
 	// "target" race against the player).
 	void ActivateVehicle(const std::string& name, const std::string& behaviour);
@@ -306,6 +309,8 @@ private:
 	std::map<std::string, Vector3> _npcPositions;
 	float _objectiveElapsed = 0.0f;
 	float _objectiveDuration = 0.0f;
+	std::string _fmvFile;
+	bool _fmvStopMusic = false, _fmvStarted = false;
 	bool _announceStageComplete = false;
 	// The interior an "interior" objective asks the player into.
 	std::string _interiorTarget;

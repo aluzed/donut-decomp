@@ -149,6 +149,11 @@ public:
 	int SkinPrice(const std::string& skin) const { return rewardPrice(skin, "skin"); }
 	// Buys outfit `skin` ("m_prison") like a car, and the player wears it.
 	bool BuySkin(const std::string& skin);
+	// A movie of the story's (SetFMVInfo's "fmv2.rmv"), over the game, which
+	// waits for it; the level's music back after it, unless `stopMusic`.
+	// False if none plays: no player, no file, an unattended run.
+	bool PlayStoryMovie(const std::string& file, bool stopMusic);
+	bool IsMoviePlaying() const;
 	// Buys `car` if the purse holds its price, and drives it from then on. True
 	// once the player owns it (--autopilot is given it).
 	bool BuyCar(const std::string& car);
@@ -240,10 +245,21 @@ private:
 	std::vector<std::string> _creditLines;
 	double _creditsTime = 0.0;
 	void drawCredits(const struct GameIntent& intent, const Matrix4x4& proj, double dt, int width, int height);
-	// The movies: the one playing, which may be seen (0 the introduction,
-	// 1 to 8 View Movies' Movie1 to Movie8), as worked out for the story's
-	// progress and the cards found it was worked out for.
+	// The movies: the one playing, those to play after it, whether a skip
+	// skips them too, the state they go back to, whether the music stays off
+	// after them; which may be seen (0 the introduction, 1 to 8 View Movies'
+	// Movie1 to Movie8), as worked out for the story's progress and the cards
+	// found it was worked out for.
 	std::unique_ptr<class MoviePlayer> _moviePlayer;
+	std::vector<std::string> _moviesNext;
+	bool _moviesSkipTogether = false;
+	GameState _afterMovies = GameState::MainMenu;
+	bool _moviesStopMusic = false;
+	// Plays `files` (movies/, as named in the scripts or on the CDs), one
+	// after another; false if the first cannot be.
+	bool playMovies(std::vector<std::string> files, GameState after, bool skipTogether = false);
+	// --no-movies: none at start-up, nor in the story.
+	bool _noMovies = false;
 	std::vector<bool> _moviesUnlocked;
 	std::string _moviesUnlockedFor;
 	bool movieUnlocked(int movie);
@@ -426,11 +442,25 @@ private:
 		int coins = 0;
 		// GagSetCameraShake: the power plant's meltdown shakes the view.
 		bool shakes = false;
+		// GagPlayFMV: the observatory's telescope shows a movie ("tele.rmv").
+		std::string movie;
 		bool played = false;
 		bool inside = false;
 		double lastPlayed = -100.0;
 	};
 	std::vector<Gag> _gags;
+	// GagCheckMovie: the Aztec's box office (level 3), worked by hand, shows
+	// the Itchy & Scratchy Movie to who holds its ticket (all the cards
+	// found); to the others, the clerk's refusal (a conversation, "aztec").
+	// Not a gag found.
+	struct MovieGag
+	{
+		Vector3 position;
+		float radius = 1.0f;
+		std::string movie, refusal;
+	};
+	std::vector<MovieGag> _movieGags;
+	void useMovieGag(const MovieGag& gag);
 	// False until the first look after loading: a gag the player starts the
 	// level standing in is not walked into.
 	bool _gagsPrimed = false;

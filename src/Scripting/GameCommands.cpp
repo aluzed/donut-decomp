@@ -327,7 +327,10 @@ void GameCommands::SetDurationTime(float param0)
 {
 	Game::GetInstance().GetScriptEngine().SetDurationTime(param0);
 }
-void GameCommands::SetFMVInfo(const std::string& param0, const std::string& param1 /*= ""*/) {}
+void GameCommands::SetFMVInfo(const std::string& param0, const std::string& param1 /*= ""*/)
+{
+	Game::GetInstance().GetScriptEngine().SetFMVInfo(param0, param1);
+}
 void GameCommands::SetForcedCar(int32_t param0 /*= 0*/) {}
 void GameCommands::SwapInDefaultCar(int32_t param0 /*= 0*/) {}
 void GameCommands::SetSwapDefaultCarLocator(const std::string& param0) {}

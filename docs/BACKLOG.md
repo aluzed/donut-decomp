@@ -161,7 +161,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 |---|---|---|---|---|
 | UI-TEXT | ✅ | — | Frontend MultiText | The frontend pages' texts drawn: the text bible's phrase, the page's font, aligned and fitted to their box; the pages' images loaded from `resource/` (2026-10-20) |
 | UI-LOADING | ⬜ | P3 | Loading screen and hints | |
-| UI-FMV | 🟡 | P3 | The game's movies | Bink, decoded with FFmpeg (optional); View Movies plays them, those seen in the story open. Missing: the movies in the story (the `fmv` objective, the gags'), the logos |
+| UI-FMV | ✅ | P3 | The game's movies | Bink, decoded with FFmpeg (optional): the logos and the introduction at start-up, level 1's on a new game, the story's `fmv` stages, the gags' (telescope, Larry the Looter, the Aztec's ticket), View Movies. Not the credits' movie |
 | UI-MENU | ✅ | — | Main and pause menus, hit-testing, pause freezes the game | |
 | UI-HUD | ✅ | — | Health, Hit & Run, nitro, speedometer, coins, cards, objective, laps, timer, radar with roads | `src/UI/Hud.*` |
 | UI-LANG | ✅ | — | `--language E/F/G/I/S` for the game's own text | |
@@ -214,7 +214,7 @@ car, rewards), not through the commands.
 | SCRIPT-F | 🟡 | Hit & Run: decay and chase model read from `leveli.mfk`; `SetHitAndRunMeter`, interior decay are stubs |
 | SCRIPT-G | 🟡 | Traffic and pedestrians: models read from `leveli.mfk`; `SetMaxTraffic`, `CreatePedGroup` are stubs |
 | SCRIPT-H | 🟡 | UI: `SetPresentationBitmap` shown; `ShowHUD`, `SetFadeOut`, `SetIrisWipe` are stubs |
-| SCRIPT-I | 🟡 | Buying, dialogue, bonus missions done; FMV not (UI-FMV) |
+| SCRIPT-I | 🟡 | Buying, dialogue, bonus missions, FMV done; `GagCheckCollCards` not |
 
 ### C.3 — RENDER-008: LOD and culling
 
