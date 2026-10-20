@@ -106,7 +106,7 @@ on, which culled the 2D drawn after it; the room's draw puts it back as it was.
 The television's screen (`TVscreen.p3d`, a composite of its own) shows its static,
 running: the file's texture animation, its eight frames round and round.
 
-Not done: the sparkles.
+Not done: the scrapbook's border and sparkles (below).
 
 ## The options and the sound (2026-10-20)
 
@@ -228,3 +228,21 @@ television's outline is the television's, Homer in front). That program keeps it
 uniforms, set only when the level draws: `lightmapIntensity` left at 1 turned every
 glow black, nothing added. Checked by screenshots of the six, and of the menu's
 Resume Game, the television aglow; a screenshot at the black of the pulse shows none.
+
+## The sparkles, looked at (2026-10-20)
+
+`sparkles.p3d` (`FE_Border`, `FE_borderController`: 111 frames at 30 a second) is not
+the main menu's: its `Sparklez` transform stands at (-1.01, 1.23, -0.26), just before
+the camera's scrapbook station (frames 802-880, the camera at (-0.99, 1.54, -0.26)
+looking down at the album). Its `border` quad (`border3_m`, `BQG_borderShape`: dim to
+bright and back) is a gilt frame lying on the album's page, seen from there; its
+`sparkles` particle system (`sparklesShape22`, `scratch2_red_m`, 200 at most, 50 frames
+each) has an emitter whose `TRA` is keyed 21 times over its timeline: it runs round
+the frame. Seen drawn at the scrapbook station (the border pulsing; the sparkles a dot
+or two, not looked into further), then taken out: there is no scrapbook screen to show
+them on.
+
+For when there is: the border is a billboard quad drawn as the glows are; the particle
+system needs its emitter's offset taken along its `TRA` keys over the timeline
+(`ParticleFactory` reads the first key only, as a fixed offset), which would move any
+level emitter keyed the same way.
