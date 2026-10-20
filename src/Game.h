@@ -197,6 +197,10 @@ private:
 	// A barrel blown up against the saucer, at `blast`: sparks, dust, a shake,
 	// the explosion heard.
 	void bossBlast(const Vector3& blast, bool last);
+	// Whether no traffic car stands within a few metres of `at`; `at`, or the
+	// nearest spot beside it that is so, on the ground.
+	bool clearOfTraffic(const Vector3& at) const;
+	Vector3 clearSpotNear(const Vector3& at) const;
 	// The player's car near wrecked smokes and burns from under its hood (the
 	// effects file's car damage effect).
 	std::unique_ptr<ParticleSystem> _carSmoke;
@@ -214,6 +218,12 @@ private:
 	std::unique_ptr<FrontendProject> _mainMenuPage;
 	// The game's loading screen (backend.p3d's Loading.pag), and one frame of
 	// it drawn before a level loads.
+	// The credits: their background page, their lines, how long they have
+	// rolled.
+	std::unique_ptr<FrontendProject> _creditsPage;
+	std::vector<std::string> _creditLines;
+	double _creditsTime = 0.0;
+	void drawCredits(const struct GameIntent& intent, const Matrix4x4& proj, double dt, int width, int height);
 	std::unique_ptr<FrontendProject> _loadingPage;
 	// The game's pause screen (ingame.p3d's Pause.pag and PauseMission.pag):
 	// its entry picked, and up and down and the mouse as they were.

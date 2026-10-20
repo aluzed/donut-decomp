@@ -133,6 +133,10 @@ constexpr float kWheelSprayTilt = -0.9f;
 // under the character's middle.
 constexpr float kStride = 1.1f;
 constexpr float kFeetBelowCentre = 0.9f;
+// How fast the credits roll, pixels a second.
+constexpr float kCreditsSpeed = 60.0f;
+// How near a traffic car the autopilot may put the player's car down.
+constexpr float kTrafficClearance = 6.0f;
 // The effects file's dust of a dash.
 constexpr uint32_t kDashDust = 9;
 // The effects file's car damage effect (smoke, then fire), and the health the
@@ -349,6 +353,26 @@ Game::Game(int argc, char** argv)
 		_coins = 0;
 
 	_mainMenu = std::make_unique<GameMenu>();
+	// The credits' background (frontend.p3d's CreditsBgd.pag), over which
+	// the text bible's CREDITS_00..31 roll.
+	if (FileSystem::exists("./art/frontend/scrooby2/frontend.p3d"))
+	{
+		_creditsPage = std::make_unique<FrontendProject>();
+		_creditsPage->LoadP3D("./art/frontend/scrooby2/frontend.p3d", "CreditsBgd.pag");
+		for (int block = 0; !_textBible.Get(fmt::format("CREDITS_{:02}", block)).empty(); ++block)
+		{
+			// A line a backslash.
+			const std::string& text = _textBible.Get(fmt::format("CREDITS_{:02}", block));
+			std::size_t from = 0;
+			for (std::size_t at = text.find('\\'); ; at = text.find('\\', from))
+			{
+				_creditLines.push_back(text.substr(from, at == std::string::npos ? std::string::npos : at - from));
+				if (at == std::string::npos)
+					break;
+				from = at + 1;
+			}
+		}
+	}
 	// The game's loading screen, shown while a level loads: the fuse burning
 	// down to the dynamite, "LOADING".
 	if (FileSystem::exists("./art/frontend/scrooby2/backend.p3d"))
@@ -907,6 +931,36 @@ void Game::drawPausePage(const GameIntent& intent, const Matrix4x4& proj)
 	}
 }
 
+void Game::drawCredits(const GameIntent& intent, const Matrix4x4& proj, double dt, int width, int height)
+{
+	_creditsTime += dt;
+	_creditsPage->Draw(proj);
+	const Font* font = _resourceManager->GetFont("boulder_16");
+	if (!font)
+		return;
+	// Up from the bottom of the screen, a line at a time.
+	const float line = font->GetHeight() + 6.0f;
+	const float top = height - static_cast<float>(_creditsTime) * kCreditsSpeed;
+	SpriteBatch batch;
+	for (std::size_t i = 0; i < _creditLines.size(); ++i)
+	{
+		const float y = top + i * line;
+		if (y < -line || y > height)
+			continue;
+		const std::string& text = _creditLines[i];
+		batch.DrawText(font, text, Vector2((width - font->MeasureWidth(text)) * 0.5f, y), Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+	}
+	batch.Flush(proj);
+	// Over when the last line has gone, or skipped; not on the frame it
+	// begins.
+	const bool over = top + _creditLines.size() * line < 0.0f;
+	if (over || (_creditsTime > 0.5 && (intent.uiConfirm || intent.pauseToggle)))
+	{
+		_gameState = GameState::MainMenu;
+		_menuShown = false;
+	}
+}
+
 void Game::showLoadingScreen()
 {
 	if (!_loadingPage || !_window)
@@ -1395,7 +1449,7 @@ void Game::runAutopilot(double dt)
 	const bool ramming = objective == "destroy" || (objective == "dump" && !_scriptEngine->HasPickupsLying());
 	if (const Vehicle* quarry = _scriptEngine->GetFollowTarget(); quarry && ramming && _inVehicle && _activeVehicle)
 	{
-		const Vector3 ahead = quarry->GetPosition() + quarry->GetRotation() * Vector3::Forward * 15.0f;
+		const Vector3 ahead = clearSpotNear(quarry->GetPosition() + quarry->GetRotation() * Vector3::Forward * 15.0f);
 		Log::Info("Game: autopilot blocks '{}'", quarry->GetName());
 		_activeVehicle->Teleport(ahead, quarry->GetRotation() * Quaternion(Vector3(0.0f, 1.0f, 0.0f), 1.5708f));
 		return;
@@ -1421,12 +1475,8 @@ void Game::runAutopilot(double dt)
 			// Not on top of the traffic: put down inside a traffic car's box, the
 			// player's car was thrown out at 55 m/s and off the map, and the
 			// car being followed was lost.
-			bool clear = true;
-			if (_trafficManager && !_scriptEngine->IsTrafficSuppressed())
-				for (const auto& car : _trafficManager->GetCars())
-					clear = clear && (car.position - behind).Length() > 6.0f;
 			float ground = 0.0f;
-			if (clear && _worldPhysics->FindGroundHeight(behind, 5.0f, 5.0f, ground, true))
+			if (clearOfTraffic(behind) && _worldPhysics->FindGroundHeight(behind, 5.0f, 5.0f, ground, true))
 			{
 				grounded = true;
 				break;
@@ -1455,6 +1505,8 @@ void Game::runAutopilot(double dt)
 	Vector3 target;
 	if (!_scriptEngine->GetObjectiveTarget(target))
 		return;
+	if (_inVehicle && _activeVehicle)
+		target = clearSpotNear(target);
 	Log::Info("Game: autopilot to ({:.1f}, {:.1f}, {:.1f})", target.X, target.Y, target.Z);
 	// Something to pick up is taken where it is, at its height: level 4 m3's
 	// ketchup hangs 11m above the road, for a jump the autopilot cannot make.
@@ -1463,6 +1515,36 @@ void Game::runAutopilot(double dt)
 		_activeVehicle->Teleport(target, _activeVehicle->GetRotation(), !pickup);
 	else
 		SetPlayerPosition(target + Vector3(0.0f, 1.0f, 0.0f));
+}
+
+bool Game::clearOfTraffic(const Vector3& at) const
+{
+	if (!_trafficManager || _scriptEngine->IsTrafficSuppressed())
+		return true;
+	for (const auto& car : _trafficManager->GetCars())
+		if ((car.position - at).Length() < kTrafficClearance)
+			return false;
+	return true;
+}
+
+Vector3 Game::clearSpotNear(const Vector3& at) const
+{
+	// The autopilot's car is put down where no traffic car is: dropped inside
+	// one's box, it was thrown out at 100 m/s and more, wrecked and off the
+	// map (level 6 m1, level 3 m3). Beside it, then, a little further each
+	// time.
+	if (clearOfTraffic(at))
+		return at;
+	for (const float away : {5.0f, 8.0f, 12.0f})
+		for (const Vector3& side : {Vector3(1.0f, 0.0f, 0.0f), Vector3(-1.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, 1.0f),
+		                            Vector3(0.0f, 0.0f, -1.0f)})
+		{
+			const Vector3 spot = at + side * away;
+			float ground = 0.0f;
+			if (clearOfTraffic(spot) && _worldPhysics->FindGroundHeight(spot, 5.0f, 5.0f, ground, true))
+				return Vector3(spot.X, std::max(spot.Y, ground), spot.Z);
+		}
+	return at;
 }
 
 void Game::loadLevel()
@@ -3030,7 +3112,9 @@ void Game::Run()
 						// replay that mission, for ever.
 						Log::Info("Game: the story is over, level {} won", _levelNumber);
 						_scriptEngine->CleanupMission();
-						_gameState = GameState::MainMenu;
+						// The credits roll, then the main menu.
+						_gameState = _creditsPage ? GameState::Credits : GameState::MainMenu;
+						_creditsTime = 0.0;
 					}
 					else if (!failed && _storyIndex >= 0 && _storyIndex + 1 < static_cast<int>(_story.size()))
 					{
@@ -3731,7 +3815,8 @@ void Game::Run()
 
 		// Not under the game's own main menu page: its entry stands where the
 		// mission's objective is.
-		if (_textureFontP3D != nullptr && !(_gameState == GameState::MainMenu && _mainMenuPage))
+		if (_textureFontP3D != nullptr && !(_gameState == GameState::MainMenu && _mainMenuPage) &&
+		    !(_gameState == GameState::Credits && _creditsPage))
 		{
 			auto font = _resourceManager->GetFont("boulder_16");
 			const bool pad = intent.gamepadConnected;
@@ -4012,6 +4097,8 @@ void Game::Run()
 			}
 		}
 
+		if (_gameState == GameState::Credits && _creditsPage)
+			drawCredits(intent, proj, deltaTime, viewportWidth, viewportHeight);
 		if (_gameState == GameState::MainMenu && _mainMenuPage && !_mainMenu->GetButtons().empty())
 			drawMainMenuPage(intent, proj);
 		else if (_gameState == GameState::MainMenu)

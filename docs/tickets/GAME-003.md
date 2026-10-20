@@ -70,3 +70,26 @@ when the screen opened picks nothing. The HUD is not drawn under it.
 **Polygons** (`FrontendPolygon`, 0x18009) are drawn, as the rectangle their points span
 in their first colour: the pause screen's overlay, the loading screen's background and
 fuse.
+
+## The credits (2026-10-20)
+
+The story over (level 7's last mission won), the credits roll before the main menu: the
+`Credits` state, entered at last. Over the game's background page (`CreditsBgd.pag`, a
+black polygon) the text bible's `CREDITS_00` to `CREDITS_31` roll up from the bottom, a
+line at each backslash, centred, at 60 pixels a second -- "The Simpsons Hit & Run",
+"Vivendi Universal Games", "Producer", "John Melchior"... -- until the last has gone,
+or the confirm key skips them. Checked by forcing the state: the roll, black behind.
+
+Not done: the credits' own layout (`ViewCredits.pag`: its lines' groups and styles),
+the music under them.
+
+## The living room behind the menu, tried (2026-10-20)
+
+The 3D frontend (`3dFE.pag`) is the Simpsons' living room: `resource/pure3d/camset.p3d`
+holds 190 meshes, a scene graph placing 187 of them, and the camera `FE_Camera` (at
+2.9, 2.1, 4.6, looking at the television, 1.07 radians wide, 0.1 to 100 m), animated by
+`FE_CameraController`; Homer, the TV screen, the race car and the glows are files of
+their own. Drawn after the 2D pass with the world program, its own view and projection,
+the room stayed black although the television's centre projected well inside the screen
+(0.41, -0.09). Not found why; left out. Learnt on the way: a two-sided mesh's draw turns
+face culling back on, which culls the 2D drawn after it.
