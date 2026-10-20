@@ -139,8 +139,10 @@ constexpr float kCreditsSpeed = 60.0f;
 // How far above the ground something to pick up must be for the autopilot to
 // put the car down at its height rather than on the ground.
 constexpr float kHighPickup = 3.0f;
-// How near a traffic car the autopilot may put the player's car down.
+// How near a traffic car, and a mission's car, the autopilot may put the
+// player's car down: beside a car, still within reach of what lies by it.
 constexpr float kTrafficClearance = 6.0f;
+constexpr float kVehicleClearance = 3.0f;
 // The effects file's dust of a dash.
 constexpr uint32_t kDashDust = 9;
 // The effects file's car damage effect (smoke, then fire), and the health the
@@ -1575,6 +1577,12 @@ void Game::runAutopilot(double dt)
 
 bool Game::clearOfTraffic(const Vector3& at) const
 {
+	// The mission's cars too, but the player's own: a truck rammed to a stop
+	// stood where what it dropped lay, and the car put down on it was thrown
+	// off, every time, until the stage ran out (level 4 m1).
+	for (const auto& vehicle : _scriptEngine->GetMissionVehicles())
+		if (vehicle.get() != _activeVehicle && (vehicle->GetPosition() - at).Length() < kVehicleClearance)
+			return false;
 	if (!_trafficManager || _scriptEngine->IsTrafficSuppressed())
 		return true;
 	for (const auto& car : _trafficManager->GetCars())
@@ -1591,7 +1599,7 @@ Vector3 Game::clearSpotNear(const Vector3& at) const
 	// time.
 	if (clearOfTraffic(at))
 		return at;
-	for (const float away : {5.0f, 8.0f, 12.0f})
+	for (const float away : {3.0f, 5.0f, 8.0f, 12.0f})
 		for (const Vector3& side : {Vector3(1.0f, 0.0f, 0.0f), Vector3(-1.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, 1.0f),
 		                            Vector3(0.0f, 0.0f, -1.0f)})
 		{

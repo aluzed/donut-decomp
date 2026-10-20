@@ -5,6 +5,7 @@
 #include "Game.h"
 #include "P3D/P3D.generated.h"
 #include "P3D/P3DFile.h"
+#include "Render/CompositeModel.h"
 #include "Render/Mesh.h"
 #include "Render/OpenGL/ShaderProgram.h"
 #include "ResourceManager.h"
@@ -66,8 +67,17 @@ LivingRoom::LivingRoom(const std::string& file)
 	for (std::size_t i = 0; i < drawables.size(); ++i)
 		if (const auto mesh = _meshes.find(drawables[i]->GetDrawableName()); mesh != _meshes.end())
 			_placed.push_back({mesh->second.get(), transforms[i]});
-	Log::Info("LivingRoom: {} meshes placed of {}, camera at {} fov {:.2f}", _placed.size(), _meshes.size(),
-	          _eye.ToString(), _fov);
+	// The television's screen and the race car, beside it.
+	const std::string directory = file.substr(0, file.find_last_of('/') + 1);
+	for (const char* model : {"TVscreen.p3d", "racecar.p3d"})
+		if (auto loaded = CompositeModel::LoadP3D(directory + model))
+		{
+			if (loaded->IsAnimated())
+				loaded->Pose(0.0f, false);
+			_models.push_back(std::move(loaded));
+		}
+	Log::Info("LivingRoom: {} meshes placed of {}, {} models, camera at {} fov {:.2f}", _placed.size(), _meshes.size(),
+	          _models.size(), _eye.ToString(), _fov);
 }
 
 LivingRoom::~LivingRoom() = default;
@@ -110,6 +120,8 @@ void LivingRoom::Draw(GL::ShaderProgram& worldShader, float aspect)
 			worldShader.SetUniformValue("viewProj", viewProj * placed.transform);
 			placed.mesh->Draw(worldShader, opaque);
 		}
+		for (const auto& model : _models)
+			model->Draw(worldShader, viewProj, model->GetTransform(), opaque);
 	}
 	glDisable(GL_DEPTH_TEST);
 	if (culling)

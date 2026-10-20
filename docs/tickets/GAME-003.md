@@ -103,6 +103,8 @@ without one was drawn with no indices at all. They are drawn in order now
 (`Mesh::CreateMeshBuffers`). On the way: a two-sided mesh's draw turns face culling back
 on, which culled the 2D drawn after it; the room's draw puts it back as it was.
 
+The television's screen (`TVscreen.p3d`, a composite of its own) shows its static.
+
 Not done: the camera's animation (`FE_CameraController`: it moves as the menu turns),
-Homer on the couch, the television's screen, the glows and the sparkles (files of their
-own).
+Homer on the couch, the race car going round (`racecar.p3d` is loaded, not seen: its
+animation is not played), the screen's own animation, the glows and the sparkles.

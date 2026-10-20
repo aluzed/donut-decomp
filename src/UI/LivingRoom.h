@@ -11,6 +11,7 @@
 namespace Donut
 {
 
+class CompositeModel;
 class Mesh;
 namespace GL
 {
@@ -40,6 +41,9 @@ private:
 		Matrix4x4 transform;
 	};
 	std::vector<Placed> _placed;
+	// The models beside the room (the television's screen, the race car on
+	// the rug), each where its own skeleton puts it.
+	std::vector<std::unique_ptr<CompositeModel>> _models;
 	Vector3 _eye, _forward = Vector3(0.0f, 0.0f, 1.0f), _up = Vector3(0.0f, 1.0f, 0.0f);
 	float _fov = 1.0f, _near = 0.1f, _far = 1000.0f;
 };
