@@ -106,8 +106,7 @@ on, which culled the 2D drawn after it; the room's draw puts it back as it was.
 The television's screen (`TVscreen.p3d`, a composite of its own) shows its static,
 running: the file's texture animation, its eight frames round and round.
 
-Not done: the camera's animation (`FE_CameraController`: it moves as the menu turns),
-Homer on the couch, the glows and the sparkles.
+Not done: Homer on the couch, the glows and the sparkles.
 
 ## The options and the sound (2026-10-20)
 
@@ -172,3 +171,29 @@ On the way: the car's mesh is `f1_polySurfaceShape1`, as is one of `camset.p3d`'
 and the one loaded last replaced the other in the room's meshes; a file's meshes now go
 by a prefix ("racecar/"). Checked by screenshots at 3, 3.5 and 4 s: the car on the right
 loop, coming out of it, on the top straight, along the track each time.
+
+## The living room's camera (2026-10-20)
+
+The camera flies about the room as the menus open. `camset.p3d`'s `FE_CameraController`
+(1036 frames at 30 a second, 21 animations) moves it by two of them: `STRN_CAM`, where it
+is, and `STRN_CAM_INTEREST1`, what it looks at (both world positions, nearly a key a
+frame). Sampled every 5 frames and seen frame by frame, the flight is a string of round
+trips of 60 frames, each out from a hub to an object and back the same way:
+
+- from the room's view (2.89, 2.13, 4.57), held at 260-321 and 380-460: to the newspaper
+  (0-40, one way), the plate of donuts (80-140), the television (140-200), the VCR
+  opened (200-260), the scrapbook (321-380), the couch (741-800), the race track (880-910,
+  one way);
+- from the plate of donuts, the options' hub: to the television's screen (460-520 and
+  600-660), the game pad by the television (530-590), Krusty's radio (660-720), the wasp
+  camera on the rug (915-975), and from it to the screen (975-1035).
+
+The frames are the game code's, not in the data; which page goes to which object is read
+from what each shows. The room opens at frame 290; the options play the way to the
+donuts (80-110) and back (110-140); from there the sound page goes to the radio, the
+display page to the screen, the keyboard page to the pad, and back
+(`Game::updateLivingRoomCamera`, `LivingRoom::Play`). The camera plays the frames at 30
+a second, its position and aim interpolated between keys. Checked by screenshots: the
+room, the flight half way, the options over the donuts, the sound page over the radio.
+
+The pad (frame 560) comes out black: not looked into.

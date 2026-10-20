@@ -38,6 +38,17 @@ public:
 	// Clears the screen and draws the room with the world program, for a
 	// viewport of that aspect.
 	void Draw(GL::ShaderProgram& worldShader, float aspect, double dt);
+	// The camera's flight (camset.p3d's FE_CameraController, 1036 frames at
+	// 30 a second): where it is, and where it is going, played forwards or
+	// backwards at that rate until it is there.
+	void JumpTo(float frame) { _cameraFrame = _cameraTarget = frame; }
+	// Plays the flight from one frame to another, at its rate.
+	void Play(float from, float to)
+	{
+		_cameraFrame = from;
+		_cameraTarget = to;
+	}
+	float GetCameraFrame() const { return _cameraFrame; }
 
 private:
 	std::map<std::string, std::unique_ptr<Mesh>> _meshes;
@@ -77,6 +88,16 @@ private:
 	// and the texture each shows now.
 	std::vector<std::pair<TextureAnimation, std::string>> _textureAnimations;
 	double _time = 0.0;
+	// A key-framed position: the camera's (STRN_CAM), what it looks at
+	// (STRN_CAM_INTEREST1).
+	struct Path
+	{
+		std::vector<float> frames;
+		std::vector<Vector3> values;
+		Vector3 At(float frame) const;
+	};
+	Path _eyePath, _lookPath;
+	float _cameraFrame = 0.0f, _cameraTarget = 0.0f;
 	Vector3 _eye, _forward = Vector3(0.0f, 0.0f, 1.0f), _up = Vector3(0.0f, 1.0f, 0.0f);
 	float _fov = 1.0f, _near = 0.1f, _far = 1000.0f;
 };

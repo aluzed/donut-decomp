@@ -40,7 +40,6 @@ public:
 	// left and right move a slider, the confirm key opens, Escape goes back.
 	void Draw(const GameIntent& intent, const Matrix4x4& proj);
 
-private:
 	enum class Screen
 	{
 		Closed,
@@ -49,6 +48,10 @@ private:
 		Display,
 		Keys,
 	};
+	// The page open: the living room's camera goes to its object.
+	Screen GetScreen() const { return _screen; }
+
+private:
 	struct Entry
 	{
 		const char* name;

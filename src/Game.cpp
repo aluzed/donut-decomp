@@ -1411,6 +1411,45 @@ void Game::bossBlast(const Vector3& blast, bool last)
 	                         blast);
 }
 
+void Game::updateLivingRoomCamera()
+{
+	if (!_livingRoom || !_optionsMenu)
+		return;
+	// The room's camera flight (FE_CameraController) is a string of round
+	// trips, each 60 frames: out from the room's view, or from the options'
+	// plate of donuts, to an object, and back. A page opening plays the way
+	// out, closing it the way back.
+	struct Trip
+	{
+		OptionsMenu::Screen screen;
+		float from, to;
+	};
+	static const Trip kTrips[] = {
+	    {OptionsMenu::Screen::Options, 80.0f, 110.0f},  // the room to the donuts
+	    {OptionsMenu::Screen::Display, 460.0f, 490.0f}, // the donuts to the television's screen
+	    {OptionsMenu::Screen::Keys, 530.0f, 560.0f},    // to the game pad by the television
+	    {OptionsMenu::Screen::Sound, 660.0f, 690.0f},   // to Krusty's radio
+	};
+	const auto trip = [](OptionsMenu::Screen screen) -> const Trip* {
+		for (const Trip& t : kTrips)
+			if (t.screen == screen)
+				return &t;
+		return nullptr;
+	};
+	const OptionsMenu::Screen screen = _optionsMenu->GetScreen();
+	if (screen == _livingRoomScreen)
+		return;
+	const bool deeper = static_cast<int>(screen) > static_cast<int>(_livingRoomScreen);
+	if (const Trip* t = trip(deeper ? screen : _livingRoomScreen))
+	{
+		if (deeper)
+			_livingRoom->Play(t->from, t->to);
+		else
+			_livingRoom->Play(t->to, t->to + (t->to - t->from));
+	}
+	_livingRoomScreen = screen;
+}
+
 void Game::drawMainMenuPage(const GameIntent& intent, const Matrix4x4& proj)
 {
 	const auto& buttons = _mainMenu->GetButtons();
@@ -4224,6 +4263,7 @@ void Game::Run()
 		if (_gameState == GameState::MainMenu && _mainMenuPage && !_mainMenu->GetButtons().empty())
 		{
 			// The menu stands over the Simpsons' living room, not the level.
+			updateLivingRoomCamera();
 			if (_livingRoom && _livingRoom->IsLoaded() && _level)
 				_livingRoom->Draw(_level->GetWorldShader(), static_cast<float>(viewportWidth) / std::max(1, viewportHeight),
 				                  deltaTime);

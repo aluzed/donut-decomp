@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "UI/OptionsMenu.h"
+
 #include "Level.h"
 #include "UI/TextBible.h"
 
@@ -249,6 +251,9 @@ private:
 	bool _menuLeftHeld = false, _menuRightHeld = false;
 	bool _menuShown = false;
 	void drawMainMenuPage(const struct GameIntent& intent, const Matrix4x4& proj);
+	// The living room's camera to the object of the options page open.
+	void updateLivingRoomCamera();
+	OptionsMenu::Screen _livingRoomScreen = OptionsMenu::Screen::Closed;
 	std::unique_ptr<GL::ShaderProgram> _meshShader;
 	std::unique_ptr<SimpleMesh> _playerMesh;
 	std::unique_ptr<SimpleMesh> _carMesh;

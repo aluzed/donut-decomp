@@ -11,6 +11,7 @@
 #include "Render/SkinAnimation.h"
 #include "ResourceManager.h"
 
+#include <algorithm>
 #include <cmath>
 #include <functional>
 
@@ -121,6 +122,30 @@ LivingRoom::LivingRoom(const std::string& file)
 			_placed.push_back({mesh->second.get(), transforms[i]});
 	const std::string directory = file.substr(0, file.find_last_of('/') + 1);
 
+	// The camera's flight, from the room's file: its two paths.
+	{
+		const P3D::P3DFile p3d(file);
+		for (const auto& chunk : p3d.GetRoot().GetChildren())
+		{
+			if (!chunk->IsType(P3D::ChunkType::Animation))
+				continue;
+			const auto animation = P3D::Animation::Load(*chunk);
+			Path* path = animation->GetName() == "STRN_CAM"             ? &_eyePath
+			             : animation->GetName() == "STRN_CAM_INTEREST1" ? &_lookPath
+			                                                            : nullptr;
+			if (!path || !animation->GetGroupList() || animation->GetGroupList()->GetGroups().empty())
+				continue;
+			if (const auto* channel = animation->GetGroupList()->GetGroups()[0]->GetVector3ChannelsValue("TRAN"))
+				for (std::size_t i = 0; i < channel->GetNumFrames(); ++i)
+				{
+					path->frames.push_back(static_cast<float>(channel->GetFrames()[i]));
+					path->values.push_back(channel->GetValues()[i]);
+				}
+		}
+		// Over the main menu: the room from the door, as the game opens on it.
+		JumpTo(290.0f);
+	}
+
 	// The television's screen, beside the room.
 	if (auto loaded = CompositeModel::LoadP3D(directory + "TVscreen.p3d"))
 	{
@@ -147,9 +172,35 @@ LivingRoom::LivingRoom(const std::string& file)
 
 LivingRoom::~LivingRoom() = default;
 
+Vector3 LivingRoom::Path::At(float frame) const
+{
+	if (frames.empty())
+		return Vector3::Zero;
+	const auto next = std::upper_bound(frames.begin(), frames.end(), frame);
+	if (next == frames.begin())
+		return values.front();
+	if (next == frames.end())
+		return values.back();
+	const std::size_t i = static_cast<std::size_t>(next - frames.begin());
+	const float t = (frame - frames[i - 1]) / std::max(1e-6f, frames[i] - frames[i - 1]);
+	return values[i - 1] + (values[i] - values[i - 1]) * t;
+}
+
 void LivingRoom::Draw(GL::ShaderProgram& worldShader, float aspect, double dt)
 {
 	_time += dt;
+	// The camera along its flight, towards the frame it is sent to.
+	if (!_eyePath.frames.empty() && !_lookPath.frames.empty())
+	{
+		const float step = static_cast<float>(dt) * 30.0f;
+		if (_cameraFrame < _cameraTarget)
+			_cameraFrame = std::min(_cameraTarget, _cameraFrame + step);
+		else
+			_cameraFrame = std::max(_cameraTarget, _cameraFrame - step);
+		_eye = _eyePath.At(_cameraFrame);
+		if (const Vector3 look = _lookPath.At(_cameraFrame) - _eye; look.LengthSquared() > 1e-6f)
+			_forward = look.Normalized();
+	}
 	auto& resources = Game::GetInstance().GetResourceManager();
 	for (auto& [animation, showing] : _textureAnimations)
 	{
