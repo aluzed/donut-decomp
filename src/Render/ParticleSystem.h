@@ -71,6 +71,12 @@ public:
 		float timelineFrames = 0.0f;
 		// The emitter's.
 		Curve count, life, lifeVariance, speed, speedVariance, size, sizeVariance, gravity, alpha;
+		// How fast a sprite turns, radians a frame (SPI, either way SPIV), times
+		// SNOL over its life; and the angle it starts at: at random (RAND), the
+		// emitter's own (SPEC), or none.
+		Curve spin, spinVariance, spinOverLife;
+		bool randomAngle = false;
+		float startAngle = 0.0f;
 		Vector4 color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 		Vector3 offset = Vector3::Zero;
 		float width = 0.0f, height = 0.0f, horizontalSpread = 0.0f, verticalSpread = 0.0f;
@@ -125,6 +131,9 @@ private:
 		float size;
 		// Where it starts in its texture's frames, and what picks the next.
 		uint32_t seed = 0;
+		// How far it has turned, and how fast, radians a second.
+		float angle = 0.0f;
+		float spin = 0.0f;
 	};
 	struct Running
 	{

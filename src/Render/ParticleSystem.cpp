@@ -29,6 +29,8 @@ struct SpriteInstance
 	Vector2 size;
 	Vector4 color;
 	Vector2 uv0, uv1, uv2, uv3;
+	// Turned about its middle, radians.
+	float angle;
 };
 
 const std::array<Vector2, 4> kCorners = {Vector2(-0.5f, 0.5f), Vector2(0.5f, 0.5f), Vector2(0.5f, -0.5f),
@@ -135,8 +137,12 @@ std::unique_ptr<ParticleFactory> ParticleFactory::FromChunk(const P3D::P3DChunk&
 		emitter.frameRate = frameRate > 0.0f ? frameRate : 30.0f;
 		// How the sprites turn (SPEC, MOAL, RAND) and by how much; then their
 		// texture's frames: how they go (NONE, RAND, LIN), how many, how fast.
-		sprite.ReadString(4);
-		sprite.Read<float>();
+		const std::string angleMode = sprite.ReadString(4);
+		emitter.startAngle = sprite.Read<float>();
+		emitter.randomAngle = angleMode.rfind("RAND", 0) == 0;
+		// "MOAL" turns with the sprite's motion: not followed, upright.
+		if (angleMode.rfind("SPEC", 0) != 0)
+			emitter.startAngle = 0.0f;
 		const std::string animation = sprite.ReadString(4);
 		emitter.textureFrames = std::max<uint32_t>(1, sprite.Read<uint32_t>());
 		emitter.textureFrameRate = static_cast<float>(sprite.Read<uint32_t>());
@@ -160,6 +166,7 @@ std::unique_ptr<ParticleFactory> ParticleFactory::FromChunk(const P3D::P3DChunk&
 					emitter.alphaOverLife = curve("ALOL");
 					emitter.sizeOverLife = curve("SZOL");
 					emitter.speedOverLife = curve("SPOL");
+					emitter.spinOverLife = curve("SNOL");
 					if (const auto found = channels.colors.find("COOL"); found != channels.colors.end())
 						for (const auto& [frame, color] : found->second)
 							emitter.colorOverLife.emplace_back(frame, P3D::P3DUtil::ConvertColor(color));
@@ -175,6 +182,8 @@ std::unique_ptr<ParticleFactory> ParticleFactory::FromChunk(const P3D::P3DChunk&
 					emitter.sizeVariance = curve("SIZV");
 					emitter.gravity = curve("GRA");
 					emitter.alpha = curve("ALP");
+					emitter.spin = curve("SPI");
+					emitter.spinVariance = curve("SPIV");
 					if (const auto found = channels.vectors.find("TRA"); found != channels.vectors.end())
 						emitter.offset = found->second;
 					if (const auto found = channels.colors.find("CLR"); found != channels.colors.end() && !found->second.empty())
@@ -240,6 +249,8 @@ void ParticleSystem::Burst(int count, const Vector3& position)
 			p.life = std::max(0.1f, (e.life.At(0.0f, 30.0f) + uniform(_random, -1.0f, 1.0f) * e.lifeVariance.At(0.0f, 0.0f)) / rate);
 			p.size = std::max(0.01f, e.size.At(0.0f, 1.0f) + uniform(_random, -1.0f, 1.0f) * e.sizeVariance.At(0.0f, 0.0f));
 			p.seed = static_cast<uint32_t>(_random());
+			p.angle = e.randomAngle ? uniform(_random, 0.0f, 6.2831853f) : e.startAngle;
+			p.spin = (e.spin.At(0.0f, 0.0f) + uniform(_random, -1.0f, 1.0f) * e.spinVariance.At(0.0f, 0.0f)) * rate;
 			running.particles.push_back(p);
 		}
 	}
@@ -275,6 +286,7 @@ void ParticleSystem::Update(double dt, const Matrix4x4& placement, float timelin
 			// -6), flames rise (3). Taken per frame per frame, it threw every
 			// falling bit to the sky at hundreds of g.
 			p.velocity.Y += e.gravity.At(0.0f, 0.0f) * step;
+			p.angle += p.spin * e.spinOverLife.At(olFrame, 1.0f) * step;
 			p.position += p.velocity * (e.speedOverLife.At(olFrame, 1.0f) * step);
 		}
 		running.particles.erase(std::remove_if(running.particles.begin(), running.particles.end(),
@@ -327,6 +339,8 @@ void ParticleSystem::Update(double dt, const Matrix4x4& placement, float timelin
 			p.life = std::max(0.1f, (lifeFrames + uniform(_random, -1.0f, 1.0f) * e.lifeVariance.At(0.0f, 0.0f)) / rate);
 			p.size = std::max(0.01f, e.size.At(0.0f, 1.0f) + uniform(_random, -1.0f, 1.0f) * e.sizeVariance.At(0.0f, 0.0f));
 			p.seed = static_cast<uint32_t>(_random());
+			p.angle = e.randomAngle ? uniform(_random, 0.0f, 6.2831853f) : e.startAngle;
+			p.spin = (e.spin.At(0.0f, 0.0f) + uniform(_random, -1.0f, 1.0f) * e.spinVariance.At(0.0f, 0.0f)) * rate;
 			running.particles.push_back(p);
 		}
 	}
@@ -379,7 +393,7 @@ void ParticleSystem::Draw(GL::ShaderProgram& billboardShader)
 			const float u0 = static_cast<float>(textureFrame) / static_cast<float>(e.textureFrames);
 			const float u1 = static_cast<float>(textureFrame + 1) / static_cast<float>(e.textureFrames);
 			sprites.push_back({p.position, Vector2(size, size), color, Vector2(u0, 0.0f), Vector2(u1, 0.0f),
-			                   Vector2(u1, 1.0f), Vector2(u0, 1.0f)});
+			                   Vector2(u1, 1.0f), Vector2(u0, 1.0f), p.angle});
 		}
 
 		// The instance buffer, grown as needed and refilled every frame.
@@ -399,9 +413,10 @@ void ParticleSystem::Draw(GL::ShaderProgram& billboardShader)
 			    GL::ArrayElement(running.instances.get(), 5, 2, GL::AE_FLOAT, stride, 11 * sizeof(float), 1),
 			    GL::ArrayElement(running.instances.get(), 6, 2, GL::AE_FLOAT, stride, 13 * sizeof(float), 1),
 			    GL::ArrayElement(running.instances.get(), 7, 2, GL::AE_FLOAT, stride, 15 * sizeof(float), 1),
+			    GL::ArrayElement(running.instances.get(), 8, 1, GL::AE_FLOAT, stride, 17 * sizeof(float), 1),
 			};
 			running.binding = std::make_shared<GL::VertexBinding>();
-			running.binding->Create(layout, 8, *_indices, GL::ElementType::AE_UINT);
+			running.binding->Create(layout, 9, *_indices, GL::ElementType::AE_UINT);
 		}
 		running.instances->UpdateBuffer(sprites.data(), 0, sprites.size() * sizeof(SpriteInstance));
 
