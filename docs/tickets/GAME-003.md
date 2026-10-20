@@ -278,8 +278,8 @@ keeps every key and emits where the timeline stands (`Emitter::OffsetAt`); of th
 levels' emitters, logged as each level loaded, none other has such a path. Seen: a
 spark or two at a time, not looked into further.
 
-Not done: the missions', vehicles' and clothes' galleries (`MissionGallery.pag`,
-`VehicleGallery.pag`, `SkinGallery.pag`), greyed on the contents.
+Not done: the vehicles' and clothes' galleries (`VehicleGallery.pag`,
+`SkinGallery.pag`), greyed on the contents.
 
 ## The cards' gallery (2026-10-20)
 
@@ -305,3 +305,22 @@ quotes, each quote doubled) is undone. The small cards and the quotes' speakers 
 Checked by screenshots with a cards file of four (1-1, 1-3, 1-7, 2-1, put in for the
 run): the gallery, and the home made football, large, "Episode 8F13: Homer at Bat".
 Not shown: which level the gallery is on.
+
+## The missions' gallery (2026-10-20)
+
+Missions, on the scrapbook's contents (the contents' two open entries now picked with
+any key or the mouse), opens the missions' gallery (`MissionGallery.pag`): a level's
+eight, its m1 to m7 then its bonus mission, in two rows of four, each won its briefing
+picture (`misLL_0N.p3d` for mN, `misLL_08.p3d` the bonus mission's, as the scripts'
+`SetPresentationBitmap` have them), the locked postcard (`msnlockd.png`) for the others;
+the frame of stars about the one picked, its number ("Mission 3", "Bonus Mission") and,
+won, its title from the page's own strings (`MISSION_TITLE_L1_M3`, Office Spaced; the
+bonus mission's is `_M12`). Keys and the mouse as in the cards' gallery.
+
+A mission is won as the stats count it: before the level reached, or before the
+mission reached on it (donut_progress.dat). Level 1's m0, the tutorial, and the levels'
+m8 have no place in the gallery; the bonus missions won are not kept (GAME-011), so
+theirs stay locked. The pictures are drawn the locked postcard's size, 105 x 83, in the
+middle of their boxes (280 square, 120 apart). Checked by screenshots with the save at
+level 7's first mission: level 1's seven pictures, its bonus locked, "Mission 3"
+"Office Spaced"; level 7's eight locked.

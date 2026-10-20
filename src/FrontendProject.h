@@ -39,6 +39,9 @@ public:
 	// A text of the page, by name ("MainMenu"): shows `text` in place of its
 	// own strings; empty, its own again.
 	void SetText(const std::string& name, const std::string& text);
+	// Shows the text's own string `index` (its multi-text's), what SetText
+	// gave it gone.
+	void SetTextIndex(const std::string& name, std::size_t index);
 	// Its text in lines as wide as its box, each as high as the box: a card's
 	// description, a quote.
 	void SetTextWrapped(const std::string& name, const std::string& text);

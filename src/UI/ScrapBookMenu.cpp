@@ -18,6 +18,7 @@ namespace
 {
 constexpr const char* kFrontend = "./art/frontend/scrooby2/frontend.p3d";
 constexpr const char* kCardImages = "./art/frontend/scrooby2/resource/images/cards/";
+constexpr const char* kScrapbookImages = "./art/frontend/scrooby2/resource/images/scrapbook/";
 // A level's cards: seven found in it, of eight in the deck (the eighth its
 // bonus card, given otherwise).
 constexpr int kCardsALevel = 7, kDeckALevel = 8, kLevels = 7;
@@ -31,7 +32,7 @@ bool inside(const FrontendProject& page, const std::string& name, int mouseX, in
 }
 } // namespace
 
-ScrapBookMenu::ScrapBookMenu()
+ScrapBookMenu::ScrapBookMenu(std::function<Texture*(const std::string&)> picture): _picture(std::move(picture))
 {
 	if (!FileSystem::exists(kFrontend))
 		return;
@@ -55,6 +56,84 @@ ScrapBookMenu::ScrapBookMenu()
 		_card->SetSpriteVisible(fmt::format("Quote{}", i), false);
 	_largeCard = std::make_unique<FrontendProject>();
 	_largeCard->LoadP3D(kFrontend, "HighResCard.pag");
+	_missions = std::make_unique<FrontendProject>();
+	_missions->LoadP3D(kFrontend, "MissionGallery.pag");
+}
+
+void ScrapBookMenu::layOutMissions()
+{
+	// Each mission's picture the size of the locked one's postcard
+	// (msnlockd.png, 105 x 83), in the middle of its box: the boxes, 280
+	// square, are 120 apart.
+	Texture* locked = image(std::string(kScrapbookImages) + "msnlockd.png");
+	if (!locked)
+		return;
+	const float width = static_cast<float>(locked->GetWidth()), height = static_cast<float>(locked->GetHeight());
+	for (int i = 0; i < kDeckALevel; ++i)
+	{
+		const int mission = _missionLevel * kDeckALevel + i;
+		const std::string name = fmt::format("Mission{}", i);
+		// The briefing pictures: misLL_0N for mN, misLL_08 the bonus mission's.
+		Texture* picture = _missionsWon.count(mission) && _picture
+		                       ? _picture(fmt::format("art/frontend/dynaload/images/mis{:02}_{:02}.p3d", _missionLevel + 1, i + 1))
+		                       : nullptr;
+		_missions->SetSpriteTexture(name, picture ? picture : locked);
+		float x, y, w, h;
+		if (_missions->GetSpriteBox(name, x, y, w, h))
+		{
+			_missions->SetSpriteBox(name, x + (w - width) * 0.5f, y + (h - height) * 0.5f, width, height);
+			// The frame about the one picked, a margin of stars.
+			if (i == _missionPicked)
+				_missions->SetSpriteBox("MissionFrame", x + (w - width) * 0.5f - 8.0f, y + (h - height) * 0.5f - 8.0f,
+				                        width + 16.0f, height + 16.0f);
+		}
+	}
+	_missions->BringSpriteToFront("MissionFrame");
+	// Its number ("Mission 3", "Bonus Mission") and, won, its title.
+	_missions->SetTextIndex("MissionNum", _missionPicked);
+	if (_missionsWon.count(_missionLevel * kDeckALevel + _missionPicked))
+		_missions->SetTextIndex("MissionTitle", _missionLevel * kDeckALevel + _missionPicked);
+	else
+		_missions->SetText("MissionTitle", "?");
+}
+
+void ScrapBookMenu::drawMissions(const GameIntent& intent, const Matrix4x4& proj, bool back)
+{
+	// Two rows of four: left and right from mission to mission, past a
+	// level's last to the next level's first; up and down from row to row.
+	const bool left = intent.moveLeft > 0.5f, right = intent.moveRight > 0.5f;
+	const bool up = intent.moveForward > 0.5f, down = intent.moveBackward > 0.5f;
+	int mission = _missionLevel * kDeckALevel + _missionPicked;
+	const int all = kLevels * kDeckALevel;
+	if (_shown && left && !_leftHeld)
+		mission = (mission + all - 1) % all;
+	if (_shown && right && !_rightHeld)
+		mission = (mission + 1) % all;
+	if (_shown && ((up && !_upHeld) || (down && !_downHeld)))
+		mission += mission % kDeckALevel < 4 ? 4 : -4;
+	_leftHeld = left;
+	_rightHeld = right;
+	_upHeld = up;
+	_downHeld = down;
+	const bool moved = _mouseX >= 0 && (intent.mouseX != _mouseX || intent.mouseY != _mouseY);
+	for (int i = 0; i < kDeckALevel; ++i)
+		if ((moved || intent.mouseLeftClick) && inside(*_missions, fmt::format("Mission{}", i), intent.mouseX, intent.mouseY))
+			mission = _missionLevel * kDeckALevel + i;
+	_mouseX = intent.mouseX;
+	_mouseY = intent.mouseY;
+	if (mission != _missionLevel * kDeckALevel + _missionPicked)
+	{
+		_missionLevel = mission / kDeckALevel;
+		_missionPicked = mission % kDeckALevel;
+		layOutMissions();
+	}
+	_missions->Draw(proj);
+	_shown = true;
+	if (back)
+	{
+		_screen = Screen::Contents;
+		_shown = false;
+	}
 }
 
 Texture* ScrapBookMenu::image(const std::string& path)
@@ -139,6 +218,7 @@ void ScrapBookMenu::Open(const Stats& stats)
 	set(*_stats, "GameComplete_Value", std::nullopt);
 
 	_cardsFound = stats.cardsFound;
+	_missionsWon = stats.missionsWon;
 	set(*_contents, "StoryMissions_Unlocked", stats.storyMissions, stats.storyMissionsTotal);
 	set(*_contents, "CollectorCards_Unlocked", stats.cards);
 	set(*_contents, "CharacterClothing_Unlocked", stats.clothing);
@@ -199,19 +279,56 @@ void ScrapBookMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 		drawCard(intent, proj, back, confirm);
 		return;
 	}
+	if (_screen == Screen::Missions)
+	{
+		drawMissions(intent, proj, back);
+		return;
+	}
 	if (_screen == Screen::Contents)
 	{
-		// Of the contents, the cards are open; the missions, clothes and
-		// vehicles' galleries are not done, greyed.
-		for (const char* other : {"StoryMissions", "CharacterClothing", "Vehicles"})
+		// Of the contents, the missions and the cards are open, any key
+		// going from one to the other; the clothes and vehicles' galleries
+		// are not done, greyed.
+		static const char* const kOpen[] = {"StoryMissions", "CollectorCards"};
+		const bool left = intent.moveLeft > 0.5f, right = intent.moveRight > 0.5f;
+		const bool up = intent.moveForward > 0.5f, down = intent.moveBackward > 0.5f;
+		if (_shown && ((left && !_leftHeld) || (right && !_rightHeld) || (up && !_upHeld) || (down && !_downHeld)))
+			_contentsPicked = 1 - _contentsPicked;
+		_leftHeld = left;
+		_rightHeld = right;
+		_upHeld = up;
+		_downHeld = down;
+		bool clicked = false;
+		for (int i = 0; i < 2; ++i)
+			for (const std::string& part : {std::string(kOpen[i]), std::string(kOpen[i]) + "_Unlocked"})
+				if (inside(*_contents, part, intent.mouseX, intent.mouseY) &&
+				    (intent.mouseLeftClick || intent.mouseX != _mouseX || intent.mouseY != _mouseY))
+				{
+					_contentsPicked = i;
+					clicked = clicked || (_shown && intent.mouseLeftClick);
+				}
+		_mouseX = intent.mouseX;
+		_mouseY = intent.mouseY;
+		for (const char* other : {"CharacterClothing", "Vehicles"})
 			_contents->SetTextColor(other, kGreyed);
-		_contents->SetTextColor("CollectorCards", kPicked);
+		for (int i = 0; i < 2; ++i)
+			if (i == _contentsPicked)
+				_contents->SetTextColor(kOpen[i], kPicked);
+			else
+				_contents->ResetTextColor(kOpen[i]);
 		_contents->Draw(proj);
-		const bool clicked = _shown && intent.mouseLeftClick &&
-		                     inside(*_contents, "CollectorCards", intent.mouseX, intent.mouseY);
 		if (back)
 		{
 			_screen = Screen::Hub;
+			_shown = false;
+			return;
+		}
+		if ((confirm || clicked) && _contentsPicked == 0)
+		{
+			_screen = Screen::Missions;
+			_missionLevel = 0;
+			_missionPicked = 0;
+			layOutMissions();
 			_shown = false;
 			return;
 		}

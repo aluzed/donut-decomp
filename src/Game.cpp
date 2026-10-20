@@ -456,7 +456,7 @@ Game::Game(int argc, char** argv)
 		if (_creditsPage)
 			_audioManager->PlayMusicEvent("Credits", true);
 	});
-	_scrapBook = std::make_unique<ScrapBookMenu>();
+	_scrapBook = std::make_unique<ScrapBookMenu>([this](const std::string& file) { return presentationPicture(file); });
 	if (_scrapBook->IsLoaded())
 	{
 		const std::string& book = _textBible.Get("SCRAP_BOOK");
@@ -1475,7 +1475,12 @@ ScrapBookMenu::Stats Game::scrapBookStats() const
 				++entry;
 			// Won: on a level before the one reached, or past it in its story.
 			if (level < progress.level || (level == progress.level && entry < progress.mission))
+			{
 				++stats.storyMissions;
+				// m1 to m7 have their places in the gallery.
+				if (id.size() == 2 && id[0] == 'm' && id[1] >= '1' && id[1] <= '7')
+					stats.missionsWon.insert((level - 1) * 8 + (id[1] - '1'));
+			}
 			++entry;
 		}
 	}

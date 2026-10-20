@@ -296,6 +296,17 @@ void FrontendProject::SetText(const std::string& name, const std::string& text)
 		}
 }
 
+void FrontendProject::SetTextIndex(const std::string& name, std::size_t index)
+{
+	for (auto& entry : _texts)
+		if (entry.name == name)
+		{
+			entry.current = index;
+			entry.shown.clear();
+			entry.wrapped = false;
+		}
+}
+
 void FrontendProject::SetTextWrapped(const std::string& name, const std::string& text)
 {
 	for (auto& entry : _texts)

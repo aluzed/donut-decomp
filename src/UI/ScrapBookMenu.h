@@ -2,6 +2,7 @@
 
 #include "Core/Math/Matrix4x4.h"
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <set>
@@ -20,7 +21,8 @@ struct GameIntent;
 // (ScrapBookStats.pag). Of the galleries the contents lead to, the cards'
 // (CardGallery.pag: a level's seven, those found and those not; ViewCard.pag
 // and HighResCard.pag: one, large, with its title, episode, description and
-// quotes).
+// quotes) and the missions' (MissionGallery.pag: a level's seven and its bonus
+// mission, the picture of each won, the title of the one picked).
 class ScrapBookMenu
 {
 public:
@@ -33,10 +35,15 @@ public:
 		// the level's seven then its bonus card, level 1's first 0
 		// (CARD_TITLE_00, card00.png).
 		std::set<int> cardsFound;
+		// The story's missions won, by their place in the gallery: eight a
+		// level, m1 to m7 then the bonus mission, level 1's m1 0.
+		std::set<int> missionsWon;
 		std::optional<int> bonusMissions, streetRaces, clothing, vehicles;
 	};
 
-	ScrapBookMenu();
+	// `picture` gives a mission's briefing picture by its file
+	// ("art/frontend/dynaload/images/mis01_01.p3d"), or none.
+	explicit ScrapBookMenu(std::function<Texture*(const std::string&)> picture);
 	~ScrapBookMenu();
 
 	bool IsLoaded() const { return _hub != nullptr; }
@@ -54,11 +61,19 @@ public:
 		Stats,
 		Cards,
 		Card,
+		Missions,
 	};
 	Screen GetScreen() const { return _screen; }
 
 private:
-	std::unique_ptr<FrontendProject> _hub, _contents, _stats, _gallery, _card, _largeCard;
+	std::unique_ptr<FrontendProject> _hub, _contents, _stats, _gallery, _card, _largeCard, _missions;
+	std::function<Texture*(const std::string&)> _picture;
+	std::set<int> _missionsWon;
+	// The missions' level shown (0-6) and the one picked (0-7); the contents'
+	// entry picked (0 the missions, 1 the cards).
+	int _missionLevel = 0, _missionPicked = 0, _contentsPicked = 1;
+	void drawMissions(const GameIntent& intent, const Matrix4x4& proj, bool back);
+	void layOutMissions();
 	std::set<int> _cardsFound;
 	// The cards' level shown (0-6), and the one picked on it (0-6).
 	int _cardLevel = 0, _cardPicked = 0;
