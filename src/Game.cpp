@@ -133,6 +133,8 @@ constexpr float kWheelSprayTilt = -0.9f;
 // under the character's middle.
 constexpr float kStride = 1.1f;
 constexpr float kFeetBelowCentre = 0.9f;
+// The effects file's dust of a dash.
+constexpr uint32_t kDashDust = 9;
 // A wheel going sideways over the ground faster than this, m/s, skids and
 // marks it, black at twice that; so does one braking hard. How wide its mark.
 constexpr float kSkidSlide = 3.5f;
@@ -829,6 +831,7 @@ void Game::switchLevel(int level)
 	_sparks.reset();
 	_dust.reset();
 	_wheelSprays.clear();
+	_dashDust.reset();
 	if (_audioManager)
 		_audioManager->SetLoop("skid", "");
 	if (_skidMarks)
@@ -2569,6 +2572,7 @@ void Game::Run()
 			}
 
 			updatePlayerAnimation(deltaTime, moving, ctrl.onGround());
+			_dashKicksUpDust = moving && _playerDashing && ctrl.onGround();
 		}
 
 		// Checkpoints are reached on foot as well as at the wheel: a mission's
@@ -3452,6 +3456,16 @@ void Game::Run()
 			_sparks->Update(deltaTime, Matrix4x4::Identity);
 			_dust->Update(deltaTime, Matrix4x4::Identity);
 			updateWheelSprays(deltaTime);
+			// The dust a dash kicks up, the level's own (its effects file's type 9).
+			if (_dashKicksUpDust && !_dashDust && _level)
+				if (const ParticleFactory* dash = _level->GetHitParticleFactory(kDashDust))
+					_dashDust = std::make_unique<ParticleSystem>(*dash);
+			if (_dashDust && _character)
+				_dashDust->Update(deltaTime,
+				                  Matrix4x4::MakeTranslate(_character->GetPosition() -
+				                                           Vector3(0.0f, kFeetBelowCentre, 0.0f)) *
+				                      Matrix4x4(_character->GetRotation()),
+				                  -1.0f, _dashKicksUpDust && !_inVehicle);
 			GL::ShaderProgram& billboards = _level->GetBillboardShader();
 			billboards.Bind();
 			billboards.SetUniformValue("viewProj", viewProjection);
@@ -3463,6 +3477,8 @@ void Game::Run()
 					for (auto* system : {spray.grass.get(), spray.dirt.get()})
 						if (system)
 							system->Draw(billboards);
+			if (_dashDust)
+				_dashDust->Draw(billboards);
 			if (!blending)
 				glDisable(GL_BLEND);
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

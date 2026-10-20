@@ -65,7 +65,8 @@ on the grass or the beach's sand.
   sideways speed goes over 2 m/s for one frame at a time), there is no handbrake to
   drift on, and the AI lifts off rather than brakes. So marks come mostly from the
   player braking.
-- Effect types 9 (`dashShape`, the dust of the player's dash), 14 (`car_damage3SysShape`,
-  a damaged car's smoke and fire) and 19 (`FireSpraySysShape`) are now named, not used.
+- Effect types 14 (`car_damage3SysShape`, a damaged car's smoke and fire) and 19
+  (`FireSpraySysShape`) are now named, not used. Type 9 (`dashShape`) is: the player
+  dashing along the ground kicks up its dust, at the feet.
   A wrecked car's smoke was tried: the smoke rises from its hood well, its fire is a
   white glare (see P3D-001, what `NUM` is).

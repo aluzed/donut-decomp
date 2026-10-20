@@ -32,7 +32,7 @@ into a playable arcade racing game.
 - **Particles** (P3D-001): steam, smoke, fires, torches; the wasps' effects; sparks off a
   crash, dust under a landing; breakings (a hydrant's geyser, a tree's leaves) and what
   props shed when hit (letters, rubbish, leaves, sparks); grass and earth thrown up by a
-  car's wheels; debris falls
+  car's wheels; dust kicked up by a dash; debris falls
 - **Wasp cameras**: twenty a level, coming in as the player nears, watching, firing shots
   that can be dodged, blown up by a jump or a car
 - **Frustum culling** (RENDER-008a): meshes out of view are not drawn, tested by their

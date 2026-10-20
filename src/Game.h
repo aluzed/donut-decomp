@@ -287,6 +287,9 @@ private:
 	double _playerGestureAt = 0.0;
 	double _lastJumpAt = -100.0;
 	bool _playerDashing = false;
+	// Dashing along the ground this frame, and the dust it kicks up.
+	bool _dashKicksUpDust = false;
+	std::unique_ptr<ParticleSystem> _dashDust;
 	bool _kickedThisJump = false;
 	// Plays the player's animation `what` ("loco_run"), if the character has it.
 	bool playPlayerAnimation(const std::string& what, bool loop);
