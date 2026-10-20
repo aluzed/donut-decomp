@@ -4168,7 +4168,8 @@ void Game::Run()
 		{
 			// The menu stands over the Simpsons' living room, not the level.
 			if (_livingRoom && _livingRoom->IsLoaded() && _level)
-				_livingRoom->Draw(_level->GetWorldShader(), static_cast<float>(viewportWidth) / std::max(1, viewportHeight));
+				_livingRoom->Draw(_level->GetWorldShader(), static_cast<float>(viewportWidth) / std::max(1, viewportHeight),
+				                  deltaTime);
 			drawMainMenuPage(intent, proj);
 		}
 		else if (_gameState == GameState::MainMenu)

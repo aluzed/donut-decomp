@@ -72,6 +72,11 @@ LivingRoom::LivingRoom(const std::string& file)
 	for (const char* model : {"TVscreen.p3d", "racecar.p3d"})
 		if (auto loaded = CompositeModel::LoadP3D(directory + model))
 		{
+			const P3D::P3DFile animations(directory + model);
+			for (const auto& chunk : animations.GetRoot().GetChildren())
+				if (chunk->IsType(P3D::ChunkType::Animation))
+					if (auto animation = TextureAnimation::FromChunk(*chunk))
+						_textureAnimations.emplace_back(std::move(*animation), std::string());
 			if (loaded->IsAnimated())
 				loaded->Pose(0.0f, false);
 			_models.push_back(std::move(loaded));
@@ -82,8 +87,19 @@ LivingRoom::LivingRoom(const std::string& file)
 
 LivingRoom::~LivingRoom() = default;
 
-void LivingRoom::Draw(GL::ShaderProgram& worldShader, float aspect)
+void LivingRoom::Draw(GL::ShaderProgram& worldShader, float aspect, double dt)
 {
+	_time += dt;
+	auto& resources = Game::GetInstance().GetResourceManager();
+	for (auto& [animation, showing] : _textureAnimations)
+	{
+		if (animation.keys.empty())
+			continue;
+		const float frames = std::max(animation.frameCount, animation.keys.back().first + 1.0f);
+		const std::string& texture = animation.TextureAt(std::fmod(static_cast<float>(_time) * animation.frameRate, frames));
+		if (texture != showing && resources.ShowShaderTexture(animation.shader, texture))
+			showing = texture;
+	}
 	// The camera's view: its right, up and forward as rows (left-handed, z
 	// ahead), then where it stands.
 	Vector3 forward = _forward;
