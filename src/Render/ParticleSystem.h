@@ -38,7 +38,10 @@ class VertexBinding;
 //   spread of directions about straight up;
 //   over a particle's life (ParticleAnimation, its frames spanning the life):
 //   ALOL alpha (0-255), SZOL size, SPOL speed, as multipliers.
-// Spin, weight and drag are not used.
+// WGT weight scales the gravity (0.01, nearly every emitter's, as is; 0, dust
+// that hangs; WEOL over a particle's life: an oak's leaves float, then fall),
+// DRA drag the share of a particle's speed it keeps a second (1, most, none
+// lost; rising smoke at 0.08 slows to a drift).
 class ParticleFactory
 {
 public:
@@ -62,7 +65,7 @@ public:
 		float frameRate = 30.0f;
 		// Over a particle's life.
 		float lifeFrames = 20.0f;
-		Curve alphaOverLife, sizeOverLife, speedOverLife;
+		Curve alphaOverLife, sizeOverLife, speedOverLife, weightOverLife;
 		// Colour over a particle's life (COOL), multiplying its colour.
 		std::vector<std::pair<float, Vector4>> colorOverLife;
 		// The emission rate over the emitter's timeline (RAT), a multiplier:
@@ -70,7 +73,7 @@ public:
 		Curve rate;
 		float timelineFrames = 0.0f;
 		// The emitter's.
-		Curve count, life, lifeVariance, speed, speedVariance, size, sizeVariance, gravity, alpha;
+		Curve count, life, lifeVariance, speed, speedVariance, size, sizeVariance, gravity, alpha, weight, drag;
 		// How fast a sprite turns, radians a frame (SPI, either way SPIV), times
 		// SNOL over its life; and the angle it starts at: at random (RAND), the
 		// emitter's own (SPEC), or none.

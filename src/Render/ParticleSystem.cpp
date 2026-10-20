@@ -187,6 +187,7 @@ std::unique_ptr<ParticleFactory> ParticleFactory::FromChunk(const P3D::P3DChunk&
 					emitter.sizeOverLife = curve("SZOL");
 					emitter.speedOverLife = curve("SPOL");
 					emitter.spinOverLife = curve("SNOL");
+					emitter.weightOverLife = curve("WEOL");
 					if (const auto found = channels.colors.find("COOL"); found != channels.colors.end())
 						for (const auto& [frame, color] : found->second)
 							emitter.colorOverLife.emplace_back(frame, P3D::P3DUtil::ConvertColor(color));
@@ -201,6 +202,8 @@ std::unique_ptr<ParticleFactory> ParticleFactory::FromChunk(const P3D::P3DChunk&
 					emitter.size = curve("SIZ");
 					emitter.sizeVariance = curve("SIZV");
 					emitter.gravity = curve("GRA");
+					emitter.weight = curve("WGT");
+					emitter.drag = curve("DRA");
 					emitter.alpha = curve("ALP");
 					emitter.spin = curve("SPI");
 					emitter.spinVariance = curve("SPIV");
@@ -308,7 +311,11 @@ void ParticleSystem::Update(double dt, const Matrix4x4& placement, float timelin
 			// GRA pulls up, in m/s/s: debris fall (a crate's bits at -2, glass at
 			// -6), flames rise (3). Taken per frame per frame, it threw every
 			// falling bit to the sky at hundreds of g.
-			p.velocity.Y += e.gravity.At(0.0f, 0.0f) * step;
+			// Weighed against the usual 0.01, as it is over the particle's life;
+			// slowed to the share of its speed the drag keeps a second.
+			const float weight = e.weight.At(0.0f, 0.01f) / 0.01f * e.weightOverLife.At(olFrame, 1.0f);
+			p.velocity.Y += e.gravity.At(0.0f, 0.0f) * weight * step;
+			p.velocity = p.velocity * std::pow(std::clamp(e.drag.At(0.0f, 1.0f), 0.0f, 1.0f), step);
 			p.angle += p.spin * e.spinOverLife.At(olFrame, 1.0f) * step;
 			p.position += p.velocity * (e.speedOverLife.At(olFrame, 1.0f) * step);
 		}
