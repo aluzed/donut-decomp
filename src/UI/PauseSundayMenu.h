@@ -52,6 +52,9 @@ public:
 	// game's deck if found, else -1.
 	void Open(int level, std::vector<Mission> missions, Stats stats, std::vector<int> cards);
 	bool IsOpen() const { return _screen != Screen::Closed; }
+	// The level's end (LevelEnd: the level's counts, "LEVEL COMPLETE", on a
+	// small board): any key, or a click, calls `done`.
+	void OpenLevelEnd(int level, Stats stats, std::function<void()> done);
 	void Draw(const GameIntent& intent, const Matrix4x4& proj);
 
 private:
@@ -62,8 +65,11 @@ private:
 		MissionSelect,
 		LevelStats,
 		ViewCards,
+		LevelEnd,
 	};
-	std::unique_ptr<FrontendProject> _pause, _missionSelect, _levelStats, _viewCards;
+	std::function<void()> _levelEndDone;
+	std::unique_ptr<FrontendProject> _pause, _missionSelect, _levelStats, _viewCards, _levelEnd;
+	void setStats(FrontendProject& page, const Stats& stats);
 	Actions _actions;
 	Screen _screen = Screen::Closed;
 	int _level = 1;

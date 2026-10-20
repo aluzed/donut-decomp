@@ -4,6 +4,7 @@
 
 #include "Game/SaveGame.h"
 #include "UI/OptionsMenu.h"
+#include "UI/PauseSundayMenu.h"
 #include "UI/ScrapBookMenu.h"
 
 #include "Level.h"
@@ -38,7 +39,9 @@ enum class GameState
 	// The phone booth's car select, over the game standing still.
 	PhoneBooth,
 	// A shop (cars or clothes), likewise.
-	Shop
+	Shop,
+	// The level's end, its counts, before the next level.
+	LevelEnd
 };
 
 class Window;
@@ -292,6 +295,9 @@ private:
 	// Where Abort Mission goes: the story entry to start (the drive before a
 	// story mission, or the story where a bonus mission left it), or -1.
 	int abortTo() const;
+	// The level's counts for its progress page, its story missions won of all
+	// given.
+	PauseSundayMenu::Stats levelStats(int storyWon, int storyTotal) const;
 	// For `level`, with its picture.
 	void showLoadingScreen(int level);
 	// A mission's briefing picture, loaded once (nothing when there is none).

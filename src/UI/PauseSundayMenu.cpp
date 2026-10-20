@@ -52,6 +52,8 @@ PauseSundayMenu::PauseSundayMenu(Actions actions): _actions(std::move(actions))
 	_missionSelect = pages({"PauseBgd.pag", "BigBoard.pag", "PauseFgd.pag", "MissionSelect.pag", "Back.pag"});
 	_levelStats = pages({"PauseBgd.pag", "PauseFgd.pag", "XSmallBoard.pag", "LevelStats.pag", "Back.pag"});
 	_viewCards = pages({"PauseBgd.pag", "BigBoard.pag", "PauseFgd.pag", "PauseViewCards.pag", "Back.pag"});
+	_levelEnd = pages({"XSmallBoard.pag", "LevelStats.pag", "Accept.pag"});
+	_levelEnd->SetText("UseMissionSelect", " ");
 	// The game saves as it goes: Save Game has nothing to do.
 	_pause->SetTextColor("SaveGame", kGreyed);
 	// Mission select's numbers, one a row.
@@ -91,12 +93,29 @@ void PauseSundayMenu::Open(int level, std::vector<Mission> missions, Stats stats
 		else
 			_missionSelect->SetTextColor(fmt::format("Mission{}", i), kGreyed);
 	}
-	// Level progress: the counts, and the whole as a percentage.
-	for (const auto& [name, value] : stats.counts)
-		_levelStats->SetText(name, value);
-	_levelStats->SetText("LevelComplete_Value", fmt::format("{}%", stats.percent));
+	setStats(*_levelStats, stats);
 	_levelStats->SetTextIndex("LevelProgress", stats.percent >= 100 ? 1 : 0);
 	layOutCards();
+}
+
+void PauseSundayMenu::setStats(FrontendProject& page, const Stats& stats)
+{
+	// The counts, and the whole as a percentage.
+	for (const auto& [name, value] : stats.counts)
+		page.SetText(name, value);
+	page.SetText("LevelComplete_Value", fmt::format("{}%", stats.percent));
+}
+
+void PauseSundayMenu::OpenLevelEnd(int level, Stats stats, std::function<void()> done)
+{
+	if (!IsLoaded())
+		return;
+	_level = std::clamp(level, 1, 7);
+	setStats(*_levelEnd, stats);
+	_levelEnd->SetTextIndex("LevelProgress", 1);
+	_levelEndDone = std::move(done);
+	_screen = Screen::LevelEnd;
+	_shown = false;
 }
 
 int PauseSundayMenu::pick(FrontendProject& page, int count, const std::function<std::string(int)>& name,
@@ -146,6 +165,17 @@ void PauseSundayMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 	case Screen::Pause: drawPause(intent, proj, back, confirm); return;
 	case Screen::MissionSelect: drawMissionSelect(intent, proj, back, confirm); return;
 	case Screen::ViewCards: drawViewCards(intent, proj, back); return;
+	case Screen::LevelEnd:
+		_levelEnd->Draw(proj);
+		if (_shown && (intent.uiConfirm || intent.pauseToggle || intent.mouseLeftClick))
+		{
+			_screen = Screen::Closed;
+			if (_levelEndDone)
+				_levelEndDone();
+			return;
+		}
+		_shown = true;
+		return;
 	case Screen::LevelStats:
 		// Read, not picked from: any of the keys, or a click, goes back.
 		_levelStats->Draw(proj);

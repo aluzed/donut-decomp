@@ -532,3 +532,13 @@ Checked by screenshots with the save at level 7's first mission and a test save'
 level 1 (missions won, two cards found): the pause, the missions all checked, "18%" of
 level 1 done, the two cards and five backs; Abort from level 1's m1 back to its drive
 (story entry 3 to 2), and none from the drive.
+
+## The level's end (2026-10-21)
+
+A level's last story mission won, before the next level loads, the game's level end
+(`LevelEnd.scr`: `LevelStats.pag` on `XSmallBoard.pag`, with `Accept.pag`) over the game
+standing still (`GameState::LevelEnd`, the HUD hidden): "Level Complete", the level's
+counts as on the pause's progress page (its story missions all won), the whole as a
+percentage. Any key or a click goes on to the next level. The progress is saved first;
+under `--autopilot` there is no stop. Checked: the page with level 1's counts ("8/8",
+"11%"), and the confirm key on to level 2.

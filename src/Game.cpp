@@ -604,28 +604,8 @@ int Game::abortTo() const
 	return -1;
 }
 
-void Game::openSundayPause()
+PauseSundayMenu::Stats Game::levelStats(int storyWon, int storyTotal) const
 {
-	if (!_pauseSunday || !_pauseSunday->IsLoaded())
-		return;
-	const ScrapBookMenu::Stats book = scrapBookStats();
-	const int first = (_levelNumber - 1) * 8;
-	// m1 to m7: won or not, and where each is in the story.
-	std::vector<PauseSundayMenu::Mission> missions(7);
-	int storyWon = 0, storyTotal = 0;
-	for (int n = 1; n <= 7; ++n)
-	{
-		const std::string file = fmt::format("/m{}i.mfk", n);
-		for (int i = 0; i < static_cast<int>(_story.size()); ++i)
-			if (_story[i].size() >= file.size() && _story[i].compare(_story[i].size() - file.size(), file.size(), file) == 0)
-				missions[n - 1].story = i;
-		missions[n - 1].won = book.missionsWon.count(first + n - 1) > 0;
-		if (missions[n - 1].story >= 0)
-		{
-			++storyTotal;
-			storyWon += missions[n - 1].won;
-		}
-	}
 	// The level's counts.
 	PauseSundayMenu::Stats stats;
 	int done = 0, all = 0;
@@ -657,14 +637,11 @@ void Game::openSundayPause()
 			skins += reward.unlocked;
 			++skinsTotal;
 		}
-	std::vector<int> cards(7, -1);
+	const ScrapBookMenu::Stats book = scrapBookStats();
+	const int first = (_levelNumber - 1) * 8;
 	int cardsFound = 0;
 	for (int n = 0; n < 7; ++n)
-		if (book.cardsFound.count(first + n))
-		{
-			cards[n] = first + n;
-			++cardsFound;
-		}
+		cardsFound += book.cardsFound.count(first + n) > 0;
 	const int gagsFound = static_cast<int>(std::count_if(_gags.begin(), _gags.end(), [](const Gag& g) { return g.played; }));
 	count("StoryMissions_Unlocked", storyWon, storyTotal);
 	count("BonusMissions_Unlocked", std::min(bonus, 1), 1);
@@ -676,6 +653,36 @@ void Game::openSundayPause()
 		count("Wasps_Unlocked", _waspManager->GetDestroyed(), _waspManager->GetTotal());
 	count("Gags_Unlocked", gagsFound, static_cast<int>(_gags.size()));
 	stats.percent = all > 0 ? done * 100 / all : 0;
+	return stats;
+}
+
+void Game::openSundayPause()
+{
+	if (!_pauseSunday || !_pauseSunday->IsLoaded())
+		return;
+	const ScrapBookMenu::Stats book = scrapBookStats();
+	const int first = (_levelNumber - 1) * 8;
+	// m1 to m7: won or not, and where each is in the story.
+	std::vector<PauseSundayMenu::Mission> missions(7);
+	int storyWon = 0, storyTotal = 0;
+	for (int n = 1; n <= 7; ++n)
+	{
+		const std::string file = fmt::format("/m{}i.mfk", n);
+		for (int i = 0; i < static_cast<int>(_story.size()); ++i)
+			if (_story[i].size() >= file.size() && _story[i].compare(_story[i].size() - file.size(), file.size(), file) == 0)
+				missions[n - 1].story = i;
+		missions[n - 1].won = book.missionsWon.count(first + n - 1) > 0;
+		if (missions[n - 1].story >= 0)
+		{
+			++storyTotal;
+			storyWon += missions[n - 1].won;
+		}
+	}
+	PauseSundayMenu::Stats stats = levelStats(storyWon, storyTotal);
+	std::vector<int> cards(7, -1);
+	for (int n = 0; n < 7; ++n)
+		if (book.cardsFound.count(first + n))
+			cards[n] = first + n;
 	_pauseSunday->Open(_levelNumber, std::move(missions), std::move(stats), std::move(cards));
 }
 
@@ -3903,7 +3910,8 @@ void Game::Run()
 		// Pause has to stop the world, not just hide it: this used to keep running
 		// every frame while paused, so physics and scripts ticked behind the overlay.
 		const bool simulate = _gameState != GameState::Paused && _gameState != GameState::Movie &&
-		                      _gameState != GameState::PhoneBooth && _gameState != GameState::Shop;
+		                      _gameState != GameState::PhoneBooth && _gameState != GameState::Shop &&
+		                      _gameState != GameState::LevelEnd;
 
 		if (simulate)
 		{
@@ -4029,9 +4037,23 @@ void Game::Run()
 					if (levelWon && levelAvailable(_levelNumber + 1))
 					{
 						saveStoryProgress(_levelNumber + 1, 0);
-						switchLevel(_levelNumber + 1);
-						if (!_story.empty())
-							startStoryMission(0);
+						const auto nextLevel = [this]() {
+							switchLevel(_levelNumber + 1);
+							if (!_story.empty())
+								startStoryMission(0);
+							_gameState = GameState::InGame;
+						};
+						// The level's end: its counts, all its story won, then on.
+						if (_pauseSunday && _pauseSunday->IsLoaded() && !_autopilot)
+						{
+							int missions = 0;
+							for (const std::string& entry : _story)
+								missions += entry.size() > 7 && entry.compare(entry.size() - 7, 7, "sdi.mfk") != 0;
+							_pauseSunday->OpenLevelEnd(_levelNumber, levelStats(missions, missions), nextLevel);
+							_gameState = GameState::LevelEnd;
+						}
+						else
+							nextLevel();
 					}
 					else if (levelWon)
 					{
@@ -4766,7 +4788,7 @@ void Game::Run()
 		// mission's objective is.
 		if (_textureFontP3D != nullptr && !(_gameState == GameState::MainMenu && _mainMenuPage) &&
 		    !(_gameState == GameState::Credits && _creditsPage) && _gameState != GameState::Movie &&
-		    _scriptEngine->IsHudShown())
+		    _gameState != GameState::LevelEnd && _scriptEngine->IsHudShown())
 		{
 			auto font = _resourceManager->GetFont("boulder_16");
 			const bool pad = intent.gamepadConnected;
@@ -5197,6 +5219,8 @@ void Game::Run()
 			if (!_phoneBooth->IsOpen() && _gameState == GameState::PhoneBooth)
 				_gameState = GameState::InGame;
 		}
+		if (_gameState == GameState::LevelEnd)
+			_pauseSunday->Draw(intent, proj);
 		if (_gameState == GameState::Shop)
 		{
 			_shop->Draw(intent, proj);
