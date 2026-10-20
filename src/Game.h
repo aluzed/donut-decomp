@@ -258,6 +258,9 @@ private:
 	std::unique_ptr<SimpleMesh> _playerMesh;
 	std::unique_ptr<SimpleMesh> _carMesh;
 	std::unique_ptr<GameMenu> _mainMenu;
+	// The living room's glow for each of the main menu's entries ("tv",
+	// "homr"...), or none.
+	std::vector<std::string> _mainMenuGlows;
 	std::unique_ptr<GameMenu> _pauseMenu;
 	std::unique_ptr<class OptionsMenu> _optionsMenu;
 	std::unique_ptr<Hud> _hud;

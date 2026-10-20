@@ -106,7 +106,7 @@ on, which culled the 2D drawn after it; the room's draw puts it back as it was.
 The television's screen (`TVscreen.p3d`, a composite of its own) shows its static,
 running: the file's texture animation, its eight frames round and round.
 
-Not done: the glows and the sparkles.
+Not done: the sparkles.
 
 ## The options and the sound (2026-10-20)
 
@@ -209,3 +209,22 @@ Homer drew nothing until the room loaded them. Checked by screenshots from the r
 view, the flight to the television, and from beside the television facing him (his
 bind pose, standing, drawn too, to tell a posing fault from the pose: the pose is the
 file's). Not on the couch: the couch has its own glow, Homer his.
+
+## The glows (2026-10-20)
+
+The main menu's entry picked has its object in the room glow: `glow<name>.p3d`, a
+billboard quad each (an outline of the object, additive) where the file's scene graph
+puts it, facing the menu's camera, pulsing yellow to black and back
+(`BQG_<quad>`: 23 frames at 30 a second; its colour keys at 0, 14, 15, 16 and 22).
+`tv` is the television's outline, `homr` the newspaper's on the floor, `sofa` the
+couch's, `vcr` the VCR's, `book` the scrapbook's on top of it, `mini` the race track's.
+Resume Game has the television (the camera's trip into it), New Game and the levels the
+newspaper (`Newspaper_Spin`), Options the couch (the options' plate of donuts beside it);
+the VCR, the scrapbook and the track are the load game, scrapbook and mini game's,
+entries this menu does not have. Quit has none, nor the options' pages.
+
+Drawn with the level's billboard program after the room, over it (no depth test: the
+television's outline is the television's, Homer in front). That program keeps its own
+uniforms, set only when the level draws: `lightmapIntensity` left at 1 turned every
+glow black, nothing added. Checked by screenshots of the six, and of the menu's
+Resume Game, the television aglow; a screenshot at the black of the pulse shows none.

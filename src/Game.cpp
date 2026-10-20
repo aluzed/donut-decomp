@@ -401,6 +401,11 @@ Game::Game(int argc, char** argv)
 		_mainMenuPage = std::make_unique<FrontendProject>();
 		_mainMenuPage->LoadP3D("./art/frontend/scrooby2/frontend.p3d", "MainMenu.pag");
 	}
+	// Each entry's object in the living room glows while it is picked: the
+	// television to go back into the game, the newspaper for a new one, the
+	// couch (the options' plate of donuts beside it) for the options; the
+	// VCR, the scrapbook and the race track are the load game, scrapbook and
+	// mini game's, not here. Quitting has none.
 	// Picking up the story where it was left, when it was.
 	if (const StoryProgress progress = loadStoryProgress();
 	    (progress.level > 1 || progress.mission > 0) && levelAvailable(progress.level))
@@ -410,6 +415,7 @@ Game::Game(int argc, char** argv)
 		const std::string& resume = _textBible.Get("RESUME_GAME");
 		const std::string continueLabel = resume.empty() ? "Continue" : resume;
 		const std::string label = level.empty() ? continueLabel : continueLabel + " - " + level;
+		_mainMenuGlows.push_back("tv");
 		_mainMenu->AddButton(label, 0, 0, 200, 40, [this, progress]() {
 			if (progress.level != _levelNumber)
 				switchLevel(progress.level);
@@ -419,6 +425,7 @@ Game::Game(int argc, char** argv)
 		});
 	}
 	const std::string& newGame = _textBible.Get("NEW_GAME");
+	_mainMenuGlows.push_back("homr");
 	_mainMenu->AddButton(newGame.empty() ? "New Game" : newGame, 0, 0, 200, 40, [this]() {
 		// The story starts on level 1, whatever level is loaded.
 		if (_levelNumber != 1 && levelAvailable(1))
@@ -433,6 +440,7 @@ Game::Game(int argc, char** argv)
 		if (!levelAvailable(level))
 			continue;
 		const std::string& name = _textBible.Get(fmt::format("LEVEL_{}", level));
+		_mainMenuGlows.push_back("homr");
 		_mainMenu->AddButton(name.empty() ? fmt::format("Level {}", level) : name, 0, 0, 200, 40, [this, level]() {
 			if (_levelNumber != level)
 				switchLevel(level);
@@ -451,10 +459,12 @@ Game::Game(int argc, char** argv)
 	if (_optionsMenu->IsLoaded())
 	{
 		const std::string& options = _textBible.Get("OPTIONS");
+		_mainMenuGlows.push_back("sofa");
 		_mainMenu->AddButton(options.empty() ? "Options" : options, 0, 0, 200, 40,
 		                     [this]() { _optionsMenu->Open(false); });
 	}
 	const std::string& quitGame = _textBible.Get("QUIT_GAME");
+	_mainMenuGlows.push_back("");
 	_mainMenu->AddButton(quitGame.empty() ? "Quit" : quitGame, 0, 0, 200, 40, [this]() {
 		SDL_Event quitEvent;
 		quitEvent.type = SDL_QUIT;
@@ -1437,6 +1447,9 @@ void Game::updateLivingRoomCamera()
 		return nullptr;
 	};
 	const OptionsMenu::Screen screen = _optionsMenu->GetScreen();
+	// The options over the room: no entry of the main menu's is picked.
+	if (screen != OptionsMenu::Screen::Closed)
+		_livingRoom->SetGlow({});
 	if (screen == _livingRoomScreen)
 		return;
 	const bool deeper = static_cast<int>(screen) > static_cast<int>(_livingRoomScreen);
@@ -1472,6 +1485,8 @@ void Game::drawMainMenuPage(const GameIntent& intent, const Matrix4x4& proj)
 	// at the same place, nothing.
 	// The game's own words fit its box ("RESUME GAME"); which level it resumes
 	// ("- LEVEL 2") does not.
+	if (_livingRoom)
+		_livingRoom->SetGlow(_menuChoice < _mainMenuGlows.size() ? _mainMenuGlows[_menuChoice] : std::string());
 	const std::string& label = buttons[_menuChoice].label;
 	_mainMenuPage->SetText("MainMenu_PC", label.substr(0, label.find(" - ")));
 	_mainMenuPage->SetText("MainMenu", " ");
@@ -4265,7 +4280,7 @@ void Game::Run()
 			// The menu stands over the Simpsons' living room, not the level.
 			updateLivingRoomCamera();
 			if (_livingRoom && _livingRoom->IsLoaded() && _level)
-				_livingRoom->Draw(_level->GetWorldShader(), *_skinShaderProgram,
+				_livingRoom->Draw(_level->GetWorldShader(), *_skinShaderProgram, _level->GetBillboardShader(),
 				                  static_cast<float>(viewportWidth) / std::max(1, viewportHeight),
 				                  deltaTime);
 			if (_optionsMenu && _optionsMenu->IsOpen())

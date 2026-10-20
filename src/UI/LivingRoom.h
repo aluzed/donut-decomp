@@ -2,6 +2,7 @@
 
 #include "Core/Math/Matrix4x4.h"
 #include "Core/Math/Vector3.h"
+#include "Render/BillboardAnimation.h"
 #include "Render/TextureAnimation.h"
 
 #include <map>
@@ -12,6 +13,7 @@
 namespace Donut
 {
 
+class BillboardBatch;
 class CompositeModel;
 class Mesh;
 class SceneSkins;
@@ -37,8 +39,12 @@ public:
 
 	bool IsLoaded() const { return !_placed.empty(); }
 	// Clears the screen and draws the room with the world program, Homer with
-	// the skins', for a viewport of that aspect.
-	void Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& skinShader, float aspect, double dt);
+	// the skins', the glow with the billboards', for a viewport of that aspect.
+	void Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& skinShader, GL::ShaderProgram& billboardShader,
+	          float aspect, double dt);
+	// The glow about one of the room's objects, the main menu's entry's
+	// ("tv", "homr", "sofa", "vcr", "mini", "book": glow<name>.p3d), or none.
+	void SetGlow(const std::string& name) { _glow = name; }
 	// The camera's flight (camset.p3d's FE_CameraController, 1036 frames at
 	// 30 a second): where it is, and where it is going, played forwards or
 	// backwards at that rate until it is there.
@@ -78,6 +84,16 @@ private:
 	// Homer on the couch (homer.p3d: his skins on a skeleton, FE_HomerController
 	// a loop of 61 frames at 30 a second).
 	std::unique_ptr<SceneSkins> _homer;
+	// The glows: a quad each, where the file's scene graph puts it, pulsing
+	// (its BQG animation, 23 frames at 30 a second).
+	struct Glow
+	{
+		std::unique_ptr<BillboardBatch> batch;
+		Matrix4x4 transform;
+		std::optional<BillboardAnimation> animation;
+	};
+	std::map<std::string, Glow> _glows;
+	std::string _glow;
 	// The textures, shaders and meshes of `file` (its camera, FE_Camera, the
 	// room's) and its scene graph; with `scene`, the scene graph's nodes and
 	// the animation that moves them as well. Its meshes go by `prefix` and
