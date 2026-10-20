@@ -79,6 +79,8 @@ struct HudState
 	// A second, smaller line under the banner (a mission's summary).
 	std::string bannerDetail;
 	Vector4 bannerColour = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
+	// A picture over the banner (a mission's briefing picture), or none.
+	Texture* bannerPicture = nullptr;
 };
 
 // Draws the in-game overlay. Screens that replace the world (menus, mission

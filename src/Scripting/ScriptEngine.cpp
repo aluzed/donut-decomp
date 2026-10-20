@@ -1983,6 +1983,8 @@ void ScriptEngine::missionComplete()
 void ScriptEngine::SetPresentationBitmap(const std::string& path)
 {
 	Log::Info("ScriptEngine: presentation bitmap = '{}'", path);
+	_presentationBitmap = path;
+	std::replace(_presentationBitmap.begin(), _presentationBitmap.end(), '\\', '/');
 }
 
 void ScriptEngine::EnableTutorialMode(bool enable)

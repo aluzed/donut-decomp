@@ -75,6 +75,17 @@ Texture::Texture(const P3D::Sprite& sprite)
 		auto imageWidth = image->GetWidth();
 		auto imageHeight = image->GetHeight();
 		auto texdata = P3D::ImageDecoder::Decode(image->GetData());
+		// A tile that would not decode leaves its place blank.
+		if (texdata.data.size() < static_cast<std::size_t>(imageWidth) * imageHeight * 4)
+		{
+			dstColumn += imageWidth - 2;
+			if (dstColumn >= spriteWidth)
+			{
+				dstColumn = 0;
+				dstRow += imageHeight - 2;
+			}
+			continue;
+		}
 
 		for (uint32_t row = 0; row < imageHeight - 2; ++row)
 		{

@@ -298,6 +298,17 @@ void Hud::Draw(SpriteBatch& sprites, const Font* font, const HudState& state)
 		                 go ? Vector4(0.2f, 1.0f, 0.2f, 1.0f) : Vector4(1.0f, 0.85f, 0.1f, 1.0f));
 	}
 
+	if (!state.banner.empty() && state.bannerPicture && state.bannerPicture->GetWidth() > 0)
+	{
+		// Over the banner, a third of the screen wide, its own shape kept.
+		const float width = state.viewportWidth * 0.35f;
+		const float height = width * static_cast<float>(state.bannerPicture->GetHeight()) /
+		                     static_cast<float>(state.bannerPicture->GetWidth());
+		sprites.Draw(state.bannerPicture,
+		             Vector2((state.viewportWidth - width) * 0.5f, state.viewportHeight * 0.5f - 50.0f - height),
+		             Vector2(width, height), Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+	}
+
 	if (!state.banner.empty())
 	{
 		const float w = font != nullptr ? font->MeasureWidth(state.banner) : 0.0f;

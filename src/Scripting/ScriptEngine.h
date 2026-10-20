@@ -79,6 +79,9 @@ public:
 	void SaveGameState();
 	void LoadGameState();
 	void SetPresentationBitmap(const std::string& path);
+	// The mission's briefing picture (dynaload/images/mis01_01.p3d), as its
+	// script names it; empty when it names none.
+	const std::string& GetPresentationBitmap() const { return _presentationBitmap; }
 	void EnableTutorialMode(bool enable);
 	void CreateChaseManager(const std::string& copCar, const std::string& aiScript, int count);
 
@@ -398,6 +401,7 @@ private:
 	bool _hasPlayerStart = false;
 	Vector3 _playerStart;
 	std::unique_ptr<ChaseManager> _chaseManager;
+	std::string _presentationBitmap;
 };
 
 } // namespace Donut

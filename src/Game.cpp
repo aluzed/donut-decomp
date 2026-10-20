@@ -961,10 +961,49 @@ void Game::drawCredits(const GameIntent& intent, const Matrix4x4& proj, double d
 	}
 }
 
-void Game::showLoadingScreen()
+Texture* Game::presentationPicture(const std::string& path)
+{
+	if (path.empty())
+		return nullptr;
+	// A sprite of DDS tiles, named after its file: "mis01_01.png".
+	const std::string file = path.substr(path.find_last_of('/') + 1);
+	const std::string name = file.substr(0, file.find('.')) + ".png";
+	if (Texture* texture = _resourceManager->GetTexture(name))
+		return texture;
+	if (_missingPictures.count(name) || !FileSystem::exists(path))
+	{
+		_missingPictures.insert(name);
+		return nullptr;
+	}
+	const P3D::P3DFile p3d(path);
+	for (const auto& chunk : p3d.GetRoot().GetChildren())
+		if (chunk->IsType(P3D::ChunkType::Sprite))
+			_resourceManager->LoadTexture(*P3D::Sprite::Load(*chunk));
+	Texture* texture = _resourceManager->GetTexture(name);
+	if (!texture)
+		_missingPictures.insert(name);
+	return texture;
+}
+
+void Game::showLoadingScreen(int level)
 {
 	if (!_loadingPage || !_window)
 		return;
+	// The level's picture, in the place the page leaves blank for it
+	// (dynaload/images/loading<n>.p3d: a sprite in tiles).
+	const std::string picture = fmt::format("./art/frontend/dynaload/images/loading{}.p3d", level);
+	const std::string pictureName = fmt::format("loading{}.png", level);
+	if (!_resourceManager->GetTexture(pictureName) && FileSystem::exists(picture))
+	{
+		const P3D::P3DFile file(picture);
+		for (const auto& chunk : file.GetRoot().GetChildren())
+			if (chunk->IsType(P3D::ChunkType::Sprite))
+				_resourceManager->LoadTexture(*P3D::Sprite::Load(*chunk));
+	}
+	if (Texture* texture = _resourceManager->GetTexture(pictureName))
+		_loadingPage->SetSpriteTexture("Loading", texture);
+	else
+		_loadingPage->SetSpriteVisible("Loading", false);
 	// One frame of it, drawn before the load holds everything up.
 	int width = 0, height = 0;
 	SDL_GL_GetDrawableSize(*_window, &width, &height);
@@ -983,7 +1022,7 @@ void Game::showLoadingScreen()
 void Game::switchLevel(int level)
 {
 	Log::Info("Game: leaving level {} for level {}", _levelNumber, level);
-	showLoadingScreen();
+	showLoadingScreen(level);
 
 	// Everything that lives in the physics world goes before it: the mission's
 	// cars and drivers, the NPCs, the pedestrians and the player.
@@ -3868,6 +3907,7 @@ void Game::Run()
 					hud.banner = _scriptEngine->GetMissionTitle();
 					hud.bannerColour = Vector4(1.0f, 0.84f, 0.0f, 1.0f);
 					hud.bannerDetail = _scriptEngine->GetMissionTitle(true);
+					hud.bannerPicture = presentationPicture(_scriptEngine->GetPresentationBitmap());
 					// A level's first story mission also says which level this is.
 					if (_storyIndex == 0)
 						if (const std::string& level = _textBible.Get(fmt::format("LEVEL_{}", _levelNumber)); !level.empty())

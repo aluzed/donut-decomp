@@ -56,7 +56,11 @@ own name); the frontend registers those. The level's own picture, which the game
 in at run time, is a blank in the page (eight white pixels): hidden.
 
 The fuse is drawn too, from the fire to the dynamite (a polygon, below). Not done: it
-burning down as the level loads; the level pictures.
+burning down as the level loads.
+
+The level's picture is shown in the place the page leaves blank: `dynaload/images/
+loading<n>.p3d`, a sprite of DDS tiles (P3D-017), fitted to the page's box -- level 2's
+is the Springfield Shopper, "LOW LEVEL EMPLOYEE HARASSES MILLIONAIRE, HOUNDS RELEASED".
 
 ## The pause screen (2026-10-20)
 
@@ -97,3 +101,10 @@ colours are not black (grey-blue, white, green), and over a grey clear nothing i
 at all: no fragment comes out, culling and depth test off or not. Not found why; left
 out. Learnt on the way: a two-sided mesh's draw turns
 face culling back on, which culls the 2D drawn after it.
+
+## The mission's briefing picture (2026-10-20)
+
+A mission's script names its briefing picture (`SetPresentationBitmap`:
+`dynaload/images/mis01_01.p3d`, a sprite of DDS tiles); it is shown on the mission's
+title card, over its name and summary, a third of the screen wide -- The Cola Caper's
+is Skinner, the school, Lisa and her flask. The Sunday drives name none.

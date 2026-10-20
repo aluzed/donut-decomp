@@ -99,6 +99,11 @@ void FrontendProject::AddMultiSprite(const P3D::FrontendMultiSprite& multiSprite
 	    h,
 	    P3D::P3DUtil::ConvertColor(multiSprite.GetColor()),
 	    multiSprite.GetName(),
+	    true,
+	    multiSprite.GetPositionX(),
+	    resY - multiSprite.GetPositionY() - dimY,
+	    dimX,
+	    dimY,
 	});
 }
 
@@ -176,6 +181,20 @@ void FrontendProject::loadImages(const P3D::FrontendPage& page)
 		resources.AddTexture(name, std::make_unique<Texture>(pixels, width, height, name));
 		stbi_image_free(pixels);
 	}
+}
+
+void FrontendProject::SetSpriteTexture(const std::string& name, Texture* texture)
+{
+	for (auto& sprite : _sprites)
+		if (sprite.name == name && texture)
+		{
+			sprite.texture = texture;
+			sprite.positionX = sprite.boxX;
+			sprite.positionY = sprite.boxY;
+			sprite.width = sprite.boxWidth;
+			sprite.height = sprite.boxHeight;
+			sprite.visible = true;
+		}
 }
 
 void FrontendProject::SetSpriteVisible(const std::string& name, bool visible)

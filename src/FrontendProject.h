@@ -46,6 +46,9 @@ public:
 	// Shows or hides a sprite of the page (one the game fills at run time, as
 	// the loading screen's level picture; its text "Loading" is another).
 	void SetSpriteVisible(const std::string& name, bool visible);
+	// Shows `texture` in a sprite's place, filling its box (the loading
+	// screen's level picture, which the page leaves blank).
+	void SetSpriteTexture(const std::string& name, Texture* texture);
 	// Where an element of the page is drawn, in the page's pixels (top left,
 	// y down; the page is drawn at `scale`): false when it has none of that
 	// name.
@@ -78,6 +81,8 @@ private:
 		Vector4 color;
 		std::string name;
 		bool visible = true;
+		// Its box in the page, top left, y down.
+		int32_t boxX = 0, boxY = 0, boxWidth = 0, boxHeight = 0;
 	};
 	// A text: its strings (the text bible's, by key) and which shows, in its
 	// font, aligned in its box (top left, y down).

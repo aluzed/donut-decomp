@@ -103,7 +103,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | P3D-014 | ⬜ | P2 | CompositeDrawableSkin/Effect parsing |
 | P3D-003 | ⬜ | P3 | Facial expression animation |
 | P3D-012 | ⬜ | P3 | ExportInfo (3ds Max metadata) |
-| P3D-017 | ⬜ | P3 | Non-PNG images (palettised, DXT) |
+| P3D-017 | 🟡 | P3 | Non-PNG images | DDS (DXT1, DXT3, DXT5) decoded: the frontend's level and mission pictures (2026-10-20). Other palettised formats not |
 | P3D-005 | ✅ | — | The text bible: read from `srr2.txt` (`UI/TextBible`), in five languages |
 | P3D-013 | ✅ | — | `GetShaderTexture()`: a false bug, no such call |
 | P3D-016 | ✅ | — | P3DZ: Radical LZ blocks, decompressed in `P3DFile` |

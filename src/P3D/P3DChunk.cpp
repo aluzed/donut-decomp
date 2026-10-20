@@ -9,18 +9,140 @@
 
 #include <cstdint>
 
+#include <algorithm>
+#include <cstring>
+#include <iterator>
+#include <string>
+
 namespace Donut::P3D
 {
-// just does png for now
+namespace
+{
+// A 5:6:5 colour to 8-bit RGB.
+void unpack565(uint16_t c, uint8_t out[3])
+{
+	out[0] = static_cast<uint8_t>(((c >> 11) & 31) * 255 / 31);
+	out[1] = static_cast<uint8_t>(((c >> 5) & 63) * 255 / 63);
+	out[2] = static_cast<uint8_t>((c & 31) * 255 / 31);
+}
+
+// A DDS image (the frontend's level and mission pictures: DXT1, DXT3, DXT5
+// tiles), decoded to RGBA. False when it is none of those.
+bool decodeDds(const std::vector<uint8_t>& data, ImageDecoder& out)
+{
+	if (data.size() < 128 || std::memcmp(data.data(), "DDS ", 4) != 0)
+		return false;
+	uint32_t height = 0, width = 0;
+	std::memcpy(&height, &data[12], 4);
+	std::memcpy(&width, &data[16], 4);
+	const std::string format(reinterpret_cast<const char*>(&data[84]), 4);
+	const bool dxt1 = format == "DXT1", dxt3 = format == "DXT3", dxt5 = format == "DXT5";
+	if (!dxt1 && !dxt3 && !dxt5)
+		return false;
+	const std::size_t blockSize = dxt1 ? 8 : 16;
+	const std::size_t blocksX = (width + 3) / 4, blocksY = (height + 3) / 4;
+	if (data.size() < 128 + blocksX * blocksY * blockSize)
+		return false;
+	out.width = static_cast<int>(width);
+	out.height = static_cast<int>(height);
+	out.comp = 4;
+	out.data.assign(static_cast<std::size_t>(width) * height * 4, 0);
+	const uint8_t* block = &data[128];
+	for (std::size_t by = 0; by < blocksY; ++by)
+		for (std::size_t bx = 0; bx < blocksX; ++bx, block += blockSize)
+		{
+			// The alpha: none (DXT1), 4 bits a pixel (DXT3), or two ends and
+			// 3-bit steps between them (DXT5).
+			uint8_t alpha[16];
+			std::fill(std::begin(alpha), std::end(alpha), 255);
+			const uint8_t* colour = block;
+			if (dxt3)
+			{
+				for (int i = 0; i < 16; ++i)
+					alpha[i] = static_cast<uint8_t>(((block[i / 2] >> ((i % 2) * 4)) & 15) * 17);
+				colour = block + 8;
+			}
+			else if (dxt5)
+			{
+				uint8_t ends[8] = {block[0], block[1]};
+				if (ends[0] > ends[1])
+					for (int i = 1; i < 7; ++i)
+						ends[i + 1] = static_cast<uint8_t>(((7 - i) * ends[0] + i * ends[1]) / 7);
+				else
+				{
+					for (int i = 1; i < 5; ++i)
+						ends[i + 1] = static_cast<uint8_t>(((5 - i) * ends[0] + i * ends[1]) / 5);
+					ends[6] = 0;
+					ends[7] = 255;
+				}
+				uint64_t bits = 0;
+				for (int i = 0; i < 6; ++i)
+					bits |= static_cast<uint64_t>(block[2 + i]) << (8 * i);
+				for (int i = 0; i < 16; ++i)
+					alpha[i] = ends[(bits >> (3 * i)) & 7];
+				colour = block + 8;
+			}
+			// The colour: two 5:6:5 ends and 2-bit steps between them.
+			const uint16_t c0 = static_cast<uint16_t>(colour[0] | (colour[1] << 8));
+			const uint16_t c1 = static_cast<uint16_t>(colour[2] | (colour[3] << 8));
+			uint8_t palette[4][4];
+			unpack565(c0, palette[0]);
+			unpack565(c1, palette[1]);
+			palette[0][3] = palette[1][3] = palette[2][3] = palette[3][3] = 255;
+			for (int k = 0; k < 3; ++k)
+			{
+				if (!dxt1 || c0 > c1)
+				{
+					palette[2][k] = static_cast<uint8_t>((2 * palette[0][k] + palette[1][k]) / 3);
+					palette[3][k] = static_cast<uint8_t>((palette[0][k] + 2 * palette[1][k]) / 3);
+				}
+				else
+				{
+					palette[2][k] = static_cast<uint8_t>((palette[0][k] + palette[1][k]) / 2);
+					palette[3][k] = 0;
+				}
+			}
+			if (dxt1 && c0 <= c1)
+				palette[3][3] = 0;
+			const uint32_t indices = colour[4] | (colour[5] << 8) | (colour[6] << 16) | (static_cast<uint32_t>(colour[7]) << 24);
+			for (int i = 0; i < 16; ++i)
+			{
+				const std::size_t x = bx * 4 + i % 4, y = by * 4 + i / 4;
+				if (x >= width || y >= height)
+					continue;
+				const uint8_t* c = palette[(indices >> (2 * i)) & 3];
+				// Stored bottom row first, as the game's textures are upside
+				// down in DDS: turned the right way up, as a PNG's rows are.
+				uint8_t* pixel = &out.data[((height - 1 - y) * width + x) * 4];
+				pixel[0] = c[0];
+				pixel[1] = c[1];
+				pixel[2] = c[2];
+				pixel[3] = static_cast<uint8_t>(c[3] * alpha[i] / 255);
+			}
+		}
+	return true;
+}
+} // namespace
+
+// PNG, or a DDS of DXT1, DXT3 or DXT5 blocks.
 ImageDecoder ImageDecoder::Decode(const std::vector<uint8_t>& data)
 {
 	ImageDecoder ret;
+	if (decodeDds(data, ret))
+		return ret;
 	// Always as RGBA: asked for "as stored", a palette image's transparency
 	// (its tRNS chunk: the smoke puffs' corners) came back as three opaque
 	// channels, and every puff was drawn as a dark square.
 	int stored = 0;
 	uint8_t* image = stbi_load_from_memory(data.data(), (std::int32_t)data.size(), &ret.width, &ret.height, &stored, 4);
 	ret.comp = 4;
+	// Neither: nothing, rather than a vector made from a null pointer and a
+	// size of garbage (the game died on the first DDS tile it met).
+	if (!image)
+	{
+		ret.width = ret.height = 0;
+		return ret;
+	}
 	ret.data = std::vector<uint8_t>(image, image + (ret.width * ret.height * ret.comp));
 	stbi_image_free(image);
 

@@ -232,7 +232,11 @@ private:
 	bool _menuUpHeld = false, _menuDownHeld = false;
 	int _pauseMouseX = -1, _pauseMouseY = -1;
 	void drawPausePage(const struct GameIntent& intent, const Matrix4x4& proj);
-	void showLoadingScreen();
+	// For `level`, with its picture.
+	void showLoadingScreen(int level);
+	// A mission's briefing picture, loaded once (nothing when there is none).
+	class Texture* presentationPicture(const std::string& path);
+	std::set<std::string> _missingPictures;
 	std::size_t _menuChoice = 0;
 	bool _menuLeftHeld = false, _menuRightHeld = false;
 	bool _menuShown = false;
