@@ -24,7 +24,9 @@ struct GameIntent;
 // (CardGallery.pag: a level's seven, those found and those not; ViewCard.pag
 // and HighResCard.pag: one, large, with its title, episode, description and
 // quotes) and the missions' (MissionGallery.pag: a level's seven and its bonus
-// mission, the picture of each won, the title of the one picked).
+// mission, the picture of each won, the title of the one picked), the
+// vehicles' (VehicleGallery.pag) and the clothes' (SkinGallery.pag: a level's
+// three for sale, those bought, the others the level's character in shadow).
 class ScrapBookMenu
 {
 public:
@@ -44,6 +46,9 @@ public:
 		// mission's, the street races', three for sale), level by level, and
 		// whether each is the player's.
 		std::vector<std::pair<std::string, bool>> vehicleList;
+		// Every level's three clothes for sale (rewards.mfk's "skin"
+		// "forsale"), level by level, and whether each was bought.
+		std::vector<std::pair<std::string, bool>> skinList;
 		std::optional<int> bonusMissions, streetRaces, clothing, vehicles;
 	};
 
@@ -69,6 +74,7 @@ public:
 		Card,
 		Missions,
 		Vehicles,
+		Clothing,
 	};
 	Screen GetScreen() const { return _screen; }
 
@@ -77,7 +83,7 @@ private:
 	std::function<Texture*(const std::string&)> _picture;
 	std::set<int> _missionsWon;
 	// The missions' level shown (0-6) and the one picked (0-7); the contents'
-	// entry picked (0 the missions, 1 the cards).
+	// entry picked (0 the missions, then round the page clockwise).
 	int _missionLevel = 0, _missionPicked = 0, _contentsPicked = 0;
 	void drawMissions(const GameIntent& intent, const Matrix4x4& proj, bool back);
 	std::unique_ptr<FrontendProject> _vehicleGallery;
@@ -86,6 +92,11 @@ private:
 	void drawVehicles(const GameIntent& intent, const Matrix4x4& proj, bool back);
 	void layOutVehicles();
 	void layOutMissions();
+	std::unique_ptr<FrontendProject> _skinGallery;
+	std::vector<std::pair<std::string, bool>> _skins;
+	int _skinLevel = 0, _skinPicked = 0;
+	void drawClothing(const GameIntent& intent, const Matrix4x4& proj, bool back);
+	void layOutClothing();
 	std::set<int> _cardsFound;
 	// The cards' level shown (0-6), and the one picked on it (0-6).
 	int _cardLevel = 0, _cardPicked = 0;

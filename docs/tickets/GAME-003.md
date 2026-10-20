@@ -278,7 +278,7 @@ keeps every key and emits where the timeline stands (`Emitter::OffsetAt`); of th
 levels' emitters, logged as each level loaded, none other has such a path. Seen: a
 spark or two at a time, not looked into further.
 
-Not done: the clothes' gallery (`SkinGallery.pag`), greyed on the contents.
+The clothes' gallery (`SkinGallery.pag`) came after, below.
 
 ## The cards' gallery (2026-10-20)
 
@@ -345,3 +345,20 @@ sale bought (`car:<level>`). The stats count them out of the 42 (`Vehicles 10/42
 Checked by screenshots with a save of level 1's bonus mission and three races won and
 the Plow King bought: level 1's four (Family Sedan, Pickup Truck, Electaurus, Plow
 King), two locked; level 2's own car alone; the stats' 10/42.
+
+## The clothes' gallery (2026-10-20)
+
+Clothes, on the scrapbook's contents (now all four open, round the page clockwise from
+the missions on its left), opens the clothes' gallery (`SkinGallery.pag`): a level's
+three for sale, `rewards.mfk`'s `BindReward(..., "skin", "forsale", ...)` in its order.
+Each bought shows its picture (`dynaload/images/skins2D/<skin>.png`, 119 x 230), the
+others the level's character in shadow (the page's own `Skin0` images, a level each:
+`silhouet/si_homer.png`, `si_bart`, `si_lisa`, `si_marge`, `si_apu`, `si_bart`,
+`si_homer`); the glow (`sbcursor.png`) at the feet of the one picked, its name the text
+bible's (`M_PINK`, Marge - Classy), "?" not bought. Left and right go from one to the
+next, past a level's last to the next level's first; the mouse picks.
+
+A level's own clothes, worn from the start, have no place in the gallery: the stats
+count those bought out of the 21 (`Character Clothing 4/21`), as the save keeps them
+(`skin:<level>`). Checked by screenshots with a save of Homer's muumuu, Bart's tall and
+ninja and Marge's pink suit bought: each level's three, the stats and the contents.

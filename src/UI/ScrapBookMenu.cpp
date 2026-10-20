@@ -28,6 +28,8 @@ constexpr int kCardsALevel = 7, kDeckALevel = 8, kLevels = 7;
 // A level's vehicles: its own car, the bonus mission's, the street races',
 // and three for sale.
 constexpr int kVehiclesALevel = 6;
+// A level's clothes for sale.
+constexpr int kSkinsALevel = 3;
 const Vector4 kPicked(1.0f, 0.84f, 0.0f, 1.0f);
 const Vector4 kGreyed(0.5f, 0.5f, 0.5f, 1.0f);
 
@@ -66,6 +68,87 @@ ScrapBookMenu::ScrapBookMenu(std::function<Texture*(const std::string&)> picture
 	_missions->LoadP3D(kFrontend, "MissionGallery.pag");
 	_vehicleGallery = std::make_unique<FrontendProject>();
 	_vehicleGallery->LoadP3D(kFrontend, "VehicleGallery.pag");
+	_skinGallery = std::make_unique<FrontendProject>();
+	_skinGallery->LoadP3D(kFrontend, "SkinGallery.pag");
+}
+
+void ScrapBookMenu::layOutClothing()
+{
+	// Each its picture (skins2D/<skin>.png) as large as its box holds, in its
+	// middle; not bought, the level's character in shadow, as the page's
+	// own images (Skin0's, a level each). The glow at the feet of the one
+	// picked.
+	static const char* const kSilhouettes[] = {"homer", "bart", "lisa", "marge", "apu", "bart", "homer"};
+	for (int i = 0; i < kSkinsALevel; ++i)
+	{
+		const std::size_t index = static_cast<std::size_t>(_skinLevel * kSkinsALevel + i);
+		const std::string name = fmt::format("Skin{}", i);
+		const bool bought = index < _skins.size() && _skins[index].second;
+		Texture* picture = bought ? image(fmt::format("./art/frontend/dynaload/images/skins2D/{}.png", _skins[index].first))
+		                          : image(fmt::format("{}silhouet/si_{}.png", kScrapbookImages, kSilhouettes[_skinLevel]));
+		if (!picture)
+			continue;
+		_skinGallery->SetSpriteTexture(name, picture);
+		float x, y, w, h;
+		if (!_skinGallery->GetSpriteBox(name, x, y, w, h))
+			continue;
+		const float scale = std::min(w / picture->GetWidth(), h / picture->GetHeight());
+		const float pw = picture->GetWidth() * scale, ph = picture->GetHeight() * scale;
+		_skinGallery->SetSpriteBox(name, x + (w - pw) * 0.5f, y + (h - ph) * 0.5f, pw, ph);
+		if (i == _skinPicked)
+		{
+			float cx, cy, cw, ch;
+			if (_skinGallery->GetSpriteBox("SkinCursor", cx, cy, cw, ch))
+				_skinGallery->SetSpriteBox("SkinCursor", x + (w - cw) * 0.5f, cy, cw, ch);
+		}
+	}
+	for (int i = 0; i < kSkinsALevel; ++i)
+		_skinGallery->BringSpriteToFront(fmt::format("Skin{}", i));
+	// Its name (the text bible's SKINS, "B_NINJA": Bart - Ninja), bought.
+	const std::size_t picked = static_cast<std::size_t>(_skinLevel * kSkinsALevel + _skinPicked);
+	std::string label = "?";
+	if (picked < _skins.size() && _skins[picked].second)
+	{
+		std::string key = _skins[picked].first;
+		std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) { return std::toupper(c); });
+		const std::string& named = Game::GetInstance().GetTextBible().Get(key);
+		label = named.empty() ? _skins[picked].first : named;
+	}
+	_skinGallery->SetText("SkinName", label);
+}
+
+void ScrapBookMenu::drawClothing(const GameIntent& intent, const Matrix4x4& proj, bool back)
+{
+	// A row of three: left and right from one to the next, past a level's
+	// last to the next level's first.
+	const bool left = intent.moveLeft > 0.5f, right = intent.moveRight > 0.5f;
+	const int all = kLevels * kSkinsALevel;
+	int skin = _skinLevel * kSkinsALevel + _skinPicked;
+	if (_shown && left && !_leftHeld)
+		skin = (skin + all - 1) % all;
+	if (_shown && right && !_rightHeld)
+		skin = (skin + 1) % all;
+	_leftHeld = left;
+	_rightHeld = right;
+	const bool moved = _mouseX >= 0 && (intent.mouseX != _mouseX || intent.mouseY != _mouseY);
+	for (int i = 0; i < kSkinsALevel; ++i)
+		if ((moved || intent.mouseLeftClick) && inside(*_skinGallery, fmt::format("Skin{}", i), intent.mouseX, intent.mouseY))
+			skin = _skinLevel * kSkinsALevel + i;
+	_mouseX = intent.mouseX;
+	_mouseY = intent.mouseY;
+	if (skin != _skinLevel * kSkinsALevel + _skinPicked)
+	{
+		_skinLevel = skin / kSkinsALevel;
+		_skinPicked = skin % kSkinsALevel;
+		layOutClothing();
+	}
+	_skinGallery->Draw(proj);
+	_shown = true;
+	if (back)
+	{
+		_screen = Screen::Contents;
+		_shown = false;
+	}
 }
 
 void ScrapBookMenu::layOutVehicles()
@@ -299,7 +382,7 @@ void ScrapBookMenu::Open(const Stats& stats)
 	set(*_stats, "BonusMissions_Unlocked", stats.bonusMissions);
 	set(*_stats, "StreetRaces_Unlocked", stats.streetRaces);
 	set(*_stats, "Cards_Unlocked", stats.cards);
-	set(*_stats, "Clothing_Unlocked", stats.clothing);
+	set(*_stats, "Clothing_Unlocked", stats.clothing, static_cast<int>(stats.skinList.size()));
 	set(*_stats, "Vehicles_Unlocked", stats.vehicles, static_cast<int>(stats.vehicleList.size()));
 	set(*_stats, "Wasps_Unlocked", stats.wasps);
 	set(*_stats, "Gags_Unlocked", stats.gags);
@@ -311,9 +394,10 @@ void ScrapBookMenu::Open(const Stats& stats)
 	_missionsWon = stats.missionsWon;
 	set(*_contents, "StoryMissions_Unlocked", stats.storyMissions, stats.storyMissionsTotal);
 	set(*_contents, "CollectorCards_Unlocked", stats.cards);
-	set(*_contents, "CharacterClothing_Unlocked", stats.clothing);
+	set(*_contents, "CharacterClothing_Unlocked", stats.clothing, static_cast<int>(stats.skinList.size()));
 	set(*_contents, "Vehicles_Unlocked", stats.vehicles, static_cast<int>(stats.vehicleList.size()));
 	_vehicles = stats.vehicleList;
+	_skins = stats.skinList;
 }
 
 void ScrapBookMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
@@ -380,12 +464,16 @@ void ScrapBookMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 		drawVehicles(intent, proj, back);
 		return;
 	}
+	if (_screen == Screen::Clothing)
+	{
+		drawClothing(intent, proj, back);
+		return;
+	}
 	if (_screen == Screen::Contents)
 	{
-		// Of the contents, the missions, the vehicles and the cards are
-		// open, left and up going back through them, right and down on; the
-		// clothes' gallery is not done, greyed.
-		static const char* const kOpen[] = {"StoryMissions", "Vehicles", "CollectorCards"};
+		// The contents' four, round the page clockwise from the missions on
+		// its left: left and up going back through them, right and down on.
+		static const char* const kOpen[] = {"StoryMissions", "CharacterClothing", "Vehicles", "CollectorCards"};
 		constexpr int kOpenCount = static_cast<int>(std::size(kOpen));
 		const bool left = intent.moveLeft > 0.5f, right = intent.moveRight > 0.5f;
 		const bool up = intent.moveForward > 0.5f, down = intent.moveBackward > 0.5f;
@@ -408,7 +496,6 @@ void ScrapBookMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 				}
 		_mouseX = intent.mouseX;
 		_mouseY = intent.mouseY;
-		_contents->SetTextColor("CharacterClothing", kGreyed);
 		for (int i = 0; i < kOpenCount; ++i)
 			if (i == _contentsPicked)
 				_contents->SetTextColor(kOpen[i], kPicked);
@@ -424,14 +511,22 @@ void ScrapBookMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 		if (confirm || clicked)
 		{
 			_shown = false;
-			if (_contentsPicked == 0)
+			const std::string picked = kOpen[_contentsPicked];
+			if (picked == "StoryMissions")
 			{
 				_screen = Screen::Missions;
 				_missionLevel = 0;
 				_missionPicked = 0;
 				layOutMissions();
 			}
-			else if (_contentsPicked == 1)
+			else if (picked == "CharacterClothing")
+			{
+				_screen = Screen::Clothing;
+				_skinLevel = 0;
+				_skinPicked = 0;
+				layOutClothing();
+			}
+			else if (picked == "Vehicles")
 			{
 				_screen = Screen::Vehicles;
 				_vehicleLevel = 0;

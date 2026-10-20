@@ -1465,14 +1465,13 @@ ScrapBookMenu::Stats Game::scrapBookStats() const
 		if (id.compare(0, 2, "bm") == 0 && won.size() > 1 && std::isdigit(won[1]))
 			stats.missionsWon.insert((won[1] - '1') * 8 + 7);
 	}
-	stats.clothing = 0;
-	for (int level = 1; level <= 7; ++level)
-		*stats.clothing += static_cast<int>(_save.Entries(fmt::format("skin:{}", level)).size());
 	// The vehicles, rewards.mfk's BindReward("<car>", "<file>", "car",
 	// "<how>", <level>...): a level's own car is the player's from the start;
 	// the bonus mission's with the bonus mission won; the street races' with
-	// all three won; those for sale bought.
+	// all three won; those for sale bought. The clothes, its "skin" ones for
+	// sale, three a level, bought.
 	stats.vehicles = 0;
+	stats.clothing = 0;
 	{
 		std::ifstream rewards("scripts/rewards.mfk");
 		for (std::string line; std::getline(rewards, line);)
@@ -1490,10 +1489,19 @@ ScrapBookMenu::Stats Game::scrapBookStats() const
 				quoted.push_back(line.substr(open + 1, close - open - 1));
 				open = close;
 			}
-			if (quoted.size() < 4 || quoted[2] != "car")
+			if (quoted.size() < 4 || (quoted[2] != "car" && quoted[2] != "skin"))
 				continue;
 			const std::size_t afterHow = line.find(quoted[3]) + quoted[3].size() + 1;
 			const int level = std::atoi(line.c_str() + line.find(',', afterHow) + 1);
+			if (quoted[2] == "skin")
+			{
+				if (quoted[3] != "forsale")
+					continue;
+				const bool bought = _save.Entries(fmt::format("skin:{}", level)).count(quoted[0]) > 0;
+				stats.skinList.emplace_back(quoted[0], bought);
+				*stats.clothing += bought;
+				continue;
+			}
 			int won = 0;
 			for (const std::string& entry : _save.Entries("won"))
 				if (entry.compare(0, 3, fmt::format("L{}:", level)) == 0 &&
