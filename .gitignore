@@ -44,6 +44,7 @@ donut_cards.dat
 /scripts/rewards.mfk
 donut_gags.dat
 donut_wasps.dat
+donut_settings.dat
 
 # build dependencies unpacked without root (tools/fetch_deps.sh)
 /deps/

@@ -54,6 +54,16 @@ public:
 
 	void SetListenerPosition(const Vector3& position, const Vector3& direction, const Vector3& up);
 	void SetVolume(float volume);
+	// The options' sound page: each kind of sound's volume, 0 to 1.
+	enum class Channel
+	{
+		Music,
+		Effects,
+		Engine, // the cars: engines, tyres
+		Voice,
+	};
+	void SetChannelVolume(Channel channel, float volume);
+	float GetChannelVolume(Channel channel) const { return _channelVolumes[static_cast<int>(channel)]; }
 	void PlayRaw(const std::vector<uint8_t>& pcmData, int sampleRate, int channels, int bits);
 	void PlayMusic(const std::string& name);
 	// Plays these tracks one after another, round and round: the game's own
@@ -154,6 +164,10 @@ private:
 	// The source speaking the current line, or -1.
 	int _dialogueSource = -1;
 	std::unique_ptr<MusicSource> _music;
+	float _channelVolumes[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+	float volume(Channel channel) const { return _channelVolumes[static_cast<int>(channel)]; }
+	// What each loop was asked to play at, before its channel's volume.
+	std::unordered_map<std::string, float> _loopGains;
 	// The music playing: its once tracks, then its loop; and the last cue that
 	// looped, to go back to.
 	MusicScript::Cue _cue;

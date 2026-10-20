@@ -16,6 +16,7 @@
 #include "UI/TextBible.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 
 namespace Donut
@@ -204,6 +205,44 @@ void FrontendProject::SetSpriteVisible(const std::string& name, bool visible)
 			sprite.visible = visible;
 }
 
+void FrontendProject::SetSpriteFill(const std::string& name, float fraction)
+{
+	for (auto& sprite : _sprites)
+		if (sprite.name == name)
+			sprite.fill = std::clamp(fraction, 0.0f, 1.0f);
+}
+
+bool FrontendProject::GetSpriteBox(const std::string& name, float& x, float& y, float& width, float& height) const
+{
+	for (const auto& sprite : _sprites)
+		if (sprite.name == name)
+		{
+			x = static_cast<float>(sprite.boxX);
+			y = static_cast<float>(sprite.boxY);
+			width = static_cast<float>(sprite.boxWidth);
+			height = static_cast<float>(sprite.boxHeight);
+			return true;
+		}
+	return false;
+}
+
+void FrontendProject::SetSpriteBox(const std::string& name, float x, float y, float width, float height)
+{
+	for (auto& sprite : _sprites)
+		if (sprite.name == name)
+		{
+			sprite.positionX = sprite.boxX = static_cast<int32_t>(std::lround(x));
+			sprite.positionY = sprite.boxY = static_cast<int32_t>(std::lround(y));
+			sprite.width = sprite.boxWidth = static_cast<int32_t>(std::lround(width));
+			sprite.height = sprite.boxHeight = static_cast<int32_t>(std::lround(height));
+		}
+}
+
+void FrontendProject::BringSpriteToFront(const std::string& name)
+{
+	std::stable_partition(_sprites.begin(), _sprites.end(), [&](const Sprite& sprite) { return sprite.name != name; });
+}
+
 void FrontendProject::loadTextStyles(const P3D::P3DChunk& chunk)
 {
 	auto& resources = Game::GetInstance().GetResourceManager();
@@ -379,6 +418,13 @@ void FrontendProject::Draw(const Matrix4x4& proj)
 	{
 		if (!sprite.visible)
 			continue;
+		if (sprite.fill < 1.0f)
+		{
+			if (sprite.fill > 0.0f)
+				_spriteBatch.Draw(sprite.texture, Vector2(sprite.positionX, sprite.positionY), Vector2(0.0f, 0.0f),
+				                  Vector2(sprite.fill, 1.0f), Vector2(sprite.width * sprite.fill, sprite.height), sprite.color);
+			continue;
+		}
 		_spriteBatch.Draw(sprite.texture, Vector2(sprite.positionX, sprite.positionY), Vector2(sprite.width, sprite.height),
 		                  sprite.color);
 	}

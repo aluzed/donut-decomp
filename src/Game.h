@@ -254,6 +254,7 @@ private:
 	std::unique_ptr<SimpleMesh> _carMesh;
 	std::unique_ptr<GameMenu> _mainMenu;
 	std::unique_ptr<GameMenu> _pauseMenu;
+	std::unique_ptr<class OptionsMenu> _optionsMenu;
 	std::unique_ptr<Hud> _hud;
 	std::unique_ptr<GL::ShaderProgram> _postProcessShader;
 	std::unique_ptr<GL::FrameBuffer> _sceneFBO;

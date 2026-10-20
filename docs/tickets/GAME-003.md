@@ -1,6 +1,6 @@
 # GAME-003 — Machine à états de jeu complète (Splash→MainMenu→LevelSelect→InGame→Pause→Result→Credits)
 
-- **Status:** TODO
+- **Status:** PARTIAL (2026-10-20: menus, pause, loading, credits, options and sound)
 - **Priority:** P1
 - **Module:** Game
 - **Depends on:** —
@@ -109,3 +109,28 @@ running: the file's texture animation, its eight frames round and round.
 Not done: the camera's animation (`FE_CameraController`: it moves as the menu turns),
 Homer on the couch, the race car going round (`racecar.p3d` is loaded, not seen: its
 animation is not played), the glows and the sparkles.
+
+## The options and the sound (2026-10-20)
+
+The main menu has an Options entry (the text bible's `OPTIONS`), and so does the pause
+screen (greyed until now). Both open the game's options page (`Options.pag`, over the
+living room or the paused game): Controller, Sound, View Movies, View Credits, Display,
+picked as the pause screen's are (up and down, the mouse; the confirm key or a click
+takes one, Escape goes back). Sound and View Credits are done; the others are greyed and
+passed over, as is View Credits from the pause screen. The console's display mode the
+page carries (interlaced or progressive) is hidden.
+
+The sound page (`Sound.pag`) has the game's four sliders: the music, the effects (and
+the place's background), the cars (engines, tyres) and the voices. Up and down pick
+one, left and right move it a tenth, a click on its bar puts it there; the speaker (a
+note for the music, a microphone for the voices) rides the bar at its value, crossed out
+at nothing. Each is drawn at its box's size, not its image's: drawn at the image's, the
+bar was a quarter of its width and the knob twice its size, behind it. The volumes are
+`AudioManager::SetChannelVolume`, heard at once on what is playing, and kept in
+`donut_settings.dat`, read at start and written when the page is left. The surround
+setting shows stereo, what OpenAL is given. Checked by screenshots of both pages, the
+effects at 0.3 and the voices at nothing.
+
+Not done: Controller (the key bindings: `PCKeyboardConfig.pag`), Display (resolution,
+full screen: `Display.pag`), View Movies (the cutscenes are not played: UI-FMV), the
+game settings (`GameSettings.pag`: mouse look and sensitivity).

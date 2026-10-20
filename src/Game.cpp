@@ -9,6 +9,7 @@
 #include "Core/Math/Frustum.h"
 #include "Render/SkidMarks.h"
 #include "UI/LivingRoom.h"
+#include "UI/OptionsMenu.h"
 #include "Core/FpsTimer.h"
 #include "Core/Math/Math.h"
 #include "FreeCamera.h"
@@ -440,6 +441,19 @@ Game::Game(int argc, char** argv)
 			_gameState = GameState::InGame;
 		});
 	}
+	// The options: the sound's volumes; the credits.
+	_optionsMenu = std::make_unique<OptionsMenu>(*_audioManager, [this]() {
+		_gameState = _creditsPage ? GameState::Credits : GameState::MainMenu;
+		_creditsTime = 0.0;
+		if (_creditsPage)
+			_audioManager->PlayMusicEvent("Credits", true);
+	});
+	if (_optionsMenu->IsLoaded())
+	{
+		const std::string& options = _textBible.Get("OPTIONS");
+		_mainMenu->AddButton(options.empty() ? "Options" : options, 0, 0, 200, 40,
+		                     [this]() { _optionsMenu->Open(false); });
+	}
 	const std::string& quitGame = _textBible.Get("QUIT_GAME");
 	_mainMenu->AddButton(quitGame.empty() ? "Quit" : quitGame, 0, 0, 200, 40, [this]() {
 		SDL_Event quitEvent;
@@ -473,6 +487,10 @@ Game::Game(int argc, char** argv)
 		SDL_Event quitEvent;
 		quitEvent.type = SDL_QUIT;
 		SDL_PushEvent(&quitEvent);
+	});
+	_pauseMenu->AddButton("Options", 0, 0, 200, 40, [this]() {
+		if (_optionsMenu)
+			_optionsMenu->Open(true);
 	});
 }
 
@@ -881,7 +899,7 @@ void Game::drawPausePage(const GameIntent& intent, const Matrix4x4& proj)
 	// The page's entries, top to bottom, and which of ours each is (-1: none,
 	// shown greyed and passed over).
 	static const std::pair<const char*, int> kEntries[] = {
-	    {"Continue", 0}, {"RestartMission", 1}, {"AbortMission", -1}, {"Options", -1}, {"QuitGame", 2}};
+	    {"Continue", 0}, {"RestartMission", 1}, {"AbortMission", -1}, {"Options", 3}, {"QuitGame", 2}};
 	constexpr int kCount = static_cast<int>(sizeof(kEntries) / sizeof(kEntries[0]));
 	const auto step = [&](int from, int by) {
 		int at = from;
@@ -3521,7 +3539,8 @@ void Game::Run()
 		debugAboutMenu();
 		drawControlsWindow();
 
-		if (intent.pauseToggle)
+		// Escape in the options goes back a page, not out of the pause.
+		if (intent.pauseToggle && !(_optionsMenu && _optionsMenu->IsOpen()))
 		{
 			if (_gameState == GameState::InGame)
 				_gameState = GameState::Paused;
@@ -4083,7 +4102,10 @@ void Game::Run()
 			if (_gameState == GameState::Paused && _pausePage)
 			{
 				sprites.Flush(proj);
-				drawPausePage(intent, proj);
+				if (_optionsMenu && _optionsMenu->IsOpen())
+					_optionsMenu->Draw(intent, proj);
+				else
+					drawPausePage(intent, proj);
 				_window->Swap();
 				continue;
 			}
@@ -4205,7 +4227,10 @@ void Game::Run()
 			if (_livingRoom && _livingRoom->IsLoaded() && _level)
 				_livingRoom->Draw(_level->GetWorldShader(), static_cast<float>(viewportWidth) / std::max(1, viewportHeight),
 				                  deltaTime);
-			drawMainMenuPage(intent, proj);
+			if (_optionsMenu && _optionsMenu->IsOpen())
+				_optionsMenu->Draw(intent, proj);
+			else
+				drawMainMenuPage(intent, proj);
 		}
 		else if (_gameState == GameState::MainMenu)
 		{

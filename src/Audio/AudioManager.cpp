@@ -120,7 +120,7 @@ void AudioManager::PlayAudio(const std::string& name, const Vector3& position, f
 		// the listener is.
 		alSourcei(src->id, AL_SOURCE_RELATIVE, AL_FALSE);
 		alSource3f(src->id, AL_POSITION, position.X, position.Y, position.Z);
-		alSourcef(src->id, AL_GAIN, gain);
+		alSourcef(src->id, AL_GAIN, gain * volume(Channel::Effects));
 		alSourcef(src->id, AL_PITCH, pitch);
 		return;
 	}
@@ -170,7 +170,10 @@ void AudioManager::processDialogueQueue()
 	_dialogueQueue.pop_front();
 	PlayAudio(name);
 	if (src->inUse)
+	{
 		_dialogueSource = static_cast<int>(src - _sources.data());
+		alSourcef(src->id, AL_GAIN, volume(Channel::Voice));
+	}
 }
 
 void AudioManager::Update()
@@ -270,7 +273,7 @@ bool AudioManager::startMusicTrack(const std::string& name, bool loop)
 	alSourcei(_music->id, AL_BUFFER, static_cast<ALint>(_music->buffers[0]));
 	alSourcei(_music->id, AL_LOOPING, loop ? AL_TRUE : AL_FALSE);
 	alSourcei(_music->id, AL_SOURCE_RELATIVE, AL_TRUE);
-	alSourcef(_music->id, AL_GAIN, 0.45f);
+	alSourcef(_music->id, AL_GAIN, 0.45f * volume(Channel::Music));
 	alSourcePlay(_music->id);
 	_music->playing = true;
 	return true;
@@ -501,7 +504,7 @@ void AudioManager::PlayEngine(const std::string& file)
 	alSourcei(_engineSource, AL_BUFFER, static_cast<ALint>(_engineBuffer));
 	alSourcei(_engineSource, AL_LOOPING, AL_TRUE);
 	alSourcei(_engineSource, AL_SOURCE_RELATIVE, AL_TRUE);
-	alSourcef(_engineSource, AL_GAIN, 0.35f);
+	alSourcef(_engineSource, AL_GAIN, 0.35f * volume(Channel::Engine));
 	alSourcePlay(_engineSource);
 	Log::Info("Audio: engine '{}'", file);
 }
@@ -515,9 +518,10 @@ void AudioManager::SetEnginePitch(float pitch)
 void AudioManager::SetLoop(const std::string& channel, const std::string& file, float gain)
 {
 	auto found = _loops.find(channel);
+	_loopGains[channel] = gain;
 	if (found != _loops.end() && found->second.file == file && !file.empty())
 	{
-		alSourcef(found->second.source, AL_GAIN, gain);
+		alSourcef(found->second.source, AL_GAIN, gain * volume(Channel::Engine));
 		return;
 	}
 	if (found != _loops.end())
@@ -547,7 +551,7 @@ void AudioManager::SetLoop(const std::string& channel, const std::string& file, 
 	alSourcei(loop.source, AL_BUFFER, static_cast<ALint>(loop.buffer));
 	alSourcei(loop.source, AL_LOOPING, AL_TRUE);
 	alSourcei(loop.source, AL_SOURCE_RELATIVE, AL_TRUE);
-	alSourcef(loop.source, AL_GAIN, gain);
+	alSourcef(loop.source, AL_GAIN, gain * volume(Channel::Engine));
 	alSourcePlay(loop.source);
 	_loops[channel] = loop;
 }
@@ -597,7 +601,7 @@ void AudioManager::PlayAmbience(const std::string& part)
 	alSourcei(_ambienceSource, AL_BUFFER, static_cast<ALint>(_ambienceBuffer));
 	alSourcei(_ambienceSource, AL_LOOPING, AL_TRUE);
 	alSourcei(_ambienceSource, AL_SOURCE_RELATIVE, AL_TRUE);
-	alSourcef(_ambienceSource, AL_GAIN, 0.3f);
+	alSourcef(_ambienceSource, AL_GAIN, 0.3f * volume(Channel::Effects));
 	alSourcePlay(_ambienceSource);
 	Log::Info("Audio: ambience '{}'", name);
 }
@@ -624,6 +628,26 @@ void AudioManager::SetListenerPosition(const Vector3& position, const Vector3& d
 	alListener3f(AL_POSITION, position.X, position.Y, position.Z);
 	ALfloat orientation[] = {direction.X, direction.Y, direction.Z, up.X, up.Y, up.Z};
 	alListenerfv(AL_ORIENTATION, orientation);
+}
+
+void AudioManager::SetChannelVolume(Channel channel, float value)
+{
+	_channelVolumes[static_cast<int>(channel)] = std::clamp(value, 0.0f, 1.0f);
+	// What is playing follows at once.
+	if (channel == Channel::Music && _music)
+		alSourcef(_music->id, AL_GAIN, 0.45f * volume(Channel::Music));
+	if (channel == Channel::Engine)
+	{
+		if (_engineSource != 0)
+			alSourcef(_engineSource, AL_GAIN, 0.35f * volume(Channel::Engine));
+		for (const auto& [name, loop] : _loops)
+			if (const auto gain = _loopGains.find(name); gain != _loopGains.end())
+				alSourcef(loop.source, AL_GAIN, gain->second * volume(Channel::Engine));
+	}
+	if (channel == Channel::Effects && _ambienceSource != 0)
+		alSourcef(_ambienceSource, AL_GAIN, 0.3f * volume(Channel::Effects));
+	if (channel == Channel::Voice && _dialogueSource >= 0)
+		alSourcef(_sources[_dialogueSource].id, AL_GAIN, volume(Channel::Voice));
 }
 
 void AudioManager::SetVolume(float volume)
@@ -656,6 +680,8 @@ void AudioManager::PlayRaw(const std::vector<uint8_t>& pcmData, int sampleRate, 
 	// world's origin, metres away and faint.
 	alSourcei(src->id, AL_SOURCE_RELATIVE, AL_TRUE);
 	alSource3f(src->id, AL_POSITION, 0.0f, 0.0f, 0.0f);
+	alSourcef(src->id, AL_GAIN, volume(Channel::Effects));
+	alSourcef(src->id, AL_PITCH, 1.0f);
 	alSourcePlay(src->id);
 	src->inUse = true;
 }
@@ -781,7 +807,7 @@ void AudioManager::playOnSource(Source* src, const RCL::RSDFile& rsdFile)
 	alSourcei(src->id, AL_BUFFER, src->buffer);
 	alSourcei(src->id, AL_LOOPING, AL_FALSE);
 	// A pooled source keeps what the last sound on it was given.
-	alSourcef(src->id, AL_GAIN, 1.0f);
+	alSourcef(src->id, AL_GAIN, volume(Channel::Effects));
 	alSourcef(src->id, AL_PITCH, 1.0f);
 	alSourcePlay(src->id);
 	src->inUse = true;

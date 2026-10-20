@@ -46,6 +46,14 @@ public:
 	// Shows or hides a sprite of the page (one the game fills at run time, as
 	// the loading screen's level picture; its text "Loading" is another).
 	void SetSpriteVisible(const std::string& name, bool visible);
+	// Draws only its left `fraction`, 0 to 1: a slider's bar at its value.
+	void SetSpriteFill(const std::string& name, float fraction);
+	// Its box in the page (top left, y down), and drawing it there, at that
+	// size, rather than at its image's.
+	bool GetSpriteBox(const std::string& name, float& x, float& y, float& width, float& height) const;
+	void SetSpriteBox(const std::string& name, float x, float y, float width, float height);
+	// Drawn last, over the others: a slider's knob over its bar.
+	void BringSpriteToFront(const std::string& name);
 	// Shows `texture` in a sprite's place, filling its box (the loading
 	// screen's level picture, which the page leaves blank).
 	void SetSpriteTexture(const std::string& name, Texture* texture);
@@ -83,6 +91,8 @@ private:
 		bool visible = true;
 		// Its box in the page, top left, y down.
 		int32_t boxX = 0, boxY = 0, boxWidth = 0, boxHeight = 0;
+		// How much of it, from the left, is drawn: a slider's bar.
+		float fill = 1.0f;
 	};
 	// A text: its strings (the text bible's, by key) and which shows, in its
 	// font, aligned in its box (top left, y down).
