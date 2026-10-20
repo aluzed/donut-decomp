@@ -234,6 +234,34 @@ void GameHud::Draw(const HudState& state, const Matrix4x4& proj, double dt)
 		}
 	}
 
+	// The call-outs. Hit & Run, or busted: the ticket and its line.
+	if (state.alertTerm == "HIT_AND_RUN" || state.alertTerm == "BUSTED")
+	{
+		_page->SetSpriteVisible("HitNRunTicket", true);
+		_page->SetTextIndex("HitNRun", state.alertTerm == "BUSTED" ? 1 : 0);
+	}
+	// A card found: its picture, title and "you got a card"; the level's
+	// cards all found.
+	if (state.cardFound >= 0)
+	{
+		// The page names stubs (cards/db/_stubs/, blank); the cards are beside
+		// them.
+		if (Texture* card = ScrapBookMenu::image(
+		        fmt::format("./art/frontend/scrooby2/resource/images/cards/db/card{:02}_t.png", state.cardFound)))
+		{
+			_page->SetSpriteTexture("CardCollected", card);
+			_page->SetSpriteVisible("CardCollected", true);
+		}
+		_page->SetTextIndex("CardTitle", static_cast<std::size_t>(state.cardFound));
+		_page->SetText("CardGet", "");
+	}
+	if (state.itemsDone == "CARD_LEVEL_COMPLETE" || state.itemsDone == "CARD_DECK_COMPLETE")
+		_page->SetTextIndex("ItemsComplete", state.itemsDone == "CARD_DECK_COMPLETE" ? 1 : 0);
+	else if (state.itemsDone == "WASPS_COMPLETE" || state.itemsDone == "GAGS_COMPLETE")
+		_page->SetTextIndex("WaspsComplete", state.itemsDone == "GAGS_COMPLETE" ? 1 : 0);
+	if (state.stageComplete)
+		_page->SetText("StageComplete", "");
+
 	// The counters, top left, one under the other: the stage's clock, the
 	// place in a race, its laps, the car's damage.
 	float x, y, w, h;
@@ -306,6 +334,9 @@ void GameHud::Draw(const HudState& state, const Matrix4x4& proj, double dt)
 		drawLetters(batch, *_page, text, counter, kCounterHeight, false);
 		counter.Y += kCounterStep;
 	}
+	// A count of wasp cameras or gags, where the card's count would be.
+	if (!state.itemsCount.empty() && _page->GetSpriteBox("ItemsCount", x, y, w, h))
+		drawLetters(batch, *_page, state.itemsCount, Vector2(x, y), kCounterHeight, false);
 	// The countdown, large, in the middle.
 	if (!state.countdown.empty() && _page->GetSpriteBox("CountDown", x, y, w, h))
 	{

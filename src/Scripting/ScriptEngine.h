@@ -186,6 +186,9 @@ public:
 	// The script's ShowStageComplete(): announce the stage when it is done. It
 	// does not complete anything itself.
 	void AnnounceStageComplete();
+	// How many stages have been announced complete, for the HUD to notice
+	// another.
+	int GetStagesAnnounced() const { return _stagesAnnounced; }
 	// RESET_TO_HERE: a failed mission is retried from this stage.
 	void ResetToHere();
 	// The stage clock counts up from SetStageTime instead of down (gr1's race
@@ -334,6 +337,7 @@ private:
 	float _objectiveElapsed = 0.0f;
 	float _objectiveDuration = 0.0f;
 	bool _hudShown = true;
+	int _stagesAnnounced = 0;
 	std::string _hudIcon;
 	Transition _stageTransition = Transition::None;
 	float _stageTransitionSeconds = 0.0f;

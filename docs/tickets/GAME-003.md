@@ -483,7 +483,13 @@ Checked by screenshots: on foot (radar, phone booths, the Kwik-E-Mart's objectiv
 icon), a timed mission ("3:21", the couplings' objective wrapped), at the wheel ("1:57",
 "2ND", "LAP 1/2", the damage at 60 %, "$65", "000 kmh").
 
-Not done: the radar's map, its cone; the Hit & Run ticket and "BUSTED", the card found
-(`CardCollected`, `CardTitle`), stage and mission complete in the page's letters, the
-proximity meter, the action button, the tutorial's walkie-talkie: those still show as
-the old call-outs or not at all.
+The page's call-outs (2026-10-21): Hit & Run and "BUSTED" (the ticket and its line,
+from the alert's term); a card found (its picture, `cards/db/cardNN_t.png`: the page
+names blank stubs; its title, "COLLECTOR CARD!"), the level's cards all found
+("LEVEL CARDS COLLECTED!"); the wasp cameras' and gags' count ("20/20", in the page's
+letters, top right) and their sets done ("LEVEL WASPS COMPLETE!"); a stage announced
+complete ("TASK COMPLETE!", two seconds). The old banners are not drawn for them.
+Checked by screenshots of each, raised by hand.
+
+Not done: the radar's map, its cone; mission complete and failed in the page's letters,
+the proximity meter, the action button, the tutorial's walkie-talkie.

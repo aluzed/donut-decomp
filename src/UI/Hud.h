@@ -79,6 +79,14 @@ struct HudState
 	bool showPlayerCar = false;
 	Vector2 playerCarXZ;
 	std::vector<Vector2> phoneBooths, shops, bonusMissions, streetRaces;
+	// Its call-outs, while they are up: the alert's term ("HIT_AND_RUN",
+	// "BUSTED"), a card found (its place in the deck), a count of wasp
+	// cameras or gags ("3/20"), a set done ("WASPS_COMPLETE"), a stage
+	// complete.
+	std::string alertTerm;
+	int cardFound = -1;
+	std::string itemsCount, itemsDone;
+	bool stageComplete = false;
 
 	// free-form lines drawn under the HUD (control hints, help overlay)
 	std::vector<std::string> hints;

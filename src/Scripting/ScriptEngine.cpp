@@ -233,7 +233,10 @@ void ScriptEngine::objectiveComplete()
 	Log::Info("ScriptEngine: stage {}/{} objective '{}' complete{}", _stageCursor + 1, _stageScripts.size(),
 	          _objectiveType, _announceStageComplete ? " -- STAGE COMPLETE" : "");
 	if (_announceStageComplete)
+	{
 		_game.GetAudioManager().PlayRaw(SoundGenerator::Chirp(500, 900, 0.25f), 22050, 1, 16);
+		++_stagesAnnounced;
+	}
 
 	// Closed first, if the stage says so; the next stage once it is.
 	if (_stageTransition != Transition::None && _stageTransitionSeconds > 0.0f)

@@ -608,6 +608,16 @@ private:
 	std::string _alertMessage;
 	double _alertUntil = 0.0;
 	void alert(const std::string& term, const char* fallback);
+	// What the message stands for, for the game's HUD: the alert's term
+	// ("HIT_AND_RUN", "BUSTED"); a card found (its place in the deck), or a
+	// count of wasp cameras or gags ("3/20"); the set done ("WASPS_COMPLETE",
+	// "GAGS_COMPLETE", "CARD_LEVEL_COMPLETE"); and when a stage was announced
+	// complete.
+	std::string _alertTerm;
+	int _cardFound = -1;
+	std::string _itemsCount, _itemsDone;
+	int _stagesAnnounced = 0;
+	double _stageCompleteUntil = 0.0;
 	// The view rotation for a camera looking along heading `yaw` (radians about
 	// +Y, 0 is +Z), tipped `pitchDown` radians below the horizon.
 	static Quaternion cameraLooking(float pitchDown, float yaw);

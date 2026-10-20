@@ -1518,6 +1518,7 @@ void Game::alert(const std::string& term, const char* fallback)
 	const std::string& text = _textBible.Get(term);
 	_alertMessage = text.empty() ? fallback : text;
 	_alertUntil = _elapsedSeconds + 3.0;
+	_alertTerm = term;
 }
 
 void Game::updateHitAndRun(double dt)
@@ -2923,6 +2924,9 @@ void Game::playGag(Gag& gag)
 		const auto found = std::count_if(_gags.begin(), _gags.end(), [](const Gag& g) { return g.played; });
 		const std::string& word = _textBible.Get("GAGS");
 		_cardMessage = fmt::format("{} {}/{}", word.empty() ? "Gags" : word, found, _gags.size());
+		_cardFound = -1;
+		_itemsCount = fmt::format("{}/{}", found, _gags.size());
+		_itemsDone = static_cast<std::size_t>(found) == _gags.size() ? "GAGS_COMPLETE" : "";
 		if (static_cast<std::size_t>(found) == _gags.size())
 			_cardMessage += " - " + _textBible.Get("GAGS_COMPLETE");
 		_cardMessageUntil = _elapsedSeconds + 3.0;
@@ -4140,6 +4144,11 @@ void Game::Run()
 				{
 					const int index = (card[4] - '1') * 8 + (card[5] - '1');
 					_cardMessage = _textBible.Get(fmt::format("CARD_TITLE_{:02}", index));
+					_cardFound = index;
+					_itemsCount.clear();
+					_itemsDone = _collectibleManager->GetCardsFound() == _collectibleManager->GetCardsTotal()
+					                 ? "CARD_LEVEL_COMPLETE"
+					                 : "";
 					if (_collectibleManager->GetCardsFound() == _collectibleManager->GetCardsTotal())
 					{
 						const std::string& all = _textBible.Get("CARD_LEVEL_COMPLETE");
@@ -4189,6 +4198,9 @@ void Game::Run()
 					saveCoins();
 					AddShake(0.4f);
 					_cardMessage = fmt::format("Wasp cameras {}/{}", _waspManager->GetDestroyed(), _waspManager->GetTotal());
+					_cardFound = -1;
+					_itemsCount = fmt::format("{}/{}", _waspManager->GetDestroyed(), _waspManager->GetTotal());
+					_itemsDone = _waspManager->GetDestroyed() == _waspManager->GetTotal() ? "WASPS_COMPLETE" : "";
 					_cardMessageUntil = _elapsedSeconds + 3.0;
 				}
 			}
@@ -4632,15 +4644,35 @@ void Game::Run()
 			if (_inVehicle && _activeVehicle)
 				hud.speedKmh = _activeVehicle->GetSpeedKmh();
 
+			// The game's HUD has its own call-outs for alerts, cards, counts
+			// and a stage complete; the old one shows them as banners.
+			const bool gameHud = _gameHud && _gameHud->IsLoaded();
+			if (_scriptEngine->GetStagesAnnounced() != _stagesAnnounced)
+			{
+				_stagesAnnounced = _scriptEngine->GetStagesAnnounced();
+				_stageCompleteUntil = _elapsedSeconds + 2.0;
+			}
+			if (gameHud)
+			{
+				hud.stageComplete = _elapsedSeconds < _stageCompleteUntil;
+				if (_elapsedSeconds < _alertUntil)
+					hud.alertTerm = _alertTerm;
+				if (_elapsedSeconds < _cardMessageUntil)
+				{
+					hud.cardFound = _cardFound;
+					hud.itemsCount = _itemsCount;
+					hud.itemsDone = _itemsDone;
+				}
+			}
 			if (_collectibleManager)
 			{
 				hud.coins = _coins;
-				if (!_alertMessage.empty() && _elapsedSeconds < _alertUntil && hud.banner.empty())
+				if (!gameHud && !_alertMessage.empty() && _elapsedSeconds < _alertUntil && hud.banner.empty())
 				{
 					hud.banner = _alertMessage;
 					hud.bannerColour = Vector4(1.0f, 0.25f, 0.2f, 1.0f);
 				}
-				if (!_cardMessage.empty() && _elapsedSeconds < _cardMessageUntil && hud.banner.empty())
+				if (!gameHud && !_cardMessage.empty() && _elapsedSeconds < _cardMessageUntil && hud.banner.empty())
 				{
 					hud.banner = _cardMessage;
 					hud.bannerColour = Vector4(0.4f, 0.7f, 1.0f, 1.0f);
@@ -4721,7 +4753,9 @@ void Game::Run()
 				hud.chaseActive = true;
 				hud.heat = chase->GetHeat();
 				hud.busted = chase->IsBusted();
-				if (hud.busted)
+				if (hud.busted && gameHud)
+					hud.alertTerm = "BUSTED";
+				else if (hud.busted)
 					hud.banner = "BUSTED!";
 				for (const auto& cop : chase->GetCopCars())
 					hud.policeBlips.emplace_back(cop->GetPosition().X, cop->GetPosition().Z);
@@ -4765,7 +4799,6 @@ void Game::Run()
 
 			// The game's HUD has no control hints of its own: only the help
 			// overlay's and those that say what is at hand.
-			const bool gameHud = _gameHud && _gameHud->IsLoaded();
 			if (_inVehicle)
 			{
 				hud.hintColour = Vector4(0.5f, 0.8f, 1.0f, 1.0f);
