@@ -27,6 +27,9 @@ public:
 	Texture(const uint8_t* rgba, std::size_t width, std::size_t height, std::string name);
 	~Texture();
 
+	// New pixels, of its size, in the place of its own (a movie's frame).
+	void Update(const uint8_t* rgba);
+
 	void Bind() const;
 	void Bind(GLuint slot) const;
 

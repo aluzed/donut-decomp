@@ -50,6 +50,25 @@ find_package(OpenAL REQUIRED) #find_package(openal-soft CONFIG REQUIRED)
 find_package(Bullet REQUIRED)
 find_package(ZLIB REQUIRED)
 
+# FFmpeg, for the game's movies (Bink, as .rmv): optional, the movies are not
+# played without it. Its headers may come from deps/sysroot (the -dev
+# packages), its libraries from the system, which ships no unversioned names.
+find_path(FFMPEG_INCLUDE_DIR libavformat/avformat.h PATH_SUFFIXES x86_64-linux-gnu)
+set(FFMPEG_LIBRARIES "")
+foreach (_lib avformat:60 avcodec:60 avutil:58 swscale:7 swresample:4)
+  string(REPLACE ":" ";" _parts ${_lib})
+  list(GET _parts 0 _name)
+  list(GET _parts 1 _version)
+  find_library(FFMPEG_${_name}_LIBRARY NAMES lib${_name}.so.${_version} ${_name})
+  list(APPEND FFMPEG_LIBRARIES ${FFMPEG_${_name}_LIBRARY})
+endforeach()
+if (FFMPEG_INCLUDE_DIR AND NOT FFMPEG_LIBRARIES MATCHES "NOTFOUND")
+  set(FFMPEG_FOUND TRUE)
+  message(STATUS "FFmpeg found: the movies play")
+else()
+  message(STATUS "FFmpeg not found: the movies do not play")
+endif()
+
 # Setup an interface library for Bullet, this allows us to target Debug/Release configurations properly.
 # This should be resolved once https://github.com/microsoft/vcpkg/pull/9098 is merged.
 if (BULLET_FOUND AND NOT TARGET Bullet::Bullet)

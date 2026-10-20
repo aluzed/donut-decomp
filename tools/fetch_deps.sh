@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Unpack the build dependencies that may be missing from the system (Bullet,
-# fmt, OpenAL, glm) into deps/sysroot, without root: the Debian/Ubuntu packages
+# fmt, OpenAL, glm, FFmpeg's headers) into deps/sysroot, without root: the Debian/Ubuntu packages
 # are downloaded with `apt-get download` and extracted with `dpkg -x`.
 # CMakeLists.txt looks there first; the binary finds the shared libraries
 # through its RUNPATH.
@@ -18,6 +18,8 @@ PACKAGES=(
 	libfmt-dev libfmt9
 	libopenal-dev libopenal1
 	libglm-dev
+	# The movies' decoder: its headers; the libraries are the system's.
+	libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libswresample-dev
 )
 
 mkdir -p "$DEBS" "$SYSROOT"

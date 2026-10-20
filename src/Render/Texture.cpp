@@ -60,6 +60,12 @@ Texture::Texture(const uint8_t* rgba, std::size_t width, std::size_t height, std
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 }
 
+void Texture::Update(const uint8_t* rgba)
+{
+	glBindTexture(GL_TEXTURE_2D, _glTexture);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, (GLsizei)_width, (GLsizei)_height, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+}
+
 Texture::Texture(const P3D::Sprite& sprite)
     : _name(sprite.GetName()), _width(sprite.GetWidth()), _height(sprite.GetHeight()), _glTexture(0)
 {

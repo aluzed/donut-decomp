@@ -32,7 +32,9 @@ enum class GameState
 	Paused,
 	MissionComplete,
 	MissionFailed,
-	Credits
+	Credits,
+	// One of the game's movies, from the options' View Movies.
+	Movie
 };
 
 class Window;
@@ -238,6 +240,15 @@ private:
 	std::vector<std::string> _creditLines;
 	double _creditsTime = 0.0;
 	void drawCredits(const struct GameIntent& intent, const Matrix4x4& proj, double dt, int width, int height);
+	// The movies: the one playing, which may be seen (0 the introduction,
+	// 1 to 8 View Movies' Movie1 to Movie8), as worked out for the story's
+	// progress and the cards found it was worked out for.
+	std::unique_ptr<class MoviePlayer> _moviePlayer;
+	std::vector<bool> _moviesUnlocked;
+	std::string _moviesUnlockedFor;
+	bool movieUnlocked(int movie);
+	void playMovie(int movie);
+	void drawMovie(const struct GameIntent& intent, const Matrix4x4& proj, double dt, int width, int height);
 	std::unique_ptr<FrontendProject> _loadingPage;
 	// The game's pause screen (ingame.p3d's Pause.pag and PauseMission.pag):
 	// its entry picked, and up and down and the mouse as they were.

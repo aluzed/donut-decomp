@@ -54,6 +54,12 @@ target_link_libraries(${PROJECT_NAME}
 		ZLIB::ZLIB
 	)
 
+if (FFMPEG_FOUND)
+	target_include_directories(${PROJECT_NAME} PRIVATE ${FFMPEG_INCLUDE_DIR})
+	target_link_libraries(${PROJECT_NAME} PRIVATE ${FFMPEG_LIBRARIES})
+	target_compile_definitions(${PROJECT_NAME} PRIVATE DONUT_HAS_FFMPEG)
+endif()
+
 if (UNIX)
 	target_link_libraries(${PROJECT_NAME}
 			PRIVATE

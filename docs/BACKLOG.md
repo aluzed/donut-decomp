@@ -81,7 +81,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 
 | ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
-| GAME-003 | 🟡 | P1 | The full state machine | Splash, main menu (the game's own `MainMenu.pag` over the Simpsons' living room, one entry between its arrows), the game's loading screen with the level's picture, in game, the game's pause screen, mission complete and failed, the briefing picture on a mission's card, the credits at the story's end, the options, their sound, display and keyboard pages (kept) work. So do the scrapbook (its pages, stats, contents and four galleries: cards, missions, vehicles, clothes) and the living room (Homer asleep before the television, the entry's object aglow, the race car going round, the camera flying to each options page's object). Missing: the movies (`View Movies`), the other frontend screens |
+| GAME-003 | 🟡 | P1 | The full state machine | Splash, main menu (the game's own `MainMenu.pag` over the Simpsons' living room, one entry between its arrows), the game's loading screen with the level's picture, in game, the game's pause screen, mission complete and failed, the briefing picture on a mission's card, the credits at the story's end, the options, their sound, display and keyboard pages (kept) work. So do the scrapbook (its pages, stats, contents and four galleries: cards, missions, vehicles, clothes) and the living room (Homer asleep before the television, the entry's object aglow, the race car going round, the camera flying to each options page's object). View Movies too (UI-FMV). Missing: the other frontend screens |
 | GAME-010 | 🟡 | P2 | Collectibles and their saved state | Coins (purse in the save), cards (the save), wrenches, phone booths, doorbells, gags (sound, coin, animated model and characters, count, `donut_gags.dat`), wasp cameras (GAME-WASP), buying cars and outfits |
 | GAME-011 | ✅ | P2 | Full save and load | One save, `donut_game.dat`: the story reached, coins, cards, gags, wasp cameras, bonus missions and street races won, each level's cars and clothes bought and those in use, best times; the separate files of before imported. Not the player's position: the next mission places them |
 | GAME-014 | 🟡 | P1 | Interiors | Every level's interiors load with the level; doors and zone triggers take the player in and out. Not streamed |
@@ -161,7 +161,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 |---|---|---|---|---|
 | UI-TEXT | ✅ | — | Frontend MultiText | The frontend pages' texts drawn: the text bible's phrase, the page's font, aligned and fitted to their box; the pages' images loaded from `resource/` (2026-10-20) |
 | UI-LOADING | ⬜ | P3 | Loading screen and hints | |
-| UI-FMV | ⬜ | P3 | RMV (Radical Movie) player | format to reverse |
+| UI-FMV | 🟡 | P3 | The game's movies | Bink, decoded with FFmpeg (optional); View Movies plays them, those seen in the story open. Missing: the movies in the story (the `fmv` objective, the gags'), the logos |
 | UI-MENU | ✅ | — | Main and pause menus, hit-testing, pause freezes the game | |
 | UI-HUD | ✅ | — | Health, Hit & Run, nitro, speedometer, coins, cards, objective, laps, timer, radar with roads | `src/UI/Hud.*` |
 | UI-LANG | ✅ | — | `--language E/F/G/I/S` for the game's own text | |

@@ -21,16 +21,22 @@ struct GameIntent;
 // View Movies, View Credits and Display; the sound page the volume of the
 // music, the effects, the cars and the voices, each a slider; the display page
 // (Display.pag) the window's size and whether it fills the screen; Controller
-// the keys (PCKeyboardConfig.pag), two for each of the game's commands. What is not
-// done here is shown greyed and passed over.
+// the keys (PCKeyboardConfig.pag), two for each of the game's commands; View
+// Movies the game's movies (ViewMovies.pag), the introduction and the levels'
+// eight, those not seen yet greyed. What is not done here is shown greyed and
+// passed over.
 //
 // The volumes and the display are kept in donut_settings.dat, the keys in
 // keymap.conf.
 class OptionsMenu
 {
 public:
-	// `viewCredits` rolls the credits; none, from the pause screen.
-	OptionsMenu(AudioManager& audio, SDL_Window* window, std::function<void()> viewCredits);
+	// `viewCredits` rolls the credits, from the main menu. The movies, from
+	// the main menu too: `movieUnlocked` says whether each (0 the
+	// introduction, 1 to 8 the page's Movie1 to Movie8) may be seen,
+	// `playMovie` plays it, none without a player.
+	OptionsMenu(AudioManager& audio, SDL_Window* window, std::function<void()> viewCredits,
+	            std::function<bool(int)> movieUnlocked = nullptr, std::function<void(int)> playMovie = nullptr);
 	~OptionsMenu();
 
 	bool IsLoaded() const { return _options != nullptr; }
@@ -47,6 +53,7 @@ public:
 		Sound,
 		Display,
 		Keys,
+		Movies,
 	};
 	// The page open: the living room's camera goes to its object.
 	Screen GetScreen() const { return _screen; }
@@ -60,6 +67,10 @@ private:
 	AudioManager& _audio;
 	SDL_Window* _window;
 	std::function<void()> _viewCredits;
+	std::function<bool(int)> _movieUnlocked;
+	std::function<void(int)> _playMovie;
+	std::unique_ptr<FrontendProject> _movies;
+	void drawMovies(const GameIntent& intent, const Matrix4x4& proj, bool back, bool confirm);
 	std::unique_ptr<FrontendProject> _options;
 	std::unique_ptr<FrontendProject> _sound;
 	std::unique_ptr<FrontendProject> _display;

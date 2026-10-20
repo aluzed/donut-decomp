@@ -146,7 +146,7 @@ cp -a "$EX/Sound/sound" "$TARGET/art/audio/"
 cp -a "$EX"/Music1/*.rcf "$EX"/Music2/*.rcf "$TARGET/art/audio/music/"
 isoinfo -i "$ISO1" -x "/DIALOGF.RCF;1" >"$TARGET/art/audio/dialog/DIALOGF.RCF"
 
-# The cutscenes (Radical's .RMV, not played yet: UI-FMV), outside the cabinets.
+# The movies (.RMV, Bink: UI-FMV), outside the cabinets.
 mkdir -p "$TARGET/movies"
 for iso in "$ISO1" "$ISO2" "$ISO3"; do
 	{ isoinfo -f -i "$iso" | grep -i '^/MOVIES/.*\.RMV;1$' || true; } | while read -r movie; do

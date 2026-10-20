@@ -72,8 +72,10 @@ bool inside(const FrontendProject& page, const std::string& name, int mouseX, in
 }
 } // namespace
 
-OptionsMenu::OptionsMenu(AudioManager& audio, SDL_Window* window, std::function<void()> viewCredits)
-    : _audio(audio), _window(window), _viewCredits(std::move(viewCredits))
+OptionsMenu::OptionsMenu(AudioManager& audio, SDL_Window* window, std::function<void()> viewCredits,
+                         std::function<bool(int)> movieUnlocked, std::function<void(int)> playMovie)
+    : _audio(audio), _window(window), _viewCredits(std::move(viewCredits)), _movieUnlocked(std::move(movieUnlocked)),
+      _playMovie(std::move(playMovie))
 {
 	load();
 	applyDisplay();
@@ -124,6 +126,8 @@ OptionsMenu::OptionsMenu(AudioManager& audio, SDL_Window* window, std::function<
 		if (_display->GetSpriteBox(arrow, x, y, w, h))
 			_display->SetSpriteBox(arrow, x, y, w, h);
 	}
+	_movies = std::make_unique<FrontendProject>();
+	_movies->LoadP3D(kFrontend, "ViewMovies.pag");
 	_keys = std::make_unique<FrontendProject>();
 	_keys->LoadP3D(kFrontend, "PCKeyboardConfig.pag");
 	_keys->SetTextsFitHeight(true);
@@ -215,7 +219,7 @@ void OptionsMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 	{
 		const std::vector<Entry> entries = {{"Controller", true},
 		                                    {"Sound", true},
-		                                    {"ViewMovies", false},
+		                                    {"ViewMovies", !_fromPause && _playMovie != nullptr && _movieUnlocked != nullptr},
 		                                    {"ViewCredits", !_fromPause && _viewCredits != nullptr},
 		                                    {"Display", _window != nullptr && !_sizes.empty()}};
 		const int clicked = _shown ? pick(*_options, entries, intent) : -1;
@@ -258,6 +262,12 @@ void OptionsMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 			_choice = 0;
 			_shown = false;
 		}
+		else if (chosen == "ViewMovies")
+		{
+			_screen = Screen::Movies;
+			_choice = 0;
+			_shown = false;
+		}
 		else if (chosen == "ViewCredits")
 		{
 			_screen = Screen::Closed;
@@ -274,6 +284,11 @@ void OptionsMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 	if (_screen == Screen::Display)
 	{
 		drawDisplay(intent, proj, back, confirm, rightPressed ? 1 : leftPressed ? -1 : 0);
+		return;
+	}
+	if (_screen == Screen::Movies)
+	{
+		drawMovies(intent, proj, back, confirm);
 		return;
 	}
 
@@ -544,6 +559,35 @@ void OptionsMenu::save() const
 	          _audio.GetChannelVolume(AudioManager::Channel::Effects),
 	          _audio.GetChannelVolume(AudioManager::Channel::Engine),
 	          _audio.GetChannelVolume(AudioManager::Channel::Voice));
+}
+
+void OptionsMenu::drawMovies(const GameIntent& intent, const Matrix4x4& proj, bool back, bool confirm)
+{
+	// The introduction at the top, the levels' movies down from it.
+	static const char* const kMovies[] = {"IntroMovie", "Movie1", "Movie2", "Movie3", "Movie4",
+	                                      "Movie5", "Movie6", "Movie7", "Movie8"};
+	std::vector<Entry> entries;
+	for (int i = 0; i < static_cast<int>(std::size(kMovies)); ++i)
+		entries.push_back({kMovies[i], _movieUnlocked(i)});
+	const int clicked = _shown ? pick(*_movies, entries, intent) : -1;
+	if (!_shown)
+		colour(*_movies, entries);
+	_movies->Draw(proj);
+	_shown = true;
+	if (back)
+	{
+		_screen = Screen::Options;
+		_choice = 2;
+		_shown = false;
+		return;
+	}
+	if ((confirm || clicked >= 0) && entries[_choice].enabled)
+	{
+		// Back on this page when it is over, the key that ends it not taken
+		// here.
+		_shown = false;
+		_playMovie(_choice);
+	}
 }
 
 } // namespace Donut

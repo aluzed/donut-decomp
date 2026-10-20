@@ -152,8 +152,8 @@ binds nothing. The page's texts are 15 high in a font twice that: they are shrun
 their boxes' height (`FrontendProject::SetTextsFitHeight`), on this page only. Checked
 by a screenshot; a key captured was not, there being no keyboard to press.
 
-Not done: View Movies (the cutscenes are not played: UI-FMV), the
-game settings (`GameSettings.pag`: mouse look and sensitivity).
+Not done: the game settings (`GameSettings.pag`: mouse look and sensitivity). View
+Movies came after (UI-FMV).
 
 ## The race car on the rug (2026-10-20)
 

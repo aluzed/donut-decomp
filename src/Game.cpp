@@ -9,6 +9,7 @@
 #include "Core/Math/Frustum.h"
 #include "Render/SkidMarks.h"
 #include "UI/LivingRoom.h"
+#include "UI/MoviePlayer.h"
 #include "UI/OptionsMenu.h"
 #include "Core/FpsTimer.h"
 #include "Core/Math/Math.h"
@@ -454,13 +455,20 @@ Game::Game(int argc, char** argv)
 			_gameState = GameState::InGame;
 		});
 	}
-	// The options: the sound's volumes, the window's size; the credits.
-	_optionsMenu = std::make_unique<OptionsMenu>(*_audioManager, *_window, [this]() {
-		_gameState = _creditsPage ? GameState::Credits : GameState::MainMenu;
-		_creditsTime = 0.0;
-		if (_creditsPage)
-			_audioManager->PlayMusicEvent("Credits", true);
-	});
+	// The options: the sound's volumes, the window's size; the credits; the
+	// movies, with a player.
+	_moviePlayer = std::make_unique<MoviePlayer>();
+	const bool movies = MoviePlayer::IsAvailable();
+	_optionsMenu = std::make_unique<OptionsMenu>(
+	    *_audioManager, *_window,
+	    [this]() {
+		    _gameState = _creditsPage ? GameState::Credits : GameState::MainMenu;
+		    _creditsTime = 0.0;
+		    if (_creditsPage)
+			    _audioManager->PlayMusicEvent("Credits", true);
+	    },
+	    movies ? std::function<bool(int)>([this](int movie) { return movieUnlocked(movie); }) : nullptr,
+	    movies ? std::function<void(int)>([this](int movie) { playMovie(movie); }) : nullptr);
 	_scrapBook = std::make_unique<ScrapBookMenu>([this](const std::string& file) { return presentationPicture(file); });
 	if (_scrapBook->IsLoaded())
 	{
@@ -1009,6 +1017,98 @@ void Game::drawCredits(const GameIntent& intent, const Matrix4x4& proj, double d
 	{
 		_gameState = GameState::MainMenu;
 		_menuShown = false;
+	}
+}
+
+namespace
+{
+// View Movies' movies (movies/, as the CDs have them): the introduction, then
+// Movie1 to Movie8.
+const char* const kMovieFiles[] = {"INTRO", "FMV1A", "FMV2", "FMV3", "FMV4", "FMV5", "FMV6", "FMV7", "FMV8"};
+} // namespace
+
+bool Game::movieUnlocked(int movie)
+{
+	const StoryProgress progress = loadStoryProgress();
+	const std::size_t cards = _save.Entries("card").size();
+	const std::string reckoned = fmt::format("{} {} {}", progress.level, progress.mission, cards);
+	if (reckoned != _moviesUnlockedFor)
+	{
+		_moviesUnlockedFor = reckoned;
+		// The introduction and level 1's, which open the game, always. A
+		// level's movie once the story is past the step that plays it (its
+		// script's SetFMVInfo("fmv2.rmv"), in a mission's or in the drive to
+		// it); the bonus movie, the Itchy & Scratchy Movie, with all 49 cards
+		// found, as its ticket is.
+		_moviesUnlocked.assign(std::size(kMovieFiles), false);
+		_moviesUnlocked[0] = _moviesUnlocked[1] = true;
+		_moviesUnlocked[8] = cards >= 49;
+		for (int level = 1; level <= 7; ++level)
+		{
+			const std::string directory = fmt::format("scripts/level{:02}", level);
+			std::ifstream script(directory + "/level.mfk");
+			int entry = 0;
+			for (std::string line; std::getline(script, line);)
+			{
+				const std::size_t at = line.find("AddMission(");
+				const std::size_t comment = line.find("//");
+				const std::size_t open = line.find('"', at);
+				const std::size_t close = open == std::string::npos ? open : line.find('"', open + 1);
+				if (at == std::string::npos || (comment != std::string::npos && comment < at) || close == std::string::npos)
+					continue;
+				const std::string id = line.substr(open + 1, close - open - 1);
+				// The drive to it, then the mission, each a step of the story.
+				for (const std::string& part : {id + "sd", id})
+				{
+					std::ifstream file(fmt::format("{}/{}i.mfk", directory, part));
+					if (!file)
+						continue;
+					const bool passed = level < progress.level || (level == progress.level && entry < progress.mission);
+					for (std::string text; std::getline(file, text);)
+					{
+						const std::size_t fmv = text.find("SetFMVInfo(\"");
+						const std::size_t remark = text.find("//");
+						if (fmv == std::string::npos || (remark != std::string::npos && remark < fmv))
+							continue;
+						std::string name = text.substr(fmv + 12, text.find('"', fmv + 12) - fmv - 12);
+						std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return std::toupper(c); });
+						for (std::size_t i = 2; i + 1 < std::size(kMovieFiles); ++i)
+							if (name == std::string(kMovieFiles[i]) + ".RMV" && passed)
+								_moviesUnlocked[i] = true;
+					}
+					++entry;
+				}
+			}
+		}
+	}
+	return movie >= 0 && movie < static_cast<int>(_moviesUnlocked.size()) && _moviesUnlocked[movie];
+}
+
+void Game::playMovie(int movie)
+{
+	if (movie < 0 || movie >= static_cast<int>(std::size(kMovieFiles)))
+		return;
+	// Its soundtrack in the game's language: English, French, German,
+	// Spanish.
+	const int track = _language == 'F' ? 1 : _language == 'G' || _language == 'D' ? 2 : _language == 'S' ? 3 : 0;
+	const std::string path = fmt::format("movies/{}.RMV", kMovieFiles[movie]);
+	if (!_moviePlayer->Open(path, track, _audioManager->GetChannelVolume(AudioManager::Channel::Music)))
+		return;
+	_audioManager->StopMusic();
+	_gameState = GameState::Movie;
+}
+
+void Game::drawMovie(const GameIntent& intent, const Matrix4x4& proj, double dt, int width, int height)
+{
+	_moviePlayer->Update(dt);
+	_moviePlayer->Draw(proj, width, height);
+	// Over at its end, or skipped; not on the frame it begins. Back to View
+	// Movies, the show's theme with it.
+	if (!_moviePlayer->IsPlaying() || (_moviePlayer->GetTime() > 0.5 && (intent.uiConfirm || intent.pauseToggle)))
+	{
+		_moviePlayer->Stop();
+		_gameState = GameState::MainMenu;
+		_menuMusic = false;
 	}
 }
 
@@ -1572,6 +1672,7 @@ void Game::updateLivingRoomCamera()
 	    // the pad fills it.
 	    {OptionsMenu::Screen::Keys, 530.0f, 557.0f, 563.0f, 590.0f},
 	    {OptionsMenu::Screen::Sound, 660.0f, 690.0f, 690.0f, 720.0f}, // to Krusty's radio
+	    {OptionsMenu::Screen::Movies, 460.0f, 490.0f, 490.0f, 520.0f}, // the television, as Display
 	};
 	const auto trip = [](OptionsMenu::Screen screen) -> const Trip* {
 		for (const Trip& t : kTrips)
@@ -4146,7 +4247,7 @@ void Game::Run()
 		// Not under the game's own main menu page: its entry stands where the
 		// mission's objective is.
 		if (_textureFontP3D != nullptr && !(_gameState == GameState::MainMenu && _mainMenuPage) &&
-		    !(_gameState == GameState::Credits && _creditsPage))
+		    !(_gameState == GameState::Credits && _creditsPage) && _gameState != GameState::Movie)
 		{
 			auto font = _resourceManager->GetFont("boulder_16");
 			const bool pad = intent.gamepadConnected;
@@ -4433,7 +4534,7 @@ void Game::Run()
 
 		// The main menu has the show's theme (music02.rcf), the level's music
 		// back after it.
-		if ((_gameState == GameState::MainMenu) != _menuMusic)
+		if ((_gameState == GameState::MainMenu || _gameState == GameState::Movie) != _menuMusic)
 		{
 			_menuMusic = !_menuMusic;
 			static const std::string kTheme = "sound\\music\\simpsons_theme.rsd";
@@ -4444,6 +4545,8 @@ void Game::Run()
 		}
 		if (_gameState == GameState::Credits && _creditsPage)
 			drawCredits(intent, proj, deltaTime, viewportWidth, viewportHeight);
+		if (_gameState == GameState::Movie)
+			drawMovie(intent, proj, deltaTime, viewportWidth, viewportHeight);
 		if (_gameState == GameState::MainMenu && _mainMenuPage && !_mainMenu->GetButtons().empty())
 		{
 			// The menu stands over the Simpsons' living room, not the level.
