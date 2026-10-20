@@ -93,10 +93,10 @@ into a playable arcade racing game.
 - **Vehicle System**: Enter/exit, boost (Shift), jump (Space), horn (H)
 - **Races**: the mission's own checkpoints and lap count, countdown, race position,
   losing to an opponent who finishes first, races against the clock (par time)
-- **Best Times**: one per mission ("L1:gr1 195.2"), kept in `donut_save.dat`
+- **Best Times**: one per mission ("L1:gr1 195.2"), kept in the save (`donut_game.dat`)
 - **Coins**: the level's own coins (177 on level 1), in the game's coin model; a purse
-  kept in `donut_coins.dat`, which pays entry fees (gr1)
-- **Collector cards**: each level's seven, found for good (`donut_cards.dat`)
+  kept in the save, which pays entry fees (gr1)
+- **Collector cards**: each level's seven, found for good (the save)
 - **Gags**: the level's interactive gags (33 on level 1) stand in their rest pose, and play
   their sound when walked into or worked by hand, paying a coin the first time; the count
   found is shown. Their animations are not played

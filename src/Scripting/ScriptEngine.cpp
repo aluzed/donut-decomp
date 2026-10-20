@@ -1891,27 +1891,22 @@ std::string ScriptEngine::bestTimeKey() const
 
 std::map<std::string, float> ScriptEngine::loadBestTimes() const
 {
-	// Lines of "<key> <seconds>". The old file -- one bare number, the best of
-	// all missions together, then a position -- has no keys and reads as none.
+	// The save's "time:<key>" values ("time:L4:m1sd" 3.00291).
 	std::map<std::string, float> times;
-	std::ifstream file("donut_save.dat");
-	for (std::string line; std::getline(file, line);)
-	{
-		std::istringstream fields(line);
-		std::string key;
-		float seconds = 0.0f;
-		if (fields >> key >> seconds && key.size() > 1 && key[0] == 'L' && key.find(':') != std::string::npos &&
-		    seconds > 0.0f)
+	for (const auto& [key, value] : _game.GetSave().GetAll("time:"))
+		if (const float seconds = static_cast<float>(std::atof(value.c_str())); seconds > 0.0f)
 			times[key] = seconds;
-	}
 	return times;
 }
 
 void ScriptEngine::saveBestTimes(const std::map<std::string, float>& times) const
 {
-	std::ofstream file("donut_save.dat");
+	auto& save = _game.GetSave();
+	for (const auto& [key, value] : save.GetAll("time:"))
+		save.Erase("time:" + key);
 	for (const auto& [key, seconds] : times)
-		file << key << " " << seconds << "\n";
+		save.Set("time:" + key, fmt::format("{}", seconds));
+	save.Save();
 }
 
 void ScriptEngine::ResetBestTime()
@@ -2016,6 +2011,12 @@ void ScriptEngine::missionComplete()
 		_game.GetAudioManager().PlayRaw(SoundGenerator::Chirp(600, 1200, 0.5f), 22050, 1, 16);
 	}
 
+	// A bonus mission or street race won is kept: the scrapbook counts them.
+	if (!_game.IsAutopilot() && (_missionId.compare(0, 2, "bm") == 0 || _missionId.compare(0, 2, "sr") == 0))
+	{
+		_game.GetSave().Add("won", fmt::format("L{}:{}", _game.GetLevelNumber(), _missionId));
+		_game.GetSave().Save();
+	}
 	Log::Info("ScriptEngine: stage complete! Time: {:.1f}s (best: {}){}", elapsed,
 	          _bestTime < 999.0f ? fmt::format("{:.1f}s", _bestTime) : "none", _isNewRecord ? " NEW RECORD!" : "");
 	// The mission's ending, then the level's music. A drive to a mission has

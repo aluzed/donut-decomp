@@ -324,3 +324,7 @@ theirs stay locked. The pictures are drawn the locked postcard's size, 105 x 83,
 middle of their boxes (280 square, 120 apart). Checked by screenshots with the save at
 level 7's first mission: level 1's seven pictures, its bonus locked, "Mission 3"
 "Office Spaced"; level 7's eight locked.
+
+The save now keeps the bonus missions and street races won and the clothes and vehicles
+bought (GAME-011): the scrapbook's stats count them, and a level's bonus mission won
+shows in the missions' gallery.

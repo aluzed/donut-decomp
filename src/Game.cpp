@@ -171,6 +171,9 @@ void GLAPIENTRY MessageCallback(GLenum source, GLenum type, GLuint id, GLenum se
 Game::Game(int argc, char** argv)
 {
 	instance = this; // global static :D
+	// The save first: the level's cards, gags and wasp cameras are read
+	// from it as the level loads.
+	_save.Load();
 
 	// Unattended-run switches. Measuring whether the race opponent gets round the
 	// circuit means watching a 120s mission, and every run had to be nursed by
@@ -325,6 +328,9 @@ Game::Game(int argc, char** argv)
 
 	loadGlobal();
 	LoadModel(_playerCharacter, _playerCharacter);
+	// In the outfit last worn on the level.
+	if (!_wornSkin.empty())
+		BuySkin(_wornSkin);
 
 	// The mission ran before the character existed, so its player placement went
 	// nowhere: apply it now. Only a mission that places nobody falls back to the
@@ -368,8 +374,7 @@ Game::Game(int argc, char** argv)
 	if (_startStory && !_story.empty())
 		startStoryMission(std::min(_storyFrom, static_cast<int>(_story.size()) - 1));
 
-	if (std::ifstream coins("donut_coins.dat"); !(coins >> _coins) || _coins < 0)
-		_coins = 0;
+	_coins = std::max(0, std::atoi(_save.Get("coins", "0").c_str()));
 
 	_mainMenu = std::make_unique<GameMenu>();
 	// The credits' background (frontend.p3d's CreditsBgd.pag), over which
@@ -887,7 +892,7 @@ Game::StoryProgress Game::loadStoryProgress() const
 {
 	// "<mission> <level>"; a file written before there were levels holds only
 	// the mission, of level 1.
-	std::ifstream file("donut_progress.dat");
+	std::istringstream file(_save.Get("progress"));
 	StoryProgress progress;
 	if (!(file >> progress.mission) || progress.mission < 0)
 		return {};
@@ -901,9 +906,9 @@ void Game::saveStoryProgress(int level, int next) const
 	// An unattended run proves the missions play through; it has not won them.
 	if (_autopilot)
 		return;
-	std::ofstream file("donut_progress.dat");
-	if (file.good())
-		file << next << " " << level << "\n";
+	auto& save = const_cast<SaveGame&>(_save);
+	save.Set("progress", fmt::format("{} {}", next, level));
+	save.Save();
 	Log::Info("Game: story progress saved, level {} mission {}", level, next + 1);
 }
 
@@ -1106,6 +1111,8 @@ void Game::switchLevel(int level)
 	_storyIndex = -1;
 	loadLevel();
 	LoadModel(_playerCharacter, _playerCharacter);
+	if (!_wornSkin.empty())
+		BuySkin(_wornSkin);
 	_smoothCamPos = Vector3::Zero;
 }
 
@@ -1375,6 +1382,8 @@ bool Game::BuySkin(const std::string& skin)
 		_ownedSkins.insert(skin);
 		Log::Info("Game: bought outfit '{}' for {} coins{}", skin, _autopilot ? 0 : price, _autopilot ? " (autopilot)" : "");
 	}
+	_wornSkin = skin;
+	savePurchases();
 	// Worn: "art\chars\m_pris_m.p3d" is model "m_pris", moving with the
 	// character's own animations.
 	const std::size_t slash = file.find_last_of("\\/");
@@ -1432,27 +1441,38 @@ void Game::bossBlast(const Vector3& blast, bool last)
 ScrapBookMenu::Stats Game::scrapBookStats() const
 {
 	ScrapBookMenu::Stats stats;
-	// Lines in a save file: a card, a gag, a wasp each.
-	const auto lines = [](const char* file) {
-		int count = 0;
-		std::ifstream in(file);
-		for (std::string line; std::getline(in, line);)
-			count += !line.empty();
-		return count;
-	};
-	stats.cards = lines("donut_cards.dat");
+	stats.cards = static_cast<int>(_save.Entries("card").size());
 	// Each card found by its name, "card<level><n>" (card12: level 1's
 	// second), at its place in the deck: eight a level.
+	for (const std::string& line : _save.Entries("card"))
+		if (line.size() >= 6 && line.compare(0, 4, "card") == 0 && std::isdigit(line[4]) && std::isdigit(line[5]) &&
+		    line[4] >= '1' && line[5] >= '1')
+			stats.cardsFound.insert((line[4] - '1') * 8 + (line[5] - '1'));
+	stats.gags = static_cast<int>(_save.Entries("gag").size());
+	stats.wasps = static_cast<int>(_save.Entries("wasp").size());
+	// The bonus missions and street races won ("L1:bm1", "L2:sr3"); the cars
+	// and clothes bought, every level's.
+	stats.bonusMissions = 0;
+	stats.streetRaces = 0;
+	for (const std::string& won : _save.Entries("won"))
 	{
-		std::ifstream in("donut_cards.dat");
-		for (std::string line; std::getline(in, line);)
-			if (line.size() >= 6 && line.compare(0, 4, "card") == 0 && std::isdigit(line[4]) && std::isdigit(line[5]) &&
-			    line[4] >= '1' && line[5] >= '1')
-				stats.cardsFound.insert((line[4] - '1') * 8 + (line[5] - '1'));
+		const std::string id = won.substr(won.find(':') + 1);
+		if (id.compare(0, 2, "bm") == 0)
+			++*stats.bonusMissions;
+		else if (id.compare(0, 2, "sr") == 0)
+			++*stats.streetRaces;
+		// Its place in the missions' gallery: the level's eighth.
+		if (id.compare(0, 2, "bm") == 0 && won.size() > 1 && std::isdigit(won[1]))
+			stats.missionsWon.insert((won[1] - '1') * 8 + 7);
 	}
-	stats.gags = lines("donut_gags.dat");
-	stats.wasps = lines("donut_wasps.dat");
-	// The story's missions: each level's AddMission list. donut_progress.dat
+	stats.vehicles = 0;
+	stats.clothing = 0;
+	for (int level = 1; level <= 7; ++level)
+	{
+		*stats.vehicles += static_cast<int>(_save.Entries(fmt::format("car:{}", level)).size());
+		*stats.clothing += static_cast<int>(_save.Entries(fmt::format("skin:{}", level)).size());
+	}
+	// The story's missions: each level's AddMission list. The save
 	// keeps the level reached and where in its story, the drives to the
 	// missions (<id>sd) counted in, as startStoryMission plays them.
 	const StoryProgress progress = loadStoryProgress();
@@ -1586,12 +1606,40 @@ void Game::drawMainMenuPage(const GameIntent& intent, const Matrix4x4& proj)
 	_menuShown = true;
 }
 
+void Game::restorePurchases()
+{
+	// This level's, as bought in an earlier session.
+	_ownedCars = _save.Entries(fmt::format("car:{}", _levelNumber));
+	_ownedSkins = _save.Entries(fmt::format("skin:{}", _levelNumber));
+	_currentCar = _save.Get(fmt::format("current-car:{}", _levelNumber));
+	_wornSkin = _save.Get(fmt::format("worn-skin:{}", _levelNumber));
+}
+
+void Game::savePurchases()
+{
+	// An unattended run's are free, not bought.
+	if (_autopilot)
+		return;
+	for (const auto& car : _ownedCars)
+		_save.Add(fmt::format("car:{}", _levelNumber), car);
+	for (const auto& skin : _ownedSkins)
+		_save.Add(fmt::format("skin:{}", _levelNumber), skin);
+	if (!_currentCar.empty())
+		_save.Set(fmt::format("current-car:{}", _levelNumber), _currentCar);
+	if (!_wornSkin.empty())
+		_save.Set(fmt::format("worn-skin:{}", _levelNumber), _wornSkin);
+	_save.Save();
+}
+
 bool Game::BuyCar(const std::string& car)
 {
 	if (car.empty() || _ownedCars.count(car))
 	{
 		if (!car.empty())
+		{
 			_currentCar = car;
+			savePurchases();
+		}
 		return true;
 	}
 	const int price = CarPrice(car);
@@ -1600,6 +1648,7 @@ bool Game::BuyCar(const std::string& car)
 	_ownedCars.insert(car);
 	_currentCar = car;
 	Log::Info("Game: bought '{}' for {} coins{}", car, _autopilot ? 0 : price, _autopilot ? " (autopilot)" : "");
+	savePurchases();
 	return true;
 }
 
@@ -1617,9 +1666,9 @@ void Game::saveCoins() const
 	// Coins an unattended run walks into were not earned either.
 	if (_autopilot)
 		return;
-	std::ofstream file("donut_coins.dat");
-	if (file.good())
-		file << _coins << "\n";
+	auto& save = const_cast<SaveGame&>(_save);
+	save.Set("coins", std::to_string(_coins));
+	save.Save();
 }
 
 void Game::runAutopilot(double dt)
@@ -1943,10 +1992,13 @@ void Game::loadLevel()
 	_teleports.clear();
 	_playerCharacter = "homer";
 	_playerCarModel = "famil_v";
-	// A new level, its own car: what was bought on the last one stays there.
+	// A new level, its own cars and clothes: what was bought on the last one
+	// stays there, and comes back with it.
 	_currentCar.clear();
 	_ownedCars.clear();
 	_ownedSkins.clear();
+	_wornSkin.clear();
+	restorePurchases();
 	for (const std::string& id : levelScriptCalls("AddMission"))
 	{
 		// Each mission is reached through its "Sunday drive", <id>sdi.mfk: go
@@ -2385,14 +2437,8 @@ void Game::loadGags()
 	std::ifstream script(fmt::format("scripts/{}/level.mfk", levelDirectory()));
 	if (!script)
 		return;
-	// Found in an earlier session (donut_gags.dat, every level's).
-	std::set<std::string> found;
-	{
-		std::ifstream file("donut_gags.dat");
-		for (std::string id; std::getline(file, id);)
-			if (!id.empty())
-				found.insert(id);
-	}
+	// Found in an earlier session (the save's, every level's).
+	const std::set<std::string>& found = _save.Entries("gag");
 	std::optional<Gag> gag;
 	int unplaced = 0;
 	for (std::string line; std::getline(script, line);)
@@ -2489,19 +2535,11 @@ void Game::saveGags() const
 {
 	if (_autopilot)
 		return;
-	std::set<std::string> found;
-	{
-		std::ifstream file("donut_gags.dat");
-		for (std::string id; std::getline(file, id);)
-			if (!id.empty())
-				found.insert(id);
-	}
+	auto& save = const_cast<SaveGame&>(_save);
 	for (const auto& gag : _gags)
 		if (gag.played)
-			found.insert(gagId(gag));
-	std::ofstream file("donut_gags.dat");
-	for (const auto& id : found)
-		file << id << "\n";
+			save.Add("gag", gagId(gag));
+	save.Save();
 }
 
 void Game::playGag(Gag& gag)

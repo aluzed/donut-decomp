@@ -30,11 +30,7 @@ CollectibleManager::CollectibleManager(Level& level, LineRenderer& lineRenderer)
 
 void CollectibleManager::loadCards()
 {
-	std::set<std::string> found;
-	std::ifstream file("donut_cards.dat");
-	for (std::string id; std::getline(file, id);)
-		if (!id.empty())
-			found.insert(id);
+	const std::set<std::string>& found = Game::GetInstance().GetSave().Entries("card");
 
 	_cards.clear();
 	for (const auto& card : _level.GetCards())
@@ -50,22 +46,12 @@ void CollectibleManager::saveCards() const
 	// An unattended run teleports past cards; it has not found them.
 	if (Game::GetInstance().IsAutopilot())
 		return;
-	// The file holds every level's cards: those of the others are kept as they
-	// were read. Writing this level's alone lost them all on the first card
-	// found on the next level.
-	std::set<std::string> found;
-	{
-		std::ifstream file("donut_cards.dat");
-		for (std::string id; std::getline(file, id);)
-			if (!id.empty())
-				found.insert(id);
-	}
+	// The save holds every level's cards: this level's are added to them.
+	auto& save = Game::GetInstance().GetSave();
 	for (const auto& card : _cards)
 		if (card.found)
-			found.insert(card.id);
-	std::ofstream file("donut_cards.dat");
-	for (const auto& id : found)
-		file << id << "\n";
+			save.Add("card", card.id);
+	save.Save();
 }
 
 void CollectibleManager::layOutWrenches()

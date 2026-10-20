@@ -206,12 +206,7 @@ WaspManager::WaspManager(int level, const std::string& levelScript, const Level&
 	readBehaviours(levelScript);
 
 	// AddSpawnPointByLocatorScript("w_lemon", "beecamera", "Shelley", "w_lemon", ...).
-	std::set<std::string> destroyed;
-	{
-		std::ifstream saved("donut_wasps.dat");
-		for (std::string id; std::getline(saved, id);)
-			destroyed.insert(id);
-	}
+	const std::set<std::string>& destroyed = Game::GetInstance().GetSave().Entries("wasp");
 	std::ifstream script(levelScript);
 	for (std::string line; std::getline(script, line);)
 	{
@@ -636,20 +631,12 @@ void WaspManager::save() const
 {
 	if (Game::GetInstance().IsAutopilot())
 		return;
-	// Every level's: the others' as they were read.
-	std::set<std::string> destroyed;
-	{
-		std::ifstream saved("donut_wasps.dat");
-		for (std::string id; std::getline(saved, id);)
-			if (!id.empty())
-				destroyed.insert(id);
-	}
+	// Every level's: this level's added to the others'.
+	auto& save = Game::GetInstance().GetSave();
 	for (const auto& wasp : _wasps)
 		if (wasp.destroyed)
-			destroyed.insert(wasp.id);
-	std::ofstream file("donut_wasps.dat");
-	for (const auto& id : destroyed)
-		file << id << "\n";
+			save.Add("wasp", wasp.id);
+	save.Save();
 }
 
 } // namespace Donut

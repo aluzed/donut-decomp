@@ -82,8 +82,8 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
 | GAME-003 | 🟡 | P1 | The full state machine | Splash, main menu (the game's own `MainMenu.pag` over the Simpsons' living room, one entry between its arrows), the game's loading screen with the level's picture, in game, the game's pause screen, mission complete and failed, the briefing picture on a mission's card, the credits at the story's end, the options, their sound, display and keyboard pages (kept) work. Missing: the scrapbook's vehicles and clothes galleries (its pages, stats, contents, cards' and missions' galleries work; the living room: Homer asleep before the television, the entry's object aglow, the race car going round, the camera flying to each options page's object), the other frontend screens |
-| GAME-010 | 🟡 | P2 | Collectibles and their saved state | Coins (purse in `donut_coins.dat`), cards (`donut_cards.dat`), wrenches, phone booths, doorbells, gags (sound, coin, animated model and characters, count, `donut_gags.dat`), wasp cameras (GAME-WASP), buying cars and outfits |
-| GAME-011 | 🟡 | P2 | Full save and load | Separate files for story progress, best times, coins, cards and gags. Missing: one save slot holding them all, the player's car and outfit, the cars bought |
+| GAME-010 | 🟡 | P2 | Collectibles and their saved state | Coins (purse in the save), cards (the save), wrenches, phone booths, doorbells, gags (sound, coin, animated model and characters, count, `donut_gags.dat`), wasp cameras (GAME-WASP), buying cars and outfits |
+| GAME-011 | ✅ | P2 | Full save and load | One save, `donut_game.dat`: the story reached, coins, cards, gags, wasp cameras, bonus missions and street races won, each level's cars and clothes bought and those in use, best times; the separate files of before imported. Not the player's position: the next mission places them |
 | GAME-014 | 🟡 | P1 | Interiors | Every level's interiors load with the level; doors and zone triggers take the player in and out. Not streamed |
 | GAME-WASP | 🟡 | P2 | Wasp cameras | Twenty per level hover at their spawn points; drawn to the player and firing at them as the level script says; a jump or a car destroys one (its explosion plays), for 20 coins, kept in `donut_wasps.dat`. Their shots fly and can be dodged; their lens and signal glow; they buzz, fire, zap and blow up with the game's sounds. they dodge about (EVADE_PLAYER); their particle effects run |
 
@@ -242,7 +242,7 @@ car, rewards), not through the commands.
 1. **Animated props** (P3D-004, then RENDER-006/007): gags, doors and level props come to
    life; the biggest visible gain.
 2. **The game's own screens** (GAME-003, UI-TEXT, UI-LOADING, AUDIO-007 subtitles).
-3. **Gameplay left**: one save slot (GAME-011).
+3. **Gameplay left**: one save slot (GAME-011, done).
 4. **World look**: lights (P3D-002), lightmaps (RENDER-014/015), fog (LEVEL-FOG),
    sun halo (RENDER-011).
 5. **Scale**: LEVEL-STREAM, then the spatial tree (RENDER-008b; the frustum culling is

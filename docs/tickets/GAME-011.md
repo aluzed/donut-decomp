@@ -1,6 +1,6 @@
 # GAME-011 — Sauvegarde/chargement complet (position, véhicule, argent, progression, collectibles)
 
-- **Status:** TODO
+- **Status:** DONE (2026-10-20: one save, `donut_game.dat`)
 - **Priority:** P2
 - **Module:** Game
 - **Depends on:** GAME-010
@@ -30,3 +30,41 @@ de mission ne sont jamais sauvegardés. Aucun format de save unifié n'existe.
 - [ ] Après relancement, position, argent et collectibles sont restaurés.
 - [ ] Le best-time existant continue de fonctionner.
 - [ ] Le jeu compile et reste jouable.
+
+## One save (2026-10-20)
+
+`SaveGame` (`src/Game/SaveGame.{h,cpp}`) keeps the game in one file, `donut_game.dat`:
+values by key and sets of entries by name, a tab-separated line each after a
+`donut-save 1` header, written whole to a file beside it then moved into place (a write
+cut short leaves the last save).
+
+| Kept | As |
+|---|---|
+| the story reached | `progress`: "<mission> <level>", as donut_progress.dat had it |
+| the coins | `coins` |
+| a mission's best time | `time:L4:m1sd` |
+| the cards, gags, wasp cameras found | sets `card`, `gag`, `wasp`, their ids as before |
+| the bonus missions and street races won | set `won`: "L1:bm1", "L2:sr3" (new) |
+| a level's cars and clothes bought | sets `car:1`, `skin:1` (new: they were lost with the level) |
+| the car and the outfit in use there | `current-car:1`, `worn-skin:1` (new) |
+
+`Game` loads it first thing, before the level reads its cards, gags and wasps; every
+writer that had its own file (`saveCoins`, `saveStoryProgress`, `saveGags`,
+`CollectibleManager::saveCards`, `WaspManager`, `ScriptEngine::saveBestTimes`) now sets
+its part and saves. A level loaded gets its purchases back (`restorePurchases`), the
+player in the outfit last worn (`BuySkin`, owned, free); a purchase or a car chosen is
+saved (`savePurchases`). An unattended run (`--autopilot`) saves none of it, as before.
+
+Without `donut_game.dat`, the separate files of before (`donut_progress.dat`,
+`donut_coins.dat`, `donut_cards.dat`, `donut_gags.dat`, `donut_wasps.dat`,
+`donut_save.dat`) are read, and written into it at the first save; they are left as they
+were. Checked: a save of 60 coins, level 7's first mission and two best times read from
+the old files, written out as the new one, the old ones unchanged (their checksums); a
+`donut_game.dat` given a bonus mission and two street races won, a car and an outfit
+bought on level 1: the scrapbook's stats count them, level 1's bonus mission (This Old
+Shanty) shows in the missions' gallery, and level 1 opens with Homer in that outfit
+(h_fat) and the car (the Plow King) at the car start.
+
+Not kept: the player's position. "Resume Game" goes on with the story's next mission,
+whose script places the player, as the game does. The scrapbook's stats now count the
+bonus missions, street races, clothes and vehicles (GAME-003).

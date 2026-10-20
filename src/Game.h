@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "Game/SaveGame.h"
 #include "UI/OptionsMenu.h"
 #include "UI/ScrapBookMenu.h"
 
@@ -127,6 +128,8 @@ public:
 	float GetCarHealth() const { return _health; }
 	// The player's coins, kept across sessions in donut_coins.dat.
 	int GetCoins() const { return _coins; }
+	// The game's save: the story, coins, collectibles, purchases, best times.
+	SaveGame& GetSave() { return _save; }
 	// Takes `amount` from the purse; false, taking nothing, if it holds less.
 	bool SpendCoins(int amount);
 	bool IsAutopilot() const { return _autopilot; }
@@ -333,6 +336,9 @@ private:
 	float _fallOffY = -50.0f;
 	std::string _currentCar;
 	std::set<std::string> _ownedSkins;
+	// The outfit worn on this level, the last bought or put on; none, the
+	// character's own.
+	std::string _wornSkin;
 	// rewards.mfk's BindReward for `name` of `type` ("car", "skin") for sale:
 	// its cost, and the model file it names. 0 when there is none.
 	int rewardPrice(const std::string& name, const std::string& type, std::string* file = nullptr) const;
@@ -498,6 +504,11 @@ private:
 	// Whether level `level`'s scripts were copied off the CD.
 	bool levelAvailable(int level) const;
 	int _coins = 0;
+	SaveGame _save;
+	// The cars and clothes bought on the current level, and those in use, as
+	// the save keeps them; a purchase saved.
+	void restorePurchases();
+	void savePurchases();
 	double _lastLineAt = -10.0;
 	// The car whose engine is heard ("famil_v"), empty on foot.
 	std::string _engineCar;
