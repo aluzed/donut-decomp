@@ -2273,12 +2273,17 @@ bool Game::seatDriver(Character& character, const Vehicle& car)
 		return false;
 	// The driving animations are built about a point beside the car: their
 	// Motion_Root stands at (1.0, 0.46, -0.72) from the character's origin. Put
-	// that root, not the origin, at the seat; facing the car's way.
+	// that root, not the origin, at the seat, its height too: without it the
+	// driver sat half a metre up, standing out of the car, Marge's hair
+	// through its roof. Facing the car's way: the model faces -Z, hence the
+	// half turn (as at its door); the car's own way had every driver sitting
+	// backwards, over the back seat.
 	Vector3 root = Vector3::Zero;
 	if (const auto* joint = character.FindJoint("Motion_Root"))
 		root = joint->pose.Translation();
-	character.SetRotation(car.GetRotation());
-	character.FollowController(seat - car.GetRotation() * Vector3(root.X, 0.0f, root.Z));
+	const Quaternion facing = car.GetRotation() * Quaternion(0.0f, 1.0f, 0.0f, 0.0f);
+	character.SetRotation(facing);
+	character.FollowController(seat - facing * root);
 	return true;
 }
 
