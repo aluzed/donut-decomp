@@ -170,6 +170,14 @@ target (the HUD's, the autopilot's) is the ground under it ("UFO beam").
 Checked: the story from m3i under `--autopilot`, the saucer hit and the mission complete;
 from m7i, "hit, and down it goes"; the beam seen from the playground; the saucer falling.
 
+## The barrel up the beam (2026-10-20)
+
+A barrel driven into the beam is seen going up it: the waste barrel's model
+(`bombbarrel.p3d`) rises from the car, slowly at first and turning over, to under the
+hull in 1.6 s, and blows up there -- the sparks, the dust, the shake, the explosion
+heard, the saucer rocked (or, the fourth, brought down). The objective is met as the
+barrel is let go, as before.
+
 ## Not done
 
 - `destroyboss`: the saucer's explosion is the game's sparks and dust, not the barrel's own
@@ -178,7 +186,7 @@ from m7i, "hit, and down it goes"; the beam seen from the playground; the saucer
   `expl2_m` keeps some 100 sprites of 1.5 m alive at once, additive, coloured green over
   their life, on a texture whose background is not black (5, 5, 5): they add up to a
   saturated square. Whether the game shows fewer, or blends them otherwise, is not known;
-  left out; the barrel is not seen going up the beam; the beam's
+  left out; the beam's
   sparkles (its particle system) and the saucer's state props are not played. Level 7 m5 and
   m7 name a barrel they do not place: they go to where the last mission put it (m3's for
   m5, m6's for m7, in the story), or, loaded alone, have nowhere to go and are skipped.

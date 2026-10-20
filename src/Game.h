@@ -194,6 +194,9 @@ private:
 	};
 	std::map<const Vehicle*, std::array<WheelSpray, 2>> _wheelSprays;
 	void updateWheelSprays(double dt);
+	// A barrel blown up against the saucer, at `blast`: sparks, dust, a shake,
+	// the explosion heard.
+	void bossBlast(const Vector3& blast, bool last);
 	// The player's car near wrecked smokes and burns from under its hood (the
 	// effects file's car damage effect).
 	std::unique_ptr<ParticleSystem> _carSmoke;

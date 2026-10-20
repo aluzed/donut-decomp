@@ -1258,8 +1258,15 @@ void Game::HitBoss(bool last)
 {
 	if (!_ufo)
 		return;
-	// The barrel goes up the beam and blows up against the hull.
-	const Vector3 blast = _ufo->Hit(last) - Vector3(0.0f, 2.0f, 0.0f);
+	// The barrel goes up the beam from the car; it blows up against the hull
+	// as it gets there (bossBlast).
+	const Vector3 from = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()
+	                                                  : (_character ? _character->GetPosition() : _ufo->GetGroundPosition());
+	_ufo->Launch(from, last);
+}
+
+void Game::bossBlast(const Vector3& blast, bool last)
+{
 	if (_sparks)
 		_sparks->Burst(last ? 60 : 30, blast);
 	if (_dust)
@@ -3268,7 +3275,13 @@ void Game::Run()
 			}
 			updateGags();
 			if (_ufo)
+			{
 				_ufo->Update(deltaTime);
+				Vector3 blast;
+				bool lastBarrel = false;
+				while (_ufo->TakeBlast(blast, lastBarrel))
+					bossBlast(blast, lastBarrel);
+			}
 			// The wasp cameras: a jump at one, or a car driven into it,
 			// destroys it, for coins.
 			if (_waspManager && _character && _interior.empty())

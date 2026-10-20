@@ -43,8 +43,15 @@ public:
 	// Whether `position` is in its beam: under the saucer, within the beam's
 	// reach of its axis.
 	bool InBeam(const Vector3& position) const;
-	// A barrel gone up the beam and blown up against it; `last`, it comes
-	// down. Where the blast is.
+	// A barrel let go into the beam at `from` (the car carrying it): it rises,
+	// turning, to the hull, where it blows up (Hit); `last`, the saucer
+	// comes down.
+	void Launch(const Vector3& from, bool last);
+	// A barrel that has reached the hull since the last call: where it blew
+	// up, and whether it was the last. False when none has.
+	bool TakeBlast(Vector3& at, bool& last);
+	// A barrel blown up against it; `last`, it comes down. Where the blast
+	// is.
 	Vector3 Hit(bool last);
 	bool IsDestroyed() const { return _destroyed; }
 	const Vector3& GetPosition() const { return _position; }
@@ -66,6 +73,17 @@ private:
 	// round and round.
 	std::vector<BillboardAnimation> _glowAnimations;
 	void loadGlows(const std::string& file, CompositeModel* model);
+	// The barrels on their way up: the model, where each set off, how long
+	// since, and whether it is the last.
+	std::unique_ptr<CompositeModel> _barrel;
+	struct Rising
+	{
+		Vector3 from;
+		double age = 0.0;
+		bool last = false;
+	};
+	std::vector<Rising> _rising;
+	std::vector<std::pair<Vector3, bool>> _blasts;
 	Vector3 _position;
 	float _ground;
 	double _time = 0.0;

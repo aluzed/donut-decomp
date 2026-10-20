@@ -29,6 +29,11 @@ constexpr float kBeamWidth = 10.0f;
 // The saucer's turn, radians a second, and how far it bobs.
 constexpr float kSpin = 0.4f;
 constexpr float kBob = 0.6f;
+// A barrel's way up the beam: how long it takes, how fast it turns, and how far
+// under the saucer's middle it meets the hull.
+constexpr double kRiseSeconds = 1.6;
+constexpr float kRiseSpin = 5.0f;
+constexpr float kHullBelow = 2.0f;
 } // namespace
 
 std::unique_ptr<UfoBoss> UfoBoss::FromLevelScript(const std::string& levelScript, const Level& level,
@@ -64,7 +69,9 @@ UfoBoss::UfoBoss(const Vector3& position, float ground): _position(position), _g
 	_beam = CompositeModel::LoadP3D("art/missions/level07/ufobeam.p3d");
 	loadGlows("art/missions/level07/UFO.p3d", _saucer.get());
 	loadGlows("art/missions/level07/ufobeam.p3d", _beam.get());
+	_barrel = CompositeModel::LoadP3D("art/missions/level07/bombbarrel.p3d");
 }
+
 
 void UfoBoss::loadGlows(const std::string& file, CompositeModel* model)
 {
@@ -85,9 +92,36 @@ void UfoBoss::loadGlows(const std::string& file, CompositeModel* model)
 
 UfoBoss::~UfoBoss() = default;
 
+void UfoBoss::Launch(const Vector3& from, bool last)
+{
+	_rising.push_back({from + Vector3(0.0f, 1.0f, 0.0f), 0.0, last});
+}
+
+bool UfoBoss::TakeBlast(Vector3& at, bool& last)
+{
+	if (_blasts.empty())
+		return false;
+	at = _blasts.front().first;
+	last = _blasts.front().second;
+	_blasts.erase(_blasts.begin());
+	return true;
+}
+
 void UfoBoss::Update(double dt)
 {
 	_time += dt;
+	// The barrels rise, slowly at first, and blow up against the hull.
+	for (auto it = _rising.begin(); it != _rising.end();)
+	{
+		it->age += dt;
+		if (it->age < kRiseSeconds)
+		{
+			++it;
+			continue;
+		}
+		_blasts.emplace_back(Hit(it->last) - Vector3(0.0f, kHullBelow, 0.0f), it->last);
+		it = _rising.erase(it);
+	}
 	if (_sinceHit >= 0.0)
 		_sinceHit += dt;
 
@@ -125,6 +159,22 @@ void UfoBoss::Update(double dt)
 
 void UfoBoss::Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& billboardShader, const Matrix4x4& viewProj)
 {
+	for (const auto& rising : _rising)
+	{
+		if (!_barrel)
+			break;
+		// Eased up the beam to under the hull, turning over.
+		const float t = static_cast<float>(rising.age / kRiseSeconds);
+		const float eased = t * t;
+		const Vector3 hull = _position - Vector3(0.0f, kHullBelow, 0.0f);
+		const Vector3 at = rising.from + (hull - rising.from) * eased;
+		const float turn = static_cast<float>(rising.age) * kRiseSpin;
+		_barrel->SetTransform(Matrix4x4::MakeTranslate(at) *
+		                      Matrix4x4(Quaternion(Vector3(0.0f, 1.0f, 0.0f), turn) *
+		                                Quaternion(Vector3(1.0f, 0.0f, 0.0f), turn * 0.7f)));
+		for (const bool opaque : {true, false})
+			_barrel->Draw(worldShader, viewProj, _barrel->GetTransform(), opaque);
+	}
 	for (const bool opaque : {true, false})
 	{
 		if (_saucer)
