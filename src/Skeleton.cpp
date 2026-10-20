@@ -41,8 +41,23 @@ void Skeleton::UpdatePose(SkinAnimation& animation, double time, bool loop)
 
 	_joints[0].pose = Matrix4x4::Identity;
 
-	for (auto i = 0; i < _joints.size(); i++)
-		_joints[i].pose = _joints[_joints[i].parent].pose * animation.Evaluate(i, static_cast<float>(time), loop);
+	// Motion_Root carries the animation's travel: a walk moves it forward
+	// over the cycle, and it jumps back when the cycle starts again. The
+	// character is moved by its controller, so the root stays where the first
+	// frame has it, across the ground; up and down it keeps.
+	const auto motionRoot = _jointNameIndexMap.find("Motion_Root");
+	const std::size_t motionIndex = motionRoot != _jointNameIndexMap.end() ? motionRoot->second : _joints.size();
+	for (std::size_t i = 0; i < _joints.size(); i++)
+	{
+		Matrix4x4 local = animation.Evaluate(i, static_cast<float>(time), loop);
+		if (i == motionIndex)
+		{
+			const Vector3 start = animation.Evaluate(i, 0.0f, loop).Translation();
+			const Vector3 now = local.Translation();
+			local = Matrix4x4::MakeTranslate(Vector3(start.X - now.X, 0.0f, start.Z - now.Z)) * local;
+		}
+		_joints[i].pose = _joints[_joints[i].parent].pose * local;
+	}
 
 	updateJoints();
 }
