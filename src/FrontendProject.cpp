@@ -11,6 +11,8 @@
 #include <Render/Texture.h>
 #include <ResourceManager.h>
 #include "Core/FileSystem.h"
+#include "ThirdParty/stb_image.h"
+#include "UI/TextBible.h"
 
 #include <cstdint>
 
@@ -94,12 +96,94 @@ void FrontendProject::AddMultiSprite(const P3D::FrontendMultiSprite& multiSprite
 	    w,
 	    h,
 	    P3D::P3DUtil::ConvertColor(multiSprite.GetColor()),
+	    multiSprite.GetName(),
 	});
+}
+
+void FrontendProject::AddMultiText(const P3D::FrontendMultiText& multiText, int32_t resX, int32_t resY)
+{
+	auto& resources = Game::GetInstance().GetResourceManager();
+	// The page names its text style ("font0_24"), the font file its font
+	// ("boulder_24"): both are registered.
+	const Font* font = resources.GetFont(multiText.GetFontName());
+	if (!font)
+		return;
+	Text text {multiText.GetName(), font, {}, multiText.GetCurrent()};
+	const auto& bible = Game::GetInstance().GetTextBible();
+	for (const auto& string : multiText.GetTextBibles())
+	{
+		const std::string& phrase = bible.Get(string->GetKey());
+		text.strings.push_back(phrase.empty() ? string->GetKey() : phrase);
+	}
+	// Its box: the position is its bottom left, y up.
+	text.width = static_cast<int32_t>(multiText.GetDimensionX());
+	text.height = static_cast<int32_t>(multiText.GetDimensionY());
+	text.x = multiText.GetPositionX();
+	text.y = resY - multiText.GetPositionY() - text.height;
+	text.alignX = multiText.GetAlignX();
+	text.alignY = multiText.GetAlignY();
+	text.color = P3D::P3DUtil::ConvertColor(multiText.GetColor());
+	_texts.push_back(std::move(text));
+}
+
+void FrontendProject::loadImages(const P3D::FrontendPage& page)
+{
+	auto& resources = Game::GetInstance().GetResourceManager();
+	for (const auto& image : page.GetImageResources())
+	{
+		const std::string name = image->GetName() + ".png";
+		if (resources.GetTexture(name))
+			continue;
+		std::string path = image->GetFilepath();
+		path = path.substr(0, path.find('\0'));
+		std::replace(path.begin(), path.end(), '\\', '/');
+		int width = 0, height = 0, channels = 0;
+		uint8_t* pixels = stbi_load((_resourceDir + path).c_str(), &width, &height, &channels, 4);
+		if (!pixels)
+		{
+			Log::Warn("Frontend: no image '{}'", _resourceDir + path);
+			continue;
+		}
+		resources.AddTexture(name, std::make_unique<Texture>(pixels, width, height, name));
+		stbi_image_free(pixels);
+	}
+}
+
+void FrontendProject::SetText(const std::string& name, const std::string& text)
+{
+	for (auto& entry : _texts)
+		if (entry.name == name)
+			entry.shown = text;
+}
+
+bool FrontendProject::GetRect(const std::string& name, float& x, float& y, float& width, float& height) const
+{
+	for (const auto& sprite : _sprites)
+		if (sprite.name == name)
+		{
+			x = sprite.positionX * kScale;
+			y = sprite.positionY * kScale;
+			width = sprite.width * kScale;
+			height = sprite.height * kScale;
+			return true;
+		}
+	for (const auto& text : _texts)
+		if (text.name == name)
+		{
+			x = text.x * kScale;
+			y = text.y * kScale;
+			width = text.width * kScale;
+			height = text.height * kScale;
+			return true;
+		}
+	return false;
 }
 
 void FrontendProject::AddGroup(const P3D::FrontendGroup& group, int32_t resX, int32_t resY)
 {
 	for (const auto& multiSprite : group.GetMultiSprites()) { AddMultiSprite(*multiSprite, resX, resY); }
+
+	for (const auto& multiText : group.GetMultiTexts()) { AddMultiText(*multiText, resX, resY); }
 
 	for (const auto& group : group.GetChildren()) { AddGroup(*group, resX, resY); }
 }
@@ -113,6 +197,28 @@ void FrontendProject::LoadP3D(const std::string& filename, const std::string& pa
 	}
 
 	Log::Info("Loading Frontend Project: {}", filename);
+
+	// Its resources sit beside it (scrooby2/resource/): the pages' images, and
+	// the fonts their texts name, by style and by font.
+	_resourceDir = filename.substr(0, filename.find_last_of('/') + 1) + "resource/";
+	if (FileSystem::exists(_resourceDir + "fonts"))
+	{
+		auto& resources = Game::GetInstance().GetResourceManager();
+		for (const auto& entry : FileSystem::directory_iterator(_resourceDir + "fonts"))
+		{
+			if (entry.path().extension() != ".p3d")
+				continue;
+			const P3D::P3DFile fonts(entry.path().string());
+			for (const auto& chunk : fonts.GetRoot().GetChildren())
+				if (chunk->IsType(P3D::ChunkType::TextureFont))
+				{
+					const auto p3dFont = P3D::TextureFont::Load(*chunk);
+					for (const std::string& name : {p3dFont->GetName(), entry.path().stem().string()})
+						if (!resources.GetFont(name))
+							resources.AddFont(name, std::make_unique<Font>(*p3dFont));
+				}
+		}
+	}
 
 	const auto p3d = P3D::P3DFile(filename);
 	int pagesLoaded = 0;
@@ -132,11 +238,13 @@ void FrontendProject::LoadP3D(const std::string& filename, const std::string& pa
 				if (!pageName.empty() && page->GetName() != pageName)
 					continue;
 
+				loadImages(*page);
 				for (const auto& layer : page->GetLayers())
 				{
 					for (const auto& group : layer->GetGroups()) { AddGroup(*group, resX, resY); }
 
 					for (const auto& multiSprite : layer->GetMultiSprites()) { AddMultiSprite(*multiSprite, resX, resY); }
+					for (const auto& multiText : layer->GetMultiTexts()) { AddMultiText(*multiText, resX, resY); }
 				}
 
 				++pagesLoaded;
@@ -172,7 +280,33 @@ void FrontendProject::Draw(const Matrix4x4& proj)
 		                  sprite.color);
 	}
 
+	for (const auto& text : _texts)
+	{
+		const std::string& value =
+		    !text.shown.empty() ? text.shown
+		                        : (text.current < text.strings.size() ? text.strings[text.current] : std::string());
+		if (value.empty())
+			continue;
+		// Shrunk to fit its box, as the game's are: "RESUME GAME" is wider in
+		// its font than the main menu's box between the arrows.
+		const float natural = text.font->MeasureWidth(value);
+		const float scale = natural > text.width && text.width > 0 ? text.width / natural : 1.0f;
+		const float width = natural * scale;
+		const float height = text.font->GetHeight() * scale;
+		float x = static_cast<float>(text.x);
+		float y = static_cast<float>(text.y);
+		if (static_cast<Alignment>(text.alignX) == Alignment::Center)
+			x += (text.width - width) * 0.5f;
+		else if (static_cast<Alignment>(text.alignX) == Alignment::Right)
+			x += text.width - width;
+		if (static_cast<Alignment>(text.alignY) == Alignment::Center)
+			y += (text.height - height) * 0.5f;
+		else if (static_cast<Alignment>(text.alignY) == Alignment::Bottom)
+			y += text.height - height;
+		_spriteBatch.DrawText(text.font, value, Vector2(x, y), text.color, scale);
+	}
+
 	glBindSampler(0, _sampler);
-	_spriteBatch.Flush(proj, 2.0f);
+	_spriteBatch.Flush(proj, kScale);
 }
 } // namespace Donut

@@ -31,3 +31,16 @@ dispersés (`Game.cpp:587`, `606`, `749`, `763`). `_mainMenu` n'est rendu qu'en 
 - [ ] Chaque état possède un rendu visible (LevelSelect et Credits inclus).
 - [ ] Splash→MainMenu→LevelSelect→InGame→Pause→Result→Credits→MainMenu est parcourable au clavier/manette.
 - [ ] Le jeu compile et reste jouable.
+
+## The game's main menu page (2026-10-20)
+
+The main menu is the game's own page now (`scrooby2/frontend.p3d`, `MainMenu.pag`): one
+entry at a time between its two arrows, at its place at the top of the screen, in its
+font -- "RESUME GAME", "NEW GAME", the levels, "QUIT GAME", the text bible's words.
+Left and right (or a click on an arrow) turn it, the confirm key (or a click on it)
+takes it; not on the frame the menu opens, which the key leaving the splash screen
+would take. The HUD is not drawn under it. Checked: the page drawn, NEW GAME confirmed
+starts level 1's first mission.
+
+Not done: the 3D frontend behind it (the Simpsons' house, `3dFE.pag`), the other screens
+(options, scrapbook, load game), the screen transitions.

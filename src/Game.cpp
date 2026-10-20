@@ -349,13 +349,22 @@ Game::Game(int argc, char** argv)
 		_coins = 0;
 
 	_mainMenu = std::make_unique<GameMenu>();
+	// The game's own main menu page: its arrows, and the entry shown between
+	// them in its font.
+	if (FileSystem::exists("./art/frontend/scrooby2/frontend.p3d"))
+	{
+		_mainMenuPage = std::make_unique<FrontendProject>();
+		_mainMenuPage->LoadP3D("./art/frontend/scrooby2/frontend.p3d", "MainMenu.pag");
+	}
 	// Picking up the story where it was left, when it was.
 	if (const StoryProgress progress = loadStoryProgress();
 	    (progress.level > 1 || progress.mission > 0) && levelAvailable(progress.level))
 	{
 		// Says where: "Continue - LEVEL 2".
 		const std::string& level = _textBible.Get(fmt::format("LEVEL_{}", progress.level));
-		const std::string label = level.empty() ? "Continue" : "Continue - " + level;
+		const std::string& resume = _textBible.Get("RESUME_GAME");
+		const std::string continueLabel = resume.empty() ? "Continue" : resume;
+		const std::string label = level.empty() ? continueLabel : continueLabel + " - " + level;
 		_mainMenu->AddButton(label, 0, 0, 200, 40, [this, progress]() {
 			if (progress.level != _levelNumber)
 				switchLevel(progress.level);
@@ -364,7 +373,8 @@ Game::Game(int argc, char** argv)
 			_gameState = GameState::InGame;
 		});
 	}
-	_mainMenu->AddButton("New Game", 0, 0, 200, 40, [this]() {
+	const std::string& newGame = _textBible.Get("NEW_GAME");
+	_mainMenu->AddButton(newGame.empty() ? "New Game" : newGame, 0, 0, 200, 40, [this]() {
 		// The story starts on level 1, whatever level is loaded.
 		if (_levelNumber != 1 && levelAvailable(1))
 			switchLevel(1);
@@ -386,7 +396,8 @@ Game::Game(int argc, char** argv)
 			_gameState = GameState::InGame;
 		});
 	}
-	_mainMenu->AddButton("Quit", 0, 0, 200, 40, [this]() {
+	const std::string& quitGame = _textBible.Get("QUIT_GAME");
+	_mainMenu->AddButton(quitGame.empty() ? "Quit" : quitGame, 0, 0, 200, 40, [this]() {
 		SDL_Event quitEvent;
 		quitEvent.type = SDL_QUIT;
 		SDL_PushEvent(&quitEvent);
@@ -1153,6 +1164,43 @@ void Game::HitBoss(bool last)
 	_audioManager->PlayAudio(last ? "sound\\soundfx\\collisions\\car_explosion_04b.rsd"
 	                              : "sound\\soundfx\\collisions\\car_explosion_01b.rsd",
 	                         blast);
+}
+
+void Game::drawMainMenuPage(const GameIntent& intent, const Matrix4x4& proj)
+{
+	const auto& buttons = _mainMenu->GetButtons();
+	_menuChoice = std::min(_menuChoice, buttons.size() - 1);
+	// One entry at a time, turned with left and right (or a click on an
+	// arrow), taken with the confirm key (or a click on it).
+	const bool left = intent.moveLeft > 0.5f, right = intent.moveRight > 0.5f;
+	const auto clicked = [&](const char* name) {
+		float x, y, w, h;
+		return intent.mouseLeftClick && _mainMenuPage->GetRect(name, x, y, w, h) && intent.mouseX >= x &&
+		       intent.mouseX <= x + w && intent.mouseY >= y && intent.mouseY <= y + h;
+	};
+	if ((left && !_menuLeftHeld) || clicked("MainMenu_LArrow"))
+		_menuChoice = (_menuChoice + buttons.size() - 1) % buttons.size();
+	if ((right && !_menuRightHeld) || clicked("MainMenu_RArrow"))
+		_menuChoice = (_menuChoice + 1) % buttons.size();
+	_menuLeftHeld = left;
+	_menuRightHeld = right;
+	// The PC page's text (it has "QUIT GAME") shows ours; the console one,
+	// at the same place, nothing.
+	// The game's own words fit its box ("RESUME GAME"); which level it resumes
+	// ("- LEVEL 2") does not.
+	const std::string& label = buttons[_menuChoice].label;
+	_mainMenuPage->SetText("MainMenu_PC", label.substr(0, label.find(" - ")));
+	_mainMenuPage->SetText("MainMenu", " ");
+	_mainMenuPage->Draw(proj);
+	// Not on the frame it opens: the key that left the splash screen would
+	// take the first entry at once.
+	if (_menuShown && (intent.uiConfirm || clicked("MainMenu_PC")) && buttons[_menuChoice].action)
+	{
+		_menuShown = false;
+		buttons[_menuChoice].action();
+		return;
+	}
+	_menuShown = true;
 }
 
 bool Game::BuyCar(const std::string& car)
@@ -3564,7 +3612,9 @@ void Game::Run()
 
 		Matrix4x4 proj = Matrix4x4::MakeOrtho(0.0f, viewportWidth, viewportHeight, 0.0f);
 
-		if (_textureFontP3D != nullptr)
+		// Not under the game's own main menu page: its entry stands where the
+		// mission's objective is.
+		if (_textureFontP3D != nullptr && !(_gameState == GameState::MainMenu && _mainMenuPage))
 		{
 			auto font = _resourceManager->GetFont("boulder_16");
 			const bool pad = intent.gamepadConnected;
@@ -3835,7 +3885,9 @@ void Game::Run()
 			}
 		}
 
-		if (_gameState == GameState::MainMenu)
+		if (_gameState == GameState::MainMenu && _mainMenuPage && !_mainMenu->GetButtons().empty())
+			drawMainMenuPage(intent, proj);
+		else if (_gameState == GameState::MainMenu)
 		{
 			auto font = _resourceManager->GetFont("boulder_16");
 			SpriteBatch menuSprites;

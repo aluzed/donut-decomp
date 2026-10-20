@@ -81,7 +81,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 
 | ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
-| GAME-003 | 🟡 | P1 | The full state machine | Splash, main menu (New Game, Continue, level select), in game, pause, mission complete and failed work. Missing: the game's own frontend screens (`FrontendProject` pages), loading screen, credits (the `Loading` and `Credits` states are never entered) |
+| GAME-003 | 🟡 | P1 | The full state machine | Splash, main menu (the game's own `MainMenu.pag`: one entry between its arrows, turned left and right), in game, pause, mission complete and failed work. Missing: the 3D frontend behind the menu, the other frontend screens, loading screen, credits |
 | GAME-010 | 🟡 | P2 | Collectibles and their saved state | Coins (purse in `donut_coins.dat`), cards (`donut_cards.dat`), wrenches, phone booths, doorbells, gags (sound, coin, animated model and characters, count, `donut_gags.dat`), wasp cameras (GAME-WASP), buying cars and outfits |
 | GAME-011 | 🟡 | P2 | Full save and load | Separate files for story progress, best times, coins, cards and gags. Missing: one save slot holding them all, the player's car and outfit, the cars bought |
 | GAME-014 | 🟡 | P1 | Interiors | Every level's interiors load with the level; doors and zone triggers take the player in and out. Not streamed |
@@ -159,7 +159,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 
 | ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
-| UI-TEXT | 🟡 | P1 | Frontend MultiText | The text bible drives objectives, titles, cards, failure reasons and hints; `FrontendMultiText` is read, not drawn |
+| UI-TEXT | ✅ | — | Frontend MultiText | The frontend pages' texts drawn: the text bible's phrase, the page's font, aligned and fitted to their box; the pages' images loaded from `resource/` (2026-10-20) |
 | UI-LOADING | ⬜ | P3 | Loading screen and hints | |
 | UI-FMV | ⬜ | P3 | RMV (Radical Movie) player | format to reverse |
 | UI-MENU | ✅ | — | Main and pause menus, hit-testing, pause freezes the game | |

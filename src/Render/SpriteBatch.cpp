@@ -63,14 +63,15 @@ GL::ShaderProgram& SpriteBatch::GetShader()
 	return *Shader;
 }
 
-void SpriteBatch::DrawText(const Font* font, const std::string& text, const Vector2& position, const Vector4& colour)
+void SpriteBatch::DrawText(const Font* font, const std::string& text, const Vector2& position, const Vector4& colour,
+                           float scale)
 {
 	if (font == nullptr)
 		return;
 
 	Font::Glyph glyph;
 	Vector2 curPosition = position;
-	float fontHeight = font->GetHeight();
+	float fontHeight = font->GetHeight() * scale;
 
 	for (const char& c : text)
 	{
@@ -86,10 +87,10 @@ void SpriteBatch::DrawText(const Font* font, const std::string& text, const Vect
 
 		Texture* glyphTexture = font->GetTexture(glyph.textureId);
 
-		Draw(glyphTexture, curPosition + Vector2(glyph.leftBearing), Vector2(glyph.bottomLeftX, 1.0f - glyph.topRightY),
-		     Vector2(glyph.topRightX, 1.0f - glyph.bottomLeftY), Vector2(glyph.width, fontHeight), colour);
+		Draw(glyphTexture, curPosition + Vector2(glyph.leftBearing * scale), Vector2(glyph.bottomLeftX, 1.0f - glyph.topRightY),
+		     Vector2(glyph.topRightX, 1.0f - glyph.bottomLeftY), Vector2(glyph.width * scale, fontHeight), colour);
 
-		curPosition += Vector2(glyph.advance, 0);
+		curPosition += Vector2(glyph.advance * scale, 0);
 	}
 }
 

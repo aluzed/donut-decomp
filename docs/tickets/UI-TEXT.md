@@ -1,6 +1,6 @@
 # UI-TEXT — Rendu des FrontendMultiText (texte frontend)
 
-- **Status:** TODO
+- **Status:** DONE (2026-10-20)
 - **Priority:** P1
 - **Module:** UI
 - **Depends on:** P3D-005
@@ -36,3 +36,23 @@ car's health forced to 0: "MISSION FAILED!", the reason, the E-brake hint, then 
 - [ ] Le texte utilise la `TextureFont` chargée depuis le P3D frontend.
 - [ ] Le contenu provient du text bible (pas de chaîne hardcodée).
 - [ ] Les groupes imbriqués propagent leurs textes (`AddGroup`).
+
+## Done (2026-10-20)
+
+- **Texts drawn** (`FrontendProject::AddMultiText`): a `FrontendMultiText` (0x18007) of a
+  page, its group's or its layer's, shows its current string -- the text bible's phrase
+  for its key (`FrontendStringTextBible`, 0x1800B) -- in its font, aligned in its box
+  (the position is the box's bottom left, y up, as the sprites': the splash screen's
+  "PRESS START" stands at y 60 of 480), in its colour. Too wide for its box, it is shrunk
+  to fit (`SpriteBatch::DrawText` takes a scale), as "RESUME GAME" is between the main
+  menu's arrows.
+- **Fonts**: a page names its text style ("font0_24"), the font file its font
+  ("boulder_24"); the frontend's `resource/fonts/*.p3d` are loaded under both names.
+- **Images**: a page's image resources (`FrontendImageResource`, 0x18100: name and
+  `images\LArrowG.png`) are read from the frontend's `resource/` directory, by name.
+- `SetText` shows a text of ours in place of a page's strings; `GetRect` gives where an
+  element stands, for clicks.
+
+## Not done
+
+- `FrontendStringHardCoded` (0x1800C) strings; a text's shadow; text effects.

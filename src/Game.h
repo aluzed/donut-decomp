@@ -206,6 +206,13 @@ private:
 	void updateHitAndRun(double dt);
 	std::unique_ptr<GameInput> _gameInput;
 	std::unique_ptr<FrontendProject> _frontend;
+	// The game's main menu page (scrooby2's MainMenu.pag) and the entry it
+	// shows; left and right as they were last frame.
+	std::unique_ptr<FrontendProject> _mainMenuPage;
+	std::size_t _menuChoice = 0;
+	bool _menuLeftHeld = false, _menuRightHeld = false;
+	bool _menuShown = false;
+	void drawMainMenuPage(const struct GameIntent& intent, const Matrix4x4& proj);
 	std::unique_ptr<GL::ShaderProgram> _meshShader;
 	std::unique_ptr<SimpleMesh> _playerMesh;
 	std::unique_ptr<SimpleMesh> _carMesh;

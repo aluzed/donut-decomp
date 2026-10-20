@@ -30,7 +30,8 @@ public:
 	SpriteBatch(size_t = 1000);
 
 	void Flush(const Matrix4x4&, float = 1.0f);
-	void DrawText(const class Font*, const std::string&, const Vector2&, const Vector4&);
+	// `scale` on the font's own size (a text shrunk to fit its box).
+	void DrawText(const class Font*, const std::string&, const Vector2&, const Vector4&, float scale = 1.0f);
 	void Draw(Texture*, const Vector2&, float, const Vector4&);
 	void Draw(Texture*, const Vector2&, const Vector2&, const Vector4&);
 	void Draw(Texture*, const Vector2&, const Vector2&, float, const Vector4&);
