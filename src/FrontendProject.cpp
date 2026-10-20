@@ -205,6 +205,16 @@ void FrontendProject::SetSpriteVisible(const std::string& name, bool visible)
 			sprite.visible = visible;
 }
 
+void FrontendProject::RenameSprite(const std::string& name, const std::string& newName)
+{
+	for (auto& sprite : _sprites)
+		if (sprite.name == name)
+		{
+			sprite.name = newName;
+			return;
+		}
+}
+
 void FrontendProject::SetSpriteFill(const std::string& name, float fraction)
 {
 	for (auto& sprite : _sprites)

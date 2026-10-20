@@ -4,6 +4,7 @@
 #include "Core/Log.h"
 
 #include <fstream>
+#include <iterator>
 #include <sstream>
 #include <vector>
 
@@ -66,11 +67,62 @@ bool TextBible::Load(const std::string& path, char language)
 	return !_phrases.empty();
 }
 
+bool TextBible::LoadCompiled(const std::string& path, char language)
+{
+	std::ifstream file(path, std::ios::binary);
+	const std::vector<uint8_t> data((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+	const auto u32 = [&data](std::size_t at) {
+		return at + 4 <= data.size() ? static_cast<uint32_t>(data[at] | data[at + 1] << 8 | data[at + 2] << 16 | data[at + 3] << 24) : 0u;
+	};
+	// The file's header, the bible's chunk (0x1800D: its name), then a chunk
+	// a language (0x1800E): its name, its letter, the count of its phrases,
+	// the modulo, the size of its text; the hashes, sorted, their phrases'
+	// offsets into the text, the text, UTF-16 phrases each ended by a zero.
+	if (data.size() < 24 || u32(12) != 0x1800D)
+		return false;
+	for (std::size_t chunk = 12 + u32(16); chunk + 12 <= data.size() && u32(chunk + 8) > 0; chunk += u32(chunk + 8))
+	{
+		std::size_t at = chunk + 12;
+		if (u32(chunk) != 0x1800E || at >= data.size())
+			continue;
+		at += 1 + data[at];
+		if (at >= data.size() || static_cast<char>(data[at]) != language)
+			continue;
+		const uint32_t count = u32(at + 1), modulo = u32(at + 5), size = u32(at + 9);
+		const std::size_t hashes = at + 13, offsets = hashes + 4 * count, text = offsets + 4 * count;
+		if (text + size > data.size())
+			return false;
+		for (uint32_t i = 0; i < count; ++i)
+		{
+			// Latin-1, as the export's.
+			std::string phrase;
+			for (std::size_t c = text + u32(offsets + 4 * i); c + 1 < text + size && (data[c] | data[c + 1]); c += 2)
+			{
+				const unsigned unit = data[c] | data[c + 1] << 8;
+				phrase += static_cast<char>(unit < 256 ? unit : '?');
+			}
+			_compiled[u32(hashes + 4 * i)] = std::move(phrase);
+		}
+		_modulo = modulo;
+		Log::Info("TextBible: {} compiled phrases in language '{}' from {}", _compiled.size(), language, path);
+		return true;
+	}
+	return false;
+}
+
 const std::string& TextBible::Get(const std::string& term) const
 {
 	static const std::string kNone;
 	const auto found = _phrases.find(term);
-	return found == _phrases.end() ? kNone : found->second;
+	if (found != _phrases.end())
+		return found->second;
+	if (_modulo == 0)
+		return kNone;
+	uint64_t hash = 0;
+	for (const unsigned char c : term)
+		hash = (hash * 64 + c) % _modulo;
+	const auto compiled = _compiled.find(static_cast<uint32_t>(hash));
+	return compiled == _compiled.end() ? kNone : compiled->second;
 }
 
 } // namespace Donut

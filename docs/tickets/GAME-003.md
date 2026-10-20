@@ -152,8 +152,7 @@ binds nothing. The page's texts are 15 high in a font twice that: they are shrun
 their boxes' height (`FrontendProject::SetTextsFitHeight`), on this page only. Checked
 by a screenshot; a key captured was not, there being no keyboard to press.
 
-Not done: the game settings (`GameSettings.pag`: mouse look and sensitivity). View
-Movies came after (UI-FMV).
+View Movies and the game settings came after (UI-FMV; below).
 
 ## The race car on the rug (2026-10-20)
 
@@ -362,3 +361,31 @@ A level's own clothes, worn from the start, have no place in the gallery: the st
 count those bought out of the 21 (`Character Clothing 4/21`), as the save keeps them
 (`skin:<level>`). Checked by screenshots with a save of Homer's muumuu, Bart's tall and
 ninja and Marge's pink suit bought: each level's three, the stats and the contents.
+
+## The controller's pages and the game settings (2026-10-20)
+
+Controller, on the options, now opens the PC's own page of it (`ControllerPC.pag`):
+Character Controls, Vehicle Controls and Game Settings. The first two open the keys'
+page (`PCKeyboardConfig.pag`, which has both), at its first row on foot and at its
+eleventh in the car; Escape there comes back to it. The camera goes to the game pad as
+for the keys before.
+
+Game Settings (`GameSettings.pag`), top to bottom: Use Mouselook Mode (yes or no), Mouse
+Sensitivity X and Y (bars, a tenth a step), Invert Mouse X and Y. Left and right change
+the one picked, a click on its arrows or along its bar too. Kept in
+`donut_settings.dat` (`mouselook`, `mousex`, `mousey`, `invertx`, `inverty`) as soon as
+changed. On foot, mouselook off leaves the mouse free and the camera to the keys; the
+sensitivity is 0.0005 + 0.009 x the bar a pixel (the half the game's 0.005 of before).
+The vehicle's settings, force feedback and the wheel's sensitivity, are greyed: the game
+has neither. The page has two sprites named `MouseXSliderIcon` (the mouse's and the
+wheel's knobs): the first is renamed (`FrontendProject::RenameSprite`).
+
+The pages' PC strings (`GAME_SETTINGS`, `MOUSE_SENSITIVITY_X` ...) are not in the text
+bible's export (`srr2.txt`): they are read from the compiled bible (`srr2.p3d`,
+`TextBible::LoadCompiled`) for the terms the export lacks. A language's chunk there
+(0x1800E) holds its phrases by a hash of their terms, h = (h * 64 + c) modulo a number
+of its own (2990119), sorted, with their offsets into its UTF-16 text; the hash matches
+1172 of the 1190 terms whose English phrase is the export's alone.
+
+Checked by screenshots: the controller's page over the pad; the settings with X at 0.8
+and Y inverted.

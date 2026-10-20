@@ -128,6 +128,30 @@ OptionsMenu::OptionsMenu(AudioManager& audio, SDL_Window* window, std::function<
 	}
 	_movies = std::make_unique<FrontendProject>();
 	_movies->LoadP3D(kFrontend, "ViewMovies.pag");
+	_controller = std::make_unique<FrontendProject>();
+	_controller->LoadP3D(kFrontend, "ControllerPC.pag");
+	_gameSettings = std::make_unique<FrontendProject>();
+	_gameSettings->LoadP3D(kFrontend, "GameSettings.pag");
+	// Its wheel's knob has the mouse's across name: apart, it stays put.
+	_gameSettings->RenameSprite("MouseXSliderIcon", "WheelSliderIcon");
+	// Its texts are 15 high in a font twice that, as the keys' page's; its
+	// arrows, bars and knobs at their boxes' size, not their images'.
+	_controller->SetTextsFitHeight(true);
+	_gameSettings->SetTextsFitHeight(true);
+	for (const char* sprite : {"Label00_ArrowL", "Label00_ArrowR", "Label03_ArrowL", "Label03_ArrowR", "Label04_ArrowL",
+	                           "Label04_ArrowR", "Label05_ArrowL", "Label05_ArrowR", "Sensitivity XBgd", "Label01_Slider",
+	                           "MouseXSliderIcon", "Sensitivity YBgd", "Label02_Slider", "MouseYSliderIcon",
+	                           "Wheel SensitivityBgd", "Label06_Slider", "WheelSliderIcon"})
+	{
+		float x, y, w, h;
+		if (_gameSettings->GetSpriteBox(sprite, x, y, w, h))
+			_gameSettings->SetSpriteBox(sprite, x, y, w, h);
+	}
+	_gameSettings->BringSpriteToFront("MouseXSliderIcon");
+	_gameSettings->BringSpriteToFront("MouseYSliderIcon");
+	_gameSettings->BringSpriteToFront("WheelSliderIcon");
+	// The wheel's, greyed, at a half, where its knob stands.
+	_gameSettings->SetSpriteFill("Label06_Slider", 0.5f);
 	_keys = std::make_unique<FrontendProject>();
 	_keys->LoadP3D(kFrontend, "PCKeyboardConfig.pag");
 	_keys->SetTextsFitHeight(true);
@@ -243,9 +267,8 @@ void OptionsMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 		}
 		else if (chosen == "Controller")
 		{
-			_screen = Screen::Keys;
+			_screen = Screen::Controller;
 			_choice = 0;
-			_column = 0;
 			_shown = false;
 		}
 		else if (chosen == "Display")
@@ -276,6 +299,16 @@ void OptionsMenu::Draw(const GameIntent& intent, const Matrix4x4& proj)
 		return;
 	}
 
+	if (_screen == Screen::Controller)
+	{
+		drawController(intent, proj, back, confirm);
+		return;
+	}
+	if (_screen == Screen::GameSettings)
+	{
+		drawGameSettings(intent, proj, back, rightPressed ? 1 : leftPressed ? -1 : 0);
+		return;
+	}
 	if (_screen == Screen::Keys)
 	{
 		drawKeys(intent, proj, back, confirm, rightPressed ? 1 : leftPressed ? -1 : 0);
@@ -468,7 +501,7 @@ void OptionsMenu::drawKeys(const GameIntent& intent, const Matrix4x4& proj, bool
 		_mouseY = intent.mouseY;
 		if (back)
 		{
-			_screen = Screen::Options;
+			_screen = Screen::Controller;
 			_choice = 0;
 			_shown = false;
 			return;
@@ -543,6 +576,16 @@ void OptionsMenu::load()
 			_keptHeight = static_cast<int>(value);
 		else if (key == "fullscreen")
 			_keptFullScreen = value != 0.0f;
+		else if (key == "mouselook")
+			_mouse.look = value != 0.0f;
+		else if (key == "mousex")
+			_mouse.sensitivityX = std::clamp(value, 0.0f, 1.0f);
+		else if (key == "mousey")
+			_mouse.sensitivityY = std::clamp(value, 0.0f, 1.0f);
+		else if (key == "invertx")
+			_mouse.invertX = value != 0.0f;
+		else if (key == "inverty")
+			_mouse.invertY = value != 0.0f;
 	}
 }
 
@@ -554,6 +597,9 @@ void OptionsMenu::save() const
 	if (_keptWidth > 0 && _keptHeight > 0)
 		file << "width " << _keptWidth << "\nheight " << _keptHeight << "\nfullscreen " << (_keptFullScreen ? 1 : 0)
 		     << '\n';
+	file << "mouselook " << (_mouse.look ? 1 : 0) << "\nmousex " << _mouse.sensitivityX << "\nmousey "
+	     << _mouse.sensitivityY << "\ninvertx " << (_mouse.invertX ? 1 : 0) << "\ninverty " << (_mouse.invertY ? 1 : 0)
+	     << '\n';
 	Log::Info("Options: volumes saved, music {:.1f}, effects {:.1f}, vehicle {:.1f}, voice {:.1f}",
 	          _audio.GetChannelVolume(AudioManager::Channel::Music),
 	          _audio.GetChannelVolume(AudioManager::Channel::Effects),
@@ -587,6 +633,111 @@ void OptionsMenu::drawMovies(const GameIntent& intent, const Matrix4x4& proj, bo
 		// here.
 		_shown = false;
 		_playMovie(_choice);
+	}
+}
+
+void OptionsMenu::drawController(const GameIntent& intent, const Matrix4x4& proj, bool back, bool confirm)
+{
+	// The character's controls, the vehicle's, the game's settings; the
+	// first two the keys' page, at its rows for each (on foot from the top,
+	// in the car from its eleventh).
+	const std::vector<Entry> entries = {{"Label00", true}, {"Label01", true}, {"Label02", true}};
+	const int clicked = _shown ? pick(*_controller, entries, intent) : -1;
+	if (!_shown)
+		colour(*_controller, entries);
+	_controller->Draw(proj);
+	_shown = true;
+	if (back)
+	{
+		_screen = Screen::Options;
+		_choice = 0;
+		_shown = false;
+		return;
+	}
+	if (!confirm && clicked < 0)
+		return;
+	_shown = false;
+	if (_choice == 2)
+	{
+		_screen = Screen::GameSettings;
+		_choice = 0;
+		return;
+	}
+	_screen = Screen::Keys;
+	_choice = _choice == 0 ? 0 : 10;
+	_column = 0;
+}
+
+void OptionsMenu::drawGameSettings(const GameIntent& intent, const Matrix4x4& proj, bool back, int by)
+{
+	// Top to bottom: the mouse looking round, its sensitivity across and up
+	// and down, inverted across and up and down; the vehicle's force feedback
+	// and wheel, which the game has neither of, greyed. A value changes with
+	// left and right, a click on its arrows or along its bar.
+	const std::vector<Entry> entries = {{"Label00", true}, {"Label01", true}, {"Label02", true}, {"Label03", true},
+	                                    {"Label04", true}, {"Label05", false}, {"Label06", false}};
+	struct Toggle
+	{
+		int row;
+		bool* value;
+	};
+	const Toggle toggles[] = {{0, &_mouse.look}, {3, &_mouse.invertX}, {4, &_mouse.invertY}};
+	struct Bar
+	{
+		int row;
+		float* value;
+		const char *bar, *fill, *knob;
+	};
+	const Bar bars[] = {{1, &_mouse.sensitivityX, "Sensitivity XBgd", "Label01_Slider", "MouseXSliderIcon"},
+	                    {2, &_mouse.sensitivityY, "Sensitivity YBgd", "Label02_Slider", "MouseYSliderIcon"}};
+	if (_shown)
+		pick(*_gameSettings, entries, intent);
+	const Mouse was = _mouse;
+	if (_shown && intent.mouseLeftClick)
+	{
+		for (const Toggle& toggle : toggles)
+		{
+			const std::string arrow = fmt::format("Label{:02}_Arrow", toggle.row);
+			if (inside(*_gameSettings, arrow + "L", intent.mouseX, intent.mouseY) ||
+			    inside(*_gameSettings, arrow + "R", intent.mouseX, intent.mouseY))
+				_choice = toggle.row, by = 1;
+		}
+		float along = 0.0f;
+		for (const Bar& bar : bars)
+			if (inside(*_gameSettings, bar.bar, intent.mouseX, intent.mouseY, &along))
+				_choice = bar.row, *bar.value = along, by = 0;
+	}
+	for (const Toggle& toggle : toggles)
+		if (toggle.row == _choice && by != 0)
+			*toggle.value = !*toggle.value;
+	for (const Bar& bar : bars)
+		if (bar.row == _choice && by != 0)
+			*bar.value += by * kStep;
+	for (const Bar& bar : bars)
+	{
+		// To a tenth, as the volumes.
+		*bar.value = std::clamp(std::round(*bar.value * 10.0f) / 10.0f, 0.0f, 1.0f);
+		_gameSettings->SetSpriteFill(bar.fill, *bar.value);
+		float barX, barY, barW, barH, x, y, w, h;
+		if (_gameSettings->GetSpriteBox(bar.bar, barX, barY, barW, barH) && _gameSettings->GetSpriteBox(bar.knob, x, y, w, h))
+			_gameSettings->SetSpriteBox(bar.knob, barX + *bar.value * barW - w * 0.5f, y, w, h);
+	}
+	// NO and YES, the page's own strings.
+	for (const Toggle& toggle : toggles)
+		_gameSettings->SetTextIndex(fmt::format("Label{:02}_Value", toggle.row), *toggle.value ? 1 : 0);
+	_gameSettings->SetTextIndex("Label05_Value", 0);
+	_gameSettings->SetTextColor("Label05_Value", Vector4(0.5f, 0.5f, 0.5f, 1.0f));
+	colour(*_gameSettings, entries);
+	_gameSettings->Draw(proj);
+	_shown = true;
+	if (_mouse.look != was.look || _mouse.sensitivityX != was.sensitivityX || _mouse.sensitivityY != was.sensitivityY ||
+	    _mouse.invertX != was.invertX || _mouse.invertY != was.invertY)
+		save();
+	if (back)
+	{
+		_screen = Screen::Controller;
+		_choice = 2;
+		_shown = false;
 	}
 }
 

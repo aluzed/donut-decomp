@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 
@@ -18,12 +19,18 @@ public:
 	// `language` is the export's own code: E, F, G, I or S. False when the file
 	// or the language is missing.
 	bool Load(const std::string& path, char language);
+	// The compiled bible beside it (srr2.p3d), for the terms the export lacks:
+	// the PC's own (GAME_SETTINGS, MOUSE_SENSITIVITY_X ...). Its terms are
+	// hashed: h = (h * 64 + c) modulo its table's own number.
+	bool LoadCompiled(const std::string& path, char language);
 
 	// The phrase for `term`, or empty when there is none.
 	const std::string& Get(const std::string& term) const;
 
 private:
 	std::unordered_map<std::string, std::string> _phrases;
+	std::unordered_map<uint32_t, std::string> _compiled;
+	uint32_t _modulo = 0;
 };
 
 } // namespace Donut

@@ -52,6 +52,9 @@ public:
 	// Shows or hides a sprite of the page (one the game fills at run time, as
 	// the loading screen's level picture; its text "Loading" is another).
 	void SetSpriteVisible(const std::string& name, bool visible);
+	// The first sprite named `name` named `newName` instead: a page with two
+	// of one name (GameSettings.pag's mouse icons).
+	void RenameSprite(const std::string& name, const std::string& newName);
 	// Draws only its left `fraction`, 0 to 1: a slider's bar at its value.
 	void SetSpriteFill(const std::string& name, float fraction);
 	// Its box in the page (top left, y down), and drawing it there, at that

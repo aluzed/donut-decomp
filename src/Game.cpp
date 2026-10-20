@@ -254,6 +254,7 @@ Game::Game(int argc, char** argv)
 	_audioManager = std::make_unique<AudioManager>();
 	_resourceManager = std::make_unique<ResourceManager>();
 	_textBible.Load("art/frontend/scrooby2/resource/txtbible/srr2.txt", _language);
+	_textBible.LoadCompiled("art/frontend/scrooby2/resource/txtbible/srr2.p3d", _language);
 	_scriptEngine = std::make_unique<ScriptEngine>(*this);
 	_scriptEngine->SetRecordsEnabled(!_autopilot);
 
@@ -1724,7 +1725,7 @@ void Game::updateLivingRoomCamera()
 	    // To the game pad by the television: at the trip's middle (560) the
 	    // camera is against it, the view all purple; three frames before,
 	    // the pad fills it.
-	    {OptionsMenu::Screen::Keys, 530.0f, 557.0f, 563.0f, 590.0f},
+	    {OptionsMenu::Screen::Controller, 530.0f, 557.0f, 563.0f, 590.0f},
 	    {OptionsMenu::Screen::Sound, 660.0f, 690.0f, 690.0f, 720.0f}, // to Krusty's radio
 	    {OptionsMenu::Screen::Movies, 460.0f, 490.0f, 490.0f, 520.0f}, // the television, as Display
 	};
@@ -3245,12 +3246,16 @@ void Game::Run()
 		// Third-person camera: capture the mouse during on-foot gameplay so its
 		// motion orbits the camera around the character. The camera no longer
 		// follows the character's facing — only the mouse turns it.
+		// The game settings' mouse: whether it looks round, how much (a half
+		// is 0.005 a pixel), either way inverted.
+		const OptionsMenu::Mouse mouse = _optionsMenu ? _optionsMenu->GetMouse() : OptionsMenu::Mouse();
 		const bool onFoot = (_gameState == GameState::InGame) && _character && !_inVehicle;
-		LockMouse(onFoot);
-		if (onFoot && _gameInput->IsMouseLocked())
+		LockMouse(onFoot && mouse.look);
+		if (onFoot && mouse.look && _gameInput->IsMouseLocked())
 		{
-			_camYaw += intent.mouseDX * 0.005f;
-			_camPitch -= intent.mouseDY * 0.005f; // mouse up -> look up
+			const float across = 0.0005f + 0.009f * mouse.sensitivityX, upDown = 0.0005f + 0.009f * mouse.sensitivityY;
+			_camYaw += intent.mouseDX * across * (mouse.invertX ? -1.0f : 1.0f);
+			_camPitch -= intent.mouseDY * upDown * (mouse.invertY ? -1.0f : 1.0f); // mouse up -> look up
 			if (_camPitch < -1.0f) _camPitch = -1.0f; // steep down
 			if (_camPitch > 0.2f) _camPitch = 0.2f;    // slightly up
 		}

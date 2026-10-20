@@ -21,7 +21,10 @@ struct GameIntent;
 // View Movies, View Credits and Display; the sound page the volume of the
 // music, the effects, the cars and the voices, each a slider; the display page
 // (Display.pag) the window's size and whether it fills the screen; Controller
-// the keys (PCKeyboardConfig.pag), two for each of the game's commands; View
+// Controller (ControllerPC.pag) its character's and vehicle's controls, the
+// keys (PCKeyboardConfig.pag, both on one page), two for each of the game's
+// commands, and the game's settings (GameSettings.pag): the mouse looking
+// round, its sensitivity across and up and down, either inverted; View
 // Movies the game's movies (ViewMovies.pag), the introduction and the levels'
 // eight, those not seen yet greyed. What is not done here is shown greyed and
 // passed over.
@@ -52,9 +55,21 @@ public:
 		Options,
 		Sound,
 		Display,
+		Controller,
 		Keys,
+		GameSettings,
 		Movies,
 	};
+	// The game settings' mouse: whether it turns the camera on foot, how
+	// much (0 to 1, a half the game's own), either way inverted.
+	struct Mouse
+	{
+		bool look = true;
+		float sensitivityX = 0.5f, sensitivityY = 0.5f;
+		bool invertX = false, invertY = false;
+	};
+	const Mouse& GetMouse() const { return _mouse; }
+
 	// The page open: the living room's camera goes to its object.
 	Screen GetScreen() const { return _screen; }
 
@@ -75,6 +90,11 @@ private:
 	std::unique_ptr<FrontendProject> _sound;
 	std::unique_ptr<FrontendProject> _display;
 	std::unique_ptr<FrontendProject> _keys;
+	std::unique_ptr<FrontendProject> _controller;
+	std::unique_ptr<FrontendProject> _gameSettings;
+	Mouse _mouse;
+	void drawController(const GameIntent& intent, const Matrix4x4& proj, bool back, bool confirm);
+	void drawGameSettings(const GameIntent& intent, const Matrix4x4& proj, bool back, int by);
 	// The screen's sizes, smallest first; the one picked and whether the game
 	// fills the screen, as the page shows them until they are accepted.
 	std::vector<std::pair<int, int>> _sizes;
