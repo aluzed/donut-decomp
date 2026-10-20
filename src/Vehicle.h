@@ -106,6 +106,9 @@ public:
 	float GetWheelSlide(int i) const { return i >= 0 && i < kWheels ? _wheelSlides[i] : 0.0f; }
 	// Braking hard at speed: its tyres skid.
 	bool IsBrakingHard() const { return _brakingHard; }
+	// Setting off flat out, its tyres spinning ("peel out"): 1 from a
+	// standstill, nothing by 20 km/h.
+	float GetPeelOut() const { return _peelOut; }
 	Vector3 GetWheelAxle(int i) const { return i >= 0 && i < kWheels ? _wheelAxles[i] : Vector3(1.0f, 0.0f, 0.0f); }
 
 
@@ -153,6 +156,8 @@ private:
 	bool _braking = false;
 	bool _brakingHard = false;
 	static constexpr float kSkidBrakeKmh = 30.0f;
+	float _peelOut = 0.0f;
+	static constexpr float kPeelOutKmh = 20.0f;
 	bool _reversing = false;
 	std::string _modelName;
 	std::unique_ptr<btRaycastVehicle> _rayVehicle;

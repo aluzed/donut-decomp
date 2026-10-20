@@ -412,6 +412,8 @@ void Vehicle::ApplyInput(float throttle, float steer, float brake, float boost)
 	_reversing = throttle < -0.1f && rolling < 1.0f;
 	// Stamping on it at speed: the tyres lock and mark the road.
 	_brakingHard = (brake > 0.5f || throttle < -0.5f) && rolling > kSkidBrakeKmh;
+	// Floored from a standstill: the tyres spin, the more the slower it goes.
+	_peelOut = throttle > 0.9f && rolling >= 0.0f && rolling < kPeelOutKmh ? 1.0f - rolling / kPeelOutKmh : 0.0f;
 
 	// throttle runs -1..1: negative drives the wheels backwards. There was no way
 	// to reverse before -- the AI's "back out of the wall" manoeuvre passed

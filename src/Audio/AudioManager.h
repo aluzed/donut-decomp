@@ -43,7 +43,8 @@ public:
 
 	void PlayAudio(const std::string& name);
 	void PlayAudio(uint32_t hash);
-	void PlayAudio(const std::string& name, const Vector3& position);
+	// Placed in the world; `gain` and `pitch` on top of the file's own.
+	void PlayAudio(const std::string& name, const Vector3& position, float gain = 1.0f, float pitch = 1.0f);
 	void PlayDialogue(const std::string& name);
 
 	void QueueDialogue(const std::string& name, DialoguePriority priority);
@@ -66,6 +67,15 @@ public:
 	// ScriptSoundFile("collide", "car_hit_stopsign") is one of the stop sign's
 	// hits (sound\\scripts\\collide.spt). Empty when there is none.
 	std::string ScriptSoundFile(const std::string& script, const std::string& resource) const;
+	// The same, with how the script plays it: its volume (SetTrim) and the
+	// range its pitch is picked in (SetPitchRange), one at random.
+	struct ScriptSound
+	{
+		std::string file;
+		float trim = 1.0f;
+		float pitch = 1.0f;
+	};
+	ScriptSound FindScriptSound(const std::string& script, const std::string& resource) const;
 	// The engine of the car the player drives: one loop, pitched to the revs.
 	void PlayEngine(const std::string& file);
 	void SetEnginePitch(float pitch);

@@ -137,6 +137,11 @@ constexpr float kFeetBelowCentre = 0.9f;
 // marks it, black at twice that; so does one braking hard. How wide its mark.
 constexpr float kSkidSlide = 3.5f;
 constexpr float kSkidWidth = 0.3f;
+// Setting off flat out, as the game's sound settings give it (SetPeeloutMin 0.1,
+// SetPeeloutMaxTrim 0.8): how hard the tyres spin before they mark and squeal,
+// and how loud and dark at most.
+constexpr float kPeelOutMin = 0.1f;
+constexpr float kPeelOutMaxTrim = 0.8f;
 } // namespace
 
 void GLAPIENTRY MessageCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message,
@@ -589,9 +594,9 @@ void Game::updateFootsteps(bool onGround)
 		case Surface::Water: ground = "feet_dirt"; break;
 		default: break;
 		}
-		const std::string file = _audioManager->ScriptSoundFile(_footstepScript, std::string(ground) + suffix);
-		if (!file.empty())
-			_audioManager->PlayAudio(file, feet);
+		const auto sound = _audioManager->FindScriptSound(_footstepScript, std::string(ground) + suffix);
+		if (!sound.file.empty())
+			_audioManager->PlayAudio(sound.file, feet, sound.trim, sound.pitch);
 	};
 
 	if (onGround && !_footstepWasOnGround)
@@ -2156,8 +2161,12 @@ void Game::updateWheelSprays(double dt)
 			case Surface::Water: break;
 			default: mark = "skid_m"; break;
 			}
-			const float strength = vehicle->IsBrakingHard() ? 0.8f : std::min(1.0f, slide / (kSkidSlide * 2.0f));
-			if (mark && (slide > kSkidSlide || vehicle->IsBrakingHard()) && vehicle->GetWheelContact(wheel, contact))
+			// The rear wheels spinning as it sets off flat out, too.
+			const float peel = wheel >= 2 ? vehicle->GetPeelOut() * kPeelOutMaxTrim : 0.0f;
+			const float strength = std::max(
+			    {vehicle->IsBrakingHard() ? 0.8f : 0.0f, std::min(1.0f, slide / (kSkidSlide * 2.0f)), peel});
+			const bool skids = slide > kSkidSlide || vehicle->IsBrakingHard() || peel > kPeelOutMin;
+			if (mark && skids && vehicle->GetWheelContact(wheel, contact))
 			{
 				_skidMarks->Lay(track, contact, vehicle->GetWheelNormal(wheel), vehicle->GetWheelAxle(wheel), kSkidWidth,
 				                mark, strength);
@@ -2199,17 +2208,17 @@ void Game::updateWheelSprays(double dt)
 	{
 		// The game's sound settings name the clips (SetSkidRoadClipName "skid",
 		// SetSkidDirtClipName "dirt_skid").
-		static std::string road, dirt;
-		if (road.empty())
+		static AudioManager::ScriptSound road, dirt;
+		if (road.file.empty())
 			for (const char* script : {"carsound", "car_tune", "global"})
 			{
-				if (road.empty())
-					road = _audioManager->ScriptSoundFile(script, "skid");
-				if (dirt.empty())
-					dirt = _audioManager->ScriptSoundFile(script, "dirt_skid");
+				if (road.file.empty())
+					road = _audioManager->FindScriptSound(script, "skid");
+				if (dirt.file.empty())
+					dirt = _audioManager->FindScriptSound(script, "dirt_skid");
 			}
-		_audioManager->SetLoop("skid", playerSkid > 0.0f ? (!playerSkidsOnRoad && !dirt.empty() ? dirt : road) : "",
-		                       0.3f + 0.5f * playerSkid);
+		const auto& clip = !playerSkidsOnRoad && !dirt.file.empty() ? dirt : road;
+		_audioManager->SetLoop("skid", playerSkid > 0.0f ? clip.file : "", clip.trim * (0.4f + 0.6f * playerSkid));
 	}
 }
 
@@ -2956,11 +2965,12 @@ void Game::Run()
 				_sparks->Burst(20, where);
 			else if (effect == "eStars" && _sparks)
 				_sparks->Burst(8, where);
-			const std::string file = _audioManager->ScriptSoundFile("collide", sound);
+			const auto clip = _audioManager->FindScriptSound("collide", sound);
+			const std::string& file = clip.file;
 			Log::Debug("Game: a prop knocked over at ({:.1f}, {:.1f}, {:.1f}), '{}' ({}), '{}'", where.X, where.Y, where.Z, sound,
 			           file.empty() ? "no sound" : file, effect);
 			if (!file.empty())
-				_audioManager->PlayAudio(file, where);
+				_audioManager->PlayAudio(file, where, clip.trim, clip.pitch);
 		}
 		// A stage that asks for no traffic gets empty streets: neither moved,
 		// drawn nor run into.

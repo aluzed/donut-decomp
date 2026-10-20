@@ -28,16 +28,26 @@ The player walked and ran without a sound, and a car's tyres skidded silently.
   loops, louder as it skids harder; `dirt_skid` when none of the skidding wheels is on
   the road. A looped sound by name (`AudioManager::SetLoop`).
 
+- **As the script plays them**: a resource's `SetTrim` is its volume (Homer's steps on
+  dirt 0.47, on metal 0.42) and `SetPitchRange` the range its pitch is picked in, once a
+  play (0.9 to 1.1 for a landing): footsteps, the squeal and the props knocked over
+  (`collide.spt`) all take them (`AudioManager::FindScriptSound`). A pooled source is
+  put back to full volume and pitch before each sound, as the last one's stayed on it.
+
+- **Peel out**: a car set off flat out spins its rear tyres, the more the slower it goes
+  (all of it at a standstill, nothing by 20 km/h): they mark the road and, the player's,
+  squeal, at most at the settings' `SetPeeloutMaxTrim` (0.8), from `SetPeeloutMin` (0.1).
+
 ## Checked
 
 - Homer made to run across his lawn: a step every 1.15 m, `boots_dirt_01..04.rsd`;
   Lisa landing on level 3: `sneakers_conc_jump_01.rsd`.
+- Homer's car floored from a standstill: the squeal plays, and a light mark is left
+  behind it.
 - Homer's car braking hard on the pavement: `skid.rsd`; on the lawn: `dirt_skid.rsd`.
 - The seven stories under `--autopilot`, 240 s each: no failure, no crash.
 
 ## Not done
 
 - Not timed to the animation's foot falls: a stride is a distance.
-- The clips' `SetTrim` (their volume) and `SetPitchRange` are not applied.
 - Other people's footsteps; the traffic's tyres.
-- The "peel out" (`SetPeeloutMin/Max`: the tyres spinning as a car sets off hard).

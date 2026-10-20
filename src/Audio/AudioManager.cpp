@@ -1,6 +1,7 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
 #include <algorithm>
+#include <cstdio>
 #include "AudioManager.h"
 
 #include "Core/FileSystem.h"
@@ -99,7 +100,7 @@ void AudioManager::PlayAudio(uint32_t hash)
 	}
 }
 
-void AudioManager::PlayAudio(const std::string& name, const Vector3& position)
+void AudioManager::PlayAudio(const std::string& name, const Vector3& position, float gain, float pitch)
 {
 	for (const auto& rcf : _rcfFiles)
 	{
@@ -119,6 +120,8 @@ void AudioManager::PlayAudio(const std::string& name, const Vector3& position)
 		// the listener is.
 		alSourcei(src->id, AL_SOURCE_RELATIVE, AL_FALSE);
 		alSource3f(src->id, AL_POSITION, position.X, position.Y, position.Z);
+		alSourcef(src->id, AL_GAIN, gain);
+		alSourcef(src->id, AL_PITCH, pitch);
 		return;
 	}
 }
@@ -333,6 +336,11 @@ std::string AudioManager::CarSoundFile(const std::string& car, const std::string
 
 std::string AudioManager::ScriptSoundFile(const std::string& script, const std::string& resource) const
 {
+	return FindScriptSound(script, resource).file;
+}
+
+AudioManager::ScriptSound AudioManager::FindScriptSound(const std::string& script, const std::string& resource) const
+{
 	const std::string path = "sound\\scripts\\" + script + ".spt";
 	const auto found = _sounds.find(path);
 	if (found == _sounds.end())
@@ -366,7 +374,20 @@ std::string AudioManager::ScriptSoundFile(const std::string& script, const std::
 		}
 		if (files.empty())
 			return {};
-		return files[static_cast<std::size_t>(std::rand()) % files.size()];
+		ScriptSound sound;
+		sound.file = files[static_cast<std::size_t>(std::rand()) % files.size()];
+		//     SetTrim ( 0.420000 )
+		//     SetPitchRange ( 0.900000 1.100000 )
+		const std::string block = text.substr(at, next == std::string::npos ? std::string::npos : next - at);
+		if (const std::size_t trim = block.find("SetTrim"); trim != std::string::npos)
+			std::sscanf(block.c_str() + trim, "SetTrim ( %f", &sound.trim);
+		if (const std::size_t range = block.find("SetPitchRange"); range != std::string::npos)
+		{
+			float low = 1.0f, high = 1.0f;
+			if (std::sscanf(block.c_str() + range, "SetPitchRange ( %f %f", &low, &high) == 2 && high >= low)
+				sound.pitch = low + (high - low) * static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
+		}
+		return sound;
 	}
 	return {};
 }
@@ -668,6 +689,9 @@ void AudioManager::playOnSource(Source* src, const RCL::RSDFile& rsdFile)
 	alBufferData(src->buffer, format, data.data(), static_cast<ALsizei>(data.size()), rsdFile.GetSampleRate());
 	alSourcei(src->id, AL_BUFFER, src->buffer);
 	alSourcei(src->id, AL_LOOPING, AL_FALSE);
+	// A pooled source keeps what the last sound on it was given.
+	alSourcef(src->id, AL_GAIN, 1.0f);
+	alSourcef(src->id, AL_PITCH, 1.0f);
 	alSourcePlay(src->id);
 	src->inUse = true;
 }
