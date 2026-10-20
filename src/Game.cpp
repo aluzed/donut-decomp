@@ -8,6 +8,7 @@
 #include "Character.h"
 #include "Core/Math/Frustum.h"
 #include "Render/SkidMarks.h"
+#include "UI/LivingRoom.h"
 #include "Core/FpsTimer.h"
 #include "Core/Math/Math.h"
 #include "FreeCamera.h"
@@ -388,6 +389,8 @@ Game::Game(int argc, char** argv)
 			}
 		}
 	}
+	// The living room the main menu stands over (the game's 3D frontend).
+	_livingRoom = std::make_unique<LivingRoom>("./art/frontend/scrooby2/resource/pure3d/camset.p3d");
 	// The game's own main menu page: its arrows, and the entry shown between
 	// them in its font.
 	if (FileSystem::exists("./art/frontend/scrooby2/frontend.p3d"))
@@ -4154,7 +4157,12 @@ void Game::Run()
 		if (_gameState == GameState::Credits && _creditsPage)
 			drawCredits(intent, proj, deltaTime, viewportWidth, viewportHeight);
 		if (_gameState == GameState::MainMenu && _mainMenuPage && !_mainMenu->GetButtons().empty())
+		{
+			// The menu stands over the Simpsons' living room, not the level.
+			if (_livingRoom && _livingRoom->IsLoaded() && _level)
+				_livingRoom->Draw(_level->GetWorldShader(), static_cast<float>(viewportWidth) / std::max(1, viewportHeight));
 			drawMainMenuPage(intent, proj);
+		}
 		else if (_gameState == GameState::MainMenu)
 		{
 			auto font = _resourceManager->GetFont("boulder_16");

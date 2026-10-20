@@ -89,24 +89,20 @@ or the confirm key skips them. Checked by forcing the state: the roll, black beh
 Not done: the credits' own layout (`ViewCredits.pag`: its lines' groups and styles),
 the music under them.
 
-## The living room behind the menu, tried (2026-10-20)
+## The living room behind the menu (2026-10-20)
 
-The 3D frontend (`3dFE.pag`) is the Simpsons' living room: `resource/pure3d/camset.p3d`
-holds 190 meshes, a scene graph placing 187 of them, and the camera `FE_Camera` (at
-2.9, 2.1, 4.6, looking at the television, 1.07 radians wide, 0.1 to 100 m), animated by
-`FE_CameraController`; Homer, the TV screen, the race car and the glows are files of
-their own. Drawn after the 2D pass with the world program, its own view and projection,
-the room stayed black although the television's centre projected well inside the screen
-(0.41, -0.09), and as black drawn in the 3D pass, into the scene's frame buffer, in place
-of the level -- where the player and the cars drawn after it showed. The meshes' vertex
-colours are not black (grey-blue, white, green), and over a grey clear nothing is drawn
-at all: no fragment comes out, culling and depth test off or not. Not found why; left
-out. Learnt on the way: a two-sided mesh's draw turns
-face culling back on, which culls the 2D drawn after it.
+The main menu stands over the Simpsons' living room, the game's 3D frontend (`3dFE.pag`):
+`resource/pure3d/camset.p3d`'s 190 meshes, 187 placed by its scene graph, seen through
+its camera `FE_Camera` (at 2.9, 2.1, 4.6, looking at the television, 1.07 radians wide,
+0.1 to 100 m) -- the pink walls, the couch, the television, the plant, the window onto
+the garden, the rug with a wasp camera on it, Krusty's race track (`UI/LivingRoom`).
 
-## The mission's briefing picture (2026-10-20)
+It drew nothing until the meshes did: not one of its 280 primitive groups has an index
+list (2204 such groups in the frontend's files, none in the levels'), and a group
+without one was drawn with no indices at all. They are drawn in order now
+(`Mesh::CreateMeshBuffers`). On the way: a two-sided mesh's draw turns face culling back
+on, which culled the 2D drawn after it; the room's draw puts it back as it was.
 
-A mission's script names its briefing picture (`SetPresentationBitmap`:
-`dynaload/images/mis01_01.p3d`, a sprite of DDS tiles); it is shown on the mission's
-title card, over its name and summary, a third of the screen wide -- The Cola Caper's
-is Skinner, the school, Lisa and her flask. The Sunday drives name none.
+Not done: the camera's animation (`FE_CameraController`: it moves as the menu turns),
+Homer on the couch, the television's screen, the glows and the sparkles (files of their
+own).

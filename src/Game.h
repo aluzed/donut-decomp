@@ -216,6 +216,8 @@ private:
 	// The game's main menu page (scrooby2's MainMenu.pag) and the entry it
 	// shows; left and right as they were last frame.
 	std::unique_ptr<FrontendProject> _mainMenuPage;
+	// The living room behind it (the game's 3D frontend).
+	std::unique_ptr<class LivingRoom> _livingRoom;
 	// The game's loading screen (backend.p3d's Loading.pag), and one frame of
 	// it drawn before a level loads.
 	// The credits: their background page, their lines, how long they have

@@ -81,7 +81,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 
 | ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
-| GAME-003 | 🟡 | P1 | The full state machine | Splash, main menu (the game's own `MainMenu.pag`: one entry between its arrows, turned left and right), the game's loading screen on a level switch (`Loading.pag`), in game, the game's pause screen (`PauseMission.pag`), mission complete and failed, the credits at the story's end (the text bible's `CREDITS_nn` rolling) work. Missing: the 3D frontend behind the menu, the options and other frontend screens |
+| GAME-003 | 🟡 | P1 | The full state machine | Splash, main menu (the game's own `MainMenu.pag` over the Simpsons' living room, one entry between its arrows), the game's loading screen with the level's picture, in game, the game's pause screen, mission complete and failed, the briefing picture on a mission's card, the credits at the story's end work. Missing: the living room's animation and characters, the options and other frontend screens |
 | GAME-010 | 🟡 | P2 | Collectibles and their saved state | Coins (purse in `donut_coins.dat`), cards (`donut_cards.dat`), wrenches, phone booths, doorbells, gags (sound, coin, animated model and characters, count, `donut_gags.dat`), wasp cameras (GAME-WASP), buying cars and outfits |
 | GAME-011 | 🟡 | P2 | Full save and load | Separate files for story progress, best times, coins, cards and gags. Missing: one save slot holding them all, the player's car and outfit, the cars bought |
 | GAME-014 | 🟡 | P1 | Interiors | Every level's interiors load with the level; doors and zone triggers take the player in and out. Not streamed |

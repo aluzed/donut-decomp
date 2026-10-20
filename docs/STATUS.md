@@ -121,7 +121,10 @@ into a playable arcade racing game.
   skeletons
 - **Splash Screen**: Frontend bootup.p3d with "PRESS ENTER TO START"
 - **HUD**: FPS, position, HP, timer, objectives, laps, speed, heat
-- **Pause Menu**: ESC toggle with Quit option
+- **The game's own screens** (the frontend's pages, their sprites, texts and polygons):
+  the main menu over the Simpsons' living room, one entry between its arrows; the loading
+  screen with the level's newspaper; the pause screen (Continue, Restart Mission, Quit
+  Game); a mission's briefing picture on its title card; the credits at the story's end
 - **Debug Mode**: Key 1 toggles wireframe/solid rendering
 
 ### Camera

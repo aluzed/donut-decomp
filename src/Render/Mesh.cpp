@@ -50,6 +50,14 @@ void Mesh::CreateMeshBuffers(const P3D::Geometry& geometry)
 		auto uvs = prim->GetUvs(0);
 		auto colors = prim->GetColors();
 		auto indices = prim->GetIndices();
+		// A group with no index list (the frontend's living room: 280 of them)
+		// draws its vertices in order; with none, it drew nothing.
+		if (indices.empty())
+		{
+			indices.resize(verts.size());
+			for (std::size_t i = 0; i < indices.size(); ++i)
+				indices[i] = static_cast<uint32_t>(i);
+		}
 		bool hasColors = !colors.empty();
 
 		std::vector<Vector2> lightmapUVs;
@@ -69,7 +77,7 @@ void Mesh::CreateMeshBuffers(const P3D::Geometry& geometry)
 		}
 
 		_groupVertexStart.push_back(vertOffset);
-		for (auto const& idx : prim->GetIndices()) { allIndices.push_back(idx + static_cast<uint32_t>(vertOffset)); }
+		for (auto const& idx : indices) { allIndices.push_back(idx + static_cast<uint32_t>(vertOffset)); }
 
 		vertOffset += verts.size();
 
