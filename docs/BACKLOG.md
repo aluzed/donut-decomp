@@ -72,7 +72,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
 | MISSION-STAGES | 🟡 | P1 | Missions as sequences of stages | Every objective type the seven levels use works, `destroyboss` included (2026-10-20): level 7's saucer hovers over the playground with its beam, a barrel driven into the beam hits it, the fourth brings it down. Conditions, NPCs, spoken conversations, interiors, retries from `RESET_TO_HERE`. Missing: subtitles, lip sync. See the ticket |
-| LEVELS | 🟡 | P1 | Every level, not just level 1 | `--level n`, P3DZ, a level after another in one session, the Sunday drives, the story end to end. Missing: streaming (LEVEL-STREAM) |
+| LEVELS | ✅ | P1 | Every level, not just level 1 | `--level n`, P3DZ, a level after another in one session, the Sunday drives, the story end to end. Everything is loaded at once; streaming was closed as not needed on PC (LEVEL-STREAM) |
 | AI-RACE | 🟡 | P2 | Race opponents and rubber-banding | Race and chase cars drive real circuits routed through the roads; a car that cannot get through a stretch is put further along it. Under `--autopilot`, a followed car is still lost now and then (thrown by the physics) and won on retry |
 | AI-PATH | 🟡 | P2 | Reusable path following | `src/AI/PathFollower.*`, A\* in `PathGraph::FindRoute`, routing by the 966 `RoadSegment`s. `TrafficManager` keeps its own copy; 95 links over 25m remain (multi-lane roads) |
 | HIT-AND-RUN | 🟡 | P2 | The meter, the police, busted | Running people down and ramming the traffic fill it; full, a police car drives after the player; caught, busted (50-coin fine, mission failed). Missing: the game's spawn rates and several police cars |
@@ -151,7 +151,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 
 | ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
-| LEVEL-STREAM | ⬜ | P1 | Load and unload by distance | Everything is loaded and drawn. The dynamic-zone triggers that would drive it are parsed (`ScriptEngine::OnTrigger` only logs them) |
+| LEVEL-STREAM | ✅ | P1 | Load and unload by distance | Closed, not needed on PC: everything loaded, each level is under 360 MB and 2.5 s to load (measured 2026-10-20); the game streamed to fit the PS2's 32 MB |
 | LEVEL-FOG | ⬜ | P2 | Fog per zone from P3D parameters | |
 | LEVEL-TRIG | ✅ | — | Triggers act | Doors and zone interiors, doorbells, phone booths, wrenches, bonus givers, gags. The dynamic-zone loaders wait for LEVEL-STREAM |
 
@@ -245,8 +245,8 @@ car, rewards), not through the commands.
 3. **Gameplay left**: one save slot (GAME-011, done).
 4. **World look**: lights (P3D-002), lightmaps (RENDER-014/015), fog (LEVEL-FOG),
    sun halo (RENDER-011).
-5. **Scale**: LEVEL-STREAM, then the spatial tree (RENDER-008b; the frustum culling is
-   done).
+5. **Scale**: the spatial tree (RENDER-008b; the frustum culling is done). LEVEL-STREAM
+   was closed: under 360 MB and 2.5 s a level with everything loaded.
 6. **Debt** (in parallel): GAME-001b..e, CI and tests (TOOL-007/010).
 
 ---
