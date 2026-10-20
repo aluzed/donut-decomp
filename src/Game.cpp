@@ -252,6 +252,8 @@ Game::Game(int argc, char** argv)
 
 	// init sub classes
 	_audioManager = std::make_unique<AudioManager>();
+	// The voices' subtitles, heard by machine (tools/transcribe_dialogue.py).
+	_audioManager->LoadSubtitles("audio/dialog/subtitles.tsv");
 	_resourceManager = std::make_unique<ResourceManager>();
 	_textBible.Load("art/frontend/scrooby2/resource/txtbible/srr2.txt", _language);
 	_textBible.LoadCompiled("art/frontend/scrooby2/resource/txtbible/srr2.p3d", _language);
@@ -999,6 +1001,47 @@ void Game::drawPausePage(const GameIntent& intent, const Matrix4x4& proj)
 			_pauseMenu->GetButtons()[button].action();
 		}
 	}
+}
+
+void Game::drawSubtitle(const Matrix4x4& proj, int width, int height)
+{
+	const AudioManager::Subtitle* subtitle = _audioManager->GetSubtitle();
+	const Font* font = _resourceManager->GetFont("boulder_16");
+	if (!subtitle || !font)
+		return;
+	// Low on the screen, in the middle, as many lines as it takes within
+	// four fifths of its width, the speaker's name before it in yellow; a
+	// shadow under it to read it over anything.
+	const std::string prefix = subtitle->speaker.empty() ? "" : subtitle->speaker + ": ";
+	const float most = width * 0.8f;
+	std::vector<std::string> lines(1, prefix);
+	std::istringstream words(subtitle->text);
+	for (std::string word; words >> word;)
+	{
+		const std::string longer = lines.back().empty() || lines.back() == prefix ? lines.back() + word : lines.back() + " " + word;
+		if (font->MeasureWidth(longer) > most && lines.back() != prefix && !lines.back().empty())
+			lines.push_back(word);
+		else
+			lines.back() = longer;
+	}
+	const float lineHeight = font->GetHeight() + 4.0f;
+	float y = height * 0.86f - lineHeight * (lines.size() - 1);
+	SpriteBatch batch;
+	for (std::size_t i = 0; i < lines.size(); ++i, y += lineHeight)
+	{
+		const std::string& line = lines[i];
+		const float x = (width - font->MeasureWidth(line)) * 0.5f;
+		batch.DrawText(font, line, Vector2(x + 2.0f, y + 2.0f), Vector4(0.0f, 0.0f, 0.0f, 0.8f));
+		if (i == 0 && !prefix.empty())
+		{
+			batch.DrawText(font, prefix, Vector2(x, y), Vector4(1.0f, 0.84f, 0.0f, 1.0f));
+			batch.DrawText(font, line.substr(prefix.size()), Vector2(x + font->MeasureWidth(prefix), y),
+			               Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+		}
+		else
+			batch.DrawText(font, line, Vector2(x, y), Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+	}
+	batch.Flush(proj);
 }
 
 void Game::drawCredits(const GameIntent& intent, const Matrix4x4& proj, double dt, int width, int height)
@@ -4700,6 +4743,9 @@ void Game::Run()
 			menuSprites.Flush(proj);
 		}
 
+		if (_gameState == GameState::InGame || _gameState == GameState::Paused ||
+		    _gameState == GameState::MissionComplete || _gameState == GameState::MissionFailed)
+			drawSubtitle(proj, viewportWidth, viewportHeight);
 		sprites.Flush(proj);
 		if (_gameState == GameState::Splash)
 			_frontend->Draw(proj);

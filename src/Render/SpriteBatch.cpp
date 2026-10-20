@@ -82,7 +82,7 @@ void SpriteBatch::DrawText(const Font* font, const std::string& text, const Vect
 			continue;
 		}
 
-		if (!font->TryGetGlyph(c, glyph))
+		if (!font->TryGetGlyph(static_cast<unsigned char>(c), glyph))
 			continue;
 
 		Texture* glyphTexture = font->GetTexture(glyph.textureId);

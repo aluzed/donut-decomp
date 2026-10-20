@@ -30,7 +30,14 @@ bool Font::TryGetGlyph(int32_t id, Font::Glyph& glyph) const
 		glyph = _glyphs.at(id);
 		return true;
 	}
-
+	// A Latin-1 accented letter the font lacks (font0_16 has no ù): its
+	// letter without the accent.
+	static const char kBase[] = "AAAAAAACEEEEIIIIDNOOOOOxOUUUUYPsaaaaaaaceeeeiiiidnooooo/ouuuuypy";
+	if (id >= 0xC0 && id <= 0xFF && _glyphs.find(kBase[id - 0xC0]) != _glyphs.end())
+	{
+		glyph = _glyphs.at(kBase[id - 0xC0]);
+		return true;
+	}
 	return false;
 }
 
@@ -49,7 +56,7 @@ float Font::MeasureWidth(const std::string& text) const
 			continue;
 		}
 
-		if (!TryGetGlyph(c, glyph))
+		if (!TryGetGlyph(static_cast<unsigned char>(c), glyph))
 			continue;
 
 		lineWidth += glyph.advance;

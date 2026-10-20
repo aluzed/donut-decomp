@@ -1,24 +1,18 @@
-# AUDIO-007 — Sous-titres de dialogue + lip sync
+# AUDIO-007 — Dialogue: subtitles and lip sync
 
-- **Status:** TODO
+- **Status:** IN PROGRESS (subtitles done; lip sync not)
 - **Priority:** P2
 - **Module:** Audio
-- **Depends on:** —
-- **Files:** `src/Audio/AudioManager.h:32-48,93,102` (Dialogue, QueueDialogue, processDialogueQueue), bibles frontend
+- **Files:** `src/Audio/AudioManager.{h,cpp}` (dialogue queue, `LoadSubtitles`,
+  `GetSubtitle`), `src/Game.cpp` (`drawSubtitle`), `tools/transcribe_dialogue.py`
 
-## Contexte
-La file de dialogue prioritaire est déjà fonctionnelle (`Dialogue`, `QueueDialogue`, `processDialogueQueue`, `PlayDialogue`). En revanche, aucun sous-titre n'est affiché : le texte associé à chaque ligne de dialogue n'est pas extrait ni rendu de façon synchronisée.
-
-## Approche
-- Étendre `struct Dialogue` (`AudioManager.h:32-36`) avec le texte et une durée d'affichage.
-- Charger une table nom -> texte sous-titre extraite des bibles frontend (parser le format des bibles de dialogue) au chargement audio.
-- Dans `processDialogueQueue`/`PlayDialogue`, quand une ligne démarre, publier le sous-titre actif (texte + horodatage de fin) ; l'effacer dans `Update` quand sa durée est écoulée.
-- Exposer le sous-titre courant pour que la couche HUD/rendu l'affiche ; optionnellement, piloter un paramètre de lip sync (amplitude) à partir du RMS du signal en cours de lecture.
-
-## Critères d'acceptation
-- [ ] Le texte du dialogue en cours est extrait des bibles frontend et exposé par `AudioManager`.
-- [ ] Le sous-titre apparaît au début de la ligne et disparaît à la fin de sa durée.
-- [ ] La priorité de file existante reste respectée (un dialogue Cutscene coupe toujours un Gameplay).
+## Context
+The dialogue queue plays the game's lines (`QueueDialogue`, `processDialogueQueue`), one
+at a time. The first plan, to read each line's text from the frontend's text bibles,
+does not hold: the game has no text for its dialogue. Its text bible
+(`srr2.txt`, `srr2.p3d`) holds menus, cards, objectives and names; the executable has no
+subtitles; `DIALOGF.RCF`'s 3713 lines are sound only. The subtitles are therefore heard
+by machine (below).
 
 ## The missions' conversations (2026-10-18)
 
@@ -50,3 +44,50 @@ jump of more than 0.8s (`d_air`), as the turbo kicks in (`w_turbo`). Homer, Bart
 Marge and Apu have 3 to 8 takes of each. Others speak too: a traffic driver rammed
 (`traffic1..4\d_*crash`), a resident whose doorbell is rung (`w_doorbell`), the level's
 people walked up to (`w_idlereply`). Not heard on this machine.
+
+## Subtitles (2026-10-20)
+
+The voices of this copy are French (the game's French release: `DIALOGF.RCF`, "F").
+`tools/transcribe_dialogue.py` reads the library (as `RCL::RCFFile`), decodes each line
+(16-bit PCM, or Radical's 4-bit ADPCM, `RSD4RADP`, as `RCL::RSDFile`), resamples it to
+16 kHz mono and has a speech recogniser hear it, a line at a time: NVIDIA's Parakeet TDT
+0.6B v3 (`--engine parakeet`, the default; 25 European languages, French among them),
+run by onnx-asr on the graphics card (an RTX 2080 Ti: the 3713 lines in under eight
+minutes). faster-whisper stays as `--engine whisper`. The table it writes,
+`audio/dialog/subtitles.tsv` (a line's name in the library, a tab, its text, UTF-8), is
+the game's text and is not versioned: it is made once, like the assets (`art/`).
+
+Machine heard: mostly right ("Merci d'apporter ma maquette du système digestif. Hé, où
+est passée la vésicule biliaire?"), names and shouts wrong in places ("milouz" for
+Milhouse). Parakeet tells the language itself: 13 short or shouted lines came out in
+Russian or Czech; 14 are empty.
+
+The recogniser is not a dependency of the game. It ran from a virtual environment
+outside the repository (`uv venv`; `uv pip install "onnx-asr[gpu,hub]"
+"onnxruntime-gpu[cuda,cudnn]" numpy`, which bring CUDA 13 and cuDNN 9), the model
+(`istupakov/parakeet-tdt-0.6b-v3-onnx`) downloaded to a plain folder (`--model-dir`):
+ONNX Runtime refuses the Hugging Face cache's links to its weights.
+
+In the game (`AudioManager::LoadSubtitles`, at start-up), every sound started by name
+(`PlayAudio`, positioned or not; the dialogue queue's lines among them) that has a text
+becomes the subtitle, for as long as it is heard and 0.6 s more. Who speaks: a
+character's own lines are in its folder (`agnes\p_hitbyc_agn_hurt.rsd`); a
+conversation's line names its speaker by a three-letter code two words after its number
+(`c_bladder_1_convinit_lis_l1m1`), and each folder's code is the word most of its files
+carry (`lis` for lisa). Generic people are not named. `Game::drawSubtitle` draws it low
+in the middle of the screen, wrapped to four fifths of its width, the speaker in yellow,
+over a shadow, in game, paused and on a mission's end; not over the menus or a movie.
+
+A line with letters beyond Latin-1 (the Russian and Czech ones) has no subtitle.
+
+The game's text is Latin-1 and its fonts have most accented letters, but every letter
+past 127 was looked up as a negative number and dropped ("ça" drawn "a"): `Font` and
+`SpriteBatch` now take the bytes as unsigned. This was true of every French text drawn.
+A letter the font lacks (font0_16 has no "ù") is drawn as its letter without the
+accent.
+
+Checked in game: Agnes's "Tu crois que ça fait mal ? ..." on two lines with its
+accents; level 1 m1's first line, "Lisa: Merci d'apporter ma maquette...", its speaker
+told by its code.
+
+Not done: a setting to hide them; the movies' lines (not transcribed); lip sync.

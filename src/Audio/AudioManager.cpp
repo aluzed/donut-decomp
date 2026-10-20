@@ -9,6 +9,8 @@
 #include "Render/imgui/imgui.h"
 
 #include <cctype>
+#include <fstream>
+#include <map>
 #include <cstdint>
 #include <cstdlib>
 #include <stdexcept>
@@ -76,6 +78,7 @@ void AudioManager::PlayAudio(const std::string& name)
 		alGenBuffers(1, &src->buffer);
 
 		playOnSource(src, rsdFile);
+		showSubtitle(name, rsdFile);
 		return;
 	}
 }
@@ -122,8 +125,150 @@ void AudioManager::PlayAudio(const std::string& name, const Vector3& position, f
 		alSource3f(src->id, AL_POSITION, position.X, position.Y, position.Z);
 		alSourcef(src->id, AL_GAIN, gain * volume(Channel::Effects));
 		alSourcef(src->id, AL_PITCH, pitch);
+		showSubtitle(name, rsdFile);
 		return;
 	}
+}
+
+void AudioManager::LoadSubtitles(const std::string& path)
+{
+	std::ifstream file(path);
+	if (!file)
+		return;
+	// UTF-8 to Latin-1, typographic quotes and the like to their nearest;
+	// a line with letters beyond it (heard as Russian or Czech: shouts the
+	// recogniser took for another language) is none.
+	const auto latin1 = [](const std::string& text) {
+		bool foreign = false;
+		std::string out;
+		for (std::size_t i = 0; i < text.size();)
+		{
+			const unsigned char c = text[i];
+			unsigned code = c;
+			std::size_t length = 1;
+			if (c >= 0xF0 && i + 3 < text.size())
+				code = '?', length = 4;
+			else if (c >= 0xE0 && i + 2 < text.size())
+				code = (c & 0x0F) << 12 | (text[i + 1] & 0x3F) << 6 | (text[i + 2] & 0x3F), length = 3;
+			else if (c >= 0xC0 && i + 1 < text.size())
+				code = (c & 0x1F) << 6 | (text[i + 1] & 0x3F), length = 2;
+			i += length;
+			if (code == 0x2019 || code == 0x2018)
+				code = '\'';
+			else if (code == 0x201C || code == 0x201D)
+				code = '"';
+			else if (code == 0x2026)
+			{
+				out += "...";
+				continue;
+			}
+			else if (code == 0x0153)
+			{
+				out += "oe";
+				continue;
+			}
+			if (code >= 256)
+				foreign = true;
+			out += static_cast<char>(code < 256 ? code : '?');
+		}
+		return foreign ? std::string() : out;
+	};
+	for (std::string line; std::getline(file, line);)
+	{
+		const std::size_t tab = line.find('\t');
+		if (tab == std::string::npos || tab + 1 >= line.size())
+			continue;
+		const std::string text = latin1(line.substr(tab + 1));
+		if (!text.empty())
+			_subtitleTexts[line.substr(0, tab)] = text;
+	}
+	// Who speaks: a character's own lines are in its folder,
+	// "lisa\\d_answer_lis_01.rsd", the code among the words of their names
+	// the one most of them have; a conversation's line names its speaker by
+	// that code, "c_bladder_1_convinit_lis_l1m1.rsd".
+	std::map<std::string, std::map<std::string, int>> words;
+	for (const auto& [name, rcf] : _sounds)
+	{
+		const std::size_t slash = name.find('\\');
+		if (slash == std::string::npos || name.compare(0, slash, "conversations") == 0)
+			continue;
+		std::string stem = name.substr(slash + 1);
+		stem = stem.substr(0, stem.find('.'));
+		std::size_t at = 0;
+		for (std::size_t end; (end = stem.find('_', at)) != std::string::npos || at < stem.size(); at = end + 1)
+		{
+			if (end == std::string::npos)
+				end = stem.size();
+			const std::string word = stem.substr(at, end - at);
+			if (word.size() == 3 && std::isalpha(static_cast<unsigned char>(word[0])))
+				++words[name.substr(0, slash)][word];
+			if (end == stem.size())
+				break;
+		}
+	}
+	for (const auto& [speaker, counts] : words)
+	{
+		const auto most = std::max_element(counts.begin(), counts.end(),
+		                                   [](const auto& a, const auto& b) { return a.second < b.second; });
+		if (most != counts.end() && !_speakerCodes.count(most->first))
+			_speakerCodes[most->first] = speaker;
+	}
+	Log::Info("Audio: {} lines' subtitles from {}, {} speakers", _subtitleTexts.size(), path, _speakerCodes.size());
+}
+
+void AudioManager::showSubtitle(const std::string& name, const RCL::RSDFile& rsdFile)
+{
+	const auto found = _subtitleTexts.find(name);
+	if (found == _subtitleTexts.end() || found->second.empty())
+		return;
+	// Who: the folder of a character's own line; a conversation's speaker by
+	// their code. The generic people are not named.
+	const std::size_t slash = name.find('\\');
+	std::string speaker = slash == std::string::npos ? "" : name.substr(0, slash);
+	if (speaker == "conversations")
+	{
+		// c_<name>_<n>_<kind>_<speaker>[_<mission>]: the word two after the
+		// number.
+		speaker.clear();
+		std::vector<std::string> words;
+		std::string stem = name.substr(slash + 1);
+		stem = stem.substr(0, stem.find('.'));
+		for (std::size_t at = 0; at <= stem.size();)
+		{
+			const std::size_t end = std::min(stem.find('_', at), stem.size());
+			words.push_back(stem.substr(at, end - at));
+			at = end + 1;
+		}
+		for (std::size_t i = 1; i + 2 < words.size(); ++i)
+			if (!words[i].empty() && std::all_of(words[i].begin(), words[i].end(), [](unsigned char c) { return std::isdigit(c); }))
+			{
+				if (const auto code = _speakerCodes.find(words[i + 2]); code != _speakerCodes.end())
+					speaker = code->second;
+				break;
+			}
+	}
+	if (speaker.rfind("generic", 0) == 0)
+		speaker.clear();
+	// "dr.frink" is Dr. Frink, "sea_captain" Sea Captain.
+	for (std::size_t i = 0; i < speaker.size(); ++i)
+	{
+		if (speaker[i] == '_')
+			speaker[i] = ' ';
+		if (i == 0 || speaker[i - 1] == ' ' || speaker[i - 1] == '.')
+			speaker[i] = static_cast<char>(std::toupper(static_cast<unsigned char>(speaker[i])));
+	}
+	for (std::size_t dot = speaker.find('.'); dot != std::string::npos && dot + 1 < speaker.size(); dot = speaker.find('.', dot + 2))
+		speaker.insert(dot + 1, " ");
+	_subtitle = {speaker, found->second};
+	// As long as it is heard, and a moment more to finish reading it.
+	const std::size_t bytesASecond = std::max<std::size_t>(1, rsdFile.GetSampleRate() * rsdFile.GetNumChannels() * 2);
+	const double seconds = static_cast<double>(rsdFile.GetData().size()) / bytesASecond;
+	_subtitleUntil = std::chrono::steady_clock::now() + std::chrono::milliseconds(static_cast<int>((seconds + 0.6) * 1000.0));
+}
+
+const AudioManager::Subtitle* AudioManager::GetSubtitle() const
+{
+	return !_subtitle.text.empty() && std::chrono::steady_clock::now() < _subtitleUntil ? &_subtitle : nullptr;
 }
 
 void AudioManager::PlayDialogue(const std::string& name)

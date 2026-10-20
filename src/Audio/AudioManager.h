@@ -11,6 +11,7 @@
 #include <AL/alext.h>
 #include <AL/efx.h>
 
+#include <chrono>
 #include <cstdint>
 #include <deque>
 #include <memory>
@@ -47,6 +48,19 @@ public:
 	// Placed in the world; `gain` and `pitch` on top of the file's own.
 	void PlayAudio(const std::string& name, const Vector3& position, float gain = 1.0f, float pitch = 1.0f);
 	void PlayDialogue(const std::string& name);
+
+	// The lines' text, heard by machine (tools/transcribe_dialogue.py: a sound's
+	// name, a tab, its text, a line each, UTF-8); none without it.
+	void LoadSubtitles(const std::string& path);
+	// The line being said: who says it (empty when the file does not tell),
+	// its text, in Latin-1 as the game's fonts are.
+	struct Subtitle
+	{
+		std::string speaker;
+		std::string text;
+	};
+	// The last line started, while it is heard and a moment after; none.
+	const Subtitle* GetSubtitle() const;
 
 	void QueueDialogue(const std::string& name, DialoguePriority priority);
 	// A line queued or still being spoken.
@@ -161,6 +175,12 @@ private:
 
 	std::vector<Source> _sources;
 	std::deque<Dialogue> _dialogueQueue;
+	std::unordered_map<std::string, std::string> _subtitleTexts;
+	// The speakers' names by the codes their files carry ("lis": "lisa").
+	std::unordered_map<std::string, std::string> _speakerCodes;
+	Subtitle _subtitle;
+	std::chrono::steady_clock::time_point _subtitleUntil;
+	void showSubtitle(const std::string& name, const RCL::RSDFile& rsdFile);
 	// The source speaking the current line, or -1.
 	int _dialogueSource = -1;
 	std::unique_ptr<MusicSource> _music;
