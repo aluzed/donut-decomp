@@ -93,5 +93,7 @@ their own. Drawn after the 2D pass with the world program, its own view and proj
 the room stayed black although the television's centre projected well inside the screen
 (0.41, -0.09), and as black drawn in the 3D pass, into the scene's frame buffer, in place
 of the level -- where the player and the cars drawn after it showed. The meshes' vertex
-colours are not black (grey-blue, white, green). Not found why; left out. Learnt on the way: a two-sided mesh's draw turns
+colours are not black (grey-blue, white, green), and over a grey clear nothing is drawn
+at all: no fragment comes out, culling and depth test off or not. Not found why; left
+out. Learnt on the way: a two-sided mesh's draw turns
 face culling back on, which culls the 2D drawn after it.
