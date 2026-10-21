@@ -178,7 +178,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | TOOL-002 | ✅ | P2 | Reverse `SIMPSONS.EXE` (Ghidra) | `tools/ghidra/analyze.sh`: functions, strings, classes, decompiled C, 1605 vtables from the RTTI; anchors in `docs/GHIDRA.md` (2026-10-21) |
 | TOOL-004 | ✅ | P2 | Run `donut-codegen`, enrich `p3d.json` | `dev/codegen/generate.sh` regenerates `P3D.generated.*` and `Commands.generated.cpp` exactly as committed (.NET 8, type remap, clang-format, `hand-edits.patch`; `--check`); `p3d.json` holds the 113 generated classes, the 25 unused ones in `p3d.unused.json` (2026-10-21) |
 | TOOL-007 | ✅ | P3 | P3D unit tests (parse, reserialise, compare) | `tests/`, `ctest`; the game's 1964 files byte for byte, P3DZ and RZ covered; two parser bugs fixed (2026-10-21) |
-| TOOL-010 | ⬜ | P3 | CI (Linux, Windows) and clang-format |
+| TOOL-010 | ✅ | P3 | CI (Linux, Windows) and clang-format | `.github/workflows/ci.yml`: Linux (apt) and Windows (MSVC, vcpkg) builds, `ctest`, clang-format on the changed lines; green (2026-10-21) |
 | TOOL-008 | ✅ | — | `.con` format documented (`SCRIPT_FORMAT.md`) |
 | CORE-014/015 | ✅ | — | Logging to stderr by level; stray includes removed |
 

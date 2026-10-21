@@ -1,23 +1,42 @@
-# TOOL-010 — CI GitHub Actions (build Linux+Windows, tests, clang-format)
+# TOOL-010 — CI on GitHub Actions (Linux and Windows builds, tests, clang-format)
 
-- **Status:** TODO
+- **Status:** DONE (2026-10-21)
 - **Priority:** P3
 - **Module:** Tools
 - **Depends on:** TOOL-007
-- **Files:** `tools/setup.sh:67-69` (build cmake), `CMakeLists.txt`, `.clang-format`
+- **Files:** `.github/workflows/ci.yml`, `src/ThirdParty/.clang-format`,
+  `src/Render/imgui/.clang-format`, `src/Render/OpenGL/glad/.clang-format`
 
-## Contexte
-Aucune intégration continue n'existe. Une CI garantit que le projet compile sur Linux et Windows, que les tests passent (TOOL-007) et que le style est respecté.
+## Context
+Nothing checked that the project built on Linux and Windows, that the tests passed, or
+that the style held.
 
-## Approche
-- Créer `.github/workflows/ci.yml` avec une matrice `ubuntu-latest` + `windows-latest`.
-- Étapes build : `cmake -S . -B build` puis `cmake --build build -j` (cf. `tools/setup.sh:68-69`) ; installer les deps système nécessaires.
-- Étape tests : exécuter la suite via `ctest` (issue de TOOL-007) — sans dépendre des assets propriétaires (P3D de test embarqués/minimaux).
-- Étape style : vérifier le formatage via `clang-format --dry-run --Werror` sur `src/` (selon `.clang-format`).
-- Échec du job si build, tests ou format échouent.
+## Done
+`.github/workflows/ci.yml`, on every push and pull request, three jobs:
+- **linux** (ubuntu-24.04): SDL2, Bullet, OpenAL, fmt, glm and zlib from apt; CMake build;
+  `ctest`.
+- **windows** (windows-2022, MSVC): the same libraries from vcpkg; CMake build;
+  `ctest`.
+- **format**: `git clang-format` (clang-format 18.1.8, from pip) on the lines the push or
+  pull request changes, against `.clang-format`; a difference fails the job. Only the
+  changed lines: half of the older code predates `.clang-format`, and reformatting it all
+  would bury the history. The third-party folders keep their authors' format (a
+  `.clang-format` with `DisableFormat` in each).
 
-## Critères d'acceptation
-- [ ] Workflow CI déclenché sur push/PR.
-- [ ] Build vert sur Linux et Windows.
-- [ ] `ctest` exécuté et bloquant en cas d'échec.
-- [ ] Vérification clang-format bloquante sur écart de style.
+The tests that need the game's files are skipped in CI (none are there); those built in
+the tests run.
+
+## What the first runs found
+- glm was used but no build file said so: installed on both.
+- MSVC: `windows.h` makes `near` a macro (a lambda renamed); `GameLevel.cpp` had its
+  standard headers only through others on Linux; `Matrix4x4` was declared a `class` in two
+  headers, a `struct` everywhere else, which MSVC mangles apart (unresolved symbols).
+- The style check caught this session's own unformatted lines.
+
+All three jobs green since `42967c4`.
+
+## Acceptance criteria
+- [x] The workflow runs on push and pull request.
+- [x] Green builds on Linux and Windows.
+- [x] `ctest` runs and fails the job when a test fails.
+- [x] The clang-format check fails the job on a style difference (on the changed lines).
