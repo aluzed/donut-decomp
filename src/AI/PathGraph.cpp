@@ -27,6 +27,13 @@ constexpr float kRoadSnapDistance = 30.0f;
 // overpass above or a street below -- neither is closer than a deck's
 // clearance, which is well over this.
 constexpr float kSurfaceSearch = 3.0f;
+
+// The longest step between two road nodes. A straight street is tiled with a
+// few long slabs (up to 62m from one centre to the next), and a junction's
+// centre can lie far from its roads' first slabs (up to 90m): a route had
+// points that far apart, and a car put back on the route after being stuck
+// could land 45m from where it left it.
+constexpr float kMaxRoadStep = 12.0f;
 } // namespace
 
 
@@ -99,8 +106,8 @@ PathGraph::PathGraph(const Level& level, const WorldPhysics& physics)
 	// -> segment -> segment -> ... -> junction so a route follows the road's shape.
 	// Linking the junctions directly gave hops of up to 118m, and the race car
 	// drove the first one straight into the side of a building.
-	int roadEdges = 0, segmentNodes = 0, bareRoads = 0, longLinks = 0, longEndLinks = 0;
-	float longestLink = 0.0f;
+	int roadEdges = 0, segmentNodes = 0, bareRoads = 0, longLinks = 0, longEndLinks = 0, stepNodes = 0;
+	float longestLink = 0.0f, longestRoadLink = 0.0f;
 
 	// The road data places each node on a flat idealisation of the road; the car
 	// drives on the collision mesh. Where they disagree the node is the one that
@@ -177,6 +184,29 @@ PathGraph::PathGraph(const Level& level, const WorldPhysics& physics)
 			ordered.push_back(from);
 		}
 
+		// From one node of the road to the next, in steps of kMaxRoadStep at most:
+		// the nodes between laid on the line joining them, and on the surface.
+		const auto step = [&](int from, int to) {
+			const Vector3 start = _nodes[from].position;
+			const Vector3 end = _nodes[to].position;
+			const int pieces = static_cast<int>(std::ceil((end - start).Length() / kMaxRoadStep));
+			int previousStep = from;
+			for (int piece = 1; piece < pieces; ++piece)
+			{
+				Node node;
+				node.position = start + (end - start) * (static_cast<float>(piece) / static_cast<float>(pieces));
+				node.shortcut = road.shortcut;
+				snapToSurface(node.position);
+				const int index = static_cast<int>(_nodes.size());
+				_nodes.push_back(node);
+				++stepNodes;
+				link(previousStep, index, false);
+				previousStep = index;
+			}
+			link(previousStep, to, to == b->second || previousStep == a->second);
+			longestRoadLink = std::max(longestRoadLink, (_nodes[previousStep].position - end).Length());
+		};
+
 		int previous = a->second;
 		for (const auto& point : ordered)
 		{
@@ -188,11 +218,11 @@ PathGraph::PathGraph(const Level& level, const WorldPhysics& physics)
 			_nodes.push_back(node);
 			++segmentNodes;
 
-			link(previous, index, previous == a->second);
+			step(previous, index);
 			previous = index;
 		}
 
-		link(previous, b->second, true);
+		step(previous, b->second);
 		++roadEdges;
 	}
 
@@ -221,13 +251,14 @@ PathGraph::PathGraph(const Level& level, const WorldPhysics& physics)
 		++stitched;
 	}
 
-	Log::Info("PathGraph: built graph with {} nodes ({} junctions, {} roads, {} road segments, {} path nodes stitched in)",
-	          _nodes.size(), intersections.size(), roadEdges, segmentNodes, stitched);
-	// Most of these are honest: a straight street is tiled with a few long slabs
-	// rather than many short ones, so consecutive slab centres are far apart and
-	// the line between them still runs down the road.
-	Log::Info("PathGraph: {} links longer than 25m ({} of them onto a junction or a stitched path node), longest {:.0f}m",
-	          longLinks, longEndLinks, longestLink);
+	Log::Info("PathGraph: built graph with {} nodes ({} junctions, {} roads, {} road segments, {} steps between them, "
+	          "{} path nodes stitched in)",
+	          _nodes.size(), intersections.size(), roadEdges, segmentNodes, stepNodes, stitched);
+	// The road's own links are kMaxRoadStep at most; what is longer joins a
+	// path loop to the road (FindRoute does not travel those).
+	Log::Info("PathGraph: road links {:.1f}m at most; {} links longer than 25m ({} of them onto a junction or a "
+	          "stitched path node), longest {:.0f}m",
+	          longestRoadLink, longLinks, longEndLinks, longestLink);
 	Log::Info("PathGraph: {} road nodes dropped onto the road surface, moved by up to {:.1f}m; {} found none within "
 	          "{:.0f}m and kept the road data's height",
 	          snapped, largestShift, unsnapped, kSurfaceSearch);

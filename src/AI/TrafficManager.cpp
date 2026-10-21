@@ -1,5 +1,6 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
+#include "AI/PathFollower.h"
 #include "AI/PathGraph.h"
 #include "AI/TrafficManager.h"
 #include "Core/Log.h"
@@ -35,27 +36,6 @@ struct TrafficManager::Body
 	btDefaultMotionState motion;
 	std::unique_ptr<btRigidBody> rigid;
 };
-
-static float seekSteer(const Vector3& position, const Vector3& target, const Quaternion& rotation,
-                       float speed, float maxSteer)
-{
-	Vector3 desired = target - position;
-	if (desired.LengthSquared() < 0.01f) return 0.0f;
-
-	desired.Normalize();
-	Vector3 forward = rotation * Vector3::Forward;
-	float dot = forward.X * desired.X + forward.Z * desired.Z;
-	// Positive when the target is to the right, i.e. at a greater yaw (yaw is
-	// atan2(x, z), so turning from +Z towards +X increases it). It had the
-	// opposite sign, which went unnoticed while the yaw itself was read from
-	// Euler() in degrees: every car turned away from its next node.
-	float cross = forward.Z * desired.X - forward.X * desired.Z;
-
-	float steer = cross > 0.1f ? maxSteer : cross < -0.1f ? -maxSteer : cross * maxSteer;
-	if (dot < 0.0f) steer = steer > 0 ? maxSteer : -maxSteer;
-
-	return steer;
-}
 
 int TrafficManager::chooseNextNode(int from, int node) const
 {
@@ -160,7 +140,10 @@ void TrafficManager::Update(double dt)
 		}
 
 		const Vector3 target = nodes[car.targetNode].position;
-		const float steer = seekSteer(car.position, target, car.rotation, car.maxSpeed, 2.5f);
+		// Turning at up to 2.5 rad/s, in proportion to the error under about
+		// 6 degrees. It used to turn at a tenth of that rate below 0.1 and at
+		// the full rate above, a jump the cars wobbled about.
+		const float steer = Steering::Seek(car.position, target, car.rotation, 2.5f, 10.0f);
 
 		float yaw = car.rotation.Yaw();
 		yaw += steer * static_cast<float>(dt);
@@ -194,8 +177,11 @@ void TrafficManager::Update(double dt)
 		if (car.model >= 0 && car.blocked >= 1.5f && std::fmod(wasBlocked + 3.5f, 5.0f) > std::fmod(car.blocked + 3.5f, 5.0f))
 			_honks.emplace_back(_modelNames[car.model], car.grounded);
 		car.position += forward * speed * static_cast<float>(dt);
-		// Its wheels roll with it: a 0.35m radius, near enough for any car.
-		car.wheelAngle = std::fmod(car.wheelAngle + speed * static_cast<float>(dt) / 0.35f, 6.28318531f);
+		// Its wheels roll with it, by their own radius.
+		const float wheelRadius = car.model >= 0 && car.model < static_cast<int>(_wheelRadii.size())
+		                              ? _wheelRadii[car.model]
+		                              : 0.35f;
+		car.wheelAngle = std::fmod(car.wheelAngle + speed * static_cast<float>(dt) / wheelRadius, 6.28318531f);
 		// The roads rise and fall; the car follows the height of its way.
 		car.position.Y = target.Y;
 	}
@@ -268,6 +254,7 @@ void TrafficManager::LoadModels(const std::string& levelScript)
 		// hubs less their radii), or its lowest point without wheels.
 		float bottom = 0.0f;
 		bool wheeled = false;
+		float wheelRadius = 0.35f;
 		for (int w = 0; w < 4; ++w)
 		{
 			const int joint = model->FindJoint(fmt::format("w{}", w));
@@ -275,11 +262,14 @@ void TrafficManager::LoadModels(const std::string& levelScript)
 			if (joint < 0)
 				continue;
 			const float radius = model->GetJointPropRadius(joint);
+			if (radius > 0.1f)
+				wheelRadius = radius;
 			const float low = model->GetJointRestPosition(joint).Y - (radius > 0.1f ? radius : 0.4f);
 			bottom = wheeled ? std::min(bottom, low) : low;
 			wheeled = true;
 		}
 		_rideHeights.push_back(wheeled ? -bottom : -model->GetRestBottom());
+		_wheelRadii.push_back(wheelRadius);
 		_wheelJoints.push_back(std::move(wheels));
 		_models.push_back(std::move(model));
 		_modelNames.push_back(name);

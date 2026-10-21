@@ -7,7 +7,7 @@ namespace Donut
 namespace Steering
 {
 
-float Seek(const Vector3& position, const Vector3& target, const Quaternion& rotation, float maxSteer)
+float Seek(const Vector3& position, const Vector3& target, const Quaternion& rotation, float maxSteer, float gain)
 {
 	Vector3 desired = target - position;
 	desired.Y = 0.0f;
@@ -30,7 +30,7 @@ float Seek(const Vector3& position, const Vector3& target, const Quaternion& rot
 
 	// Proportional near the heading, saturated beyond it, and full lock when the
 	// target is behind us so the agent commits to a turn instead of dithering.
-	float steer = cross * 2.0f;
+	float steer = cross * gain;
 	if (steer > 1.0f) steer = 1.0f;
 	if (steer < -1.0f) steer = -1.0f;
 	if (dot < 0.0f)

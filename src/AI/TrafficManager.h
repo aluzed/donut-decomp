@@ -89,6 +89,8 @@ private:
 	std::vector<std::vector<int>> _wheelJoints;
 	// Each model's ride height: its middle over the road, its wheels on it.
 	std::vector<float> _rideHeights;
+	// And the radius its wheels roll by.
+	std::vector<float> _wheelRadii;
 	// Each model's brake lights: the car file's brake billboards and their joints.
 	std::vector<std::vector<std::pair<std::unique_ptr<BillboardBatch>, int>>> _brakeLights;
 	std::vector<std::unique_ptr<CompositeModel>> _models;

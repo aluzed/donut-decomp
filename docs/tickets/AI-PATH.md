@@ -1,6 +1,6 @@
 # AI-PATH — Contrôleur de suivi de chemin réutilisable
 
-- **Status:** PARTIAL (2026-08-23) — contrôleur extrait et réutilisé ; le graphe est connexe et suit les routes ; `TrafficManager` garde ses copies, 95 liens restent trop longs, et **trois endroits de l'itinéraire ne sont pas roulables** (voir ci-dessous)
+- **Status:** DONE (2026-10-21) — see "Closed" at the end
 - **Priority:** P2
 - **Module:** AI
 - **Depends on:** —
@@ -291,15 +291,16 @@ reaches waypoint 177 of 186 before the 120s stage timer restarts the mission; th
 
 ## Critères d'acceptation
 - [x] Un `PathFollower` autonome existe et ne dépend que de `PathGraph` + état d'agent.
-- [ ] `TrafficManager` délègue son pilotage à `PathFollower` — **non fait** : ses `seekSteer`/`arrivalSpeed` file-static sont intacts, pour ne pas toucher au comportement du trafic sans pouvoir le vérifier.
-- [ ] `seekSteer`/`arrivalSpeed` ne sont plus dupliqués dans `TrafficManager.cpp` — dépend du point précédent.
+- [x] `TrafficManager` steers with `Steering::Seek` (2026-10-21, see "Closed").
+- [x] `seekSteer` is no longer duplicated in `TrafficManager.cpp` (`arrivalSpeed` had
+      already gone with the cruising traffic of 2026-10-18).
 - [x] Le contrôleur est réutilisable par un autre agent — `RaceOpponent` l'utilise (AI-RACE).
 - [x] Le graphe est connexe (1 composante, 100 % des nœuds) et suit la forme des routes
       (pas moyen 13 m contre 51 m), et le réseau routier l'est aussi à lui seul.
 - [x] Un itinéraire composé est roulable de bout en bout — `validateCircuit` passes on
       M1race once nodes are dropped onto the surface and shortcut roads are not routed
       (2026-10-18, see above).
-- [ ] Aucun lien du réseau routier ne dépasse la largeur d'une rue — **95 dépassent 25 m**.
+- [x] No link of the road network is longer than 12m (2026-10-21, see "Closed").
 
 ## Traffic that drove (2026-10-18)
 
@@ -327,3 +328,21 @@ physics world (1.8 x 1.4 x 4.4m), moved with the car every frame on the ground u
 path point, so the player's car hits it: a head-on in level 1 m2 cost 23 m/s, 47 health
 and 15 Hit & Run. A stage with no traffic takes the boxes out of the world. The traffic
 itself does not react: a kinematic body is not pushed, nor does it stop.
+
+## Closed (2026-10-21)
+
+**The traffic steers with the shared `Steering::Seek`.** Its own `seekSteer` turned at a
+tenth of its full rate under a sideways error of 0.1 and at the full rate above it, a jump
+the cars wobbled about. `Seek` now takes a gain (2 for the race opponents, as before; 10
+for the traffic): proportional under about 6 degrees, saturated beyond, no jump.
+`TrafficManager` keeps no steering of its own. Its wheels also roll by each model's own
+radius rather than one 0.35m for all.
+
+**No road link is longer than 12m.** The long links were straight streets tiled with a few
+long slabs (up to 62m between centres) and junction centres far from their roads' first
+slabs (up to 90m). Both are right in direction, only coarse: a route had points 90m apart,
+and a car put back on its route after being stuck could land 45m from where it was. Each
+road link is now cut into steps of 12m at most, the nodes between laid on the line and
+dropped onto the surface like the others. Level 1: 477 nodes added, road links 12.1m at
+most (the snap onto the surface lengthens a step a little); the 9 links over 25m left are
+path loops stitched to the road (30m at most), which `FindRoute` does not travel.

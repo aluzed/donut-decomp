@@ -11,15 +11,16 @@
 namespace Donut
 {
 
-// Steering primitives shared by every path-following agent. TrafficManager grew
-// its own file-static copies of these; they live here so a second agent does not
-// have to grow a third.
+// Steering primitives shared by every path-following agent: the traffic and
+// the race opponents.
 namespace Steering
 {
 // Signed steering in [-maxSteer, maxSteer] to turn `rotation` toward `target`.
 // Positive turns one way, negative the other; the sign convention is whatever
-// Vehicle::ApplyInput expects for its steer argument.
-float Seek(const Vector3& position, const Vector3& target, const Quaternion& rotation, float maxSteer);
+// Vehicle::ApplyInput expects for its steer argument. Proportional to the
+// sideways error times `gain`, saturating at full lock.
+float Seek(const Vector3& position, const Vector3& target, const Quaternion& rotation, float maxSteer,
+           float gain = 2.0f);
 
 // Target speed that eases off inside `slowDistance` of the target.
 float ArrivalSpeed(const Vector3& position, const Vector3& target, float maxSpeed, float slowDistance);
