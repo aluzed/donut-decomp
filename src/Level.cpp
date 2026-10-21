@@ -2,6 +2,7 @@
 
 #include "Render/imgui/imgui.h"
 #include "P3D/StateProp.h"
+#include "P3D/SpatialTree.h"
 #include <algorithm>
 #include <cctype>
 #include <Core/File.h>
@@ -741,6 +742,18 @@ void Level::LoadP3D(const std::string& filename)
 					light.direction = direction.Read<Vector3>().Normalized();
 				}
 			_lights[name] = light;
+			break;
+		}
+		case P3D::ChunkType::Tree:
+		{
+			_spatialTree = std::make_unique<P3D::SpatialTree>(P3D::SpatialTree::Load(*chunk));
+			const auto leaves = std::count_if(_spatialTree->nodes.begin(), _spatialTree->nodes.end(),
+			                                  [](const P3D::SpatialTree::Node& node) { return node.axis < 0; });
+			Log::Info("Level: spatial tree of {} nodes, {} leaves, {} deep, over ({:.0f}, {:.0f}, {:.0f}) to ({:.0f}, "
+			          "{:.0f}, {:.0f})",
+			          _spatialTree->nodes.size(), leaves, _spatialTree->Depth(), _spatialTree->min.X,
+			          _spatialTree->min.Y, _spatialTree->min.Z, _spatialTree->max.X, _spatialTree->max.Y,
+			          _spatialTree->max.Z);
 			break;
 		}
 		case P3D::ChunkType::LightGroup:

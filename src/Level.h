@@ -27,6 +27,7 @@ namespace P3D
 {
 class P3DChunk;
 struct StateProp;
+struct SpatialTree;
 }
 
 namespace GL
@@ -109,6 +110,9 @@ public:
 	// three directional ones) on `shader`: the cars and the characters are lit
 	// by them; the world is lit already, by its vertex colours.
 	void ApplyLights(GL::ShaderProgram& shader) const;
+	// Its spatial tree (its terrain's: a kd-tree over the level, each node's box
+	// and how many of the world's objects of each kind lie in it), for culling.
+	const P3D::SpatialTree* GetSpatialTree() const { return _spatialTree.get(); }
 	// Whether its sky (its world sphere: the sky, the sun's glare) is drawn:
 	// not for a bonus game track, seen from far outside it.
 	void SetSkyShown(bool shown) { _skyShown = shown; }
@@ -333,6 +337,7 @@ private:
 		Vector3 direction;
 	};
 	std::map<std::string, Light> _lights;
+	std::unique_ptr<P3D::SpatialTree> _spatialTree;
 	std::map<std::string, std::vector<std::string>> _lightGroups;
 	// Those that stand as bodies, by body.
 	std::unordered_map<const btCollisionObject*, std::size_t> _breakingBodies;
