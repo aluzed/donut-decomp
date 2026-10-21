@@ -39,8 +39,8 @@ was left.
   Aztec's box office (`GagCheckMovie`) now wants that ticket, not the cards.
 - **`GagSetSparkle`** (86): a gag not yet found glints.
 
-Validation (seven levels' stories under the autopilot): 32 missions won; 29 conversation
-placements and the completion conversations heard.
+Validation (seven levels' stories under the autopilot): 32 missions won; 32 conversations
+placed on their marks, 13 closing conversations heard.
 
 ## Not done, and why
 - `SetPostLevelFMV`: commented out in every level script; only the E3 demo's call it.
