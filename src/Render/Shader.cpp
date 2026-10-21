@@ -9,6 +9,42 @@
 namespace Donut
 {
 
+void ApplyBlendMode(BlendMode mode)
+{
+	glEnable(GL_BLEND);
+	switch (mode)
+	{
+	case BlendMode::Additive:
+		glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_ONE, GL_ONE);
+		break;
+	case BlendMode::Subractive:
+		glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
+		glBlendFunc(GL_ONE, GL_ONE);
+		break;
+	case BlendMode::Modulate:
+		glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_DST_COLOR, GL_ZERO);
+		break;
+	case BlendMode::Modulate2:
+		glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
+		break;
+	case BlendMode::ModulateAlpha:
+		glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_DST_COLOR, GL_SRC_ALPHA);
+		break;
+	case BlendMode::SubtractAlpha:
+		glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
+		glBlendFunc(GL_SRC_ALPHA, GL_SRC_ALPHA);
+		break;
+	default:
+		glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		break;
+	}
+}
+
 Shader::Shader(const P3D::Shader& shader): _name(shader.GetName())
 {
 	auto const& pddiName = shader.GetPddiShaderName();

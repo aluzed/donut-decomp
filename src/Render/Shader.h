@@ -17,13 +17,27 @@ namespace P3D
 class Shader;
 }
 
+// A shader's BLMD, as Pure3D's Direct3D renderer blends it (pddidx8r.dll's
+// table at 0x1005d600: operation, source, destination).
 enum class BlendMode : uint32_t
 {
-	None,
-	Alpha,
-	Additive,
-	Subractive,
+	None,          // no blending
+	Alpha,         // add, source alpha, one less source alpha
+	Additive,      // add, one, one
+	Subractive,    // reverse subtract, one, one: what is below, less it (ground shadows)
+	Modulate,      // add, destination colour, zero
+	Modulate2,     // add, destination colour, source colour
+	ModulateAlpha, // add, destination colour, source alpha
+	SubtractAlpha, // reverse subtract, source alpha, source alpha
 };
+
+// Sets the blending to `mode`'s (its equation and factors), blending on.
+void ApplyBlendMode(BlendMode mode);
+// Back to adding, the equation everything else assumes.
+inline void ResetBlendEquation()
+{
+	glBlendEquation(GL_FUNC_ADD);
+}
 
 class Shader
 {

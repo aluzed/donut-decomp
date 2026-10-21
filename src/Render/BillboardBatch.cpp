@@ -144,18 +144,7 @@ void BillboardBatch::Draw(GL::ShaderProgram& shader, bool opaque)
 	}
 
 	if (!opaque)
-	{
-		auto blendMode = material->GetBlendMode();
-
-		if (blendMode == BlendMode::Alpha)
-		{
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		}
-		else if (blendMode == BlendMode::Additive)
-		{
-			glBlendFunc(GL_ONE, GL_ONE);
-		}
-	}
+		ApplyBlendMode(material->GetBlendMode());
 
 	if (_zTest)
 	{
@@ -176,6 +165,8 @@ void BillboardBatch::Draw(GL::ShaderProgram& shader, bool opaque)
 	material->Bind(0);
 	glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, _numQuads);
 	_vertexBinding->Unbind();
+	if (!opaque)
+		ResetBlendEquation();
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);

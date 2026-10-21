@@ -145,18 +145,7 @@ void Mesh::Draw(GL::ShaderProgram& shader, bool opaque)
 		}
 
 		if (!opaque)
-		{
-			auto blendMode = prim.cacheShader->GetBlendMode();
-
-			if (blendMode == BlendMode::Alpha)
-			{
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			}
-			else if (blendMode == BlendMode::Additive)
-			{
-				glBlendFunc(GL_ONE, GL_ONE);
-			}
-		}
+			ApplyBlendMode(prim.cacheShader->GetBlendMode());
 
 		// How the level's lights light it, when they do (the cars).
 		if (shader.HasUniform("materialLit"))
@@ -178,6 +167,8 @@ void Mesh::Draw(GL::ShaderProgram& shader, bool opaque)
 		if (prim.cacheShader->IsTwoSided())
 			glEnable(GL_CULL_FACE);
 	}
+	if (!opaque)
+		ResetBlendEquation();
 
 	_vertexBinding->Unbind();
 }

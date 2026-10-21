@@ -457,8 +457,10 @@ void ParticleSystem::Draw(GL::ShaderProgram& billboardShader)
 		// burst of them did not saturate into a white square.
 		if (material->GetBlendMode() == BlendMode::Additive)
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-		else
+		else if (material->GetBlendMode() == BlendMode::Alpha || material->GetBlendMode() == BlendMode::None)
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		else
+			ApplyBlendMode(material->GetBlendMode());
 		glEnable(GL_DEPTH_TEST);
 		glDepthMask(GL_FALSE);
 		if (billboardShader.HasUniform("alphaMask"))
@@ -466,6 +468,7 @@ void ParticleSystem::Draw(GL::ShaderProgram& billboardShader)
 		running.binding->Bind();
 		material->Bind(0);
 		glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, static_cast<GLsizei>(sprites.size()));
+		ResetBlendEquation();
 		running.binding->Unbind();
 		glDepthMask(GL_TRUE);
 	}
