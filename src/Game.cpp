@@ -2406,6 +2406,15 @@ void Game::PlaceNpc(const std::string& name, const Vector3& position)
 	found->second->SetPosition(position);
 }
 
+bool Game::GetAmbientNpcPosition(const std::string& name, Vector3& position) const
+{
+	const auto found = _ambientNpcs.find(name);
+	if (found == _ambientNpcs.end())
+		return false;
+	position = found->second->GetPosition();
+	return true;
+}
+
 void Game::ClearNpcs()
 {
 	_npcs.clear();

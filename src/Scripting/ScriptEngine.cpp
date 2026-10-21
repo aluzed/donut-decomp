@@ -319,13 +319,20 @@ void ScriptEngine::updateObjective(double dt)
 	}
 	else if (_objectiveType == "talkto")
 	{
+		// Someone the mission placed, or one of the level's own people: level 1
+		// m0's Apu is the Kwik-E-Mart's (leveli.mfk's AddAmbientCharacter), and
+		// the stage went by unseen.
+		Vector3 at;
 		const auto npc = _npcPositions.find(_talkToTarget);
-		if (npc == _npcPositions.end())
+		if (npc != _npcPositions.end())
+			at = npc->second;
+		else if (!_game.GetAmbientNpcPosition(_talkToTarget, at))
 		{
 			Log::Warn("ScriptEngine: nobody called '{}' to talk to, skipping", _talkToTarget);
 			objectiveComplete();
+			return;
 		}
-		else if ((npc->second - player).Length() < kTalkToRange)
+		if ((at - player).Length() < kTalkToRange)
 			objectiveComplete();
 	}
 	else if (_objectiveType == "dialogue")
@@ -694,11 +701,14 @@ bool ScriptEngine::GetObjectiveTarget(Vector3& position) const
 				position = pickup.second;
 		return true;
 	}
-	const auto npc = _npcPositions.find(_talkToTarget);
-	if (_objectiveType == "talkto" && npc != _npcPositions.end())
+	if (_objectiveType == "talkto")
 	{
-		position = npc->second;
-		return true;
+		if (const auto npc = _npcPositions.find(_talkToTarget); npc != _npcPositions.end())
+		{
+			position = npc->second;
+			return true;
+		}
+		return _game.GetAmbientNpcPosition(_talkToTarget, position);
 	}
 	return false;
 }

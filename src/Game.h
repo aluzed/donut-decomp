@@ -126,6 +126,9 @@ public:
 	// A mission's NPC, standing at `position`, when their model has been
 	// extracted (art/chars/<name>_m.p3d). Placing one already there moves them.
 	void PlaceNpc(const std::string& name, const Vector3& position);
+	// Where one of the level's own people stands (AddAmbientCharacter): false
+	// when it has none of that name.
+	bool GetAmbientNpcPosition(const std::string& name, Vector3& position) const;
 	void ClearNpcs();
 	// The interior the player is in ("KwikEMart"), empty outdoors.
 	const std::string& GetInterior() const { return _interior; }

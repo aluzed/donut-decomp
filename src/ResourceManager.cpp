@@ -27,7 +27,7 @@ void ResourceManager::LoadTexture(const P3D::Texture& texture)
 {
 	if (const auto old = _textures.find(texture.GetName()); old != _textures.end())
 	{
-		Log::Warn("Texture {0} already loaded", texture.GetName());
+		Log::Debug("Texture {0} loaded again (each load is kept, see GetShader)", texture.GetName());
 		_retiredTextures.push_back(std::move(old->second));
 	}
 
@@ -38,7 +38,7 @@ void ResourceManager::LoadTexture(const P3D::Sprite& sprite)
 {
 	if (const auto old = _textures.find(sprite.GetName()); old != _textures.end())
 	{
-		Log::Warn("Sprite {0} already loaded", sprite.GetName());
+		Log::Debug("Sprite {0} loaded again (each load is kept, see GetShader)", sprite.GetName());
 		_retiredTextures.push_back(std::move(old->second));
 	}
 
@@ -49,7 +49,7 @@ void ResourceManager::LoadShader(const P3D::Shader& shader)
 {
 	if (const auto old = _shaders.find(shader.GetName()); old != _shaders.end())
 	{
-		Log::Warn("Shader {0} already loaded", shader.GetName());
+		Log::Debug("Shader {0} loaded again (each load is kept, see GetShader)", shader.GetName());
 		_retiredShaders.push_back(std::move(old->second));
 	}
 
@@ -63,7 +63,7 @@ void ResourceManager::LoadSet(const P3D::Set& set)
 {
 	if (const auto old = _textures.find(set.GetName()); old != _textures.end())
 	{
-		Log::Warn("Set {0} already loaded", set.GetName());
+		Log::Debug("Set {0} loaded again (each load is kept, see GetShader)", set.GetName());
 		_retiredTextures.push_back(std::move(old->second));
 	}
 
