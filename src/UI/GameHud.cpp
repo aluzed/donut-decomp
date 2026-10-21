@@ -104,8 +104,10 @@ GameHud::GameHud()
 	// wide from x 160 and 16 high: it ran 20 past the frame's right end (at
 	// 420, its rounded cap besides), and two lines came out 8 high. From the
 	// icon to the cap, the frame's height less a margin, its lines centred,
-	// each the page's 16 high at most.
-	constexpr float kFrameCap = 22.0f, kFrameMargin = 8.0f;
+	// each the page's 16 high at most. The frame's yellow rim and its cap
+	// take more than they seem: four lines filled it to the rim, "beignets"
+	// touching the cap.
+	constexpr float kFrameCap = 34.0f, kFrameMargin = 14.0f;
 	float tx, ty, tw, th, fx, fy, fw, fh;
 	if (_page->GetTextBox("Message", tx, ty, tw, th) && _page->GetSpriteBox("MessageBox", fx, fy, fw, fh))
 		_page->SetTextBox("Message", tx, fy + kFrameMargin, fx + fw - kFrameCap - tx, fh - 2.0f * kFrameMargin, th);
