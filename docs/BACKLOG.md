@@ -74,7 +74,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | MISSION-STAGES | ✅ | P1 | Missions as sequences of stages | Every objective type the seven levels use works, `destroyboss` included (2026-10-20): level 7's saucer hovers over the playground with its beam, a barrel driven into the beam hits it, the fourth brings it down. Conditions, NPCs, spoken conversations, interiors, retries from `RESET_TO_HERE`. Spoken lines subtitled (AUDIO-007); lip sync is AUDIO-007's. See the ticket |
 | LEVELS | ✅ | P1 | Every level, not just level 1 | `--level n`, P3DZ, a level after another in one session, the Sunday drives, the story end to end. Everything is loaded at once; streaming was closed as not needed on PC (LEVEL-STREAM) |
 | AI-RACE | 🟡 | P2 | Race opponents and rubber-banding | Race and chase cars drive real circuits routed through the roads; a car that cannot get through a stretch is put further along it. Under `--autopilot`, a followed car is still lost now and then (thrown by the physics) and won on retry |
-| AI-PATH | 🟡 | P2 | Reusable path following | `src/AI/PathFollower.*`, A\* in `PathGraph::FindRoute`, routing by the 966 `RoadSegment`s. `TrafficManager` keeps its own copy; 95 links over 25m remain (multi-lane roads) |
+| AI-PATH | ✅ | P2 | Reusable path following | `src/AI/PathFollower.*`, A\* in `PathGraph::FindRoute`, routing by the 966 `RoadSegment`s; the traffic steers with the shared `Steering::Seek`; road links cut into steps of 12m at most (2026-10-21) |
 | HIT-AND-RUN | ✅ | P2 | The meter, the police, busted | Running people down and ramming the traffic fill it; full, the level's police cars (`SetNumChaseCars`: one, two from level 4) come one after another, sirens wailing; caught, busted (50-coin fine, mission failed); shaken off once they have closed in. `SetChaseSpawnRate` and `SetHitNRun` are used only by the E3 demo's scripts |
 
 ### Game flow and collectibles
@@ -153,7 +153,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
 | LEVEL-STREAM | ✅ | P1 | Load and unload by distance | Closed, not needed on PC: everything loaded, each level is under 360 MB and 2.5 s to load (measured 2026-10-20); the game streamed to fit the PS2's 32 MB |
-| LEVEL-FOG | ⬜ | P2 | Fog per zone from P3D parameters | |
+| LEVEL-FOG | ✅ | P2 | Fog per zone from P3D parameters | Closed: the game has no fog. No fog in any level file; `Simpsons.exe` builds its world render layer with fog off and never turns it on (Ghidra, 2026-10-21). Our invented haze is off |
 | LEVEL-TRIG | ✅ | — | Triggers act | Doors and zone interiors, doorbells, phone booths, wrenches, bonus givers, gags. The dynamic-zone loaders wait for LEVEL-STREAM |
 
 ### UI / HUD
@@ -173,8 +173,8 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | ID | Status | Pri | Subject |
 |---|---|---|---|
 | ASSET-001..006 | ✅ | — | Extraction pipeline to the game tree | `tools/extract_assets.sh <dir of the CD images>`: the cabinets off the three ISOs (or their .7z), unshield, then `art/`, `scripts/`, DIALOGF.RCF in place; unshield and 7z fetched without root if missing (2026-10-20) |
-| TOOL-002 | ⬜ | P2 | Reverse `SIMPSONS.EXE` (Ghidra). No longer blocking: P3DZ was solved without it |
-| TOOL-004 | ⬜ | P2 | Run `donut-codegen` and enrich `p3d.json` (for the P3D-* chunks) (and the entity variants `InstancedStaticEntity`, `Anim`, `AnimCollision`, `AnimDynamicPhysics`, read by hand: P3D-006; the frame and multi controllers: P3D-004) |
+| TOOL-002 | ✅ | P2 | Reverse `SIMPSONS.EXE` (Ghidra) | `tools/ghidra/analyze.sh`: functions, strings, classes, decompiled C, 1605 vtables from the RTTI; anchors in `docs/GHIDRA.md` (2026-10-21) |
+| TOOL-004 | ✅ | P2 | Run `donut-codegen`, enrich `p3d.json` | `dev/codegen/generate.sh` regenerates `P3D.generated.*` and `Commands.generated.cpp` exactly as committed (.NET 8, type remap, clang-format, `hand-edits.patch`; `--check`); `p3d.json` holds the 113 generated classes, the 25 unused ones in `p3d.unused.json` (2026-10-21) |
 | TOOL-007 | ⬜ | P3 | P3D unit tests (parse, reserialise, compare) |
 | TOOL-010 | ⬜ | P3 | CI (Linux, Windows) and clang-format |
 | TOOL-008 | ✅ | — | `.con` format documented (`SCRIPT_FORMAT.md`) |

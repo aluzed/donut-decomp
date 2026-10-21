@@ -2579,10 +2579,7 @@ class SurfaceTypeList
 public:
 	SurfaceTypeList(const P3DChunk&);
 
-	static std::unique_ptr<SurfaceTypeList> Load(const P3DChunk& chunk)
-	{
-		return std::make_unique<SurfaceTypeList>(chunk);
-	}
+	static std::unique_ptr<SurfaceTypeList> Load(const P3DChunk& chunk) { return std::make_unique<SurfaceTypeList>(chunk); }
 
 	const uint32_t& GetVersion() const { return _version; }
 	const uint32_t& GetNumSurfaces() const { return _numSurfaces; }

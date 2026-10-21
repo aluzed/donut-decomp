@@ -2307,9 +2307,19 @@ CompositeDrawableSkinList::CompositeDrawableSkinList(const P3DChunk& chunk)
 
 	MemoryStream stream(chunk.GetData());
 	_numSkins = stream.Read<uint32_t>();
+
 	for (auto const& child : chunk.GetChildren())
-		if (child->IsType(ChunkType::CompositeDrawableSkin))
+	{
+		switch (child->GetType())
+		{
+		case ChunkType::CompositeDrawableSkin:
+		{
 			_skins.push_back(std::make_unique<CompositeDrawableSkin>(*child));
+			break;
+		}
+		default: break;
+		}
+	}
 }
 
 CompositeDrawableEffectList::CompositeDrawableEffectList(const P3DChunk& chunk)
@@ -2318,9 +2328,19 @@ CompositeDrawableEffectList::CompositeDrawableEffectList(const P3DChunk& chunk)
 
 	MemoryStream stream(chunk.GetData());
 	_numEffects = stream.Read<uint32_t>();
+
 	for (auto const& child : chunk.GetChildren())
-		if (child->IsType(ChunkType::CompositeDrawableEffect))
+	{
+		switch (child->GetType())
+		{
+		case ChunkType::CompositeDrawableEffect:
+		{
 			_effects.push_back(std::make_unique<CompositeDrawableEffect>(*child));
+			break;
+		}
+		default: break;
+		}
+	}
 }
 
 Spline::Spline(const P3DChunk& chunk)
@@ -2350,6 +2370,6 @@ SurfaceTypeList::SurfaceTypeList(const P3DChunk& chunk)
 	_version = stream.Read<uint32_t>();
 	_numSurfaces = stream.Read<uint32_t>();
 	_surfaces.resize(_numSurfaces);
-	stream.ReadBytes(_surfaces.data(), _surfaces.size());
+	stream.ReadBytes(reinterpret_cast<uint8_t*>(_surfaces.data()), _surfaces.size() * sizeof(uint8_t));
 }
 } // namespace Donut::P3D
