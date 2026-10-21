@@ -1,12 +1,13 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
+#include <Core/Log.h>
 #include <Game.h>
 #include <Render/Mesh.h>
 #include <Render/Shader.h>
 #include <Render/SkinModel.h>
-#include <Core/Log.h>
-#include <set>
+#include <cstddef>
 #include <cstdint>
+#include <set>
 #include <vector>
 
 namespace Donut
@@ -27,11 +28,11 @@ void Mesh::CreateVertexBinding()
 	static const size_t vertStride = sizeof(Vertex);
 
 	GL::ArrayElement vertexLayout[] = {
-	    GL::ArrayElement(_vertexBuffer.get(), 0, 3, GL::AE_FLOAT, vertStride, 0),
-	    GL::ArrayElement(_vertexBuffer.get(), 1, 2, GL::AE_FLOAT, vertStride, 3 * sizeof(float)),
-	    GL::ArrayElement(_vertexBuffer.get(), 2, 2, GL::AE_FLOAT, vertStride, 5 * sizeof(float)),
-	    GL::ArrayElement(_vertexBuffer.get(), 3, 4, GL::AE_FLOAT, vertStride, 7 * sizeof(float)),
-	    GL::ArrayElement(_vertexBuffer.get(), 4, 3, GL::AE_FLOAT, vertStride, 11 * sizeof(float)),
+	    GL::ArrayElement(_vertexBuffer.get(), 0, 3, GL::AE_FLOAT, vertStride, offsetof(Vertex, pos)),
+	    GL::ArrayElement(_vertexBuffer.get(), 1, 2, GL::AE_FLOAT, vertStride, offsetof(Vertex, uv)),
+	    GL::ArrayElement(_vertexBuffer.get(), 2, 2, GL::AE_FLOAT, vertStride, offsetof(Vertex, lightmapUV)),
+	    GL::ArrayElement(_vertexBuffer.get(), 3, 4, GL::AE_FLOAT, vertStride, offsetof(Vertex, color)),
+	    GL::ArrayElement(_vertexBuffer.get(), 4, 3, GL::AE_FLOAT, vertStride, offsetof(Vertex, normal)),
 	};
 
 	_vertexBinding = std::make_shared<GL::VertexBinding>();
@@ -238,10 +239,13 @@ void MeshInstanced::CreateVertexBinding()
 
 	_instanceBuffer = std::make_shared<GL::VertexBuffer>(_transforms.data(), _transforms.size(), instanceStride);
 
+	// The vertex as Mesh::Vertex has it, by its fields' places: the colour
+	// was read 5 floats in, on the lightmap UV that has come before it since,
+	// and every instanced tree's bark came out in red and green.
 	GL::ArrayElement vertexLayout[] = {
-	    GL::ArrayElement(_vertexBuffer.get(), 0, 3, GL::AE_FLOAT, vertStride, 0),
-	    GL::ArrayElement(_vertexBuffer.get(), 1, 2, GL::AE_FLOAT, vertStride, 3 * sizeof(float)),
-	    GL::ArrayElement(_vertexBuffer.get(), 2, 4, GL::AE_FLOAT, vertStride, 5 * sizeof(float)),
+	    GL::ArrayElement(_vertexBuffer.get(), 0, 3, GL::AE_FLOAT, vertStride, offsetof(Mesh::Vertex, pos)),
+	    GL::ArrayElement(_vertexBuffer.get(), 1, 2, GL::AE_FLOAT, vertStride, offsetof(Mesh::Vertex, uv)),
+	    GL::ArrayElement(_vertexBuffer.get(), 2, 4, GL::AE_FLOAT, vertStride, offsetof(Mesh::Vertex, color)),
 
 	    GL::ArrayElement(_instanceBuffer.get(), 3, 4, GL::AE_FLOAT, instanceStride, 0, 1),
 	    GL::ArrayElement(_instanceBuffer.get(), 4, 4, GL::AE_FLOAT, instanceStride, 4 * sizeof(float), 1),
