@@ -54,6 +54,13 @@ public:
 	// used to SetDiffuseTexture, won't be needed if Shader is constructed independent of P3D::Shader
 	std::string GetDiffuseTextureName() const { return _textureName; }
 
+	// A "spheremap" shader's reflection (the cars' paint): its sphere map
+	// (REFL, "EnvMap.bmp") and how much of it is added (ENVB); none, black.
+	const std::string& GetEnvTextureName() const { return _envTextureName; }
+	void SetEnvTexture(const Texture* texture) { _envTexture = texture; }
+	const Texture* GetEnvTexture() const { return _envTexture; }
+	const Vector3& GetEnvColor() const { return _envColor; }
+
 	// Diffuse Color
 	//
 
@@ -96,6 +103,9 @@ protected:
 	Vector3 _ambient = Vector3(1.0f, 1.0f, 1.0f);
 	Vector3 _diffuse = Vector3(1.0f, 1.0f, 1.0f);
 	Vector3 _emissive = Vector3::Zero;
+	std::string _envTextureName;
+	const Texture* _envTexture = nullptr;
+	Vector3 _envColor = Vector3::Zero;
 };
 
 } // namespace Donut

@@ -182,6 +182,10 @@ Shader* ResourceManager::GetShader(const std::string& name) const
 		shader->SetDiffuseTexture(_textures.begin()->second.get()); // todo: set an error texture
 	}
 
+	if (!shader->GetEnvTextureName().empty() && !shader->GetEnvTexture())
+		if (const auto env = _textures.find(shader->GetEnvTextureName()); env != _textures.end())
+			shader->SetEnvTexture(env->second.get());
+
 	return shader.get();
 }
 

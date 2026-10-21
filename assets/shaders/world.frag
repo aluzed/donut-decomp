@@ -23,6 +23,11 @@ uniform vec3 materialEmissive = vec3(0.0);
 // The sun's shadows of the characters and the cars (FX-004): the depth from
 // the sun, where it is, how dark a shadow is. Off at 0, and on the world
 // only (unlit: the cars' own positions are not the world's).
+// A spheremap shader's reflection (the cars' paint): the sphere map, looked up
+// by the normal as the camera sees it, times how much is added; black, none.
+uniform vec3 envColor = vec3(0.0);
+uniform sampler2D envTex;
+uniform mat3 viewRotation = mat3(1.0);
 uniform float shadowStrength = 0.0;
 uniform sampler2D shadowTex;
 uniform mat4 lightViewProj;
@@ -54,6 +59,12 @@ void main()
             diffuse += lightColors[i] * max(dot(n, -lightDirections[i]), 0.0);
         vec3 light = materialEmissive + materialAmbient * ambientLight + materialDiffuse * diffuse;
         color.rgb *= min(light, vec3(1.0));
+    }
+
+    if (envColor != vec3(0.0))
+    {
+        vec3 seen = normalize(viewRotation * normalize(inData.normal));
+        color.rgb += texture(envTex, vec2(seen.x * 0.5 + 0.5, 0.5 - seen.y * 0.5)).rgb * envColor;
     }
 
     if (shadowStrength > 0.0 && lighting == 0)

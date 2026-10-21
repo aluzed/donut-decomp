@@ -48,7 +48,7 @@ void ApplyBlendMode(BlendMode mode)
 Shader::Shader(const P3D::Shader& shader): _name(shader.GetName())
 {
 	auto const& pddiName = shader.GetPddiShaderName();
-	if (pddiName != "simple")
+	if (pddiName != "simple" && pddiName != "spheremap")
 		Log::Warn("shader {}: unhandled pddi type: {}", _name, pddiName);
 
 	_isTranslucent = shader.GetIsTrans() == 1;
@@ -57,6 +57,8 @@ Shader::Shader(const P3D::Shader& shader): _name(shader.GetName())
 	{
 		if (textureParam->GetKey() == "TEX")
 			_textureName = textureParam->GetValue();
+		else if (textureParam->GetKey() == "REFL" && pddiName == "spheremap")
+			_envTextureName = textureParam->GetValue();
 	}
 
 	glGenSamplers(1, &_glSampler);
@@ -132,6 +134,8 @@ Shader::Shader(const P3D::Shader& shader): _name(shader.GetName())
 			_diffuse = color;
 		else if (param->GetKey() == "EMIS")
 			_emissive = color;
+		else if (param->GetKey() == "ENVB" && pddiName == "spheremap")
+			_envColor = color;
 	}
 
 	glSamplerParameterf(_glSampler, 0x84FE, 16);

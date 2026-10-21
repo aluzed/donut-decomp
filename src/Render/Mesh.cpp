@@ -155,6 +155,18 @@ void Mesh::Draw(GL::ShaderProgram& shader, bool opaque)
 			shader.SetUniformValue("materialDiffuse", prim.cacheShader->GetDiffuse());
 			shader.SetUniformValue("materialEmissive", prim.cacheShader->GetEmissive());
 		}
+		// The cars' paint: its sphere map's reflection, added.
+		if (shader.HasUniform("envColor"))
+		{
+			const Texture* env = prim.cacheShader->GetEnvTexture();
+			shader.SetUniformValue("envColor", env ? prim.cacheShader->GetEnvColor() : Vector3::Zero);
+			if (env)
+			{
+				env->Bind(2);
+				glBindSampler(2, 0);
+				shader.SetUniformValue("envTex", 2);
+			}
+		}
 		if (shader.HasUniform("alphaMask"))
 			shader.SetUniformValue("alphaMask", (prim.cacheShader->IsAlphaTested()) ? 0.5f : 0.0f);
 

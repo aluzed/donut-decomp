@@ -4031,6 +4031,15 @@ void Game::renderScene(double deltaTime, int viewportWidth, int viewportHeight)
 	Matrix4x4 viewMatrix = _gameCamera->View().GetViewMatrix();
 	Matrix4x4 projMatrix = _gameCamera->View().GetProjectionMatrix();
 	Matrix4x4 viewProjection = projMatrix * viewMatrix;
+	// The world turned as the camera sees it, for the cars' reflections.
+	if (_level)
+	{
+		GL::ShaderProgram& world = _level->GetWorldShader();
+		world.Bind();
+		world.SetUniformValue("viewRotation", Matrix3x3(viewMatrix[0][0], viewMatrix[0][1], viewMatrix[0][2], viewMatrix[1][0],
+		                                                viewMatrix[1][1], viewMatrix[1][2], viewMatrix[2][0], viewMatrix[2][1],
+		                                                viewMatrix[2][2]));
+	}
 
 	// Counted afresh each frame, shown the next (the overlay is built first).
 	CullStats::drawn = CullStats::culled = 0;
