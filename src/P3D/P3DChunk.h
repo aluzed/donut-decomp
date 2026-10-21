@@ -231,6 +231,9 @@ public:
 	const std::vector<uint8_t>& GetData() const { return _data; }
 	size_t GetDataSize() const { return _data.size(); }
 	const std::vector<std::unique_ptr<P3DChunk>>& GetChildren() const { return _children; }
+	// The chunk as it is in a file: its header (type, header size, total size),
+	// its data, its children in turn.
+	std::vector<uint8_t> Serialize() const;
 
 protected:
 	ChunkType _type;

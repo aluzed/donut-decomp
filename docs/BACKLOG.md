@@ -177,7 +177,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | ASSET-001..006 | ✅ | — | Extraction pipeline to the game tree | `tools/extract_assets.sh <dir of the CD images>`: the cabinets off the three ISOs (or their .7z), unshield, then `art/`, `scripts/`, DIALOGF.RCF in place; unshield and 7z fetched without root if missing (2026-10-20) |
 | TOOL-002 | ✅ | P2 | Reverse `SIMPSONS.EXE` (Ghidra) | `tools/ghidra/analyze.sh`: functions, strings, classes, decompiled C, 1605 vtables from the RTTI; anchors in `docs/GHIDRA.md` (2026-10-21) |
 | TOOL-004 | ✅ | P2 | Run `donut-codegen`, enrich `p3d.json` | `dev/codegen/generate.sh` regenerates `P3D.generated.*` and `Commands.generated.cpp` exactly as committed (.NET 8, type remap, clang-format, `hand-edits.patch`; `--check`); `p3d.json` holds the 113 generated classes, the 25 unused ones in `p3d.unused.json` (2026-10-21) |
-| TOOL-007 | ⬜ | P3 | P3D unit tests (parse, reserialise, compare) |
+| TOOL-007 | ✅ | P3 | P3D unit tests (parse, reserialise, compare): `tests/`, `ctest`; the game's 1964 files byte for byte, P3DZ and RZ covered; two parser bugs fixed (2026-10-21) |
 | TOOL-010 | ⬜ | P3 | CI (Linux, Windows) and clang-format |
 | TOOL-008 | ✅ | — | `.con` format documented (`SCRIPT_FORMAT.md`) |
 | CORE-014/015 | ✅ | — | Logging to stderr by level; stray includes removed |

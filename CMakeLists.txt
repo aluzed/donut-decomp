@@ -124,6 +124,12 @@ endif()
 # The Code
 add_subdirectory(src)
 
+option(DONUT_TESTS "Build the tests (ctest)" ON)
+if (DONUT_TESTS)
+  enable_testing()
+  add_subdirectory(tests)
+endif()
+
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
 set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/bin/$<CONFIG>")
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)

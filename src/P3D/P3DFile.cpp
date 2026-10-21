@@ -12,8 +12,6 @@
 namespace Donut::P3D
 {
 
-namespace
-{
 // Radical's own compression, the 'P3DZ' files (all of level 5's mission art).
 // After the magic: the uncompressed size, then blocks of [compressed size]
 // [uncompressed size][data], each data a byte-oriented LZ. A code byte under 16
@@ -21,7 +19,7 @@ namespace
 // its length the low four bits, its distance the high four plus the next byte
 // shifted up four (a 4 KB window, the block size). A length of 0 means 15 plus
 // extension bytes, each 0 adding 255 more, the first non-zero one ending it.
-bool decompressP3DZ(const std::vector<uint8_t>& in, std::vector<uint8_t>& out)
+bool DecompressP3DZ(const std::vector<uint8_t>& in, std::vector<uint8_t>& out)
 {
 	const auto u32 = [&](std::size_t at) {
 		return static_cast<uint32_t>(in[at]) | static_cast<uint32_t>(in[at + 1]) << 8 |
@@ -83,7 +81,6 @@ bool decompressP3DZ(const std::vector<uint8_t>& in, std::vector<uint8_t>& out)
 	}
 	return out.size() == total;
 }
-} // namespace
 
 P3DFile::P3DFile(const std::string& path): _filename(path)
 {
@@ -99,14 +96,18 @@ P3DFile::P3DFile(const std::string& path): _filename(path)
 		std::vector<uint8_t> compressed(compressedSize);
 		file.ReadBytes(compressed.data(), compressedSize);
 
-		uLongf uncompressedSize = compressedSize * 4;
+		// Twice as much room each time it does not fit. The size it came to is
+		// what uncompress leaves in uncompressedSize, not the room given.
+		uLongf room = compressedSize * 4;
+		uLongf uncompressedSize = 0;
 		std::vector<uint8_t> uncompressed;
 		int ret;
 		do
 		{
-			uncompressed.resize(uncompressedSize);
+			uncompressed.resize(room);
+			uncompressedSize = room;
 			ret = uncompress(uncompressed.data(), &uncompressedSize, compressed.data(), static_cast<uLong>(compressedSize));
-			uncompressedSize *= 2;
+			room *= 2;
 		} while (ret == Z_BUF_ERROR);
 
 		if (ret != Z_OK)
@@ -116,7 +117,8 @@ P3DFile::P3DFile(const std::string& path): _filename(path)
 		}
 
 		uncompressed.resize(uncompressedSize);
-		_root = std::make_unique<P3DChunk>(uncompressed);
+		_data = std::move(uncompressed);
+		_root = std::make_unique<P3DChunk>(_data);
 		file.Close();
 		return;
 	}
@@ -127,7 +129,7 @@ P3DFile::P3DFile(const std::string& path): _filename(path)
 		std::vector<uint8_t> packed(file.Size());
 		file.ReadBytes(packed.data(), packed.size());
 		file.Close();
-		if (!decompressP3DZ(packed, _data))
+		if (!DecompressP3DZ(packed, _data))
 		{
 			Log::Error("P3DFile: '{}' does not decompress", path);
 			_data.clear();

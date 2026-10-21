@@ -193,23 +193,41 @@ P3DChunk::P3DChunk(const std::vector<uint8_t>& chunk)
 
 	_type = *reinterpret_cast<const ChunkType*>(&chunk[0]);
 
-	const uint32_t dataSize = *reinterpret_cast<const uint32_t*>(&chunk[4]);
-	const uint32_t totalSize = *reinterpret_cast<const uint32_t*>(&chunk[8]);
+	// Its sizes, kept within what there is: a file cut short, or with bytes
+	// after its last chunk, used to be read past its end.
+	const std::size_t totalSize = std::min<std::size_t>(*reinterpret_cast<const uint32_t*>(&chunk[8]), chunk.size());
+	const std::size_t dataSize =
+	    std::clamp<std::size_t>(*reinterpret_cast<const uint32_t*>(&chunk[4]), 12, totalSize);
 
 	// define our data and ignore the first 12 bytes
 	_data = std::vector<uint8_t>(chunk.begin() + 12, chunk.begin() + dataSize);
 
-	auto it = std::next(chunk.begin(), dataSize);
-	while (it < chunk.end())
+	std::size_t at = dataSize;
+	while (at + 12 <= totalSize)
 	{
 		// cheat a little and get the chunks size so we can advance our stream
-		const uint32_t tSize = *reinterpret_cast<const uint32_t*>(&it[8]);
-
-		const auto cChunkData = std::vector<uint8_t>(it, std::next(it, tSize));
-		_children.push_back(std::make_unique<P3DChunk>(cChunkData));
-
-		std::advance(it, tSize);
+		const uint32_t tSize = *reinterpret_cast<const uint32_t*>(&chunk[at + 8]);
+		if (tSize < 12 || tSize > totalSize - at)
+			break;
+		_children.push_back(std::make_unique<P3DChunk>(
+		    std::vector<uint8_t>(chunk.begin() + at, chunk.begin() + at + tSize)));
+		at += tSize;
 	}
+}
+
+std::vector<uint8_t> P3DChunk::Serialize() const
+{
+	std::vector<uint8_t> out(12);
+	out.insert(out.end(), _data.begin(), _data.end());
+	for (const auto& child : _children)
+	{
+		const std::vector<uint8_t> bytes = child->Serialize();
+		out.insert(out.end(), bytes.begin(), bytes.end());
+	}
+	const uint32_t header[3] = {static_cast<uint32_t>(_type), static_cast<uint32_t>(12 + _data.size()),
+	                            static_cast<uint32_t>(out.size())};
+	std::memcpy(out.data(), header, sizeof(header));
+	return out;
 }
 
 std::ostream& operator<<(std::ostream& os, ChunkType chunktype)
