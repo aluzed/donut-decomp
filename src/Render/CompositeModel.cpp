@@ -247,6 +247,24 @@ float CompositeModel::GetRestBottom() const
 	return bottom;
 }
 
+bool CompositeModel::GetRestFootprint(float& halfWidth, float& halfLength) const
+{
+	bool any = false;
+	float minX = 0.0f, maxX = 0.0f, minZ = 0.0f, maxZ = 0.0f;
+	for (const auto& prop : _props)
+	{
+		const BoundingBox placed = _meshes[prop.meshIndex]->GetBounds().Transform(prop.transform);
+		minX = any ? std::min(minX, placed.GetMin().X) : placed.GetMin().X;
+		maxX = any ? std::max(maxX, placed.GetMax().X) : placed.GetMax().X;
+		minZ = any ? std::min(minZ, placed.GetMin().Z) : placed.GetMin().Z;
+		maxZ = any ? std::max(maxZ, placed.GetMax().Z) : placed.GetMax().Z;
+		any = true;
+	}
+	halfWidth = (maxX - minX) * 0.5f;
+	halfLength = (maxZ - minZ) * 0.5f;
+	return any && halfWidth > 0.0f && halfLength > 0.0f;
+}
+
 float CompositeModel::GetAnimationFrames() const
 {
 	return _animation ? static_cast<float>(_animation->GetFrameCount()) : 0.0f;

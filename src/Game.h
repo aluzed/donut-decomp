@@ -207,6 +207,7 @@ private:
 	void drawShadowCasters(Matrix4x4& lightViewProj);
 	// The shadow map drawn, and the world's shader told of it (or of none).
 	void renderShadows();
+	void drawBlobShadows(Matrix4x4& viewProjection);
 	void drawVehicles(Matrix4x4& viewProjection, double deltaTime);
 	void drawEffects(Matrix4x4& viewProjection, double deltaTime);
 	// True when the frame is done (the pause screens swap themselves).
@@ -453,6 +454,8 @@ private:
 	std::unique_ptr<class PostProcess> _postProcess;
 	// The sun's shadows of the characters and the cars, off unless set.
 	std::unique_ptr<class ShadowMap> _shadows;
+	// The game's dark patches under the characters and the cars.
+	std::unique_ptr<class BlobShadows> _blobShadows;
 	std::unique_ptr<P3D::P3DFile> _animP3D;
 	std::unique_ptr<P3D::P3DFile> _globalP3D;
 	std::unique_ptr<P3D::TextureFont> _textureFontP3D;

@@ -31,6 +31,7 @@
 #include "Physics/WorldPhysics.h"
 #include "RCL/RCFFile.h"
 #include "RCL/RSDFile.h"
+#include "Render/BlobShadows.h"
 #include "Render/CompositeModel.h"
 #include "Render/Font.h"
 #include "Render/LineRenderer.h"
@@ -342,6 +343,7 @@ void Game::loadShaders()
 
 	_postProcess = std::make_unique<PostProcess>();
 	_shadows = std::make_unique<ShadowMap>();
+	_blobShadows = std::make_unique<BlobShadows>();
 
 	_playerMesh = SimpleMesh::CreateCapsule(0.3f, 1.8f, Vector4(0.2f, 1.0f, 0.2f, 1.0f), 12);
 	_carMesh = SimpleMesh::CreateBox(Vector3(0.9f, 0.5f, 2.2f), Vector4(0.2f, 0.5f, 1.0f, 1.0f));
@@ -3904,6 +3906,7 @@ void Game::drawDebugOverlays()
 	{
 		_postProcess->DebugControls();
 		_shadows->DebugControls();
+		ImGui::Checkbox("Ground shadows", &_blobShadows->enabled);
 	}
 	ImGui::End();
 }
@@ -3968,6 +3971,72 @@ void Game::updateCharacters(double deltaTime)
 			}
 			npc->Update(deltaTime);
 		}
+}
+
+void Game::drawBlobShadows(Matrix4x4& viewProjection)
+{
+	if (!_blobShadows->enabled)
+		return;
+	_blobShadows->Clear();
+	// On the ground under it, as dark as it is near: a character in the air
+	// casts a smaller, paler one, gone at 6 m.
+	const auto onGround = [&](const Vector3& centre, float aboveFeet, Vector3& ground, float& fade)
+	{
+		float height = 0.0f;
+		if (!_worldPhysics->FindGroundHeight(centre, 0.5f, 30.0f, height, true))
+			return false;
+		fade = std::clamp(1.0f - std::max(0.0f, centre.Y - aboveFeet - height) / 6.0f, 0.0f, 1.0f);
+		ground = Vector3(centre.X, height + 0.02f, centre.Z);
+		return fade > 0.0f;
+	};
+	const auto person = [&](const Vector3& centre, float aboveFeet)
+	{
+		Vector3 ground;
+		float fade = 0.0f;
+		if (onGround(centre, aboveFeet, ground, fade))
+			_blobShadows->AddDisc(ground, 0.7f * (0.6f + 0.4f * fade), 0.6f * fade);
+	};
+	std::set<const Vehicle*> cars;
+	const auto car = [&](const Vehicle* vehicle)
+	{
+		if (!vehicle || !cars.insert(vehicle).second)
+			return;
+		Vector3 ground;
+		float fade = 0.0f, halfWidth = 0.0f, halfLength = 0.0f;
+		if (!onGround(vehicle->GetPosition(), 0.5f, ground, fade))
+			return;
+		vehicle->GetFootprint(halfWidth, halfLength);
+		_blobShadows->AddBox(ground, vehicle->GetRotation().Yaw(), halfWidth * 1.2f, halfLength * 1.1f, 0.6f * fade);
+	};
+	if (_character && !_inVehicle)
+		person(_character->GetPosition(), _character->CentreHeight());
+	for (auto& [name, npc] : _npcs) person(npc->GetPosition(), npc->CentreHeight());
+	for (auto& [name, npc] : _ambientNpcs)
+		if (_npcs.find(name) == _npcs.end())
+			person(npc->GetPosition(), npc->CentreHeight());
+	if (_bonusReturn < 0)
+		for (auto& giver : _bonusGivers)
+			if (giver.npc)
+				person(giver.npc->GetPosition(), giver.npc->CentreHeight());
+	if (_pedestrianManager && _interior.empty())
+		for (const Vector3& at : _pedestrianManager->GetBodyPositions()) person(at, 0.9f);
+	car(_activeVehicle);
+	car(_scriptEngine->GetPlayerCar());
+	if (_scriptEngine->IsMissionActive())
+		for (auto& vehicle : _scriptEngine->GetMissionVehicles()) car(vehicle.get());
+	if (_hitAndRun)
+		for (const Vehicle* cop : _hitAndRun->GetCops()) car(cop);
+	if (_trafficManager && !_scriptEngine->IsTrafficSuppressed() && _interior.empty())
+		for (const auto& traffic : _trafficManager->GetCars())
+		{
+			if (traffic.model < 0)
+				continue;
+			float halfWidth = 0.0f, halfLength = 0.0f;
+			_trafficManager->GetFootprint(traffic, halfWidth, halfLength);
+			_blobShadows->AddBox(traffic.grounded + Vector3(0.0f, 0.02f, 0.0f), traffic.rotation.Yaw(), halfWidth * 1.2f,
+			                     halfLength * 1.1f, 0.6f);
+		}
+	_blobShadows->Draw(_level->GetWorldShader(), viewProjection);
 }
 
 void Game::renderShadows()
@@ -4274,6 +4343,7 @@ void Game::drawPeople(Matrix4x4& viewProjection)
 	if (_level != nullptr)
 	{
 		_level->Draw(viewProjection);
+		drawBlobShadows(viewProjection);
 		// The characters lit by the level's lights, as the cars are.
 		_level->ApplyLights(*_skinShaderProgram);
 		// The blending the level's glows and particles left (added, one

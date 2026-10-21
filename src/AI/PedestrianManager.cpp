@@ -288,6 +288,15 @@ void PedestrianManager::DrawBodies(const Matrix4x4& viewProj, GL::ShaderProgram&
 			_bodies[p.body]->Draw(viewProj, skinShader, resources);
 }
 
+std::vector<Vector3> PedestrianManager::GetBodyPositions() const
+{
+	std::vector<Vector3> positions;
+	for (const auto& p : _pedestrians)
+		if (p.active && p.body >= 0)
+			positions.push_back(_bodies[p.body]->GetPosition());
+	return positions;
+}
+
 bool PedestrianManager::playOn(Character& body, const std::string& suffix, bool loop)
 {
 	// By the end of its name: "apu_loco_walk", "brt_flail". Failing the walk, any

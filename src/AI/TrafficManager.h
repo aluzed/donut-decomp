@@ -54,6 +54,8 @@ public:
 	// The cars that have a model, drawn with it (`worldShader`, as for mission
 	// cars); DrawSolid draws the rest as boxes.
 	void DrawModels(GL::ShaderProgram& worldShader, const Matrix4x4& viewProj);
+	// A traffic car's footprint, half width and half length.
+	void GetFootprint(const TrafficCar& car, float& halfWidth, float& halfLength) const;
 	// The brake lights of the cars held up (a car or the player in the way),
 	// with the billboard program.
 	void DrawBrakeLights(GL::ShaderProgram& billboardShader, const Matrix4x4& viewProj);

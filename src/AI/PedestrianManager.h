@@ -46,6 +46,8 @@ public:
 	void Update(double deltaTime, const Vector3& playerPosition);
 	void Draw(GL::ShaderProgram& shader, SimpleMesh& mesh, const struct Matrix4x4& viewProj);
 	// The pedestrians with a body, as skinned characters.
+	// Where the pedestrians with a body stand, for their shadows.
+	std::vector<Vector3> GetBodyPositions() const;
 	void DrawBodies(const struct Matrix4x4& viewProj, GL::ShaderProgram& skinShader, const ResourceManager& resources);
 
 	// Reads the groups of people a level script lists for its pedestrians

@@ -418,4 +418,14 @@ void TrafficManager::DrawSolid(SimpleMesh& carMesh, GL::ShaderProgram& shader, c
 	}
 }
 
+void TrafficManager::GetFootprint(const TrafficCar& car, float& halfWidth, float& halfLength) const
+{
+	if (car.model < 0 || car.model >= static_cast<int>(_models.size()) || !_models[car.model] ||
+	    !_models[car.model]->GetRestFootprint(halfWidth, halfLength))
+	{
+		halfWidth = 0.9f;
+		halfLength = 2.2f;
+	}
+}
+
 } // namespace Donut

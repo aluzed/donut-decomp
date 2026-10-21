@@ -102,6 +102,9 @@ public:
 	// a car's is level with them). Climbed into with the "_high" animations.
 	bool IsHigh() const { return _high; }
 	bool HasModel() const { return _model != nullptr; }
+	// Its footprint, half width and half length (its model's at rest; a car's
+	// size without one).
+	void GetFootprint(float& halfWidth, float& halfLength) const;
 	float GetSpeedKmh() const;
 	// No wheel touching anything.
 	bool IsAirborne() const;

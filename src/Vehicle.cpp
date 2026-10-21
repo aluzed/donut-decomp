@@ -787,4 +787,13 @@ float Vehicle::GetSpeedKmh() const
 	return 0.0f;
 }
 
+void Vehicle::GetFootprint(float& halfWidth, float& halfLength) const
+{
+	if (!_model || !_model->GetRestFootprint(halfWidth, halfLength))
+	{
+		halfWidth = 0.9f;
+		halfLength = 2.2f;
+	}
+}
+
 } // namespace Donut

@@ -113,6 +113,9 @@ public:
 	float GetJointPropRadius(int joint) const;
 	// The lowest point of its props at rest, in the model's space.
 	float GetRestBottom() const;
+	// Its half width (x) and half length (z) at rest, all its props placed:
+	// a car's footprint, for its shadow. False when it has none.
+	bool GetRestFootprint(float& halfWidth, float& halfLength) const;
 	// The joint a prop hangs from, by the prop's name (a mesh's), or -1; the
 	// first posable prop's; and a joint's transform as posed now, in the model's
 	// space.
