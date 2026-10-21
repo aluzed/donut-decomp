@@ -178,6 +178,8 @@ private:
 	static constexpr float kPeelOutKmh = 20.0f;
 	bool _reversing = false;
 	std::string _modelName;
+	// The wheels' raycaster; it outlives the vehicle that uses it.
+	std::unique_ptr<btVehicleRaycaster> _raycaster;
 	std::unique_ptr<btRaycastVehicle> _rayVehicle;
 };
 

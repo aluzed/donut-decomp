@@ -62,6 +62,58 @@ constexpr float kBrakeReferenceMass = 1200.0f;
 constexpr float kMaxSteerStill = 0.5f;
 constexpr float kMaxSteerFast = 0.12f;
 constexpr float kSteerTaperKmh = 90.0f;
+
+// The wheels' rays, which pass through their own car. Bullet's default
+// raycaster takes the first body a ray meets; with a chassis of several boxes
+// (the car's own collision object), a wheel's ray can meet one of them.
+class OwnCarRaycaster : public btVehicleRaycaster
+{
+public:
+	OwnCarRaycaster(btDynamicsWorld* world, const btCollisionObject* car): _world(world), _car(car) {}
+
+	void* castRay(const btVector3& from, const btVector3& to, btVehicleRaycasterResult& result) override
+	{
+		struct Closest : btCollisionWorld::ClosestRayResultCallback
+		{
+			const btCollisionObject* car;
+			Closest(const btVector3& from, const btVector3& to, const btCollisionObject* car):
+			    ClosestRayResultCallback(from, to), car(car)
+			{
+			}
+			btScalar addSingleResult(btCollisionWorld::LocalRayResult& ray, bool normalInWorldSpace) override
+			{
+				if (ray.m_collisionObject == car)
+					return m_closestHitFraction;
+				return ClosestRayResultCallback::addSingleResult(ray, normalInWorldSpace);
+			}
+		} closest(from, to, _car);
+		_world->rayTest(from, to, closest);
+		if (!closest.hasHit())
+			return nullptr;
+		// As the default one: only what a car can stand on.
+		const btRigidBody* body = btRigidBody::upcast(closest.m_collisionObject);
+		if (!body || !body->hasContactResponse())
+			return nullptr;
+		result.m_hitPointInWorld = closest.m_hitPointWorld;
+		result.m_hitNormalInWorld = closest.m_hitNormalWorld.normalized();
+		result.m_distFraction = closest.m_closestHitFraction;
+		return const_cast<btRigidBody*>(body);
+	}
+
+private:
+	btDynamicsWorld* _world;
+	const btCollisionObject* _car;
+};
+
+// The most a wheel's spring may push, for a car of that mass: three times its
+// share of the car's weight, to take landings. Bullet's default is 6000 N
+// whatever the car: a car over 2450 kg, its four wheels unable to hold it up,
+// sank onto its own chassis and sat there at full throttle (the Itchy &
+// Scratchy truck, 2500 kg; the Buzz Cola truck, 4000 kg).
+float maxSuspensionForce(float mass)
+{
+	return std::max(6000.0f, mass * 9.8f / 4.0f * 3.0f);
+}
 } // namespace
 
 Vehicle::Vehicle(const std::string& name): _name(name), _position(Vector3::Zero), _rotation(Quaternion::Identity) {}
@@ -193,16 +245,19 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 	_chassisShapes.clear();
 	btCollisionShape* chassisShape =
 	    _collision ? WorldPhysics::CreateBoxesShape(*_collision->GetVolume(), 0, _chassisShapes) : nullptr;
-	if (chassisShape && _wheelsFromModel)
+	if (chassisShape)
 	{
 		// Not one that reaches below its wheels: dragged along the road, it
-		// would hold the car still.
+		// would hold the car still. The wheels are the model's, or the ones
+		// every car without wheel joints gets: 0.2m of suspension and a 0.4m
+		// wheel under its middle (the Itchy & Scratchy truck's boxes reach
+		// 0.71m down: it wedged over and over, nothing in front of it).
 		btVector3 low, high;
 		btTransform identity;
 		identity.setIdentity();
 		chassisShape->getAabb(identity, low, high);
-		float wheelsBottom = 0.0f;
-		for (int i = 0; i < 4; ++i)
+		float wheelsBottom = _wheelsFromModel ? 0.0f : -0.6f;
+		for (int i = 0; _wheelsFromModel && i < 4; ++i)
 			wheelsBottom = std::min(wheelsBottom, _wheelHubs[i].Y - _wheelRadii[i]);
 		if (low.y() < wheelsBottom + 0.05f)
 		{
@@ -228,13 +283,15 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 
 	btRigidBody* chassis = new btRigidBody(mass, motionState, chassisShape, inertia);
 
-	btVehicleRaycaster* raycaster = new btDefaultVehicleRaycaster(physics.GetDynamicsWorld());
+	_raycaster = std::make_unique<OwnCarRaycaster>(physics.GetDynamicsWorld(), chassis);
+	btVehicleRaycaster* raycaster = _raycaster.get();
 
 	btRaycastVehicle::btVehicleTuning tuning;
 	tuning.m_suspensionStiffness = 30.0f;
 	tuning.m_suspensionCompression = 4.4f;
 	tuning.m_suspensionDamping = 2.8f;
 	tuning.m_maxSuspensionTravelCm = 500.0f;
+	tuning.m_maxSuspensionForce = maxSuspensionForce(mass);
 	tuning.m_frictionSlip = kFrictionSlip;
 
 	_rayVehicle = std::make_unique<btRaycastVehicle>(tuning, chassis, raycaster);
@@ -479,6 +536,8 @@ void Vehicle::SetMass(float mass)
 	chassis->getCollisionShape()->calculateLocalInertia(mass, inertia);
 	chassis->setMassProps(mass, inertia);
 	chassis->updateInertiaTensor();
+	for (int i = 0; i < _rayVehicle->getNumWheels(); ++i)
+		_rayVehicle->getWheelInfo(i).m_maxSuspensionForce = maxSuspensionForce(mass);
 }
 
 void Vehicle::SetEngineForce(float force)
@@ -575,6 +634,7 @@ void Vehicle::DestroyPhysics(WorldPhysics& physics)
 		physics.GetDynamicsWorld()->removeAction(_rayVehicle.get());
 		delete chassis;
 		_rayVehicle.reset();
+		_raycaster.reset();
 		_chassisShapes.clear();
 		Log::Info("Vehicle: physics destroyed for '{}'", _name);
 	}

@@ -1,6 +1,6 @@
 # AI-RACE — IA d'adversaire de course avec rubber-banding
 
-- **Status:** PARTIAL (2026-08-23) — l'adversaire **boucle un tour** : 122 waypoints sur 126 puis passage au tour 1, 39 km/h de moyenne. Reste : trois endroits du circuit ne sont pas roulables et sont contournés d'office
+- **Status:** DONE (2026-10-21) — every criterion met; the last stall (heavy cars sinking onto their chassis) fixed, see the end
 - **Priority:** P2
 - **Module:** AI
 - **Depends on:** AI-PATH (couvert : `src/AI/PathFollower.*`)
@@ -429,11 +429,11 @@ in each. The lap is now bound by the corners (`kLateralAccelMss`), not the engin
 a believable arcade car, and it finishes 10s inside the 120s stage where 0.83 had 1.3s to
 spare. `RaceOpponent` now logs each completed lap and its time.
 
-Still open:
-- per-car tuning: the car scripts carry `SetGasScale`, `SetTopSpeedKmh` and `SetMass`
-  (e.g. `snake_v` 8.0 / 160 km/h, `famil_v` 4.5 / 120 km/h), but none of them is run.
-  Every car shares one engine, a hardcoded 1200kg chassis and a 180 km/h cap;
-- the player's boost multiplies the engine by 3: 18 m/s² at 1.5. It is untested by hand.
+Left open then, settled since:
+- per-car tuning: the car scripts' `SetGasScale`, `SetTopSpeedKmh` and `SetMass` are run
+  (logged at each car's creation: `cCola` 4000 kg, gas scale 4.0, 140 km/h; `cNerd`
+  1000 kg, 6.0, 125 km/h...);
+- the player's boost multiplies the engine by 3: 18 m/s² at 1.5. Still untested by hand.
 
 ### La force moteur n'est plus bloquée par l'IA, mais reste à 0,83
 
@@ -447,6 +447,30 @@ tient plus : c'était le braquage constant qui envoyait la voiture en tête-à-q
 gagne toujours, parce que ce qui reste en travers est de la **géométrie**, et qu'y arriver plus
 vite ne fait que taper plus fort. À relever une fois le circuit roulable — et en mesurant alors
 la voiture du joueur, qui plafonne elle aussi à ~56 km/h.
+
+## Heavy cars sank onto their chassis (2026-10-21)
+
+The last mission an opponent could not drive: level 6's `m2`, following the Itchy &
+Scratchy truck (`IStruck`, 2500 kg). Under `--autopilot` it took over 300 s, the truck
+standing at full throttle with "nothing in front of it", skipped past 15-18 stretches of
+its route, and the stage was not won. The same with the generic wheels and chassis of
+before VEH-WHEELS: not new.
+
+Logged wheel by wheel: the front wheels' suspension compressed past zero (-0.24 m), the
+rear ones off the ground, the truck resting on its cab's collision box. Bullet caps a
+wheel's spring at `m_maxSuspensionForce`, 6000 N unless set, and it was not set: a quarter
+of a 2500 kg truck's weight is 6125 N. Every car over 2450 kg sank until its chassis took
+the load (`cCola` 4000 kg, `cArmor`...).
+
+The cap is now three times a wheel's share of the car's weight (at least 6000 N), and
+follows `SetMass`. Level 6's `m2`: the stage won in 277 s, 3 skips, no wedge, the truck at
+up to 60 km/h. Also: the wheels' rays now pass through their own car
+(`OwnCarRaycaster`): with the chassis made of the car's own boxes, a front wheel's
+attachment point can lie inside the cab's box, and Bullet's default raycaster takes the
+first body it meets.
+
+Over 600 s a level (`val.sh 600`), before this fix: 69 missions won, 0 failed, 0 retried,
+no followed car lost. The "followed car lost now and then" of the backlog was not seen.
 
 ## Critères d'acceptation
 - [x] Un `RaceOpponent` suit le circuit en pilotant un `Vehicle` via `ApplyInput`.
