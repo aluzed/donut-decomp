@@ -48,7 +48,10 @@ void ApplyBlendMode(BlendMode mode)
 Shader::Shader(const P3D::Shader& shader): _name(shader.GetName())
 {
 	auto const& pddiName = shader.GetPddiShaderName();
-	if (pddiName != "simple" && pddiName != "spheremap")
+	// "spheremap" and "environment" are the same to us: the texture, and a
+	// sphere map's reflection added (the cars' paint, the wasps' shell).
+	const bool reflects = pddiName == "spheremap" || pddiName == "environment";
+	if (pddiName != "simple" && !reflects)
 		Log::Warn("shader {}: unhandled pddi type: {}", _name, pddiName);
 
 	_isTranslucent = shader.GetIsTrans() == 1;
@@ -57,7 +60,7 @@ Shader::Shader(const P3D::Shader& shader): _name(shader.GetName())
 	{
 		if (textureParam->GetKey() == "TEX")
 			_textureName = textureParam->GetValue();
-		else if (textureParam->GetKey() == "REFL" && pddiName == "spheremap")
+		else if (textureParam->GetKey() == "REFL" && reflects)
 			_envTextureName = textureParam->GetValue();
 	}
 
@@ -134,7 +137,7 @@ Shader::Shader(const P3D::Shader& shader): _name(shader.GetName())
 			_diffuse = color;
 		else if (param->GetKey() == "EMIS")
 			_emissive = color;
-		else if (param->GetKey() == "ENVB" && pddiName == "spheremap")
+		else if (param->GetKey() == "ENVB" && reflects)
 			_envColor = color;
 	}
 
