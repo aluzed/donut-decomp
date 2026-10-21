@@ -1657,7 +1657,7 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 
 	glDisable(GL_DEPTH_TEST);
 
-	if (_worldSphere != nullptr)
+	if (_worldSphere != nullptr && _skyShown)
 	{
 		glDisable(GL_BLEND);
 		_worldSphere->Draw(*_worldShader, *_billboardBatchShader, viewProj, true);

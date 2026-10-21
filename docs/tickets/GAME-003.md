@@ -1,6 +1,6 @@
 # GAME-003 — Machine à états de jeu complète (Splash→MainMenu→LevelSelect→InGame→Pause→Result→Credits)
 
-- **Status:** PARTIAL (2026-10-20: menus, pause, loading, credits, options and sound)
+- **Status:** DONE (2026-10-21: the bonus game, the last screen the PC has)
 - **Priority:** P1
 - **Module:** Game
 - **Depends on:** —
@@ -563,3 +563,103 @@ the boxes and breakables, the reward, driving. The page's `TutorialMessage` (the
 bible's TUTORIAL_000... in the page's letters, with the consoles' buttons) is not shown.
 
 Checked: level 1's start, Bart at the top, his line subtitled.
+
+## The bonus game (2026-10-21)
+
+The main menu's BONUS GAME (its glow the living room's race track) opens the game's
+SuperSprint: four cars round one of seven small tracks, seen from far above.
+
+**Its files.** A track is two files: `art/b0N.p3d` (its world, roads, fences, and
+`sprint_camShape`, the camera all seven share: 2200 m off, a 5 degree lens, 31 degrees
+down on the middle of the track), and `art/b0Ndata.p3d`, its locators:
+
+| Locator | Type | What it is |
+|---|---|---|
+| `car1`..`car4` | car start | the grid, its heading in the first data word (pi/2, +X) |
+| `finish`, `check*` | event 2 | the checkpoints, their place round the lap in the second data word (`finish` 1) |
+| `WPR01`.. / `WPL01`.. | event 2, place 0 | the computer's waypoints, one way round and the other |
+| `nitro*` | action `Nitro` | a nitro pickup (b02's second says `ToggleOnOff`) |
+| `wrench*`, `repair*` | action `Wrench` | a wrench, the car mended |
+| `death*`, `B03..`, `B07D..` | event 4 | where a car is lost: off the edge, in the water |
+| `jump*` | event 0x30 | a ramp's run-up |
+| `spycam*` | event 1 | camera cuts, unused here: the one camera shows the whole track |
+| `trap*`, `fire`, `B04G0*` | events 0x42, 0x41, 0x3F | b04's and B07's traps, B07's fire; not read |
+
+`b00` is a test track (three checkpoints without their places), not offered. The track's
+world sphere (its sky and the sun's glare) is not drawn: made to be seen from inside it,
+from 2200 m off it was a yellow band across the screen.
+
+**The race** (`SuperSprint`). Three seconds counted down, the cars held on the line.
+Each car goes through the checkpoints in their order, the finish ending a lap; reversed,
+the cars face the other way and meet them backwards. One missed is gone back for; a
+computer car its own unwedging put past one takes the one after. The places go by laps
+and checkpoints, then the way to the next one; the finished by their times. The race is
+over when everyone is over the line, or the players are and the others have had 15 s.
+
+**Lost, and put back.** A car is put back, a moment after, where it last went through a
+checkpoint wheels down and over solid ground, when it is lost: wrecked, fallen, in a
+"death" zone (their boxes reach up to the jumps over the water: B07's to 7.8 m), or
+stuck (a player's, four seconds still with the gas down; the computer's, eight going no
+further than 3 m, long enough for its own backing out). Lost again as soon as put back,
+it goes to the last checkpoint over solid ground (B07's fifth is in mid-air, halfway
+across its jump); stuck twice at one spot, to the checkpoint past it.
+
+**The jumps.** A car up a ramp's run-up, heading on, is launched at 26 m/s at least:
+B07's gap is 31 m across, more than the cars clear at the speed its corners allow (they
+fell in, over and over). The figure is the one that clears it, not the game's. The
+computer is floored there.
+
+**The computer** drives its waypoints (WPR one way round, WPL the other), threaded
+through the track's roads as the street races are, turned round should they run
+against the checkpoints. It joins its route at the
+nearest point ahead of it, not behind (a grid's car turned round for one, over and
+over). It catches up with the players' leader as in the street races, and fires a
+nitro now and then when behind. Threading the checkpoints in as well, tried, did
+worse: their locators sit at gates against walls, and the cars wedged there. It still
+wedges at places (track 2's west side, B07's bends) and loses laps getting out: it is
+the street races' driver, made for wide streets.
+
+**Nitros and wrenches.** Each car starts with one nitro and may hold five; one fired
+burns 1.5 s at 1.6 times the car's pull and top speed. Pickups come back ten seconds
+after they are taken. A blow (more than 8 m/s lost in a frame, sideways or head on)
+dents the car; a wrench mends it. These figures are not the game's (its code was not
+read): chosen to be felt without throwing the cars off the tight corners.
+
+**The menu** (`MiniGameMenu`, `minigame.p3d`'s MiniMenu.pag). Player 1 is in; players 2
+to 4 join on another pad's Start. Each picks who to be among the page's five (Lisa,
+Bart, Homer, Marge, Apu: one each, lit, their tag under them), then a car between the
+arrows, its star beside it (its four ratings summed, halved, on the page's 0 to 9 star:
+a deduction). Once all are ready, the track (those unlocked; the others greyed), its
+laps (up and down, 1 to 9), its way round (the aux key, `h` / pad X), confirm. The
+computer drives the cars no one joined for, as whoever is left, in a car at random.
+The cars offered are those had: bought, won, and the levels' own up to the level reached.
+
+**Tracks unlocked.** Track 1, and one more for each level whose seven cards are found:
+the HUD page's "New bonus game track unlocked!" follows the cards' set complete.
+
+**The pause** (MiniPause.pag over the pause's board): Continue, Quit (to the menu).
+
+**The standings** (MiniSummary.pag), after each race: the series so far, by points
+(4, 3, 2, 1 a race, none for one who did not finish: the plain count, not the game's),
+their faces as the page has them a row (glad, sore, so-so, sad), wins, points, total
+time ("DNF"), best lap, a crown on the best time and the best lap. Any key goes back to
+the tracks; the series runs until the menu is left.
+
+**Its HUD** is drawn by the game's code (MiniHud.pag is empty): each player's place,
+lap and nitros in their corner, in their colour; who drives each car over it; the
+countdown and GO!.
+
+**Its pads.** Player 1 plays with the keyboard (the keymap's) or the first pad; the
+others' pads are read on their own (`ExtraPads`): left stick or cross, right trigger
+gas, left brake, A, B, X, Start, the right shoulder (or Y) a nitro. The first pad's
+events no longer take the others' too.
+
+**Its music**: the music script's `SuperSprint`, then `Win_SuperSprint` or
+`Lose_SuperSprint` as a player wins or not.
+
+**Not done:** the arrows over the cars (`miniarrow1.p3d`, the players' colours) are
+drawn as their tags; the traps and the fire; the bonus game's own sounds (the game's
+countdown, the pickups': chirps stand in).
+
+`--minigame <n>[r]` runs a race on track n (reversed with `r`), the computer driving
+all four, and quits at its standings.

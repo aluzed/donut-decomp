@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Game/SaveGame.h"
+#include "UI/MiniGameMenu.h"
 #include "UI/OptionsMenu.h"
 #include "UI/PauseSundayMenu.h"
 #include "UI/ScrapBookMenu.h"
@@ -41,7 +42,9 @@ enum class GameState
 	// A shop (cars or clothes), likewise.
 	Shop,
 	// The level's end, its counts, before the next level.
-	LevelEnd
+	LevelEnd,
+	// The bonus game: its menu, a race, its standings.
+	MiniGame
 };
 
 class Window;
@@ -637,6 +640,54 @@ private:
 	// Tears the current level down, physics world included, and loads level
 	// `level` in its place, with its own player; no mission is started.
 	void switchLevel(int level);
+	// Tears the level down, its physics world made anew, empty.
+	void unloadLevel();
+
+	// The bonus game (main menu's BONUS GAME): its screens, the race being
+	// run, the pads of players 2 to 4, which screen is up. A race is run on
+	// its track loaded in the level's place (the story's level loaded again
+	// on leaving); the series' wins and points are kept until then.
+	std::unique_ptr<MiniGameMenu> _miniMenu;
+	std::unique_ptr<class SuperSprint> _sprint;
+	std::unique_ptr<class ExtraPads> _extraPads;
+	enum class MiniStage
+	{
+		Menu,
+		Race,
+		Paused,
+		Summary,
+	};
+	MiniStage _miniStage = MiniStage::Menu;
+	bool _trackLoaded = false;
+	int _loadedTrack = 0;
+	struct MiniTally
+	{
+		int wins = 0;
+		int points = 0;
+	};
+	std::array<MiniTally, 4> _miniTally {};
+	// Since the race was over, before its standings.
+	double _miniFinishedFor = 0.0;
+	// The keys of player 1 (and the first pad), the others' pads, as the
+	// menus and the cars take them; what was held, for what is pressed.
+	std::array<MiniGameMenu::Pad, 4> miniPads(const struct GameIntent& intent);
+	std::array<std::array<bool, 5>, 4> _miniHeld {};
+	bool _miniNitroHeld = false;
+	// The racers' drivers, at their wheels, racer by racer (none without a model).
+	std::vector<std::unique_ptr<Character>> _sprintDrivers;
+	void openMiniGame();
+	void leaveMiniGame();
+	void startSprint(const SuperSprint::Setup& setup);
+	// --minigame: the track of a race run by the computer alone, 0 for none.
+	int _miniGameDemo = 0;
+	bool _miniGameDemoReverse = false;
+	void miniGameFrame(double dt, const struct GameIntent& intent);
+	void drawSprint(int width, int height);
+	void drawSprintHud(const Matrix4x4& proj, const Matrix4x4& viewProj, int width, int height);
+	// The cars one may race: those the player has, their stars.
+	std::vector<MiniGameMenu::Car> miniGameCars() const;
+	// Track 1, and one more for each level whose seven cards are all found.
+	int miniGameTracks() const;
 	// Whether level `level`'s scripts were copied off the CD.
 	bool levelAvailable(int level) const;
 	int _coins = 0;

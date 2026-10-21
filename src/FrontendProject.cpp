@@ -313,6 +313,33 @@ void FrontendProject::SetText(const std::string& name, const std::string& text)
 		}
 }
 
+bool FrontendProject::SetTextPosition(const std::string& name, float x, float y)
+{
+	bool found = false;
+	for (auto& entry : _texts)
+		if (entry.name == name)
+		{
+			entry.x = static_cast<int32_t>(std::lround(x));
+			entry.y = static_cast<int32_t>(std::lround(y));
+			found = true;
+		}
+	return found;
+}
+
+bool FrontendProject::GetTextBox(const std::string& name, float& x, float& y, float& width, float& height) const
+{
+	for (const auto& entry : _texts)
+		if (entry.name == name)
+		{
+			x = static_cast<float>(entry.x);
+			y = static_cast<float>(entry.y);
+			width = static_cast<float>(entry.width);
+			height = static_cast<float>(entry.height);
+			return true;
+		}
+	return false;
+}
+
 void FrontendProject::SetTextIndex(const std::string& name, std::size_t index)
 {
 	for (auto& entry : _texts)

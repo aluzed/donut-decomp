@@ -168,8 +168,8 @@ float loopLength(const std::vector<Vector3>& points)
 }
 } // namespace
 
-RaceOpponent::RaceOpponent(Vehicle& vehicle, std::vector<Vector3> circuit, bool open)
-    : _vehicle(vehicle), _path(circuit), _open(open), _circuitMetres(loopLength(circuit)),
+RaceOpponent::RaceOpponent(Vehicle& vehicle, std::vector<Vector3> circuit, bool open, bool joinAhead)
+    : _vehicle(vehicle), _path(circuit), _open(open), _joinAhead(joinAhead), _circuitMetres(loopLength(circuit)),
       _lastPosition(vehicle.GetPosition())
 {
 	Log::Info("RaceOpponent: driving '{}' around {} waypoints", _vehicle.GetName(), _path.Count());
@@ -205,7 +205,25 @@ void RaceOpponent::startFromHere(std::vector<Vector3> circuit)
 	if (circuit.empty() || _open)
 		return;
 	_path.SnapToNearest(_vehicle.GetPosition());
-	const std::size_t start = _path.Index();
+	std::size_t start = _path.Index();
+	// Joining ahead: the nearest of the points before its bonnet, not one
+	// behind it to turn round for (the bonus game's grids, a car put back).
+	if (_joinAhead)
+	{
+		const Vector3 position = _vehicle.GetPosition();
+		const Vector3 forward = _vehicle.GetRotation() * Vector3(0.0f, 0.0f, 1.0f);
+		float best = 1.0e9f;
+		for (std::size_t i = 0; i < circuit.size(); ++i)
+		{
+			Vector3 to = circuit[i] - position;
+			const float distance = to.Length();
+			if (distance > 2.0f && to.Dot(forward) > 0.5f * distance && distance < best)
+			{
+				best = distance;
+				start = i;
+			}
+		}
+	}
 	if (start == 0)
 		return;
 	std::rotate(circuit.begin(), circuit.begin() + static_cast<std::ptrdiff_t>(start), circuit.end());
@@ -428,7 +446,13 @@ void RaceOpponent::Update(double dt, float playerProgress)
 	// through its engine: under x1 the boost also cut the force, and sr3's bus
 	// -- 2500kg on gas 3.5, held at x0.6 while ahead of an idle player -- was
 	// left with 1.6 m/s^2 and could not climb the hill out of the start.
-	_vehicle.ApplyInput(throttle, steer, brake, _boost > 1.0f ? _boost : 1.0f);
+	// Up a ramp (the bonus game's jumps): floored, or it falls short.
+	if (_floored)
+	{
+		throttle = 1.0f;
+		brake = 0.0f;
+	}
+	_vehicle.ApplyInput(throttle, steer, brake, (_boost > 1.0f ? _boost : 1.0f) * _extraBoost);
 
 	// Whether the opponent is making progress is the whole question for AI-RACE,
 	// and a car wedged against a wall looks identical to one driving from the

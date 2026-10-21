@@ -22,7 +22,9 @@ class RaceOpponent
 public:
 	// `open`: the route runs start to finish rather than round a loop. The car
 	// stops once it reaches the end, which counts as its one lap.
-	RaceOpponent(Vehicle& vehicle, std::vector<Vector3> circuit, bool open = false);
+	// `joinAhead`: it joins the circuit at the nearest point ahead of it, not
+	// the nearest.
+	RaceOpponent(Vehicle& vehicle, std::vector<Vector3> circuit, bool open = false, bool joinAhead = false);
 
 	// `playerProgress` is how far the player is round the race *in laps*; pass a
 	// negative value to disable rubber-banding.
@@ -39,6 +41,15 @@ public:
 	float ProgressLaps() const { return _path.ProgressLaps(); }
 	int Laps() const { return _path.Laps(); }
 	const Vehicle& GetVehicle() const { return _vehicle; }
+
+	// The circuit it drives, from where it joined it.
+	const std::vector<Vector3>& GetCircuit() const { return _path.GetWaypoints(); }
+	// A boost on top of its own (the bonus game's nitro): its engine's pull and
+	// top speed times `boost` while it lasts; 1 for none.
+	void SetExtraBoost(float boost) { _extraBoost = boost; }
+	// Floored, whatever the road ahead: a ramp to clear (the bonus game's
+	// jumps).
+	void SetFloored(bool floored) { _floored = floored; }
 
 	// Last throttle scale applied, for HUD/debug readouts.
 	float BoostScale() const { return _boost; }
@@ -85,6 +96,8 @@ private:
 	PathFollower _path;
 
 	float _boost = 1.0f;
+	float _extraBoost = 1.0f;
+	bool _floored = false;
 	double _stuckTimer = 0.0;
 	float _stuckTravel = 0.0f;
 	double _reverseTimer = 0.0;
@@ -96,6 +109,7 @@ private:
 	float _lastWedgeProgress = 0.0f;
 	double _logTimer = 0.0;
 	bool _open = false;
+	bool _joinAhead = false;
 	bool _hasCatchup = false;
 	Catchup _catchup {};
 	// Length of the circuit once round, to turn a deficit in laps into metres.

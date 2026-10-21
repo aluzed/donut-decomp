@@ -93,6 +93,9 @@ public:
 		Vector3 position;
 	};
 	std::vector<KnockedProp> TakeKnockedProps();
+	// Whether its sky (its world sphere: the sky, the sun's glare) is drawn:
+	// not for a bonus game track, seen from far outside it.
+	void SetSkyShown(bool shown) { _skyShown = shown; }
 	void Draw(Matrix4x4& viewProj, const Vector3& cameraPos = Vector3::Zero);
 	// The shader the level's own meshes are drawn with, uniforms as Draw left
 	// them -- what any other P3D Mesh (a car's, say) has to be drawn with too.
@@ -251,6 +254,7 @@ private:
 	void unloadRegion(const std::string& filename);
 
 	std::unique_ptr<WorldSphere> _worldSphere;
+	bool _skyShown = true;
 	std::vector<std::unique_ptr<Entity>> _entities;
 	std::vector<std::unique_ptr<Entity>> _instances;
 	std::vector<std::unique_ptr<BillboardBatch>> _billboardBatches;

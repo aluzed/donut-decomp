@@ -15,6 +15,8 @@
 #include "UI/PauseSundayMenu.h"
 #include "UI/PhoneBoothMenu.h"
 #include "UI/ShopMenu.h"
+#include "Game/SuperSprint.h"
+#include "Input/ExtraPads.h"
 #include "Core/FpsTimer.h"
 #include "Core/Math/Math.h"
 #include "FreeCamera.h"
@@ -193,6 +195,8 @@ Game::Game(int argc, char** argv)
 	//   --from <k>           with --story, start at the level's k-th story mission (from 0)
 	//   --language <E|F|G|I|S>  language of the game's own text (English)
 	//   --no-movies          no movies at start-up or in the story
+	//   --minigame <n>[r]    a bonus game race on track n (reversed with r), the computer
+	//                        driving all four; the game quits at its standings
 	for (int i = 1; i < argc; ++i)
 	{
 		const std::string_view arg = argv[i];
@@ -215,6 +219,12 @@ Game::Game(int argc, char** argv)
 			_clean = true;
 		else if (arg == "--no-movies")
 			_noMovies = true;
+		else if (arg == "--minigame" && i + 1 < argc)
+		{
+			const std::string_view track = argv[++i];
+			_miniGameDemo = std::clamp(std::atoi(track.data()), 1, 7);
+			_miniGameDemoReverse = !track.empty() && (track.back() == 'r' || track.back() == 'R');
+		}
 		else if (arg == "--level" && i + 1 < argc)
 			_levelNumber = std::max(1, std::atoi(argv[++i]));
 		else if (arg == "--language" && i + 1 < argc)
@@ -502,6 +512,31 @@ Game::Game(int argc, char** argv)
 		}
 		return true;
 	});
+	// The bonus game, the race track's in the living room.
+	_miniMenu = std::make_unique<MiniGameMenu>();
+	if (_miniMenu->IsLoaded())
+	{
+		const std::string& bonus = _textBible.Get("MINI_GAME");
+		_mainMenuGlows.push_back("mini");
+		_mainMenu->AddButton(bonus.empty() ? "Bonus Game" : bonus, 0, 0, 200, 40, [this]() { openMiniGame(); });
+	}
+	if (_miniGameDemo > 0 && _miniMenu->IsLoaded())
+	{
+		openMiniGame();
+		SuperSprint::Setup demo;
+		demo.track = _miniGameDemo;
+		demo.laps = 2;
+		demo.reverse = _miniGameDemoReverse;
+		const auto cars = miniGameCars();
+		const char* characters[] = {"homer", "bart", "lisa", "marge"};
+		for (int i = 0; i < SuperSprint::kRacers; ++i)
+		{
+			demo.entries[i].player = -1;
+			demo.entries[i].character = characters[i];
+			demo.entries[i].car = cars.empty() ? "famil_v" : cars[i % cars.size()].name;
+		}
+		startSprint(demo);
+	}
 	_scrapBook = std::make_unique<ScrapBookMenu>([this](const std::string& file) { return presentationPicture(file); });
 	if (_scrapBook->IsLoaded())
 	{
@@ -868,6 +903,8 @@ Game::~Game()
 	// came back truncated.
 	//
 	// Everything holding a physics reference goes first, the world last.
+	_sprint.reset();       // the bonus game's cars
+	_sprintDrivers.clear();
 	_scriptEngine.reset(); // mission vehicles and the race opponent
 	_hitAndRun.reset();    // the police car
 	_trafficManager.reset(); // its cars' kinematic bodies
@@ -1644,7 +1681,19 @@ void Game::switchLevel(int level)
 {
 	Log::Info("Game: leaving level {} for level {}", _levelNumber, level);
 	showLoadingScreen(level);
+	unloadLevel();
+	_levelNumber = level;
+	_storyIndex = -1;
+	loadLevel();
+	LoadModel(_playerCharacter, _playerCharacter);
+	if (!_wornSkin.empty())
+		BuySkin(_wornSkin);
+	_smoothCamPos = Vector3::Zero;
+	_trackLoaded = false;
+}
 
+void Game::unloadLevel()
+{
 	// Everything that lives in the physics world goes before it: the mission's
 	// cars and drivers, the NPCs, the pedestrians and the player.
 	_scriptEngine->CleanupMission();
@@ -1676,14 +1725,6 @@ void Game::switchLevel(int level)
 	_footstepScript.clear();
 	_level.reset();
 	_worldPhysics = std::make_unique<WorldPhysics>(_lineRenderer.get());
-
-	_levelNumber = level;
-	_storyIndex = -1;
-	loadLevel();
-	LoadModel(_playerCharacter, _playerCharacter);
-	if (!_wornSkin.empty())
-		BuySkin(_wornSkin);
-	_smoothCamPos = Vector3::Zero;
 }
 
 Quaternion Game::cameraLooking(float pitchDown, float yaw)
@@ -3829,6 +3870,14 @@ void Game::Run()
 		{
 			Log::Info("Game: --quit-after {:.0f}s reached, closing", _quitAfterSeconds);
 			running = false;
+		}
+
+		// The bonus game runs on its own: its menu, its track, its cars.
+		if (_gameState == GameState::MiniGame)
+		{
+			LockMouse(false);
+			miniGameFrame(deltaTime, intent);
+			continue;
 		}
 
 		// Third-person camera: capture the mouse during on-foot gameplay so its

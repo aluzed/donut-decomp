@@ -65,6 +65,10 @@ public:
 	void SetSpriteBox(const std::string& name, float x, float y, float width, float height);
 	// Drawn last, over the others: a slider's knob over its bar.
 	void BringSpriteToFront(const std::string& name);
+	// A text's box moved, its top left to (`x`, `y`) in the page (y down);
+	// false when it has none of that name. And where it is.
+	bool SetTextPosition(const std::string& name, float x, float y);
+	bool GetTextBox(const std::string& name, float& x, float& y, float& width, float& height) const;
 	// Its texts shrunk to their boxes' height too, not only their width: the
 	// keyboard page's, 15 high, in a font twice that.
 	void SetTextsFitHeight(bool fit) { _fitHeight = fit; }

@@ -87,6 +87,8 @@ public:
 	static int GetMouseY();
 
 	static bool IsGamepadConnected();
+	// Player 1's pad, the first plugged in; null without one.
+	static SDL_GameController* GetGamepad() { return Gamepad; }
 
 	static void InitGamepad();
 	static void CloseGamepad();

@@ -212,6 +212,14 @@ void Input::HandleEvent(const SDL_Event& e)
 		MouseX = e.motion.x;
 		MouseY = e.motion.y;
 	}
+	// Only the first pad's: the others are the bonus game's players 2 to 4
+	// (ExtraPads), not a second pair of hands for player 1.
+	else if ((e.type == SDL_CONTROLLERAXISMOTION &&
+	          (!Gamepad || e.caxis.which != SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(Gamepad)))) ||
+	         ((e.type == SDL_CONTROLLERBUTTONDOWN || e.type == SDL_CONTROLLERBUTTONUP) &&
+	          (!Gamepad || e.cbutton.which != SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(Gamepad)))))
+	{
+	}
 	else if (e.type == SDL_CONTROLLERAXISMOTION)
 	{
 		float val = static_cast<float>(e.caxis.value) / 32767.0f;

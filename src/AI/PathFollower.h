@@ -34,6 +34,7 @@ public:
 	explicit PathFollower(std::vector<Vector3> waypoints): _waypoints(std::move(waypoints)) {}
 
 	void SetWaypoints(std::vector<Vector3> waypoints);
+	const std::vector<Vector3>& GetWaypoints() const { return _waypoints; }
 	bool Empty() const { return _waypoints.empty(); }
 	std::size_t Count() const { return _waypoints.size(); }
 

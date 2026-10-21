@@ -90,6 +90,8 @@ public:
 	bool IsAirborne() const;
 	// The chassis' velocity, in m/s.
 	Vector3 GetVelocity() const;
+	// Sets the chassis going at `velocity` (m/s): the bonus game's ramps.
+	void SetVelocity(const Vector3& velocity);
 	// The ground under wheel `i` (0, 1 front; 2, 3 rear) when it last touched
 	// any.
 	Surface GetWheelSurface(int i) const { return i >= 0 && i < kWheels ? _wheelSurfaces[i] : Surface::Road; }

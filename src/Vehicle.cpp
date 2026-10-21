@@ -504,6 +504,15 @@ Vector3 Vehicle::GetVelocity() const
 	return Vector3(v.x(), v.y(), v.z());
 }
 
+void Vehicle::SetVelocity(const Vector3& velocity)
+{
+	if (!_rayVehicle)
+		return;
+	btRigidBody* chassis = _rayVehicle->getRigidBody();
+	chassis->activate(true);
+	chassis->setLinearVelocity(btVector3(velocity.X, velocity.Y, velocity.Z));
+}
+
 bool Vehicle::IsAirborne() const
 {
 	if (!_rayVehicle)
