@@ -162,10 +162,6 @@ Game::Game(int argc, char** argv)
 	_gameCamera = std::make_unique<GameCamera>();
 	_states.Start(_launch.autoStart ? GameState::InGame : GameState::Splash);
 
-	_frontend = std::make_unique<FrontendProject>();
-	if (FileSystem::exists("./art/frontend/scrooby/bootup.p3d"))
-		_frontend->LoadP3D("./art/frontend/scrooby/bootup.p3d");
-
 	if (_launch.startStory && !_story.empty())
 		startStoryMission(std::min(_launch.storyFrom, static_cast<int>(_story.size()) - 1));
 
@@ -3055,7 +3051,11 @@ void Game::Run()
 		_gameCamera->ApplyShake(deltaTime);
 		updateMissionResult(deltaTime);
 
-		if (_states.Is(GameState::Splash) && (intent.uiConfirm || intent.pauseToggle))
+		// The PC game has no title screen to press a key on: its movies over,
+		// it is at its main menu. Without the menu's page, the old "press
+		// enter" over the level.
+		if (_states.Is(GameState::Splash) &&
+		    (intent.uiConfirm || intent.pauseToggle || (_mainMenuPage && !_mainMenu->GetButtons().empty())))
 			_states.Fire(GameEvent::ToMainMenu);
 
 		updateFallOff();
@@ -4249,8 +4249,6 @@ void Game::drawScreens(SpriteBatch& sprites, const GameIntent& intent, const Mat
 		if (!_shop->IsOpen())
 			_states.Fire(GameEvent::Play);
 	}
-	if (_states.Is(GameState::Splash))
-		_frontend->Draw(proj);
 }
 
 void Game::drawPeople(Matrix4x4& viewProjection)

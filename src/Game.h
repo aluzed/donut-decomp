@@ -277,7 +277,6 @@ private:
 	// Runs the Hit & Run meter: people run down, the police, busted.
 	void updateHitAndRun(double dt);
 	std::unique_ptr<GameInput> _gameInput;
-	std::unique_ptr<FrontendProject> _frontend;
 	// The game's main menu page (scrooby2's MainMenu.pag) and the entry it
 	// shows; left and right as they were last frame.
 	std::unique_ptr<FrontendProject> _mainMenuPage;
