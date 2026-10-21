@@ -492,8 +492,14 @@ void Vehicle::DestroyPhysics(WorldPhysics& physics)
 
 void Vehicle::Draw(Matrix4x4& viewProj, GL::ShaderProgram& shader, bool opaque)
 {
-	if (_model)
-		_model->Draw(shader, viewProj, _model->GetTransform(), opaque);
+	// Lit by the level's lights (its textures are not lit, as the world's
+	// vertex colours are), then the shader left unlit for the rest.
+	if (!_model)
+		return;
+	shader.Bind();
+	shader.SetUniformValue("lighting", 1);
+	_model->Draw(shader, viewProj, _model->GetTransform(), opaque);
+	shader.SetUniformValue("lighting", 0);
 }
 
 Vector3 Vehicle::GetVelocity() const

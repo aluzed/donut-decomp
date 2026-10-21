@@ -2,6 +2,7 @@
 
 #include <Core/Log.h>
 #include <Core/Math/Frustum.h>
+#include <Core/Math/Matrix3x3.h>
 #include <Game.h>
 #include <P3D/P3D.generated.h>
 #include <P3D/P3DFile.h>
@@ -278,6 +279,11 @@ void CompositeModel::Draw(GL::ShaderProgram& shader, const Matrix4x4& viewProj, 
 	if (!_visible)
 		return;
 	shader.Bind();
+	// Opaque, unblended: a car's body texture keeps its reflection's mask in
+	// its alpha, and blended it was see-through.
+	const GLboolean blending = glIsEnabled(GL_BLEND);
+	if (opaque)
+		glDisable(GL_BLEND);
 	for (const auto& prop : _props)
 	{
 		if (!prop.visible)
@@ -288,7 +294,14 @@ void CompositeModel::Draw(GL::ShaderProgram& shader, const Matrix4x4& viewProj, 
 		if (!seen)
 			continue;
 		shader.SetUniformValue("viewProj", transform);
+		// Its normals turned as it is, for the level's lights.
+		const Matrix4x4 placed = modelMatrix * prop.transform;
+		shader.SetUniformValue("normalRotation", Matrix3x3(placed[0][0], placed[0][1], placed[0][2], placed[1][0],
+		                                                   placed[1][1], placed[1][2], placed[2][0], placed[2][1],
+		                                                   placed[2][2]));
 		_meshes[prop.meshIndex]->Draw(shader, opaque);
 	}
+	if (blending)
+		glEnable(GL_BLEND);
 }
 } // namespace Donut

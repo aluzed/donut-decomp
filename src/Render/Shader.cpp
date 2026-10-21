@@ -84,6 +84,18 @@ Shader::Shader(const P3D::Shader& shader): _name(shader.GetName())
 		{
 			_blendMode = (BlendMode)param->GetValue();
 		}
+		else if (param->GetKey() == "LIT")
+			_lit = param->GetValue() != 0;
+	}
+	for (const auto& param : shader.GetColorParams())
+	{
+		const Vector3 color(param->GetR() / 255.0f, param->GetG() / 255.0f, param->GetB() / 255.0f);
+		if (param->GetKey() == "AMBI")
+			_ambient = color;
+		else if (param->GetKey() == "DIFF")
+			_diffuse = color;
+		else if (param->GetKey() == "EMIS")
+			_emissive = color;
 	}
 
 	glSamplerParameterf(_glSampler, 0x84FE, 16);

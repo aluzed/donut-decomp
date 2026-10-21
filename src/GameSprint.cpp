@@ -393,6 +393,7 @@ void Game::drawSprint(int width, int height)
 	Matrix4x4 viewProj = projection * view;
 
 	_level->Draw(viewProj);
+	_level->ApplyLights(*_skinShaderProgram);
 	_sprint->Draw(viewProj, _level->GetWorldShader(), static_cast<float>(_elapsedSeconds));
 	glDisable(GL_CULL_FACE);
 	for (std::size_t i = 0; i < _sprintDrivers.size() && i < _sprint->GetRacers().size(); ++i)

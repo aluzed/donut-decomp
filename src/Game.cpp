@@ -4868,7 +4868,11 @@ void Game::Run()
 		// Counted afresh each frame, shown the next (the overlay is built first).
 		CullStats::drawn = CullStats::culled = 0;
 		if (_level != nullptr)
+		{
 			_level->Draw(viewProjection);
+			// The characters lit by the level's lights, as the cars are.
+			_level->ApplyLights(*_skinShaderProgram);
+		}
 
 		// At the wheel, the player sits in the driver's seat, idling as drivers
 		// do (in_car_idle); the controller keeps him where he got in, and

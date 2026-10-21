@@ -15,6 +15,7 @@ out VertexData
     vec2 lightmapUV;
     vec4 color;
     vec3 worldPos;
+    vec3 normal;
 } outData;
 
 uniform mat4 viewProj;
@@ -25,6 +26,7 @@ void main()
     outData.lightmapUV = vec2(0.0);
     outData.color = color;
     outData.worldPos = offset;
+    outData.normal = vec3(0.0, 1.0, 0.0);
 
     // The corner, turned: its height in the world, its width on the screen.
     vec2 corner = vertex.xy * size;

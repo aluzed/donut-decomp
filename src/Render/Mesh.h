@@ -50,6 +50,9 @@ protected:
 		Vector2 uv;
 		Vector2 lightmapUV;
 		Vector4 color;
+		// Its normal, for a mesh lit by the level's lights (a car's); up when
+		// it has none.
+		Vector3 normal;
 	};
 
 	void CreateMeshBuffers(const P3D::Geometry& geometry);

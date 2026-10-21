@@ -11,6 +11,7 @@ out VertexData
     vec2 lightmapUV;
     vec4 color;
     vec3 worldPos;
+    vec3 normal;
 } outData;
 
 uniform mat4 viewProj;
@@ -23,5 +24,6 @@ void main()
 
     vec4 worldPos4 = transform * vec4(position, 1.0);
     outData.worldPos = worldPos4.xyz;
+    outData.normal = vec3(0.0, 1.0, 0.0);
     gl_Position = viewProj * worldPos4;
 }

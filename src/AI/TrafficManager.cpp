@@ -285,7 +285,9 @@ void TrafficManager::DrawModels(GL::ShaderProgram& worldShader, const Matrix4x4&
 		transforms[i] = Matrix4x4::MakeTranslate(_cars[i].grounded) * Matrix4x4(_cars[i].rotation);
 
 	// The models are shared: each car's wheels are turned just before it is
-	// drawn.
+	// drawn. Lit by the level's lights, as the player's car is.
+	worldShader.Bind();
+	worldShader.SetUniformValue("lighting", 1);
 	for (const bool opaque : {true, false})
 		for (std::size_t i = 0; i < _cars.size(); ++i)
 			if (_cars[i].model >= 0)
@@ -295,6 +297,7 @@ void TrafficManager::DrawModels(GL::ShaderProgram& worldShader, const Matrix4x4&
 					model.SetJointRotation(joint, Quaternion(Vector3(-1.0f, 0.0f, 0.0f), _cars[i].wheelAngle));
 				model.Draw(worldShader, viewProj, transforms[i], opaque);
 			}
+	worldShader.SetUniformValue("lighting", 0);
 }
 
 void TrafficManager::DrawBrakeLights(GL::ShaderProgram& billboardShader, const Matrix4x4& viewProj)

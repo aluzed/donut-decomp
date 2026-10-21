@@ -32,7 +32,8 @@ void main()
 
     vec4 worldPos4 = boneMatrix * vec4(position, 1.0);
     outData.uv = uv;
-    outData.normal = normal;
+    // Turned with its bones: in their bind pose it lit every pose alike.
+    outData.normal = mat3(boneMatrix) * normal;
     outData.worldPos = worldPos4.xyz;
     gl_Position = viewProj * worldPos4;
 }

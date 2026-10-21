@@ -105,6 +105,10 @@ public:
 		Vector3 position;
 	};
 	std::vector<KnockedProp> TakeKnockedProps();
+	// The level's lights (its terrain's light group "sun": an ambient light and
+	// three directional ones) on `shader`: the cars and the characters are lit
+	// by them; the world is lit already, by its vertex colours.
+	void ApplyLights(GL::ShaderProgram& shader) const;
 	// Whether its sky (its world sphere: the sky, the sun's glare) is drawn:
 	// not for a bonus game track, seen from far outside it.
 	void SetSkyShown(bool shown) { _skyShown = shown; }
@@ -320,6 +324,16 @@ private:
 	void updateState(AnimatedObject& object, CompositeModel& model);
 	void stateCallback(AnimatedObject& object, CompositeModel& model, uint32_t callback);
 	std::vector<CoinDrop> _coinDrops;
+	// Every light read (Light, 0x13000), by name, and the light groups
+	// (LightGroup, 0x2380) naming them.
+	struct Light
+	{
+		bool ambient = false;
+		Vector3 color;
+		Vector3 direction;
+	};
+	std::map<std::string, Light> _lights;
+	std::map<std::string, std::vector<std::string>> _lightGroups;
 	// Those that stand as bodies, by body.
 	std::unordered_map<const btCollisionObject*, std::size_t> _breakingBodies;
 	// Breaks one: its breaking plays, its body goes; `hitter`, given its

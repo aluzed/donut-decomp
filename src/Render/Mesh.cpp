@@ -31,10 +31,11 @@ void Mesh::CreateVertexBinding()
 	    GL::ArrayElement(_vertexBuffer.get(), 1, 2, GL::AE_FLOAT, vertStride, 3 * sizeof(float)),
 	    GL::ArrayElement(_vertexBuffer.get(), 2, 2, GL::AE_FLOAT, vertStride, 5 * sizeof(float)),
 	    GL::ArrayElement(_vertexBuffer.get(), 3, 4, GL::AE_FLOAT, vertStride, 7 * sizeof(float)),
+	    GL::ArrayElement(_vertexBuffer.get(), 4, 3, GL::AE_FLOAT, vertStride, 11 * sizeof(float)),
 	};
 
 	_vertexBinding = std::make_shared<GL::VertexBinding>();
-	_vertexBinding->Create(vertexLayout, 4, *_indexBuffer, GL::ElementType::AE_UINT);
+	_vertexBinding->Create(vertexLayout, 5, *_indexBuffer, GL::ElementType::AE_UINT);
 }
 
 void Mesh::CreateMeshBuffers(const P3D::Geometry& geometry)
@@ -59,6 +60,8 @@ void Mesh::CreateMeshBuffers(const P3D::Geometry& geometry)
 				indices[i] = static_cast<uint32_t>(i);
 		}
 		bool hasColors = !colors.empty();
+		const auto& normals = prim->GetNormals();
+		const bool hasNormals = normals.size() == verts.size();
 
 		// A second UV channel would be a lightmap's. None of the game's 655
 		// files with UV lists has one (19866 lists, all channel 0): its world
@@ -77,6 +80,7 @@ void Mesh::CreateMeshBuffers(const P3D::Geometry& geometry)
 			    Vector2(uvs[i].X, 1.0f - uvs[i].Y),
 			    lmUV,
 			    hasColors ? P3D::P3DUtil::ConvertColor(colors[i]) : Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+			    hasNormals ? normals[i] : Vector3(0.0f, 1.0f, 0.0f),
 			});
 		}
 
@@ -154,6 +158,14 @@ void Mesh::Draw(GL::ShaderProgram& shader, bool opaque)
 			}
 		}
 
+		// How the level's lights light it, when they do (the cars).
+		if (shader.HasUniform("materialLit"))
+		{
+			shader.SetUniformValue("materialLit", prim.cacheShader->IsLit() ? 1 : 0);
+			shader.SetUniformValue("materialAmbient", prim.cacheShader->GetAmbient());
+			shader.SetUniformValue("materialDiffuse", prim.cacheShader->GetDiffuse());
+			shader.SetUniformValue("materialEmissive", prim.cacheShader->GetEmissive());
+		}
 		if (shader.HasUniform("alphaMask"))
 			shader.SetUniformValue("alphaMask", (prim.cacheShader->IsAlphaTested()) ? 0.5f : 0.0f);
 

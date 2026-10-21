@@ -37,6 +37,8 @@ public:
 private:
 	GLuint _program;
 	std::map<std::string, GLint> _uniforms;
+	std::map<std::string, GLint> _otherUniforms;
+	GLint location(const char* uniformName);
 
 	GLuint createSubShader(GLenum type, const std::string& source);
 };

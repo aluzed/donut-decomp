@@ -2,6 +2,7 @@
 #include "OpenGL/glad/glad.h"
 
 #include <Render/Texture.h>
+#include "Core/Math/Vector3.h"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -45,6 +46,13 @@ public:
 	void Bind(GLuint unit) const;
 
 	bool HasLighting() const { return _hasLighting; }
+	// Lit by the scene's lights (LIT), and how: its ambient (AMBI), diffuse
+	// (DIFF) and emissive (EMIS) colours. A car's body takes no ambient light:
+	// lit only from where the sun shines.
+	bool IsLit() const { return _lit; }
+	const Vector3& GetAmbient() const { return _ambient; }
+	const Vector3& GetDiffuse() const { return _diffuse; }
+	const Vector3& GetEmissive() const { return _emissive; }
 	bool IsAlphaTested() const { return _alphaTested; }
 	bool IsTwoSided() const { return _twoSided; }
 
@@ -70,6 +78,10 @@ protected:
 	bool _twoSided;
 
 	BlendMode _blendMode;
+	bool _lit = false;
+	Vector3 _ambient = Vector3(1.0f, 1.0f, 1.0f);
+	Vector3 _diffuse = Vector3(1.0f, 1.0f, 1.0f);
+	Vector3 _emissive = Vector3::Zero;
 };
 
 } // namespace Donut

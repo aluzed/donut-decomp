@@ -718,6 +718,45 @@ void Level::LoadP3D(const std::string& filename)
 			break;
 		}
 		case P3D::ChunkType::WorldSphere: _worldSphere = std::make_unique<WorldSphere>(*P3D::WorldSphere::Load(*chunk)); break;
+		case P3D::ChunkType::Light:
+		{
+			// Its name, version, type (0 ambient, 2 directional), colour,
+			// attenuation (three), whether on; its direction, a child.
+			MemoryStream stream(chunk->GetData());
+			std::string name = stream.ReadLPString();
+			name = name.substr(0, name.find('\0'));
+			stream.Read<uint32_t>();
+			const uint32_t type = stream.Read<uint32_t>();
+			const Vector4 color = P3D::P3DUtil::ConvertColor(stream.Read<uint32_t>());
+			Light light;
+			light.ambient = type == 0;
+			// On the scale the consoles light by, 128 the full light: none of
+			// the game's goes past 140, and read out of 255 a car's body (no
+			// ambient light of its own) came out a dull maroon.
+			light.color = Vector3(color.X, color.Y, color.Z) * (255.0f / 128.0f);
+			for (const auto& child : chunk->GetChildren())
+				if (child->IsType(P3D::ChunkType::LightDirection))
+				{
+					MemoryStream direction(child->GetData());
+					light.direction = direction.Read<Vector3>().Normalized();
+				}
+			_lights[name] = light;
+			break;
+		}
+		case P3D::ChunkType::LightGroup:
+		{
+			MemoryStream stream(chunk->GetData());
+			std::string name = stream.ReadLPString();
+			name = name.substr(0, name.find('\0'));
+			std::vector<std::string> names(stream.Read<uint32_t>());
+			for (auto& light : names)
+			{
+				light = stream.ReadLPString();
+				light = light.substr(0, light.find('\0'));
+			}
+			_lightGroups[name] = std::move(names);
+			break;
+		}
 		case P3D::ChunkType::Locator2:
 		{
 			auto loc = P3D::Locator2::Load(*chunk);
@@ -1758,6 +1797,32 @@ void Level::Update(double deltatime)
 	                    _hitParticles.end());
 }
 
+void Level::ApplyLights(GL::ShaderProgram& shader) const
+{
+	const auto group = _lightGroups.find("sun");
+	if (group == _lightGroups.end())
+		return;
+	Vector3 ambient = Vector3::Zero;
+	int count = 0;
+	shader.Bind();
+	for (const std::string& name : group->second)
+	{
+		const auto light = _lights.find(name);
+		if (light == _lights.end())
+			continue;
+		if (light->second.ambient)
+			ambient += light->second.color;
+		else if (count < 4)
+		{
+			shader.SetUniformValue(fmt::format("lightDirections[{}]", count).c_str(), light->second.direction);
+			shader.SetUniformValue(fmt::format("lightColors[{}]", count).c_str(), light->second.color);
+			++count;
+		}
+	}
+	shader.SetUniformValue("ambientLight", ambient);
+	shader.SetUniformValue("lightCount", count);
+}
+
 void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 {
 	_worldShader->Bind();
@@ -1767,6 +1832,9 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 	_worldShader->SetUniformValue("cameraPos", cameraPos);
 	_worldShader->SetUniformValue("lightmapIntensity", 0.0f);
 	_worldShader->SetUniformValue("lightmapTex", 1);
+	// Unlit, the world (its vertex colours are its light); the cars turn it on.
+	_worldShader->SetUniformValue("lighting", 0);
+	ApplyLights(*_worldShader);
 	// The billboards' program shares the world's fragment shader, and its
 	// uniforms are its own: left at their defaults, lightmapIntensity 1 had each
 	// glow multiplied by a corner of its own texture (black), and an additive
