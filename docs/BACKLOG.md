@@ -197,7 +197,7 @@ the same.
 | GAME-001a | ✅ | `GameInput` (input to intents) |
 | GAME-001b | ✅ | `GameCamera` (follow, orbit, camera moves, conversation shots, shake) (2026-10-21) |
 | GAME-001c | ✅ | 2D drawing out of `Game::Run`: the HUD in `UI/Hud.*`, menus, results and hints in `UI/ScreenText` (2026-10-21) |
-| GAME-001d | ⬜ | `GameStateMachine` (transitions from a table, not scattered `if`s) |
+| GAME-001d | ✅ | `GameStateMachine`: the states' transitions from one table of events (2026-10-21) |
 | GAME-001e | ⬜ | Out of `Game`: the autopilot, the story and level loading, interiors, gags |
 
 ### C.2 — SCRIPT: `.con`/`.mfk` commands

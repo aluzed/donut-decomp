@@ -17,6 +17,7 @@
 
 #include "Core/Math/Fwd.h"
 #include "Core/Math/Vector3.h"
+#include "Game/GameStateMachine.h"
 
 #include <memory>
 #include <string>
@@ -25,27 +26,6 @@
 namespace Donut
 {
 
-enum class GameState
-{
-	Splash,
-	MainMenu,
-	Loading,
-	InGame,
-	Paused,
-	MissionComplete,
-	MissionFailed,
-	Credits,
-	// One of the game's movies, from the options' View Movies.
-	Movie,
-	// The phone booth's car select, over the game standing still.
-	PhoneBooth,
-	// A shop (cars or clothes), likewise.
-	Shop,
-	// The level's end, its counts, before the next level.
-	LevelEnd,
-	// The bonus game: its menu, a race, its standings.
-	MiniGame
-};
 
 class Window;
 class AudioManager;
@@ -112,8 +92,9 @@ public:
 
 	ScriptEngine& GetScriptEngine() { return *_scriptEngine; }
 
-	GameState GetState() const { return _gameState; }
-	void SetState(GameState state) { _gameState = state; }
+	GameState GetState() const { return _states.GetState(); }
+	// Moves the game's state on (see GameStateMachine); false when refused.
+	bool Fire(GameEvent event) { return _states.Fire(event); }
 
 	void LockMouse(bool lockMouse);
 	void SetPlayerPosition(const Vector3& pos);
@@ -279,6 +260,8 @@ private:
 	std::vector<std::string> _moviesNext;
 	bool _moviesSkipTogether = false;
 	GameState _afterMovies = GameState::MainMenu;
+	// The event that goes to `state` (a movie's way back).
+	static GameEvent eventTo(GameState state);
 	bool _moviesStopMusic = false;
 	// Plays `files` (movies/, as named in the scripts or on the CDs), one
 	// after another; false if the first cannot be.
@@ -439,7 +422,7 @@ private:
 	float _prevVehicleY = 0.0f;
 	float _hornCooldown = 0.0f;
 
-	GameState _gameState = GameState::InGame;
+	GameStateMachine _states;
 
 	// Unattended-run switches (--autostart / --quit-after), for measuring the AI
 	// over a whole mission without a human holding ENTER down for two minutes.
@@ -770,7 +753,6 @@ private:
 
 	bool _inVehicle = false;
 	Vehicle* _activeVehicle = nullptr;
-	double _missionCompleteTimer = 0.0;
 	Vector3 _lastSafePos = Vector3(220, 4.5f, -172);
 	// Where the car the player drives last had a wheel on the ground: a car
 	// that falls off the map is put back on the road nearest to it, rather

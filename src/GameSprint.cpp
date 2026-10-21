@@ -99,7 +99,7 @@ void Game::openMiniGame()
 	_miniTally = {};
 	_miniMenu->OpenSetup(miniGameCars(), miniGameTracks());
 	_miniStage = MiniStage::Menu;
-	_gameState = GameState::MiniGame;
+	_states.Fire(GameEvent::OpenMiniGame);
 	for (auto& held : _miniHeld)
 		held.fill(true);
 }
@@ -111,7 +111,7 @@ void Game::leaveMiniGame()
 	// The story's level back, where the track stood.
 	if (_trackLoaded)
 		switchLevel(_levelNumber);
-	_gameState = GameState::MainMenu;
+	_states.Fire(GameEvent::ToMainMenu);
 }
 
 std::array<MiniGameMenu::Pad, 4> Game::miniPads(const GameIntent& intent)

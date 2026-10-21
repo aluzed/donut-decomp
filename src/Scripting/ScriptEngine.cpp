@@ -778,7 +778,7 @@ void ScriptEngine::missionFailed(const std::string& reason, const std::string& h
 	    !audio.PlayMusicEvent(musicEvent("lose"), true))
 		audio.ResumeMusicBase();
 	_missionMusicEnded = true;
-	_game.SetState(GameState::MissionFailed);
+	_game.Fire(GameEvent::MissionLost);
 }
 
 std::string ScriptEngine::musicEvent(const std::string& what) const
@@ -2215,7 +2215,7 @@ void ScriptEngine::missionComplete()
 		audio.ResumeMusicBase();
 	_missionMusicEnded = true;
 	_stageTimeRemaining = -1.0f;
-	_game.SetState(GameState::MissionComplete);
+	_game.Fire(GameEvent::MissionWon);
 }
 
 void ScriptEngine::SetPresentationBitmap(const std::string& path)

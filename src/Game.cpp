@@ -376,8 +376,7 @@ Game::Game(int argc, char** argv)
 	Input::LoadKeymap("keymap.conf");
 
 	_gameCamera = std::make_unique<GameCamera>();
-	_gameState = _autoStart ? GameState::InGame : GameState::Splash;
-	_missionCompleteTimer = 0.0;
+	_states.Start(_autoStart ? GameState::InGame : GameState::Splash);
 
 	_frontend = std::make_unique<FrontendProject>();
 	if (FileSystem::exists("./art/frontend/scrooby/bootup.p3d"))
@@ -439,7 +438,7 @@ Game::Game(int argc, char** argv)
 				switchLevel(progress.level);
 			if (progress.mission < static_cast<int>(_story.size()))
 				startStoryMission(progress.mission);
-			_gameState = GameState::InGame;
+			_states.Fire(GameEvent::Play);
 		});
 	}
 	const std::string& newGame = _textBible.Get("NEW_GAME");
@@ -450,7 +449,7 @@ Game::Game(int argc, char** argv)
 			switchLevel(1);
 		if (!_story.empty())
 			startStoryMission(0);
-		_gameState = GameState::InGame;
+		_states.Fire(GameEvent::Play);
 		// Level 1's introduction (FMV1A) before its first mission.
 		if (!_noMovies && !_autopilot)
 			playMovies({"FMV1A.RMV"}, GameState::InGame);
@@ -467,7 +466,7 @@ Game::Game(int argc, char** argv)
 				switchLevel(level);
 			if (!_story.empty())
 				startStoryMission(0);
-			_gameState = GameState::InGame;
+			_states.Fire(GameEvent::Play);
 		});
 	}
 	// The options: the sound's volumes, the window's size; the credits; the
@@ -477,7 +476,7 @@ Game::Game(int argc, char** argv)
 	_optionsMenu = std::make_unique<OptionsMenu>(
 	    *_audioManager, *_window,
 	    [this]() {
-		    _gameState = _creditsPage ? GameState::Credits : GameState::MainMenu;
+		    _states.Fire(_creditsPage ? GameEvent::ShowCredits : GameEvent::ToMainMenu);
 		    _creditsTime = 0.0;
 		    if (_creditsPage)
 			    _audioManager->PlayMusicEvent("Credits", true);
@@ -486,7 +485,7 @@ Game::Game(int argc, char** argv)
 	    movies ? std::function<void(int)>([this](int movie) { playMovie(movie); }) : nullptr);
 	// At start-up, as the game: the studios' logos, then its introduction;
 	// a key skips them all.
-	if (_gameState == GameState::Splash && !_noMovies)
+	if (_states.Is(GameState::Splash) && !_noMovies)
 		playMovies({"RADLOGO.RMV", "FOXLOGO.RMV", "GRACIE.RMV", "VUGLOGO.RMV", "INTRO.RMV"}, GameState::Splash, true);
 	_phoneBooth = std::make_unique<PhoneBoothMenu>([this](const std::string& car) { callCar(car); });
 	// A shop's item had: an outfit worn, a car left by its seller, the player
@@ -567,14 +566,13 @@ Game::Game(int argc, char** argv)
 	}
 	_pauseMenu = std::make_unique<GameMenu>();
 	_pauseMenu->AddButton("Resume", 0, 0, 200, 40, [this]() {
-		_gameState = GameState::InGame;
+		_states.Fire(GameEvent::Play);
 	});
 	_pauseMenu->AddButton("Restart", 0, 0, 200, 40, [this]() {
 		_scriptEngine->CleanupMission();
 		if (_collectibleManager) _collectibleManager->SpawnOnPath();
 		runMissionScript();
-		_gameState = GameState::InGame;
-		_missionCompleteTimer = 0.0;
+		_states.Fire(GameEvent::Play);
 	});
 	_pauseMenu->AddButton("Quit", 0, 0, 200, 40, [this]() {
 		SDL_Event quitEvent;
@@ -593,10 +591,10 @@ Game::Game(int argc, char** argv)
 			return;
 		_bonusReturn = -1;
 		startStoryMission(to);
-		_gameState = GameState::InGame;
+		_states.Fire(GameEvent::Play);
 	});
 	PauseSundayMenu::Actions sunday;
-	sunday.resume = [this]() { _gameState = GameState::InGame; };
+	sunday.resume = [this]() { _states.Fire(GameEvent::Play); };
 	sunday.options = [this]() {
 		if (_optionsMenu)
 			_optionsMenu->Open(true);
@@ -611,7 +609,7 @@ Game::Game(int argc, char** argv)
 	sunday.replay = [this](int story) {
 		_bonusReturn = _storyIndex;
 		startStoryMission(story);
-		_gameState = GameState::InGame;
+		_states.Fire(GameEvent::Play);
 	};
 	_pauseSunday = std::make_unique<PauseSundayMenu>(std::move(sunday));
 }
@@ -811,7 +809,7 @@ void Game::updateTutorial()
 		tutorial("broken");
 	if (_hitAndRun && _hitAndRun->GetMeter() > 0.0f)
 		tutorial("hitrun");
-	const bool failed = _gameState == GameState::MissionFailed;
+	const bool failed = _states.Is(GameState::MissionFailed);
 	if (failed && !seen.failed)
 		tutorial("failed");
 	seen.failed = failed;
@@ -832,7 +830,7 @@ void Game::updateTutorial()
 	if (_audioManager->IsDialoguePlaying())
 		return;
 	_walkieTalkie = false;
-	if (_tutorialWaiting.empty() || _gameState != GameState::InGame)
+	if (_tutorialWaiting.empty() || !_states.Is(GameState::InGame))
 		return;
 	const std::string event = _tutorialWaiting.front();
 	_tutorialWaiting.erase(_tutorialWaiting.begin());
@@ -1396,7 +1394,7 @@ void Game::drawCaption(const std::string& speaker, const std::string& text, cons
 	const std::string prefix = speaker.empty() ? "" : speaker + ": ";
 	// Clear of the game HUD's radar, bottom right: half the screen wide, left
 	// of its middle; over a movie, the screen's whole width.
-	const bool radar = _gameHud && _gameHud->IsLoaded() && _gameState != GameState::Movie;
+	const bool radar = _gameHud && _gameHud->IsLoaded() && !_states.Is(GameState::Movie);
 	const float most = width * (radar ? 0.5f : 0.8f);
 	const float middle = width * (radar ? 0.42f : 0.5f);
 	std::vector<std::string> lines(1, prefix);
@@ -1411,7 +1409,7 @@ void Game::drawCaption(const std::string& speaker, const std::string& text, cons
 	}
 	const float lineHeight = font->GetHeight() + 4.0f;
 	// Above the objective's box while it is up.
-	const float bottom = _gameHud && _gameHud->IsObjectiveShown() && _gameState != GameState::Movie ? 0.66f : 0.86f;
+	const float bottom = _gameHud && _gameHud->IsObjectiveShown() && !_states.Is(GameState::Movie) ? 0.66f : 0.86f;
 	float y = height * bottom - lineHeight * (lines.size() - 1);
 	SpriteBatch batch;
 	for (std::size_t i = 0; i < lines.size(); ++i, y += lineHeight)
@@ -1456,7 +1454,7 @@ void Game::drawCredits(const GameIntent& intent, const Matrix4x4& proj, double d
 	const bool over = top + _creditLines.size() * line < 0.0f;
 	if (over || (_creditsTime > 0.5 && (intent.uiConfirm || intent.pauseToggle)))
 	{
-		_gameState = GameState::MainMenu;
+		_states.Fire(GameEvent::ToMainMenu);
 		_menuShown = false;
 	}
 }
@@ -1541,7 +1539,7 @@ bool Game::PlayStoryMovie(const std::string& file, bool stopMusic)
 
 bool Game::IsMoviePlaying() const
 {
-	return _gameState == GameState::Movie;
+	return _states.Is(GameState::Movie);
 }
 
 bool Game::playMovies(std::vector<std::string> files, GameState after, bool skipTogether)
@@ -1563,13 +1561,13 @@ bool Game::playMovies(std::vector<std::string> files, GameState after, bool skip
 			continue;
 		// A movie with fewer soundtracks plays its first.
 		_moviePlaying = {upper, _movieLines.count({upper, track}) ? track : 0};
-		if (_gameState != GameState::Movie)
+		if (!_states.Is(GameState::Movie))
 		{
 			_afterMovies = after;
 			_moviesSkipTogether = skipTogether;
 			_moviesStopMusic = false;
 			_audioManager->StopMusic();
-			_gameState = GameState::Movie;
+			_states.Fire(GameEvent::PlayMovie);
 		}
 		_moviesNext = std::move(files);
 		return true;
@@ -1625,7 +1623,7 @@ void Game::drawMovie(const GameIntent& intent, const Matrix4x4& proj, double dt,
 		_moviesNext.clear();
 	if (!_moviesNext.empty() && playMovies(std::move(_moviesNext), _afterMovies, _moviesSkipTogether))
 		return;
-	_gameState = _afterMovies;
+	_states.Fire(eventTo(_afterMovies));
 	if (_afterMovies == GameState::MainMenu)
 		_menuMusic = false;
 	else if (_afterMovies == GameState::InGame && !_moviesStopMusic)
@@ -1801,6 +1799,18 @@ void Game::loadTextBible()
 	_textBible.LoadCompiled("art/frontend/scrooby/resource/txtbible/srr2.p3d", _language);
 	if (_language != 'E')
 		_textBible.SetFallback(&_englishBible);
+}
+
+GameEvent Game::eventTo(GameState state)
+{
+	switch (state)
+	{
+	case GameState::InGame: return GameEvent::Play;
+	case GameState::Splash: return GameEvent::ShowSplash;
+	case GameState::Credits: return GameEvent::ShowCredits;
+	case GameState::LevelEnd: return GameEvent::LevelOver;
+	default: return GameEvent::ToMainMenu;
+	}
 }
 
 void Game::AddShake(float amount)
@@ -2384,7 +2394,7 @@ void Game::saveCoins() const
 
 void Game::runAutopilot(double dt)
 {
-	if (!_scriptEngine->IsMissionActive() || _gameState != GameState::InGame)
+	if (!_scriptEngine->IsMissionActive() || !_states.Is(GameState::InGame))
 		return;
 
 	// Every two seconds, not every frame: each step should be seen to land, and
@@ -3830,14 +3840,14 @@ bool Game::openShop()
 		return false;
 	Log::Info("Game: shop '{}', {} on sale", _shopSeller ? _shopSeller->shop : "interior", items.size());
 	_shop->Open(std::move(items));
-	_gameState = GameState::Shop;
+	_states.Fire(GameEvent::OpenShop);
 	return true;
 }
 
 void Game::callCar(const std::string& car)
 {
 	// The car chosen, the player's from now on, brought round; repaired.
-	_gameState = GameState::InGame;
+	_states.Fire(GameEvent::Play);
 	_currentCar = car;
 	savePurchases();
 	Vehicle& vehicle = _scriptEngine->SummonPlayerCar(car, _phoneBoothRoad);
@@ -3873,7 +3883,7 @@ bool Game::usePhoneBooth()
 			}
 			_phoneBoothRoad = road;
 			_phoneBooth->Open(std::move(cars), GetPlayerCarModel());
-			_gameState = GameState::PhoneBooth;
+			_states.Fire(GameEvent::OpenPhoneBooth);
 			Log::Info("Game: phone booth '{}'", trigger.locator);
 			return true;
 		}
@@ -4049,7 +4059,7 @@ void Game::Run()
 		}
 
 		// The bonus game runs on its own: its menu, its track, its cars.
-		if (_gameState == GameState::MiniGame)
+		if (_states.Is(GameState::MiniGame))
 		{
 			LockMouse(false);
 			miniGameFrame(deltaTime, intent);
@@ -4062,7 +4072,7 @@ void Game::Run()
 		// The game settings' mouse: whether it looks round, how much (a half
 		// is 0.005 a pixel), either way inverted.
 		const OptionsMenu::Mouse mouse = _optionsMenu ? _optionsMenu->GetMouse() : OptionsMenu::Mouse();
-		const bool onFoot = (_gameState == GameState::InGame) && _character && !_inVehicle;
+		const bool onFoot = (_states.Is(GameState::InGame)) && _character && !_inVehicle;
 		LockMouse(onFoot && mouse.look);
 		if (onFoot && mouse.look && _gameInput->IsMouseLocked())
 		{
@@ -4281,14 +4291,14 @@ void Game::Run()
 			_gameCamera->OrbitCharacter(_character->GetPosition(), deltaTime);
 		// The script's cameras over the player's: a mission's camera move as it
 		// starts, then the conversation's shots, line by line.
-		if (_gameState == GameState::InGame)
+		if (_states.Is(GameState::InGame))
 			scriptedCamera(deltaTime);
 
 		// Pause has to stop the world, not just hide it: this used to keep running
 		// every frame while paused, so physics and scripts ticked behind the overlay.
-		const bool simulate = _gameState != GameState::Paused && _gameState != GameState::Movie &&
-		                      _gameState != GameState::PhoneBooth && _gameState != GameState::Shop &&
-		                      _gameState != GameState::LevelEnd;
+		const bool simulate = !_states.Is(GameState::Paused) && !_states.Is(GameState::Movie) &&
+		                      !_states.Is(GameState::PhoneBooth) && !_states.Is(GameState::Shop) &&
+		                      !_states.Is(GameState::LevelEnd);
 
 		if (simulate)
 		{
@@ -4358,28 +4368,25 @@ void Game::Run()
 				}
 			updateCarDamage();
 			updateCarDamageLook(deltaTime);
-			if (_gameState == GameState::InGame)
+			if (_states.Is(GameState::InGame))
 				updateHitAndRun(deltaTime);
 		}
 
 		_gameCamera->ApplyShake(deltaTime);
 
-		if (_gameState == GameState::MissionComplete || _gameState == GameState::MissionFailed)
+		if (_states.Is(GameState::MissionComplete) || _states.Is(GameState::MissionFailed))
 		{
 			// Won on foot, the player celebrates: the big one for the level's last
 			// story mission.
-			if (_missionCompleteTimer == 0.0 && _gameState == GameState::MissionComplete && !_inVehicle)
+			if (_states.GetResultTime() == 0.0 && _states.Is(GameState::MissionComplete) && !_inVehicle)
 			{
 				const bool levelWon = _storyIndex >= 0 && _storyIndex + 1 == static_cast<int>(_story.size());
 				if (!levelWon || !playPlayerAnimation("victory_large", false))
 					playPlayerAnimation("victory_small", false);
 			}
-			_missionCompleteTimer += deltaTime;
-			if (_missionCompleteTimer > 5.0)
+			const bool failed = _states.Is(GameState::MissionFailed);
+			if (_states.UpdateResult(deltaTime) && _states.Fire(GameEvent::ResultOver))
 			{
-				const bool failed = _gameState == GameState::MissionFailed;
-				_gameState = GameState::InGame;
-				_missionCompleteTimer = 0.0;
 				if (_inVehicle)
 				{
 					_inVehicle = false;
@@ -4412,7 +4419,7 @@ void Game::Run()
 							switchLevel(_levelNumber + 1);
 							if (!_story.empty())
 								startStoryMission(0);
-							_gameState = GameState::InGame;
+							_states.Fire(GameEvent::Play);
 						};
 						// The level's end: its counts, all its story won, then on.
 						if (_pauseSunday && _pauseSunday->IsLoaded() && !_autopilot)
@@ -4421,7 +4428,7 @@ void Game::Run()
 							for (const std::string& entry : _story)
 								missions += entry.size() > 7 && entry.compare(entry.size() - 7, 7, "sdi.mfk") != 0;
 							_pauseSunday->OpenLevelEnd(_levelNumber, levelStats(missions, missions), nextLevel);
-							_gameState = GameState::LevelEnd;
+							_states.Fire(GameEvent::LevelOver);
 						}
 						else
 							nextLevel();
@@ -4433,7 +4440,7 @@ void Game::Run()
 						Log::Info("Game: the story is over, level {} won", _levelNumber);
 						_scriptEngine->CleanupMission();
 						// The credits roll, then the main menu.
-						_gameState = _creditsPage ? GameState::Credits : GameState::MainMenu;
+						_states.Fire(_creditsPage ? GameEvent::ShowCredits : GameEvent::ToMainMenu);
 						_creditsTime = 0.0;
 						if (_creditsPage)
 							_audioManager->PlayMusicEvent("Credits");
@@ -4455,12 +4462,11 @@ void Game::Run()
 			}
 		}
 
-		if (_gameState == GameState::Splash)
+		if (_states.Is(GameState::Splash))
 		{
 			if (intent.uiConfirm || intent.pauseToggle)
 			{
-				_gameState = GameState::MainMenu;
-				_missionCompleteTimer = 0.0;
+				_states.Fire(GameEvent::ToMainMenu);
 			}
 		}
 
@@ -4621,7 +4627,7 @@ void Game::Run()
 		// Re-enabled (REGR-001): db9c8db commented this out to isolate a crash on "press
 		// up"; 9860a4f fixed that same day (uninitialised Character::_rotation feeding the
 		// follow camera, plus stepUp/stepDown/onGround bugs) but the block was never restored.
-		if (_character != nullptr && _gameState == GameState::InGame)
+		if (_character != nullptr && _states.Is(GameState::InGame))
 		{
 			// Triggers fire on the transition, once, from wherever the player
 			// actually is -- the car, when driving. This used to log "entered
@@ -4780,9 +4786,9 @@ void Game::Run()
 		if (intent.pauseToggle && !(_optionsMenu && _optionsMenu->IsOpen()) &&
 		    !(_pauseSunday && _pauseSunday->IsOpen()))
 		{
-			if (_gameState == GameState::InGame)
+			if (_states.Is(GameState::InGame))
 			{
-				_gameState = GameState::Paused;
+				_states.Fire(GameEvent::Pause);
 				// Driving about between missions (the story at a drive, no
 				// bonus mission on): the pause of the Sunday drive.
 				const bool drive = _bonusReturn < 0 && _storyIndex >= 0 && _storyIndex < static_cast<int>(_story.size()) &&
@@ -4791,23 +4797,23 @@ void Game::Run()
 				if (drive)
 					openSundayPause();
 			}
-			else if (_gameState == GameState::Paused)
-				_gameState = GameState::InGame;
+			else if (_states.Is(GameState::Paused))
+				_states.Fire(GameEvent::Play);
 		}
 
-		if (intent.resetBest && _gameState == GameState::InGame)
+		if (intent.resetBest && _states.Is(GameState::InGame))
 		{
 			_scriptEngine->ResetBestTime();
 			Log::Info("Game: best time reset!");
 		}
 
-		if (_gameState == GameState::Paused && intent.quit)
+		if (_states.Is(GameState::Paused) && intent.quit)
 		{
 			running = false;
 			Log::Info("Game: quit from pause menu");
 		}
 
-		if (intent.restart && _gameState == GameState::InGame)
+		if (intent.restart && _states.Is(GameState::InGame))
 		{
 			Log::Info("Game: restarting mission...");
 			_scriptEngine->CleanupMission();
@@ -5202,9 +5208,9 @@ void Game::Run()
 
 		// Not under the game's own main menu page: its entry stands where the
 		// mission's objective is.
-		if (_textureFontP3D != nullptr && !(_gameState == GameState::MainMenu && _mainMenuPage) &&
-		    !(_gameState == GameState::Credits && _creditsPage) && _gameState != GameState::Movie &&
-		    _gameState != GameState::LevelEnd && _scriptEngine->IsHudShown())
+		if (_textureFontP3D != nullptr && !(_states.Is(GameState::MainMenu) && _mainMenuPage) &&
+		    !(_states.Is(GameState::Credits) && _creditsPage) && !_states.Is(GameState::Movie) &&
+		    !_states.Is(GameState::LevelEnd) && _scriptEngine->IsHudShown())
 		{
 			auto font = _resourceManager->GetFont("boulder_16");
 			const bool pad = intent.gamepadConnected;
@@ -5272,7 +5278,7 @@ void Game::Run()
 				hud.missionActive = true;
 				// The mission's title card, for its first few seconds.
 				constexpr double kTitleCardSeconds = 4.0;
-				if (_gameState == GameState::InGame && _elapsedSeconds - _missionLoadedAt < kTitleCardSeconds)
+				if (_states.Is(GameState::InGame) && _elapsedSeconds - _missionLoadedAt < kTitleCardSeconds)
 				{
 					hud.banner = _scriptEngine->GetMissionTitle();
 					hud.bannerColour = Vector4(1.0f, 0.84f, 0.0f, 1.0f);
@@ -5386,7 +5392,7 @@ void Game::Run()
 						ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Boost, pad),
 						ControlLabel(GameAction::Honk, pad), ControlLabel(GameAction::Interact, pad)));
 			}
-			else if (_gameState == GameState::InGame)
+			else if (_states.Is(GameState::InGame))
 			{
 				if (!gameHud)
 					hud.hints.push_back(fmt::format("{}: Move | {}: Action | {}: Restart | {}: Pause",
@@ -5424,12 +5430,12 @@ void Game::Run()
 				}
 			}
 
-			if (_gameState == GameState::Splash)
+			if (_states.Is(GameState::Splash))
 				hud.banner = "PRESS ENTER TO START";
 
 			// Not under the game's pause screen, whose title stands where the
 			// objective does.
-			if (!(_gameState == GameState::Paused && _pausePage))
+			if (!(_states.Is(GameState::Paused) && _pausePage))
 			{
 				if (gameHud)
 				{
@@ -5442,7 +5448,7 @@ void Game::Run()
 			}
 
 
-			if (_gameState == GameState::Paused && _pausePage)
+			if (_states.Is(GameState::Paused) && _pausePage)
 			{
 				sprites.Flush(proj);
 				if (_optionsMenu && _optionsMenu->IsOpen())
@@ -5454,7 +5460,7 @@ void Game::Run()
 				_window->Swap();
 				continue;
 			}
-			if (_gameState == GameState::Paused)
+			if (_states.Is(GameState::Paused))
 			{
 				DrawTextMenu(sprites, font, *_pauseMenu, GameText("pause", _language), Vector4(1.0f, 1.0f, 0.0f, 1.0f),
 				             Vector4(0.5f, 0.5f, 0.5f, 1.0f), Vector4(1.0f, 0.3f, 0.3f, 1.0f), viewportWidth,
@@ -5466,10 +5472,10 @@ void Game::Run()
 				continue;
 			}
 
-			if (_gameState == GameState::MissionComplete || _gameState == GameState::MissionFailed)
+			if (_states.Is(GameState::MissionComplete) || _states.Is(GameState::MissionFailed))
 			{
 				MissionResult result;
-				result.complete = _gameState == GameState::MissionComplete;
+				result.complete = _states.Is(GameState::MissionComplete);
 				result.language = _language;
 				// In the game's words, when the phrase table is there.
 				const std::string& term = _textBible.Get(result.complete ? "MISSION_COMPLETE" : "MISSION_FAILED");
@@ -5484,14 +5490,14 @@ void Game::Run()
 				result.best = _scriptEngine->GetBestTime();
 				result.reason = _scriptEngine->GetFailureReason();
 				result.hint = _scriptEngine->GetFailureHint();
-				result.nextIn = 5 - static_cast<int>(_missionCompleteTimer);
+				result.nextIn = static_cast<int>(GameStateMachine::kResultSeconds) - static_cast<int>(_states.GetResultTime());
 				DrawMissionResult(sprites, font, result, viewportWidth, viewportHeight);
 			}
 		}
 
 		// The main menu has the show's theme (music02.rcf), the level's music
 		// back after it.
-		if ((_gameState == GameState::MainMenu || (_gameState == GameState::Movie && _afterMovies == GameState::MainMenu)) !=
+		if ((_states.Is(GameState::MainMenu) || (_states.Is(GameState::Movie) && _afterMovies == GameState::MainMenu)) !=
 		    _menuMusic)
 		{
 			_menuMusic = !_menuMusic;
@@ -5501,11 +5507,11 @@ void Game::Run()
 			else if (!_audioManager->FindSounds(kTheme).empty())
 				_audioManager->PlayMusic(kTheme);
 		}
-		if (_gameState == GameState::Credits && _creditsPage)
+		if (_states.Is(GameState::Credits) && _creditsPage)
 			drawCredits(intent, proj, deltaTime, viewportWidth, viewportHeight);
-		if (_gameState == GameState::Movie)
+		if (_states.Is(GameState::Movie))
 			drawMovie(intent, proj, deltaTime, viewportWidth, viewportHeight);
-		if (_gameState == GameState::MainMenu && _mainMenuPage && !_mainMenu->GetButtons().empty())
+		if (_states.Is(GameState::MainMenu) && _mainMenuPage && !_mainMenu->GetButtons().empty())
 		{
 			// The menu stands over the Simpsons' living room, not the level.
 			updateLivingRoomCamera();
@@ -5520,7 +5526,7 @@ void Game::Run()
 			else
 				drawMainMenuPage(intent, proj);
 		}
-		else if (_gameState == GameState::MainMenu)
+		else if (_states.Is(GameState::MainMenu))
 		{
 			auto font = _resourceManager->GetFont("boulder_16");
 			SpriteBatch menuSprites;
@@ -5532,27 +5538,27 @@ void Game::Run()
 			menuSprites.Flush(proj);
 		}
 
-		if (_gameState == GameState::InGame || _gameState == GameState::Paused ||
-		    _gameState == GameState::MissionComplete || _gameState == GameState::MissionFailed)
+		if (_states.Is(GameState::InGame) || _states.Is(GameState::Paused) ||
+		    _states.Is(GameState::MissionComplete) || _states.Is(GameState::MissionFailed))
 			drawSubtitle(proj, viewportWidth, viewportHeight);
 		sprites.Flush(proj);
-		if (_gameState == GameState::InGame || _gameState == GameState::Paused)
+		if (_states.Is(GameState::InGame) || _states.Is(GameState::Paused))
 			drawTransition(proj, viewportWidth, viewportHeight);
-		if (_gameState == GameState::PhoneBooth)
+		if (_states.Is(GameState::PhoneBooth))
 		{
 			_phoneBooth->Draw(intent, proj);
-			if (!_phoneBooth->IsOpen() && _gameState == GameState::PhoneBooth)
-				_gameState = GameState::InGame;
+			if (!_phoneBooth->IsOpen() && _states.Is(GameState::PhoneBooth))
+				_states.Fire(GameEvent::Play);
 		}
-		if (_gameState == GameState::LevelEnd)
+		if (_states.Is(GameState::LevelEnd))
 			_pauseSunday->Draw(intent, proj);
-		if (_gameState == GameState::Shop)
+		if (_states.Is(GameState::Shop))
 		{
 			_shop->Draw(intent, proj);
 			if (!_shop->IsOpen())
-				_gameState = GameState::InGame;
+				_states.Fire(GameEvent::Play);
 		}
-		if (_gameState == GameState::Splash)
+		if (_states.Is(GameState::Splash))
 			_frontend->Draw(proj);
 
 		if (!_clean)

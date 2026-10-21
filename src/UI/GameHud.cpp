@@ -100,6 +100,15 @@ GameHud::GameHud()
 	_page = std::make_unique<FrontendProject>();
 	_page->LoadP3D(kIngame, "Hud.pag");
 	_page->SetTextsFitHeight(true);
+	// The objective's text inside its frame. The page gives it one line, 280
+	// wide from x 160 and 16 high: it ran 20 past the frame's right end (at
+	// 420, its rounded cap besides), and two lines came out 8 high. From the
+	// icon to the cap, the frame's height less a margin, its lines centred,
+	// each the page's 16 high at most.
+	constexpr float kFrameCap = 22.0f, kFrameMargin = 8.0f;
+	float tx, ty, tw, th, fx, fy, fw, fh;
+	if (_page->GetTextBox("Message", tx, ty, tw, th) && _page->GetSpriteBox("MessageBox", fx, fy, fw, fh))
+		_page->SetTextBox("Message", tx, fy + kFrameMargin, fx + fw - kFrameCap - tx, fh - 2.0f * kFrameMargin, th);
 	_coins = std::make_unique<FrontendProject>();
 	_coins->LoadP3D(kIngame, "Coins.pag");
 	_coins->SetSpriteVisible("NumCoins", false);

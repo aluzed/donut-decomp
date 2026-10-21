@@ -69,6 +69,9 @@ public:
 	// false when it has none of that name. And where it is.
 	bool SetTextPosition(const std::string& name, float x, float y);
 	bool GetTextBox(const std::string& name, float& x, float& y, float& width, float& height) const;
+	// A text's box set anew (top left, y down), its lines centred in it up
+	// and down, each at most `lineHeight` high (0: the box's height).
+	bool SetTextBox(const std::string& name, float x, float y, float width, float height, float lineHeight = 0.0f);
 	// Its texts shrunk to their boxes' height too, not only their width: the
 	// keyboard page's, 15 high, in a font twice that.
 	void SetTextsFitHeight(bool fit) { _fitHeight = fit; }
@@ -145,6 +148,8 @@ private:
 		bool wrapped = false;
 		// The text bible's keys for its strings.
 		std::vector<std::string> keys;
+		// How high a wrapped line may be; 0, the box's height.
+		float lineHeight = 0.0f;
 	};
 	std::vector<Text> _texts;
 

@@ -341,6 +341,23 @@ bool FrontendProject::SetTextPosition(const std::string& name, float x, float y)
 	return found;
 }
 
+bool FrontendProject::SetTextBox(const std::string& name, float x, float y, float width, float height, float lineHeight)
+{
+	bool found = false;
+	for (auto& entry : _texts)
+		if (entry.name == name)
+		{
+			entry.x = static_cast<int32_t>(std::lround(x));
+			entry.y = static_cast<int32_t>(std::lround(y));
+			entry.width = static_cast<int32_t>(std::lround(width));
+			entry.height = static_cast<int32_t>(std::lround(height));
+			entry.alignY = static_cast<uint32_t>(Alignment::Center);
+			entry.lineHeight = lineHeight;
+			found = true;
+		}
+	return found;
+}
+
 bool FrontendProject::GetTextBox(const std::string& name, float& x, float& y, float& width, float& height) const
 {
 	for (const auto& entry : _texts)
@@ -597,7 +614,9 @@ void FrontendProject::Draw(const Matrix4x4& proj)
 			// one under the other: three lines stood out of the objective's
 			// frame by two.
 			const float fontHeight = text.font->GetHeight();
-			float scale = std::min(1.0f, text.height / fontHeight);
+			const float tallest = text.lineHeight > 0.0f ? std::min(text.lineHeight, static_cast<float>(text.height))
+			                                             : static_cast<float>(text.height);
+			float scale = std::min(1.0f, tallest / fontHeight);
 			std::vector<std::string> lines = wrapLines(*text.font, value, text.width / scale);
 			constexpr float kSmallest = 0.35f;
 			while (lines.size() * fontHeight * scale > text.height && scale > kSmallest)

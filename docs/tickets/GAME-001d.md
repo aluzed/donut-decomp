@@ -1,6 +1,6 @@
 # GAME-001d — Extraire GameStateMachine (transitions splash/menu/ingame/pause/result via enum+table)
 
-- **Status:** TODO
+- **Status:** DONE (2026-10-21)
 - **Priority:** P1
 - **Module:** Game
 - **Depends on:** —
@@ -23,9 +23,24 @@ quit depuis pause (`Game.cpp:763-767`) et le court-circuit de rendu en Paused
 4. Exposer `GetState()`/`SetState()` (déjà `Game.h:78-79`) en délégant à la SM ; remplacer les
    `if (_gameState==)` dispersés par des appels SM. Aligner / fusionner avec GAME-003 (même table).
 
+## Done (2026-10-21)
+
+`src/Game/GameStateMachine.{h,cpp}` holds the game's state (`GameState`, moved there) and the
+result screen's clock. The 23 assignments scattered through `Game.cpp`, `GameSprint.cpp` and
+`ScriptEngine.cpp` are events (`Play`, `Pause`, `MissionWon`, `MissionLost`, `ResultOver`,
+`OpenShop`, `OpenPhoneBooth`, `LevelOver`, `ShowCredits`, `ToMainMenu`, `PlayMovie`,
+`OpenMiniGame`, `ShowSplash`) fired at one table of `{event, states it may come from, state it
+goes to}`; one fired from a state the table does not list is refused and logged ("Game:
+OpenMiniGame refused in state Splash"), which found the one way the first table missed: the
+bonus game started straight from the title (`--minigame`), which then crashed. The result's
+five seconds are `UpdateResult`; the movies go back where they came from by `eventTo`.
+
+Checked: `val.sh 240`, the bonus game and a start from the logos and the title, with no
+transition refused.
+
 ## Critères d'acceptation
-- [ ] `_gameState`/`_missionCompleteTimer` vivent dans `GameStateMachine`, plus dans `Game`.
-- [ ] Une table enum+transition pilote splash/menu/ingame/pause/result (plus de `if (_gameState==)` dispersés dans `Run`).
-- [ ] Le timer Result→InGame avec cleanup mission fonctionne à l'identique.
-- [ ] Les mêmes états et transitions qu'avant sont atteignables (rien régressé).
-- [ ] Le jeu compile et reste runnable à l'identique.
+- [x] `_gameState` and `_missionCompleteTimer` live in `GameStateMachine`, no longer in `Game`.
+- [x] One table drives the states' transitions; `Run` fires events instead of assigning.
+- [x] The result screen's timer and the mission's cleanup after it work as before.
+- [x] The same states and transitions are reached (none refused over the runs above).
+- [x] The game builds and runs as before.
