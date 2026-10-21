@@ -118,6 +118,11 @@ class VectorOffsetList;
 class ExportInfo;
 class ExportInfoNamedString;
 class ExportInfoNamedInteger;
+class ExpressionGroup;
+class Expression;
+class ExpressionMixer;
+class ExpressionOffsets;
+class OffsetList;
 class CollisionObject;
 class CollisionVolume;
 class CollisionSphere;
@@ -2108,6 +2113,109 @@ public:
 private:
 	std::string _name;
 	uint32_t _value;
+};
+
+class ExpressionGroup
+{
+public:
+	ExpressionGroup(const P3DChunk&);
+
+	static std::unique_ptr<ExpressionGroup> Load(const P3DChunk& chunk) { return std::make_unique<ExpressionGroup>(chunk); }
+
+	const uint32_t& GetVersion() const { return _version; }
+	const std::string& GetName() const { return _name; }
+	const std::string& GetTargetName() const { return _targetName; }
+	const uint32_t& GetNumStages() const { return _numStages; }
+	const std::vector<uint32_t>& GetStages() const { return _stages; }
+	const std::vector<std::unique_ptr<Expression>>& GetExpressions() const { return _expressions; }
+
+private:
+	uint32_t _version;
+	std::string _name;
+	std::string _targetName;
+	uint32_t _numStages;
+	std::vector<uint32_t> _stages;
+	std::vector<std::unique_ptr<Expression>> _expressions;
+};
+
+class Expression
+{
+public:
+	Expression(const P3DChunk&);
+
+	static std::unique_ptr<Expression> Load(const P3DChunk& chunk) { return std::make_unique<Expression>(chunk); }
+
+	const uint32_t& GetVersion() const { return _version; }
+	const std::string& GetName() const { return _name; }
+	const uint32_t& GetNumKeys() const { return _numKeys; }
+	const std::vector<float>& GetKeys() const { return _keys; }
+	const std::vector<uint32_t>& GetIndices() const { return _indices; }
+
+private:
+	uint32_t _version;
+	std::string _name;
+	uint32_t _numKeys;
+	std::vector<float> _keys;
+	std::vector<uint32_t> _indices;
+};
+
+class ExpressionMixer
+{
+public:
+	ExpressionMixer(const P3DChunk&);
+
+	static std::unique_ptr<ExpressionMixer> Load(const P3DChunk& chunk) { return std::make_unique<ExpressionMixer>(chunk); }
+
+	const uint32_t& GetVersion() const { return _version; }
+	const std::string& GetName() const { return _name; }
+	const uint32_t& GetType() const { return _type; }
+	const std::string& GetTargetName() const { return _targetName; }
+	const std::string& GetExpressionGroupName() const { return _expressionGroupName; }
+
+private:
+	uint32_t _version;
+	std::string _name;
+	uint32_t _type;
+	std::string _targetName;
+	std::string _expressionGroupName;
+};
+
+class ExpressionOffsets
+{
+public:
+	ExpressionOffsets(const P3DChunk&);
+
+	static std::unique_ptr<ExpressionOffsets> Load(const P3DChunk& chunk) { return std::make_unique<ExpressionOffsets>(chunk); }
+
+	const uint32_t& GetVersion() const { return _version; }
+	const uint32_t& GetNumPrimGroups() const { return _numPrimGroups; }
+	const std::vector<uint32_t>& GetPrimGroupIndices() const { return _primGroupIndices; }
+	const std::vector<std::unique_ptr<OffsetList>>& GetOffsetLists() const { return _offsetLists; }
+
+private:
+	uint32_t _version;
+	uint32_t _numPrimGroups;
+	std::vector<uint32_t> _primGroupIndices;
+	std::vector<std::unique_ptr<OffsetList>> _offsetLists;
+};
+
+class OffsetList
+{
+public:
+	OffsetList(const P3DChunk&);
+
+	static std::unique_ptr<OffsetList> Load(const P3DChunk& chunk) { return std::make_unique<OffsetList>(chunk); }
+
+	const uint32_t& GetNumOffsets() const { return _numOffsets; }
+	const uint32_t& GetPrimGroupIndex() const { return _primGroupIndex; }
+	const std::vector<uint32_t>& GetIndices() const { return _indices; }
+	const std::vector<Vector3>& GetOffsets() const { return _offsets; }
+
+private:
+	uint32_t _numOffsets;
+	uint32_t _primGroupIndex;
+	std::vector<uint32_t> _indices;
+	std::vector<Vector3> _offsets;
 };
 
 class CollisionObject

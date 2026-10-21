@@ -709,6 +709,45 @@
     "value": "u32"
   },
 
+  "ExpressionGroup": {
+    "version": "u32",
+    "name": "string",
+    "targetName": "string",
+    "numStages": "u32",
+    "stages": "buffer<u32[numStages]>",
+    "expressions": "children Expression"
+  },
+
+  "Expression": {
+    "version": "u32",
+    "name": "string",
+    "numKeys": "u32",
+    "keys": "buffer<float[numKeys]>",
+    "indices": "buffer<u32[numKeys]>"
+  },
+
+  "ExpressionMixer": {
+    "version": "u32",
+    "name": "string",
+    "type": "u32",
+    "targetName": "string",
+    "expressionGroupName": "string"
+  },
+
+  "ExpressionOffsets": {
+    "version": "u32",
+    "numPrimGroups": "u32",
+    "primGroupIndices": "buffer<u32[numPrimGroups]>",
+    "offsetLists": "children OffsetList"
+  },
+
+  "OffsetList": {
+    "numOffsets": "u32",
+    "primGroupIndex": "u32",
+    "indices": "buffer<u32[numOffsets]>",
+    "offsets": "buffer<vec3[numOffsets]>"
+  },
+
   "CollisionObject": {
     "name": "string",
     "version": "u32",

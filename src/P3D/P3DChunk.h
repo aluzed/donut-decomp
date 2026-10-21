@@ -263,14 +263,26 @@ enum class PrimitiveType : uint32_t
 	LineStrip,
 };
 
+// An Image chunk's format: those the game's files hold. PNG, palettised or not
+// (16565 images); DDS in DXT1, DXT3 or DXT5 (4083, the frontend's pictures).
+enum class ImageFormat : uint32_t
+{
+	PNG = 1,
+	DXT1 = 6,
+	DXT3 = 8,
+	DXT5 = 10,
+};
+
 struct ImageDecoder
 {
-	int width;
-	int height;
-	int comp;
+	int width = 0;
+	int height = 0;
+	int comp = 0;
 	std::vector<uint8_t> data;
 
-	static ImageDecoder Decode(const std::vector<uint8_t>& data);
+	// The image as RGBA, as its chunk's `format` says it is stored; empty (no
+	// width) when it does not decode or is in no format of these.
+	static ImageDecoder Decode(const std::vector<uint8_t>& data, uint32_t format);
 };
 
 struct P3DUtil

@@ -13,11 +13,14 @@
 
 #include <zlib.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -212,4 +215,91 @@ TEST(GameFilesRoundTrip)
 	CHECK(files > 0);
 	CHECK(compressed > 0);
 	CHECK(different == 0);
+}
+
+// Every picture of the game decodes, as its chunk says it is stored: PNG
+// (palettised or not) or DDS (DXT1, DXT3, DXT5), to as many pixels as it has.
+TEST(GameImagesDecode)
+{
+	const auto art = artFolder();
+	if (!std::filesystem::exists(art))
+		SKIP("no game files at " + art.string());
+	int images = 0, failed = 0;
+	std::map<uint32_t, int> formats;
+	const auto visit = [&](const auto& self, const P3D::P3DChunk& chunk) -> void
+	{
+		if (chunk.IsType(P3D::ChunkType::Image))
+		{
+			const P3D::Image image(chunk);
+			const auto decoded = P3D::ImageDecoder::Decode(image.GetData(), image.GetFormat());
+			++images;
+			++formats[image.GetFormat()];
+			if (decoded.width != static_cast<int>(image.GetWidth()) || decoded.height != static_cast<int>(image.GetHeight()) ||
+			    decoded.data.size() != static_cast<std::size_t>(decoded.width) * decoded.height * 4)
+				++failed;
+		}
+		for (const auto& child : chunk.GetChildren()) self(self, *child);
+	};
+	for (const auto& entry : std::filesystem::recursive_directory_iterator(art))
+	{
+		if (!entry.is_regular_file() || entry.path().extension() != ".p3d")
+			continue;
+		const P3D::P3DFile p3d(entry.path().string());
+		if (!p3d.GetBytes().empty())
+			visit(visit, p3d.GetRoot());
+	}
+	std::printf("     %d images (", images);
+	for (const auto& [format, count] : formats) std::printf(" format %u: %d", format, count);
+	std::printf(" ), %d not decoded\n", failed);
+	CHECK(images > 0);
+	CHECK(failed == 0);
+}
+
+// The living room's facial expressions (camset_*.p3d, the only files that have
+// any): each mixer names a group, each group's expressions their keys, each
+// skin's offsets the vertices they move, in order, read to the last one.
+TEST(GameExpressions)
+{
+	const auto camset = artFolder() / "frontend/scrooby2/resource/pure3d/camset_C.p3d";
+	if (!std::filesystem::exists(camset))
+		SKIP("no " + camset.string());
+	const P3D::P3DFile p3d(camset.string());
+	std::set<std::string> groups;
+	int mixers = 0, expressions = 0, offsets = 0;
+	const auto visit = [&](const auto& self, const P3D::P3DChunk& chunk) -> void
+	{
+		if (chunk.IsType(P3D::ChunkType::ExpressionGroup))
+		{
+			const P3D::ExpressionGroup group(chunk);
+			groups.insert(group.GetName());
+			for (const auto& expression : group.GetExpressions())
+			{
+				++expressions;
+				CHECK(expression->GetKeys().size() == expression->GetNumKeys());
+				CHECK(expression->GetIndices().size() == expression->GetNumKeys());
+			}
+		}
+		else if (chunk.IsType(P3D::ChunkType::ExpressionOffsets))
+		{
+			const P3D::ExpressionOffsets expression(chunk);
+			CHECK(expression.GetPrimGroupIndices().size() == expression.GetNumPrimGroups());
+			for (const auto& list : expression.GetOffsetLists())
+			{
+				offsets += static_cast<int>(list->GetNumOffsets());
+				CHECK(std::is_sorted(list->GetIndices().begin(), list->GetIndices().end()));
+				CHECK(list->GetOffsets().size() == list->GetNumOffsets());
+			}
+		}
+		for (const auto& child : chunk.GetChildren()) self(self, *child);
+	};
+	visit(visit, p3d.GetRoot());
+	for (const auto& chunk : p3d.GetRoot().GetChildren())
+		if (chunk->IsType(P3D::ChunkType::ExpressionMixer))
+		{
+			++mixers;
+			CHECK(groups.count(P3D::ExpressionMixer(*chunk).GetExpressionGroupName()) == 1);
+		}
+	std::printf("     %zu groups, %d expressions, %d mixers, %d vertex offsets\n", groups.size(), expressions, mixers, offsets);
+	CHECK(mixers > 0);
+	CHECK(offsets > 0);
 }

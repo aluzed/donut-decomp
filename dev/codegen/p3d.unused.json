@@ -8,11 +8,6 @@
     "boundingSphere": "child BoundingSphere"
   },
 
-  "OffsetList": {
-    "size": "u32",
-    "offsets": "buffer<vec3[size]>"
-  },
-
   "PackedNormalList": {
     "size": "u32",
     "normals": "buffer<u32[size]>"
@@ -26,11 +21,6 @@
   "DrawShadow": {
     "version": "u32",
     "todo": "u32"
-  },
-
-  "ExpressionOffsets": {
-    "size": "u32",
-    "offsets": "buffer<vec3[size]>"
   },
 
   "Light": {

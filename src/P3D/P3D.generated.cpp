@@ -1915,6 +1915,100 @@ ExportInfoNamedInteger::ExportInfoNamedInteger(const P3DChunk& chunk)
 	_value = stream.Read<uint32_t>();
 }
 
+ExpressionGroup::ExpressionGroup(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::ExpressionGroup));
+
+	MemoryStream stream(chunk.GetData());
+	_version = stream.Read<uint32_t>();
+	_name = stream.ReadLPString();
+	_targetName = stream.ReadLPString();
+	_numStages = stream.Read<uint32_t>();
+	_stages.resize(_numStages);
+	stream.ReadBytes(reinterpret_cast<uint8_t*>(_stages.data()), _stages.size() * sizeof(uint32_t));
+
+	for (auto const& child : chunk.GetChildren())
+	{
+		switch (child->GetType())
+		{
+		case ChunkType::Expression:
+		{
+			_expressions.push_back(std::make_unique<Expression>(*child));
+			break;
+		}
+		default: break;
+		}
+	}
+}
+
+Expression::Expression(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::Expression));
+
+	MemoryStream stream(chunk.GetData());
+	_version = stream.Read<uint32_t>();
+	_name = stream.ReadLPString();
+	_numKeys = stream.Read<uint32_t>();
+	_keys.resize(_numKeys);
+	stream.ReadBytes(reinterpret_cast<uint8_t*>(_keys.data()), _keys.size() * sizeof(float));
+	_indices.resize(_numKeys);
+	stream.ReadBytes(reinterpret_cast<uint8_t*>(_indices.data()), _indices.size() * sizeof(uint32_t));
+}
+
+ExpressionMixer::ExpressionMixer(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::ExpressionMixer));
+
+	MemoryStream stream(chunk.GetData());
+	_version = stream.Read<uint32_t>();
+	_name = stream.ReadLPString();
+	_type = stream.Read<uint32_t>();
+	_targetName = stream.ReadLPString();
+	_expressionGroupName = stream.ReadLPString();
+}
+
+ExpressionOffsets::ExpressionOffsets(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::ExpressionOffsets));
+
+	MemoryStream stream(chunk.GetData());
+	_version = stream.Read<uint32_t>();
+	_numPrimGroups = stream.Read<uint32_t>();
+	_primGroupIndices.resize(_numPrimGroups);
+	stream.ReadBytes(reinterpret_cast<uint8_t*>(_primGroupIndices.data()), _primGroupIndices.size() * sizeof(uint32_t));
+
+	for (auto const& child : chunk.GetChildren())
+	{
+		switch (child->GetType())
+		{
+		case ChunkType::OffsetList:
+		{
+			_offsetLists.push_back(std::make_unique<OffsetList>(*child));
+			break;
+		}
+		default: break;
+		}
+	}
+}
+
+OffsetList::OffsetList(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::OffsetList));
+
+	MemoryStream stream(chunk.GetData());
+	// Edited by hand: each offset is its vertex's index and the offset in
+	// turn, not two arrays one after the other (the codegen cannot say so).
+	_numOffsets = stream.Read<uint32_t>();
+	_primGroupIndex = stream.Read<uint32_t>();
+	_indices.resize(_numOffsets);
+	_offsets.resize(_numOffsets);
+	for (size_t i = 0; i < _numOffsets; ++i)
+	{
+		_indices[i] = stream.Read<uint32_t>();
+		_offsets[i] = stream.Read<Vector3>();
+	}
+}
+
 CollisionObject::CollisionObject(const P3DChunk& chunk)
 {
 	assert(chunk.IsType(ChunkType::CollisionObject));

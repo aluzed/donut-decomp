@@ -3,6 +3,8 @@
 #include <P3D/P3D.generated.h>
 #include <Render/Texture.h>
 
+#include "Core/Log.h"
+
 #include <cstdint>
 #include <cstring>
 #include <utility>
@@ -22,23 +24,24 @@ Texture::Texture(const P3D::Texture& texture)
 	glGenTextures(1, &_glTexture);
 	glBindTexture(GL_TEXTURE_2D, _glTexture);
 
-	switch (image->GetFormat())
+	// PNG or DDS, as RGBA. One that will not decode is left blank rather than
+	// throwing: a model with a picture in a format of no other is still drawn.
+	auto imageData = P3D::ImageDecoder::Decode(image->GetData(), image->GetFormat());
+	// At the image's own size: some textures say they are larger than their
+	// picture (the wasps' strip: 16 by 16 of an 8 by 8), which was read past
+	// its end.
+	if (imageData.width > 0 && imageData.height > 0)
 	{
-	case 1: // PNG
+		_width = imageData.width;
+		_height = imageData.height;
+	}
+	else
 	{
-		auto imageData = P3D::ImageDecoder::Decode(image->GetData());
-
-		if (imageData.comp == 4)
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)_width, (GLsizei)_height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-			             imageData.data.data());
-		else
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)_width, (GLsizei)_height, 0, GL_RGB, GL_UNSIGNED_BYTE,
-			             imageData.data.data());
-
-		break;
+		Log::Warn("Texture: '{}' (format {}) does not decode", _name, image->GetFormat());
+		imageData.data.assign(static_cast<std::size_t>(_width) * _height * 4, 0);
 	}
-	default: throw std::runtime_error("non-png texture");
-	}
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)_width, (GLsizei)_height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+	             imageData.data.data());
 
 	// generate mipmaps :)
 	glGenerateMipmap(GL_TEXTURE_2D);
@@ -80,7 +83,7 @@ Texture::Texture(const P3D::Sprite& sprite)
 	{
 		auto imageWidth = image->GetWidth();
 		auto imageHeight = image->GetHeight();
-		auto texdata = P3D::ImageDecoder::Decode(image->GetData());
+		auto texdata = P3D::ImageDecoder::Decode(image->GetData(), image->GetFormat());
 		// A tile that would not decode leaves its place blank.
 		if (texdata.data.size() < static_cast<std::size_t>(imageWidth) * imageHeight * 4)
 		{

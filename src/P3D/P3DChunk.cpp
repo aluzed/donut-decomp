@@ -125,11 +125,20 @@ bool decodeDds(const std::vector<uint8_t>& data, ImageDecoder& out)
 } // namespace
 
 // PNG, or a DDS of DXT1, DXT3 or DXT5 blocks.
-ImageDecoder ImageDecoder::Decode(const std::vector<uint8_t>& data)
+ImageDecoder ImageDecoder::Decode(const std::vector<uint8_t>& data, uint32_t format)
 {
 	ImageDecoder ret;
-	if (decodeDds(data, ret))
+	switch (static_cast<ImageFormat>(format))
+	{
+	case ImageFormat::DXT1:
+	case ImageFormat::DXT3:
+	case ImageFormat::DXT5:
+		if (!decodeDds(data, ret))
+			ret = {};
 		return ret;
+	case ImageFormat::PNG: break;
+	default: return ret;
+	}
 	// Always as RGBA: asked for "as stored", a palette image's transparency
 	// (its tRNS chunk: the smoke puffs' corners) came back as three opaque
 	// channels, and every puff was drawn as a dark square.

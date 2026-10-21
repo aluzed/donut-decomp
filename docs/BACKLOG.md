@@ -101,9 +101,9 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | P3D-010 | ✅ | P2 | StaticProp (6 chunks) | Read by `P3D::StateProp` (2026-10-21): the levels' 263 breakables go state to state on a strike, a kick, a car (a crate takes three strikes, ten coins spilled each), their visibility, pose and particles as each state says, their callbacks called (coins, collision, gone); the wasps read theirs through it |
 | P3D-011 | ✅ | P2 | Geometry extras (PackedNormalList, DrawShadow...) | Closed on the data (2026-10-21): no `Mesh`; `PackedNormalList` always beside a full `NormalList` (read, for the lights); `VertexShader` and `DrawShadow` are markers; offsets are the living room's morphs |
 | P3D-014 | ✅ | P2 | CompositeDrawableSkin/Effect parsing | Read (2026-10-21): the skins (name, translucent) and effects (name, translucent, joint) of a composite drawable's lists; the breakables' and the wasp's effects go through them. Skins are only the characters', the scenes' and the frontend's, drawn by their own readers |
-| P3D-003 | ⬜ | P3 | Facial expression animation |
+| P3D-003 | ✅ | P3 | Facial expression animation | `Expression`, `ExpressionGroup`, `ExpressionMixer`, `ExpressionOffsets`, `OffsetList` described and generated, checked on the living room's camset files (the only ones with any); not drawn (2026-10-21) |
 | P3D-012 | ✅ | P3 | ExportInfo | The Maya exporter's settings: described in `p3d.json`, generated, shown in the P3D debug viewer (2026-10-21) |
-| P3D-017 | 🟡 | P3 | Non-PNG images | DDS (DXT1, DXT3, DXT5) decoded: the frontend's level and mission pictures (2026-10-20). Other palettised formats not |
+| P3D-017 | ✅ | P3 | Non-PNG images | DDS (DXT1, DXT3, DXT5) decoded: the frontend's level and mission pictures (2026-10-20). Decoded as the chunk's format says; the palettised images are indexed PNGs; all 20648 of the game's decode (a test); textures at their picture's size (2026-10-21) |
 | P3D-005 | ✅ | — | The text bible: read from `srr2.txt` (`UI/TextBible`), in five languages |
 | P3D-013 | ✅ | — | `GetShaderTexture()`: a false bug, no such call |
 | P3D-016 | ✅ | — | P3DZ: Radical LZ blocks, decompressed in `P3DFile` |
