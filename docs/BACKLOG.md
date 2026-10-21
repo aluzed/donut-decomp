@@ -102,7 +102,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | P3D-011 | ✅ | P2 | Geometry extras (PackedNormalList, DrawShadow...) | Closed on the data (2026-10-21): no `Mesh`; `PackedNormalList` always beside a full `NormalList` (read, for the lights); `VertexShader` and `DrawShadow` are markers; offsets are the living room's morphs |
 | P3D-014 | ✅ | P2 | CompositeDrawableSkin/Effect parsing | Read (2026-10-21): the skins (name, translucent) and effects (name, translucent, joint) of a composite drawable's lists; the breakables' and the wasp's effects go through them. Skins are only the characters', the scenes' and the frontend's, drawn by their own readers |
 | P3D-003 | ⬜ | P3 | Facial expression animation |
-| P3D-012 | ⬜ | P3 | ExportInfo (3ds Max metadata) |
+| P3D-012 | ✅ | P3 | ExportInfo (the Maya exporter's settings): described in `p3d.json`, generated, shown in the P3D debug viewer (2026-10-21) |
 | P3D-017 | 🟡 | P3 | Non-PNG images | DDS (DXT1, DXT3, DXT5) decoded: the frontend's level and mission pictures (2026-10-20). Other palettised formats not |
 | P3D-005 | ✅ | — | The text bible: read from `srr2.txt` (`UI/TextBible`), in five languages |
 | P3D-013 | ✅ | — | `GetShaderTexture()`: a false bug, no such call |

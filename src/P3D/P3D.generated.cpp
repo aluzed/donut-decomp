@@ -1871,6 +1871,50 @@ VectorOffsetList::VectorOffsetList(const P3DChunk& chunk)
 	stream.ReadBytes(reinterpret_cast<uint8_t*>(_offsets.data()), _offsets.size() * sizeof(Vector3));
 }
 
+ExportInfo::ExportInfo(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::ExportInfo));
+
+	MemoryStream stream(chunk.GetData());
+	_name = stream.ReadLPString();
+
+	for (auto const& child : chunk.GetChildren())
+	{
+		switch (child->GetType())
+		{
+		case ChunkType::ExportInfoNamedString:
+		{
+			_strings.push_back(std::make_unique<ExportInfoNamedString>(*child));
+			break;
+		}
+		case ChunkType::ExportInfoNamedInteger:
+		{
+			_integers.push_back(std::make_unique<ExportInfoNamedInteger>(*child));
+			break;
+		}
+		default: break;
+		}
+	}
+}
+
+ExportInfoNamedString::ExportInfoNamedString(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::ExportInfoNamedString));
+
+	MemoryStream stream(chunk.GetData());
+	_name = stream.ReadLPString();
+	_value = stream.ReadLPString();
+}
+
+ExportInfoNamedInteger::ExportInfoNamedInteger(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::ExportInfoNamedInteger));
+
+	MemoryStream stream(chunk.GetData());
+	_name = stream.ReadLPString();
+	_value = stream.Read<uint32_t>();
+}
+
 CollisionObject::CollisionObject(const P3DChunk& chunk)
 {
 	assert(chunk.IsType(ChunkType::CollisionObject));

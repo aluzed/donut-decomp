@@ -115,6 +115,9 @@ class MultiController2;
 class MultiController2Track;
 class VertexAnimKeyFrame;
 class VectorOffsetList;
+class ExportInfo;
+class ExportInfoNamedString;
+class ExportInfoNamedInteger;
 class CollisionObject;
 class CollisionVolume;
 class CollisionSphere;
@@ -2052,6 +2055,59 @@ private:
 	uint32_t _numOffsets;
 	std::string _param;
 	std::vector<Vector3> _offsets;
+};
+
+class ExportInfo
+{
+public:
+	ExportInfo(const P3DChunk&);
+
+	static std::unique_ptr<ExportInfo> Load(const P3DChunk& chunk) { return std::make_unique<ExportInfo>(chunk); }
+
+	const std::string& GetName() const { return _name; }
+	const std::vector<std::unique_ptr<ExportInfoNamedString>>& GetStrings() const { return _strings; }
+	const std::vector<std::unique_ptr<ExportInfoNamedInteger>>& GetIntegers() const { return _integers; }
+
+private:
+	std::string _name;
+	std::vector<std::unique_ptr<ExportInfoNamedString>> _strings;
+	std::vector<std::unique_ptr<ExportInfoNamedInteger>> _integers;
+};
+
+class ExportInfoNamedString
+{
+public:
+	ExportInfoNamedString(const P3DChunk&);
+
+	static std::unique_ptr<ExportInfoNamedString> Load(const P3DChunk& chunk)
+	{
+		return std::make_unique<ExportInfoNamedString>(chunk);
+	}
+
+	const std::string& GetName() const { return _name; }
+	const std::string& GetValue() const { return _value; }
+
+private:
+	std::string _name;
+	std::string _value;
+};
+
+class ExportInfoNamedInteger
+{
+public:
+	ExportInfoNamedInteger(const P3DChunk&);
+
+	static std::unique_ptr<ExportInfoNamedInteger> Load(const P3DChunk& chunk)
+	{
+		return std::make_unique<ExportInfoNamedInteger>(chunk);
+	}
+
+	const std::string& GetName() const { return _name; }
+	const uint32_t& GetValue() const { return _value; }
+
+private:
+	std::string _name;
+	uint32_t _value;
 };
 
 class CollisionObject

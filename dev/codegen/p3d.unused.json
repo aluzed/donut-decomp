@@ -81,22 +81,6 @@
     "position": "vec3"
   },
 
-  "ExportInfo": {
-    "version": "u32",
-    "name": "string",
-    "children": "children ExportInfoNamedString"
-  },
-
-  "ExportInfoNamedString": {
-    "name": "string",
-    "value": "string"
-  },
-
-  "ExportInfoNamedInteger": {
-    "name": "string",
-    "value": "u32"
-  },
-
   "Tree": {
     "version": "u32",
     "name": "string",

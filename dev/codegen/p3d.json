@@ -693,6 +693,22 @@
     "offsets": "buffer<vec3[numOffsets]>"
   },
 
+  "ExportInfo": {
+    "name": "string",
+    "strings": "children ExportInfoNamedString",
+    "integers": "children ExportInfoNamedInteger"
+  },
+
+  "ExportInfoNamedString": {
+    "name": "string",
+    "value": "string"
+  },
+
+  "ExportInfoNamedInteger": {
+    "name": "string",
+    "value": "u32"
+  },
+
   "CollisionObject": {
     "name": "string",
     "version": "u32",

@@ -4783,6 +4783,16 @@ void Game::debugDrawP3D(const P3D::P3DFile& p3d)
 		{
 			ImGui::TextDisabled("Type ID: %x", static_cast<uint32_t>(chunk.GetType()));
 			ImGui::TextDisabled("Data Size: %zu bytes", chunk.GetData().size());
+			// The exporter's settings: what made the file, when, how.
+			if (chunk.IsType(P3D::ChunkType::ExportInfo))
+			{
+				const P3D::ExportInfo info(chunk);
+				const auto text = [](std::string s) { return s.substr(0, s.find('\0')); };
+				for (const auto& entry : info.GetStrings())
+					ImGui::Text("%s: %s", text(entry->GetName()).c_str(), text(entry->GetValue()).c_str());
+				for (const auto& entry : info.GetIntegers())
+					ImGui::Text("%s: %u", text(entry->GetName()).c_str(), entry->GetValue());
+			}
 
 			if (!chunk.GetData().empty() && ImGui::TreeNode("Data"))
 			{
