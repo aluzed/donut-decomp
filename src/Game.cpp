@@ -1717,7 +1717,10 @@ void Game::unloadLevel()
 	_carSmoke.reset();
 	_carSmokeVehicle = nullptr;
 	if (_audioManager)
+	{
 		_audioManager->SetLoop("skid", "");
+		_audioManager->SetLoop("siren", "");
+	}
 	if (_skidMarks)
 		_skidMarks->Clear();
 	_pathGraph.reset();
@@ -1872,6 +1875,20 @@ void Game::updateHitAndRun(double dt)
 	{
 		_hitAndRunMusic = false;
 		_audioManager->ResumeMusicBase();
+	}
+	// The police cars' siren (their horn, the sound script's "siren"), louder
+	// as the nearest comes; none indoors, none once they have given up.
+	{
+		static const std::string siren = [this] {
+			const auto found = _audioManager->FindSounds("carsound\\siren.rsd");
+			return found.empty() ? std::string() : found.front();
+		}();
+		const bool heard = _hitAndRun && _hitAndRun->IsChasing() && _interior.empty() && _character && !siren.empty();
+		const Vector3 me = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()
+		                                                : (_character ? _character->GetPosition() : Vector3::Zero);
+		const float nearest = heard ? _hitAndRun->NearestCop(me) : 1.0e9f;
+		_audioManager->SetLoop("siren", heard && nearest < 200.0f ? siren : std::string(),
+		                       std::clamp(1.0f - nearest / 200.0f, 0.15f, 0.83f));
 	}
 	if (!_hitAndRun || !_character || !_interior.empty() || _autopilot)
 		return;
@@ -2662,11 +2679,24 @@ void Game::loadLevel()
 	{
 		const auto cops = levelScriptCalls("CreateChaseManager", "leveli.mfk");
 		float decay = 1.0f;
+		int cars = 1;
 		std::ifstream script(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
 		for (std::string line; std::getline(script, line);)
-			if (const std::size_t at = line.find("SetHitAndRunDecay("); at != std::string::npos)
+		{
+			const std::size_t comment = line.find("//");
+			if (const std::size_t at = line.find("SetHitAndRunDecay(");
+			    at != std::string::npos && (comment == std::string::npos || comment > at))
 				decay = static_cast<float>(std::atof(line.c_str() + at + 18));
-		_hitAndRun = std::make_unique<HitAndRun>(cops.empty() ? "cPolice" : cops.front(), decay);
+			// SetNumChaseCars("2"): how many police cars come.
+			if (const std::size_t at = line.find("SetNumChaseCars(");
+			    at != std::string::npos && (comment == std::string::npos || comment > at))
+			{
+				const std::size_t digit = line.find_first_of("0123456789", at);
+				if (digit != std::string::npos)
+					cars = std::atoi(line.c_str() + digit);
+			}
+		}
+		_hitAndRun = std::make_unique<HitAndRun>(cops.empty() ? "cPolice" : cops.front(), decay, cars);
 	}
 
 	// The story is the level script's AddMission list, in order, when the
@@ -4486,8 +4516,9 @@ void Game::Run()
 				obstacles.push_back(parked->GetPosition());
 			for (const auto& vehicle : _scriptEngine->GetMissionVehicles())
 				obstacles.push_back(vehicle->GetPosition());
-			if (_hitAndRun && _hitAndRun->GetCop())
-				obstacles.push_back(_hitAndRun->GetCop()->GetPosition());
+			if (_hitAndRun)
+				for (const Vehicle* cop : _hitAndRun->GetCops())
+					obstacles.push_back(cop->GetPosition());
 			_trafficManager->SetObstacles(std::move(obstacles));
 			_trafficManager->Update(deltaTime);
 			for (const auto& [model, position] : _trafficManager->TakeHonks())
@@ -5017,11 +5048,15 @@ void Game::Run()
 				viewProjection, Vector4(1.0f, 0.2f, 0.2f, 1.0f));
 		}
 
-		if (_hitAndRun && _hitAndRun->GetCop() && _interior.empty())
+		if (_hitAndRun && _interior.empty())
 		{
 			GL::ShaderProgram& worldShader = _level->GetWorldShader();
-			_hitAndRun->GetCop()->Draw(viewProjection, worldShader, true);
-			_hitAndRun->GetCop()->Draw(viewProjection, worldShader, false);
+			for (Vehicle* cop : _hitAndRun->GetCops())
+			{
+				cop->Draw(viewProjection, worldShader, true);
+				cop->Draw(viewProjection, worldShader, false);
+				cop->DrawLights(viewProjection, _level->GetBillboardShader());
+			}
 		}
 
 		if (_scriptEngine->IsMissionActive())
@@ -5175,7 +5210,7 @@ void Game::Run()
 			{
 				hud.chaseActive = true;
 				hud.heat = _hitAndRun->GetMeter() / 10.0f;
-				if (const Vehicle* cop = _hitAndRun->GetCop())
+				for (const Vehicle* cop : _hitAndRun->GetCops())
 					hud.policeBlips.emplace_back(cop->GetPosition().X, cop->GetPosition().Z);
 			}
 			auto* chase = _scriptEngine->GetChaseManager();

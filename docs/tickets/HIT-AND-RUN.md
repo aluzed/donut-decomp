@@ -1,6 +1,6 @@
 # HIT-AND-RUN — The meter, the police, busted
 
-- **Status:** PARTIAL (2026-10-18)
+- **Status:** DONE (2026-10-21)
 - **Priority:** P2
 - **Module:** Game
 - **Depends on:** PHYS-004 (impacts), AI-RACE (driving), LEVELS
@@ -51,3 +51,20 @@ car was dropped without `Vehicle::DestroyPhysics`, and its raycast vehicle staye
 registered as an action. `~Vehicle` now takes its physics out itself if nobody has; it
 showed up in the unattended level 4 run, where the autopilot's teleports left a chase
 behind.
+
+## Several police cars, their siren (2026-10-21)
+
+**How many.** `leveli.mfk`'s `SetNumChaseCars`: one on levels 1 to 3, two on 4 to 7.
+The meter full, the first comes at once, the others four seconds apart (each from a
+road in a direction of its own), while the meter still calls for them. The four
+seconds are ours: `SetChaseSpawnRate` is only ever commented out in the scripts, and
+`SetHitNRun` (the meter filled) is used only by the E3 demo's scripts. They bust the
+player as one did (the nearest within reach); they are shaken off when all are far
+behind -- but only once they have closed in: a car comes from the nearest road, at
+times 200 m off (level 4's start), and gave up after five seconds before it could
+arrive. Not come within reach after thirty seconds, they give up. All are drawn, with
+their lights, on the radar, and as obstacles to the traffic.
+
+**Their siren**: the police car's horn in the sound script (`cPolice`'s
+`SetHornClipName("siren")`: `sound\carsound\siren.rsd`), looped while they chase,
+louder as the nearest comes; none indoors, none once they have given up.

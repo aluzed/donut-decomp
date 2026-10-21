@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace Donut
 {
@@ -21,8 +22,10 @@ class HitAndRun
 {
 public:
 	// `copModel` is the level's chase car (CreateChaseManager's first argument,
-	// "cPolice"); `decay` the meter drained per second (SetHitAndRunDecay).
-	HitAndRun(std::string copModel, float decay);
+	// "cPolice"); `decay` the meter drained per second (SetHitAndRunDecay);
+	// `cars` how many come after the player (SetNumChaseCars: one on levels 1
+	// to 3, two after), one after another.
+	HitAndRun(std::string copModel, float decay, int cars = 1);
 	~HitAndRun();
 
 	enum class Event
@@ -43,22 +46,36 @@ public:
 	void Reset();
 
 	float GetMeter() const { return _meter; }
-	bool IsChasing() const { return _cop != nullptr; }
-	Vehicle* GetCop() const { return _cop.get(); }
+	bool IsChasing() const { return !_cops.empty(); }
+	// The police cars after the player.
+	std::vector<Vehicle*> GetCops() const;
+	// The nearest of them to `position`, how far; a large number with none.
+	float NearestCop(const Vector3& position) const;
 
 private:
-	void startChase(const Vector3& player, WorldPhysics& physics, const PathGraph& graph);
+	struct Cop
+	{
+		std::unique_ptr<Vehicle> car;
+		std::unique_ptr<RaceOpponent> driver;
+		Vector3 routedTo;
+		double sinceRoute = 0.0;
+	};
+	// One more police car, from a road some way off the player.
+	void addCop(const Vector3& player, WorldPhysics& physics, const PathGraph& graph);
+	void clear();
 
 	std::string _copModel;
 	float _decay;
+	int _cars = 1;
 	float _meter = 0.0f;
 
-	std::unique_ptr<Vehicle> _cop;
-	std::unique_ptr<RaceOpponent> _driver;
-	Vector3 _routedTo;
-	double _sinceRoute = 0.0;
+	std::vector<Cop> _cops;
+	// Since the chase began, for the next car's coming.
+	double _chasingFor = 0.0;
 	double _caughtFor = 0.0;
 	double _lostFor = 0.0;
+	// They have come within reach since the chase began.
+	bool _closedIn = false;
 };
 
 } // namespace Donut

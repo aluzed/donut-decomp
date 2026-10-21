@@ -75,7 +75,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | LEVELS | ✅ | P1 | Every level, not just level 1 | `--level n`, P3DZ, a level after another in one session, the Sunday drives, the story end to end. Everything is loaded at once; streaming was closed as not needed on PC (LEVEL-STREAM) |
 | AI-RACE | 🟡 | P2 | Race opponents and rubber-banding | Race and chase cars drive real circuits routed through the roads; a car that cannot get through a stretch is put further along it. Under `--autopilot`, a followed car is still lost now and then (thrown by the physics) and won on retry |
 | AI-PATH | 🟡 | P2 | Reusable path following | `src/AI/PathFollower.*`, A\* in `PathGraph::FindRoute`, routing by the 966 `RoadSegment`s. `TrafficManager` keeps its own copy; 95 links over 25m remain (multi-lane roads) |
-| HIT-AND-RUN | 🟡 | P2 | The meter, the police, busted | Running people down and ramming the traffic fill it; full, a police car drives after the player; caught, busted (50-coin fine, mission failed). Missing: the game's spawn rates and several police cars |
+| HIT-AND-RUN | ✅ | P2 | The meter, the police, busted | Running people down and ramming the traffic fill it; full, the level's police cars (`SetNumChaseCars`: one, two from level 4) come one after another, sirens wailing; caught, busted (50-coin fine, mission failed); shaken off once they have closed in. `SetChaseSpawnRate` and `SetHitNRun` are used only by the E3 demo's scripts |
 
 ### Game flow and collectibles
 
