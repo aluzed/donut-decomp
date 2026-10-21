@@ -11,6 +11,7 @@
 #include "Render/OpenGL/ShaderProgram.h"
 
 #include <BulletCollision/CollisionShapes/btBoxShape.h>
+#include <BulletCollision/CollisionShapes/btCompoundShape.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <BulletDynamics/Vehicle/btRaycastVehicle.h>
 #include <LinearMath/btDefaultMotionState.h>
@@ -110,6 +111,20 @@ private:
 // whatever the car: a car over 2450 kg, its four wheels unable to hold it up,
 // sank onto its own chassis and sat there at full throttle (the Itchy &
 // Scratchy truck, 2500 kg; the Buzz Cola truck, 4000 kg).
+// The median of the 90 car scripts' figures: a car's own is read against it,
+// so that the median car handles as every car did before the scripts' tuning
+// was applied.
+constexpr float kMedianWheelTurnDeg = 30.0f;
+constexpr float kMedianSteeringDrop = 0.272f;
+constexpr float kMedianBrakeScale = 7.0f;
+constexpr float kMedianSpringK = 0.4f;
+constexpr float kMedianDamperC = 0.2f;
+constexpr float kMedianHitPoints = 3.0f;
+// The suspension every car had: these at the median spring and damper.
+constexpr float kSuspensionStiffness = 30.0f;
+constexpr float kSuspensionCompression = 4.4f;
+constexpr float kSuspensionDamping = 2.8f;
+
 float maxSuspensionForce(float mass)
 {
 	return std::max(6000.0f, mass * 9.8f / 4.0f * 3.0f);
@@ -272,6 +287,22 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 		chassisShape = new btBoxShape(btVector3(0.9f, 0.4f, 2.2f));
 		_chassisShapes.emplace_back(chassisShape);
 	}
+	// The body turns about its centre of mass, which the car script puts
+	// somewhere in the model (SetCMOffsetY -0.1: a little low; Z 0.35: towards
+	// the front): its shapes and wheels are placed about it, and it stands
+	// that far from the model's origin.
+	const Vector3 centre = centreOfMass();
+	if (centre.LengthSquared() > 0.0f)
+	{
+		auto* about = new btCompoundShape();
+		btTransform offset;
+		offset.setIdentity();
+		offset.setOrigin(BulletCast<btVector3>(-centre));
+		about->addChildShape(offset, chassisShape);
+		_chassisShapes.emplace_back(about);
+		chassisShape = about;
+		pos += BulletCast<btVector3>(centre);
+	}
 	btDefaultMotionState* motionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), pos));
 
 	// The car script's mass, not one figure for every car: they run from 250kg to
@@ -287,9 +318,13 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 	btVehicleRaycaster* raycaster = _raycaster.get();
 
 	btRaycastVehicle::btVehicleTuning tuning;
-	tuning.m_suspensionStiffness = 30.0f;
-	tuning.m_suspensionCompression = 4.4f;
-	tuning.m_suspensionDamping = 2.8f;
+	// Springs and dampers from the car script (SetSpringK, SetDamperC), against
+	// the median car's.
+	const float spring = std::clamp(GetSetting("SetSpringK", kMedianSpringK) / kMedianSpringK, 0.5f, 2.0f);
+	const float damper = std::clamp(GetSetting("SetDamperC", kMedianDamperC) / kMedianDamperC, 0.5f, 3.0f);
+	tuning.m_suspensionStiffness = kSuspensionStiffness * spring;
+	tuning.m_suspensionCompression = kSuspensionCompression * damper;
+	tuning.m_suspensionDamping = kSuspensionDamping * damper;
 	tuning.m_maxSuspensionTravelCm = 500.0f;
 	tuning.m_maxSuspensionForce = maxSuspensionForce(mass);
 	tuning.m_frictionSlip = kFrictionSlip;
@@ -308,17 +343,18 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 		// the hub: the model's wheel on the road where the physics' is.
 		for (int i = 0; i < 4; ++i)
 		{
-			const Vector3& hub = _wheelHubs[i];
+			const Vector3 hub = _wheelHubs[i] - centre;
 			_rayVehicle->addWheel(btVector3(hub.X, hub.Y + suspensionRestLength, hub.Z), wheelDirection, wheelAxle,
 			                      suspensionRestLength, _wheelRadii[i], tuning, i < 2);
 		}
 	}
 	else
 	{
-		_rayVehicle->addWheel(btVector3(-0.8f, 0.0f, 1.8f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, true);
-		_rayVehicle->addWheel(btVector3(0.8f, 0.0f, 1.8f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, true);
-		_rayVehicle->addWheel(btVector3(-0.8f, 0.0f, -1.8f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, false);
-		_rayVehicle->addWheel(btVector3(0.8f, 0.0f, -1.8f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, false);
+		const btVector3 shift = BulletCast<btVector3>(centre);
+		_rayVehicle->addWheel(btVector3(-0.8f, 0.0f, 1.8f) - shift, wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, true);
+		_rayVehicle->addWheel(btVector3(0.8f, 0.0f, 1.8f) - shift, wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, true);
+		_rayVehicle->addWheel(btVector3(-0.8f, 0.0f, -1.8f) - shift, wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, false);
+		_rayVehicle->addWheel(btVector3(0.8f, 0.0f, -1.8f) - shift, wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, false);
 	}
 
 	// A btRaycastVehicle drives its chassis through applyEngineForce/setBrake,
@@ -355,7 +391,8 @@ void Vehicle::Teleport(const Vector3& position, const Quaternion& rotation, bool
 
 	btTransform transform;
 	transform.setIdentity();
-	transform.setOrigin(btVector3(position.X, spawnY, position.Z));
+	// The body's origin is its centre of mass, that far from the model's.
+	transform.setOrigin(btVector3(position.X, spawnY, position.Z) + BulletCast<btVector3>(rotation * centreOfMass()));
 	transform.setRotation(btQuaternion(rotation.X, rotation.Y, rotation.Z, rotation.W));
 
 	btRigidBody* chassis = _rayVehicle->getRigidBody();
@@ -517,8 +554,9 @@ void Vehicle::Update(double dt)
 		}
 
 		btTransform trans = _rayVehicle->getChassisWorldTransform();
-		_position = BulletCast<Vector3>(trans.getOrigin());
 		_rotation = BulletCast<Quaternion>(trans.getRotation());
+		// The model's origin, from the body's (its centre of mass).
+		_position = BulletCast<Vector3>(trans.getOrigin()) - _rotation * centreOfMass();
 	}
 
 	if (_model)
@@ -587,7 +625,14 @@ void Vehicle::ApplyInput(float throttle, float steer, float brake, float boost)
 	                       ? 1.0f / _rayVehicle->getRigidBody()->getInvMass()
 	                       : _mass;
 
-	const float force = throttle * (_gasScale / kReferenceGasScale) * mass * kEngineAcceleration * boost;
+	// Some cars change gear, as it were: past a share of their top speed the
+	// script gives them another gas scale (SetHighSpeedGasScale,
+	// SetGasScaleSpeedThreshold).
+	float gasScale = _gasScale;
+	if (const float high = GetSetting("SetHighSpeedGasScale", 0.0f); high > 0.0f)
+		if (GetSpeedKmh() > GetSetting("SetGasScaleSpeedThreshold", 1.0f) * _topSpeedKmh)
+			gasScale = high;
+	const float force = throttle * (gasScale / kReferenceGasScale) * mass * kEngineAcceleration * boost;
 	SetEngineForce(force);
 
 	// Speed-sensitive steering. Half a radian of lock is right at walking pace and
@@ -599,7 +644,14 @@ void Vehicle::ApplyInput(float throttle, float steer, float brake, float boost)
 	const float speedKmh = std::fabs(GetSpeedKmh());
 	float t = speedKmh / kSteerTaperKmh;
 	if (t > 1.0f) t = 1.0f;
-	const float maxSteer = kMaxSteerStill + (kMaxSteerFast - kMaxSteerStill) * t;
+	// Each car's own lock (SetMaxWheelTurnAngle, 9 to 55 degrees) and how much
+	// of it it loses at speed (SetHighSpeedSteeringDrop), against the median
+	// car's: a bus turns less tightly than a buggy.
+	const float lock = GetLockFactor();
+	const float keep = std::clamp((1.0f - GetSetting("SetHighSpeedSteeringDrop", kMedianSteeringDrop)) /
+	                                  (1.0f - kMedianSteeringDrop),
+	                              0.5f, 1.4f);
+	const float maxSteer = lock * (kMaxSteerStill + (kMaxSteerFast * keep - kMaxSteerStill) * t);
 
 	SetSteeringValue(steer * maxSteer);
 	// btRaycastVehicle takes the brake as a cap on the friction impulse per step,
@@ -607,7 +659,56 @@ void Vehicle::ApplyInput(float throttle, float steer, float brake, float boost)
 	// 1200kg chassis every car used to share; since the car scripts give each its
 	// own mass, a 2500kg bus braked at half the rate the race planner counts on,
 	// overshot a right-angle corner at 60 km/h and wedged itself sideways.
-	SetBrake((brake * 100.0f + 10.0f) * (mass / kBrakeReferenceMass));
+	// And each car's own brakes (SetBrakeScale, 1 to 16), against the median.
+	const float brakes = GetBrakeFactor();
+	SetBrake((brake * 100.0f * brakes + 10.0f) * (mass / kBrakeReferenceMass));
+}
+
+void Vehicle::SetSetting(const std::string& name, float value)
+{
+	_settings[name] = value;
+	// The springs and dampers, should the script come after the body.
+	if (_rayVehicle && (name == "SetSpringK" || name == "SetDamperC"))
+	{
+		const float spring = std::clamp(GetSetting("SetSpringK", kMedianSpringK) / kMedianSpringK, 0.5f, 2.0f);
+		const float damper = std::clamp(GetSetting("SetDamperC", kMedianDamperC) / kMedianDamperC, 0.5f, 3.0f);
+		for (int i = 0; i < _rayVehicle->getNumWheels(); ++i)
+		{
+			btWheelInfo& wheel = _rayVehicle->getWheelInfo(i);
+			wheel.m_suspensionStiffness = kSuspensionStiffness * spring;
+			wheel.m_wheelsDampingCompression = kSuspensionCompression * damper;
+			wheel.m_wheelsDampingRelaxation = kSuspensionDamping * damper;
+		}
+	}
+}
+
+float Vehicle::GetSetting(const std::string& name, float fallback) const
+{
+	const auto found = _settings.find(name);
+	return found != _settings.end() ? found->second : fallback;
+}
+
+float Vehicle::GetDamageScale() const
+{
+	return std::clamp(kMedianHitPoints / std::max(0.01f, GetSetting("SetHitPoints", kMedianHitPoints)), 0.03f, 5.0f);
+}
+
+float Vehicle::GetBrakeFactor() const
+{
+	return std::clamp(GetSetting("SetBrakeScale", kMedianBrakeScale) / kMedianBrakeScale, 0.3f, 2.0f);
+}
+
+float Vehicle::GetLockFactor() const
+{
+	return std::clamp(GetSetting("SetMaxWheelTurnAngle", kMedianWheelTurnDeg) / kMedianWheelTurnDeg, 0.3f, 1.8f);
+}
+
+Vector3 Vehicle::centreOfMass() const
+{
+	// Within the car: the scripts' figures run to a metre.
+	return Vector3(std::clamp(GetSetting("SetCMOffsetX", 0.0f), -1.0f, 1.0f),
+	               std::clamp(GetSetting("SetCMOffsetY", 0.0f), -1.0f, 1.0f),
+	               std::clamp(GetSetting("SetCMOffsetZ", 0.0f), -1.5f, 1.5f));
 }
 
 void Vehicle::Jump()

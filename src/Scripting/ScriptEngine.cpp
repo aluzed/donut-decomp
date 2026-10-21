@@ -1327,6 +1327,8 @@ void ScriptEngine::SetGasScale(float scale) { if (_activeVehicle) _activeVehicle
 void ScriptEngine::SetTopSpeedKmh(float speed) { if (_activeVehicle) _activeVehicle->SetTopSpeedKmh(speed); }
 void ScriptEngine::SetTireGrip(float grip) { if (_activeVehicle) _activeVehicle->SetTireGrip(grip); }
 void ScriptEngine::SetSuspensionLimit(float limit) { if (_activeVehicle) _activeVehicle->SetSuspensionLimit(limit); }
+void ScriptEngine::SetCarSetting(const std::string& name, float value) { if (_activeVehicle) _activeVehicle->SetSetting(name, value); }
+void ScriptEngine::SetCarDriver(const std::string& driver) { if (_activeVehicle) _activeVehicle->SetDefaultDriver(driver); }
 
 void ScriptEngine::AddStageWaypoint(const std::string& name)
 {

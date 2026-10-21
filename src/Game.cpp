@@ -20,6 +20,7 @@
 #include "Core/FpsTimer.h"
 #include "Core/Math/Math.h"
 #include "FreeCamera.h"
+#include "Game/GameCamera.h"
 #include <cctype>
 #include <fstream>
 #include "FrontendProject.h"
@@ -393,9 +394,7 @@ Game::Game(int argc, char** argv)
 	// load control bindings (writes a default keymap.conf if none exists)
 	Input::LoadKeymap("keymap.conf");
 
-	_camera = std::make_unique<FreeCamera>();
-	_camera->SetPosition(Vector3(228.0f, 5.0f, -174.0f));
-	_camera->SetFOV(70.0f);
+	_gameCamera = std::make_unique<GameCamera>();
 	_gameState = _autoStart ? GameState::InGame : GameState::Splash;
 	_missionCompleteTimer = 0.0;
 
@@ -403,8 +402,6 @@ Game::Game(int argc, char** argv)
 	if (FileSystem::exists("./art/frontend/scrooby/bootup.p3d"))
 		_frontend->LoadP3D("./art/frontend/scrooby/bootup.p3d");
 
-	_camera->SetZNear(1.0f);
-	_camera->SetZFar(100000.0f);
 
 	if (_startStory && !_story.empty())
 		startStoryMission(std::min(_storyFrom, static_cast<int>(_story.size()) - 1));
@@ -1233,28 +1230,6 @@ void Game::runMissionScript()
 	_scriptEngine->RunFile(_missionScript);
 }
 
-Vector3 Game::unoccludedCameraPosition(const Vector3& subject, const Vector3& wanted) const
-{
-	// A follow camera at a fixed offset goes wherever the offset puts it: on
-	// sr2's grid that was the middle of a tree, and half the screen was trunk.
-	// If the level stands between the subject and the camera, bring the camera
-	// in to just this side of it. Only static geometry counts -- a car passing
-	// behind must not yank the view.
-	constexpr float kCameraStandOff = 0.4f;
-	Vector3 toCamera = wanted - subject;
-	const float distance = toCamera.Length();
-	if (!_worldPhysics || distance < 0.01f)
-		return wanted;
-	toCamera = toCamera / distance;
-
-	Vector3 hit, normal;
-	if (!_worldPhysics->CastRay(subject, toCamera, distance, hit, normal, true))
-		return wanted;
-
-	const float clear = (hit - subject).Length() - kCameraStandOff;
-	return subject + toCamera * (clear > 0.0f ? clear : 0.0f);
-}
-
 void Game::startStoryMission(int index)
 {
 	_storyIndex = index;
@@ -1745,7 +1720,7 @@ void Game::switchLevel(int level)
 	LoadModel(_playerCharacter, _playerCharacter);
 	if (!_wornSkin.empty())
 		BuySkin(_wornSkin);
-	_smoothCamPos = Vector3::Zero;
+	_gameCamera->Snap();
 	_trackLoaded = false;
 }
 
@@ -1791,27 +1766,10 @@ void Game::scriptedCamera(double deltaTime)
 {
 	ScriptEngine::CameraMove move;
 	if (_scriptEngine->TakeCameraMove(move))
-	{
-		_cameraMove = AnimCamera::LoadP3D(fmt::format("art/missions/{}/{}.p3d", levelDirectory(), move.file), move.camera);
-		_cameraMoveTime = 0.0;
-	}
-	const auto look = [this](const Vector3& from, const Vector3& direction) {
-		const float flat = std::sqrt(direction.X * direction.X + direction.Z * direction.Z);
-		_camera->SetPosition(from);
-		_camera->SetQuaternion(cameraLooking(std::atan2(-direction.Y, std::max(flat, 0.001f)),
-		                                     std::atan2(direction.X, direction.Z)));
-	};
-	if (_cameraMove)
-	{
-		const AnimCamera::Pose pose = _cameraMove->At(_cameraMoveTime);
-		look(pose.position, pose.look);
-		_cameraMoveTime += deltaTime;
-		if (_cameraMoveTime > _cameraMove->GetDuration())
-			_cameraMove.reset();
-		// Back to the player's camera from where it is, not swung in from afar.
-		_smoothCamPos = Vector3::Zero;
+		_gameCamera->PlayMove(
+		    AnimCamera::LoadP3D(fmt::format("art/missions/{}/{}.p3d", levelDirectory(), move.file), move.camera));
+	if (_gameCamera->UpdateMove(deltaTime))
 		return;
-	}
 
 	ScriptEngine::ConversationShot shot;
 	if (!_character || _inVehicle || !_scriptEngine->GetConversationShot(shot))
@@ -1827,27 +1785,11 @@ void Game::scriptedCamera(double deltaTime)
 	// Over the shoulder of the one facing the subject: "pc" frames the player's
 	// character, "npc" the other; "far" takes in both, "near" the subject alone.
 	const bool player = shot.shot.rfind("pc", 0) == 0;
-	const bool near = shot.shot.find("near") != std::string::npos;
 	const Vector3 head(0.0f, 1.5f, 0.0f);
 	const Vector3 subject = (player ? _character->GetPosition() : other->GetPosition()) + head;
 	const Vector3 facing = (player ? other->GetPosition() : _character->GetPosition()) + head;
-	Vector3 across = facing - subject;
-	across.Y = 0.0f;
-	// Standing on the same spot (the autopilot puts the player there): along
-	// the way the camera was looking.
-	if (across.LengthSquared() < 0.25f)
-		across = Vector3(std::sin(_camYaw), 0.0f, std::cos(_camYaw)) * (player ? 1.0f : -1.0f);
-	across = across.Normalized();
-	// To one side of the line between them: the best side's, when the script
-	// names one.
-	Vector3 side(across.Z, 0.0f, -across.X);
-	if (shot.hasBestSide && (shot.bestSide - subject).Dot(side) < 0.0f)
-		side = side * -1.0f;
-	const Vector3 wanted = near ? subject + across * 1.8f + side * 0.5f
-	                            : facing + across * 1.6f + side * 0.9f + Vector3(0.0f, 0.3f, 0.0f);
-	const Vector3 from = unoccludedCameraPosition(subject, wanted);
-	look(from, subject - from);
-	_smoothCamPos = Vector3::Zero;
+	_gameCamera->FrameConversation(subject, facing, shot.shot.find("near") != std::string::npos, player,
+	                               shot.hasBestSide ? &shot.bestSide : nullptr);
 	if (const std::string now = shot.shot + "/" + shot.other; now != _conversationShot)
 	{
 		_conversationShot = now;
@@ -1855,15 +1797,9 @@ void Game::scriptedCamera(double deltaTime)
 	}
 }
 
-Quaternion Game::cameraLooking(float pitchDown, float yaw)
+void Game::AddShake(float amount)
 {
-	// FreeCamera's orientation is the view's rotation, world to camera: the
-	// inverse of the camera's own. Both follow cameras used to pass their own
-	// rotation, so the view turned the other way about Y. At a yaw of 0 or pi
-	// that is the same thing, which is why it went unseen; anywhere else the
-	// camera stood on the right side of its subject and looked away from it --
-	// at sr2's grid, facing +X, it showed the lawn behind the car.
-	return Quaternion::MakeFromEuler(Vector3(pitchDown, yaw, 0.0f)).Inverse();
+	_gameCamera->AddShake(amount);
 }
 
 void Game::updateCarDamageLook(double dt)
@@ -1933,7 +1869,8 @@ void Game::updateCarDamage()
 		const float flat = Vector3(velocity.X - _damageVelocity.X, 0.0f, velocity.Z - _damageVelocity.Z).Length();
 		if (moved < 5.0f && flat > kImpactThreshold)
 		{
-			const float damage = (flat - kImpactThreshold) * kDamagePerMs;
+			// As tough as the car's script makes it (SetHitPoints).
+			const float damage = (flat - kImpactThreshold) * kDamagePerMs * _activeVehicle->GetDamageScale();
 			_health = std::max(0.0f, _health - damage);
 			AddShake(std::min(1.0f, flat * 0.05f));
 			if (_sparks)
@@ -3042,7 +2979,7 @@ void Game::enterInterior(const Level::Trigger& door)
 	// for the school looked back out through the door at nothing.
 	const Vector3 inward = _interiorLayout.origin - _interiorLayout.entry;
 	if (inward.X * inward.X + inward.Z * inward.Z > 0.01f)
-		_camYaw = std::atan2(inward.X, inward.Z);
+		_gameCamera->SetYaw(std::atan2(inward.X, inward.Z));
 	_level->SetDrawOnly(file);
 	_scriptEngine->OnInteriorChanged(_interior);
 }
@@ -3152,11 +3089,14 @@ void Game::drawCarDrivers(const Matrix4x4& viewProjection)
 	for (const auto& vehicle : _scriptEngine->GetMissionVehicles())
 	{
 		const Vehicle* car = vehicle.get();
-		const std::string name = _scriptEngine->GetVehicleDriver(car);
+		// The mission's driver, or else the car script's own (SetDriver).
+		std::string name = _scriptEngine->GetVehicleDriver(car);
+		if (name.empty() && car->GetDefaultDriver() != "none" && _scriptEngine->IsDrivenByAI(car))
+			name = car->GetDefaultDriver();
 		if (name.empty())
 			continue;
 		present.insert(car);
-		if (car == _activeVehicle || (car->GetPosition() - _camera->GetPosition()).Length() > 120.0f)
+		if (car == _activeVehicle || (car->GetPosition() - _gameCamera->View().GetPosition()).Length() > 120.0f)
 			continue;
 		auto& driver = _carDrivers[car];
 		// Made once: a car rebuilt where an old one stood is told by its driver.
@@ -3515,7 +3455,7 @@ void Game::drawGags(const Matrix4x4& viewProjection)
 	GL::ShaderProgram& worldShader = _level->GetWorldShader();
 	for (auto& gag : _gags)
 	{
-		if (!gag.drawable || (gag.placed - _camera->GetPosition()).Length() > 150.0f || !gagHere(gag))
+		if (!gag.drawable || (gag.placed - _gameCamera->View().GetPosition()).Length() > 150.0f || !gagHere(gag))
 			continue;
 		// A scene with characters in it is seen only while it plays: Grandpa
 		// walks in, says his piece and is gone.
@@ -4120,10 +4060,9 @@ void Game::Run()
 		if (onFoot && mouse.look && _gameInput->IsMouseLocked())
 		{
 			const float across = 0.0005f + 0.009f * mouse.sensitivityX, upDown = 0.0005f + 0.009f * mouse.sensitivityY;
-			_camYaw += intent.mouseDX * across * (mouse.invertX ? -1.0f : 1.0f);
-			_camPitch -= intent.mouseDY * upDown * (mouse.invertY ? -1.0f : 1.0f); // mouse up -> look up
-			if (_camPitch < -1.0f) _camPitch = -1.0f; // steep down
-			if (_camPitch > 0.2f) _camPitch = 0.2f;    // slightly up
+			// Mouse up looks up.
+			_gameCamera->Orbit(intent.mouseDX * across * (mouse.invertX ? -1.0f : 1.0f),
+			                   -intent.mouseDY * upDown * (mouse.invertY ? -1.0f : 1.0f));
 		}
 
 		if (onFoot && _boarding.car)
@@ -4231,7 +4170,7 @@ void Game::Run()
 				// character's own rotation, so there's no feedback loop. The
 				// character then pivots to face its movement direction.
 				charMove.Normalize();
-				Vector3 worldMove = Quaternion::MakeFromEuler(Vector3(0.0f, _camYaw, 0.0f)) * charMove;
+				Vector3 worldMove = Quaternion::MakeFromEuler(Vector3(0.0f, _gameCamera->GetYaw(), 0.0f)) * charMove;
 				// A dash with the boost held: faster, and in Homer's dash.
 				_playerDashing = intent.boostHeld;
 				ctrl.setWalkDirection(BulletCast<btVector3>(worldMove * (_playerDashing ? 8.0f : 5.0f)));
@@ -4295,7 +4234,7 @@ void Game::Run()
 			else if (intent.vehicleJump)
 			{
 				_activeVehicle->Jump();
-				_shakeAmount = 1.0f;
+				_gameCamera->AddShake(1.0f);
 			}
 			else
 			{
@@ -4328,58 +4267,11 @@ void Game::Run()
 			}
 		}
 
+		_gameCamera->SetPhysics(_worldPhysics.get());
 		if (_inVehicle && _activeVehicle && !_gameInput->IsMouseLocked())
-		{
-			auto vehPos = _activeVehicle->GetPosition();
-			auto vehRot = _activeVehicle->GetRotation();
-			Vector3 camTarget = vehPos + Vector3(0, 1.5f, 0);
-			// Camera sits behind the vehicle; forward is +Z (left-handed proj), so
-			// "behind" is -Z in the vehicle's local frame. Use the vehicle's yaw
-			// only: the chassis is a physics body that pitches and rolls over
-			// bumps, and rotating the offset by the full orientation swung the
-			// camera under the terrain. The look rotation below already takes
-			// yaw alone.
-			// Euler().Y was taken here for the yaw, but it is in degrees and folds
-			// past 90: the camera stood behind only a car heading straight down +Z.
-			const Quaternion vehYaw = Quaternion::MakeFromEuler(Vector3(0.0f, vehRot.Yaw(), 0.0f));
-			Vector3 targetPos = camTarget + vehYaw * Vector3(0, 3.0f, -12.0f);
-
-			float lerpFactor = 1.0f - exp(-8.0f * static_cast<float>(deltaTime));
-			if (_smoothCamPos == Vector3::Zero) _smoothCamPos = targetPos;
-			_smoothCamPos = _smoothCamPos + (targetPos - _smoothCamPos) * lerpFactor;
-
-			// Looking at the car from wherever the camera ended up. A fixed pitch
-			// along the car's heading lost it whenever the level pulled the camera
-			// in: at sr2's grid, with the lawn behind, it sat 2m above the car and
-			// looked out over it.
-			const Vector3 cameraPos = unoccludedCameraPosition(camTarget, _smoothCamPos);
-			const Vector3 toCar = camTarget - cameraPos;
-			const float flat = std::sqrt(toCar.X * toCar.X + toCar.Z * toCar.Z);
-			const float yaw = flat > 0.5f ? atan2f(toCar.X, toCar.Z) : vehRot.Yaw();
-			_camera->SetPosition(cameraPos);
-			_camera->SetQuaternion(cameraLooking(atan2f(-toCar.Y, std::max(flat, 0.5f)), yaw));
-		}
+			_gameCamera->FollowVehicle(*_activeVehicle, deltaTime);
 		else if (_character)
-		{
-			// Mouse-controlled orbit camera: the camera yaw/pitch come from the
-			// mouse (above), the camera orbits the character at a fixed distance
-			// and looks at it. It follows the character's position but not its
-			// facing, so it no longer swings around when the character turns.
-			auto charPos = _character->GetPosition();
-			// _camPitch is negative looking down; MakeFromEuler pitches +Z down
-			// for a positive angle.
-			Quaternion camRot = Quaternion::MakeFromEuler(Vector3(-_camPitch, _camYaw, 0.0f));
-			Vector3 lookAt = charPos + Vector3(0.0f, 1.2f, 0.0f);
-			Vector3 forward = camRot * Vector3::Forward;
-			Vector3 targetPos = lookAt - forward * 6.0f;
-
-			float lerpFactor = 1.0f - exp(-12.0f * static_cast<float>(deltaTime));
-			if (_smoothCamPos == Vector3::Zero) _smoothCamPos = targetPos;
-			_smoothCamPos = _smoothCamPos + (targetPos - _smoothCamPos) * lerpFactor;
-
-			_camera->SetPosition(unoccludedCameraPosition(lookAt, _smoothCamPos));
-			_camera->SetQuaternion(cameraLooking(-_camPitch, _camYaw));
-		}
+			_gameCamera->OrbitCharacter(_character->GetPosition(), deltaTime);
 		// The script's cameras over the player's: a mission's camera move as it
 		// starts, then the conversation's shots, line by line.
 		if (_gameState == GameState::InGame)
@@ -4403,8 +4295,8 @@ void Game::Run()
 		// right as forward x up; in this world +X is on the right looking down
 		// +Z, which takes "up" as -Y to come out the same way round.
 		{
-			const Vector3 forward = _camera->GetOrientation().Inverse() * Vector3::Forward;
-			_audioManager->SetListenerPosition(_camera->GetPosition(), forward, Vector3(0.0f, -1.0f, 0.0f));
+			const Vector3 forward = _gameCamera->View().GetOrientation().Inverse() * Vector3::Forward;
+			_audioManager->SetListenerPosition(_gameCamera->View().GetPosition(), forward, Vector3(0.0f, -1.0f, 0.0f));
 		}
 		_audioManager->Update();
 		// The place's background: the level's outdoors, or a small room indoors.
@@ -4463,14 +4355,7 @@ void Game::Run()
 				updateHitAndRun(deltaTime);
 		}
 
-		if (_shakeAmount > 0.0f)
-		{
-			float sx = (rand() % 100 - 50) * 0.001f * _shakeAmount;
-			float sy = (rand() % 100 - 50) * 0.001f * _shakeAmount;
-			_camera->SetPosition(_camera->GetPosition() + Vector3(sx, sy, 0));
-			_shakeAmount -= static_cast<float>(deltaTime) * 5.0f;
-			if (_shakeAmount < 0.0f) _shakeAmount = 0.0f;
-		}
+		_gameCamera->ApplyShake(deltaTime);
 
 		if (_gameState == GameState::MissionComplete || _gameState == GameState::MissionFailed)
 		{
@@ -4942,15 +4827,15 @@ void Game::Run()
 		                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
 		                     ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
 		{
-			auto const& camPos = _camera->GetPosition();
-			auto const& camRot = _camera->GetOrientation();
+			auto const& camPos = _gameCamera->View().GetPosition();
+			auto const& camRot = _gameCamera->View().GetOrientation();
 			ImGui::Text("Camera Position: %s", camPos.ToString().c_str());
 			ImGui::Text("Camera Orientation: %s", camRot.ToString().c_str());
 			ImGui::Text("Meshes drawn: %d, culled: %d", CullStats::drawn, CullStats::culled);
 
-			float fov = _camera->GetFOV();
+			float fov = _gameCamera->View().GetFOV();
 			if (ImGui::SliderFloat("FOV", &fov, 0.0f, 120.0f))
-				_camera->SetFOV(fov);
+				_gameCamera->View().SetFOV(fov);
 		}
 		ImGui::End();
 
@@ -5051,10 +4936,10 @@ void Game::Run()
 		glClearColor(0.62f, 0.78f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		_camera->SetAspectRatio(static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight));
+		_gameCamera->View().SetAspectRatio(static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight));
 
-		Matrix4x4 viewMatrix = _camera->GetViewMatrix();
-		Matrix4x4 projMatrix = _camera->GetProjectionMatrix();
+		Matrix4x4 viewMatrix = _gameCamera->View().GetViewMatrix();
+		Matrix4x4 projMatrix = _gameCamera->View().GetProjectionMatrix();
 		Matrix4x4 viewProjection = projMatrix * viewMatrix;
 
 		// Counted afresh each frame, shown the next (the overlay is built first).
@@ -5475,7 +5360,7 @@ void Game::Run()
 				    .emplace_back(giver.position.X, giver.position.Z);
 			// The way the player faces: the car's heading at the wheel (it used
 			// to be the on-foot camera's, whatever the car did).
-			hud.playerHeading = _inVehicle && _activeVehicle ? _activeVehicle->GetRotation().Yaw() : _camYaw;
+			hud.playerHeading = _inVehicle && _activeVehicle ? _activeVehicle->GetRotation().Yaw() : _gameCamera->GetYaw();
 			if (_pathGraph)
 				for (const auto& node : _pathGraph->GetNodes())
 				{
@@ -5820,7 +5705,7 @@ void Game::imguiMenuBar()
 			{
 				const Vector3& dest = location.second;
 				//_worldPhysics->GetCharacterController()->SetPosition(dest);
-				_camera->SetPosition(dest);
+				_gameCamera->View().SetPosition(dest);
 			}
 			if (ImGui::IsItemHovered())
 			{

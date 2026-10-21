@@ -9,6 +9,7 @@
 
 #include <BulletDynamics/Vehicle/btRaycastVehicle.h>
 
+#include <map>
 #include <memory>
 #include <vector>
 #include <string>
@@ -54,6 +55,22 @@ public:
 	void SetTopSpeedKmh(float speed) { _topSpeedKmh = speed; }
 	void SetTireGrip(float grip) { _tireGrip = grip; }
 	void SetSuspensionLimit(float limit) { _suspensionLimit = limit; }
+	// The rest of a car script's tuning (scripts/cars/<car>.con), by its
+	// command's name ("SetBrakeScale", 8.0). The game's figures have no units,
+	// so each is read against the median of the 90 car scripts: what the
+	// median car does here is what every car did before. Those the engine has
+	// no use for (the e-brake slides, the wheelies, the shadow) are kept.
+	void SetSetting(const std::string& name, float value);
+	float GetSetting(const std::string& name, float fallback) const;
+	// The script's driver (SetDriver), "none" or empty for none.
+	void SetDefaultDriver(const std::string& driver) { _defaultDriver = driver; }
+	const std::string& GetDefaultDriver() const { return _defaultDriver; }
+	// How much of a crash's damage the car takes: the median car's 3 hit
+	// points over its own (SetHitPoints), within 0.03 and 5.
+	float GetDamageScale() const;
+	// Its brakes and its lock against the median car's (1 for the median car).
+	float GetBrakeFactor() const;
+	float GetLockFactor() const;
 
 	// Moves the car bodily: resets the chassis transform, clears its momentum and
 	// lets the suspension settle again. SetPosition only moves the model.
@@ -180,6 +197,11 @@ private:
 	std::string _modelName;
 	// The wheels' raycaster; it outlives the vehicle that uses it.
 	std::unique_ptr<btVehicleRaycaster> _raycaster;
+	std::map<std::string, float> _settings;
+	std::string _defaultDriver;
+	// Where its centre of mass is in the model (SetCMOffsetX/Y/Z): the chassis
+	// body's origin, its shapes and wheels placed about it.
+	Vector3 centreOfMass() const;
 	std::unique_ptr<btRaycastVehicle> _rayVehicle;
 };
 

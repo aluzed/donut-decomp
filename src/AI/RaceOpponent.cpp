@@ -585,15 +585,18 @@ float RaceOpponent::targetSpeedKmh(float boost) const
 		if (radius < kMinCornerRadius)
 			radius = kMinCornerRadius;
 
-		// What the grip allows through that corner...
-		float corner = std::sqrt(kLateralAccelMss * radius) * 3.6f;
+		// What the grip allows through that corner (less for a car that cannot
+		// turn its wheels as far as the median car)...
+		float corner = std::sqrt(kLateralAccelMss * std::min(1.0f, _vehicle.GetLockFactor()) * radius) * 3.6f;
 		if (corner > straight)
 			corner = straight;
 
 		// ...and the fastest we may be going here and still have shed the
 		// difference by the time we reach it.
 		const float cornerMs = corner / 3.6f;
-		const float allowed = std::sqrt(cornerMs * cornerMs + 2.0f * kBrakeDecelMss * arc) * 3.6f;
+		// (by its own brakes, when weaker than the median car's)
+		const float decel = kBrakeDecelMss * std::min(1.0f, _vehicle.GetBrakeFactor());
+		const float allowed = std::sqrt(cornerMs * cornerMs + 2.0f * decel * arc) * 3.6f;
 		if (allowed < limit)
 			limit = allowed;
 	}

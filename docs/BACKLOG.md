@@ -193,7 +193,7 @@ the same.
 | Sub-ticket | Status | Subject |
 |---|---|---|
 | GAME-001a | ✅ | `GameInput` (input to intents) |
-| GAME-001b | ⬜ | `GameCamera` (follow, orbit, free) |
+| GAME-001b | ✅ | `GameCamera` (follow, orbit, camera moves, conversation shots, shake) (2026-10-21) |
 | GAME-001c | 🟡 | 2D drawing out of `Game::Run`: the HUD is in `UI/Hud.*`, menus and banners are not |
 | GAME-001d | ⬜ | `GameStateMachine` (transitions from a table, not scattered `if`s) |
 | GAME-001e | ⬜ | Out of `Game`: the autopilot, the story and level loading, interiors, gags |
@@ -208,7 +208,7 @@ car, rewards), not through the commands.
 | Sub-ticket | Status | Category |
 |---|---|---|
 | SCRIPT-A | ✅ | The base race commands: every level's races run |
-| SCRIPT-B | 🟡 | Car tuning: `SetMass`, `SetGasScale`, `SetTopSpeedKmh`, `SetTireGrip` applied; suspension and the rest are stubs |
+| SCRIPT-B | ✅ | Car tuning: every command of the 90 car scripts applied or kept; lock, brakes, springs, centre of mass, hit points read against the median car (2026-10-21) |
 | SCRIPT-C | ✅ | Cameras: conversation shots line by line (`SetConversationCam`, `SetCamBestSide`), the missions' and races' camera moves as they start (2026-10-21) |
 | SCRIPT-D | ✅ | Race tuning: laps, catch-up, the opponent's win, `SetConditionPosition`, the chased car's catch-up; `SetVehicleAIParams` kept, its meaning unknown (2026-10-21) |
 | SCRIPT-E | ✅ | Gags and collectibles: read from `level.mfk` (GAME-010); state props for `pickupitem` |

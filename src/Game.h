@@ -54,6 +54,7 @@ class LineRenderer;
 class Level;
 class WorldPhysics;
 class FreeCamera;
+class GameCamera;
 class Character;
 class ScriptEngine;
 class Vehicle;
@@ -178,7 +179,7 @@ public:
 	// The ground under it, where the player is to drive the barrel.
 	bool GetBossGround(Vector3& position) const;
 	bool HasBoss() const { return _ufo != nullptr; }
-	void AddShake(float amount) { _shakeAmount = std::max(_shakeAmount, amount); }
+	void AddShake(float amount);
 
 	static Game& GetInstance() { return *instance; }
 
@@ -197,7 +198,7 @@ private:
 	std::unique_ptr<Window> _window;
 	std::unique_ptr<AudioManager> _audioManager;
 	std::unique_ptr<ResourceManager> _resourceManager;
-	std::unique_ptr<FreeCamera> _camera;
+	std::unique_ptr<GameCamera> _gameCamera;
 	std::unique_ptr<Character> _character;
 	std::unique_ptr<LineRenderer> _lineRenderer;
 	std::unique_ptr<Level> _level;
@@ -430,7 +431,6 @@ private:
 	bool _showDebug = true;
 	bool _showHelp = false;
 	float _health = 100.0f;
-	float _shakeAmount = 0.0f;
 	float _prevVehicleY = 0.0f;
 	float _hornCooldown = 0.0f;
 
@@ -743,13 +743,8 @@ private:
 	std::string _itemsCount, _itemsDone;
 	int _stagesAnnounced = 0;
 	double _stageCompleteUntil = 0.0;
-	// The view rotation for a camera looking along heading `yaw` (radians about
-	// +Y, 0 is +Z), tipped `pitchDown` radians below the horizon.
-	static Quaternion cameraLooking(float pitchDown, float yaw);
 	// The script's cameras, over the player's (see the call).
 	void scriptedCamera(double deltaTime);
-	std::unique_ptr<class AnimCamera> _cameraMove;
-	double _cameraMoveTime = 0.0;
 	std::string _conversationShot;
 	// Health lost to impacts, judged from the car's velocity a frame apart.
 	void updateCarDamage();
@@ -763,17 +758,11 @@ private:
 	Vector3 _damageVelocity;
 	Vector3 _damagePosition;
 	void saveCoins() const;
-	// `wanted`, or the nearest point to `subject` on the way to it that the level
-	// does not hide `subject` from.
-	Vector3 unoccludedCameraPosition(const Vector3& subject, const Vector3& wanted) const;
 	double _elapsedSeconds = 0.0;
 
 	bool _inVehicle = false;
 	Vehicle* _activeVehicle = nullptr;
 	double _missionCompleteTimer = 0.0;
-	Vector3 _smoothCamPos = Vector3::Zero;
-	float _camYaw = 0.0f;     // third-person camera orbit yaw (mouse-controlled)
-	float _camPitch = -0.2f;  // third-person camera orbit pitch (mouse-controlled; negative looks down)
 	Vector3 _lastSafePos = Vector3(220, 4.5f, -172);
 	// Where the car the player drives last had a wheel on the ground: a car
 	// that falls off the map is put back on the road nearest to it, rather

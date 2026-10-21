@@ -9,6 +9,7 @@
 #include "AI/ChaseManager.h"
 #include "AI/RaceOpponent.h"
 
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <string>
@@ -80,6 +81,15 @@ public:
 	void SetTopSpeedKmh(float speed);
 	void SetTireGrip(float grip);
 	void SetSuspensionLimit(float limit);
+	// The rest of a car script's tuning (see Vehicle::SetSetting), and its driver.
+	void SetCarSetting(const std::string& name, float value);
+	void SetCarDriver(const std::string& driver);
+	// A car the AI drives: a stage's race, target or chase car.
+	bool IsDrivenByAI(const Vehicle* vehicle) const
+	{
+		return std::find(_raceVehicles.begin(), _raceVehicles.end(), vehicle) != _raceVehicles.end() ||
+		       std::any_of(_chasers.begin(), _chasers.end(), [vehicle](const auto& c) { return c.vehicle == vehicle; });
+	}
 
 	void SetHUDIcon(const std::string& icon);
 	void AddObjective(const std::string& type, const std::string& argument = "");

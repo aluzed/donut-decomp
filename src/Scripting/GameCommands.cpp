@@ -452,14 +452,26 @@ void GameCommands::SetGasScale(float param0)
 {
 	Game::GetInstance().GetScriptEngine().SetGasScale(param0);
 }
-void GameCommands::SetSlipGasScale(float param0) {}
-void GameCommands::SetBrakeScale(float param0) {}
+void GameCommands::SetSlipGasScale(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetSlipGasScale", param0);
+}
+void GameCommands::SetBrakeScale(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetBrakeScale", param0);
+}
 void GameCommands::SetTopSpeedKmh(float param0)
 {
 	Game::GetInstance().GetScriptEngine().SetTopSpeedKmh(param0);
 }
-void GameCommands::SetMaxWheelTurnAngle(float param0) {}
-void GameCommands::SetHighSpeedSteeringDrop(float param0) {}
+void GameCommands::SetMaxWheelTurnAngle(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetMaxWheelTurnAngle", param0);
+}
+void GameCommands::SetHighSpeedSteeringDrop(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetHighSpeedSteeringDrop", param0);
+}
 void GameCommands::SetTireGrip(float param0)
 {
 	Game::GetInstance().GetScriptEngine().SetTireGrip(param0);
@@ -468,40 +480,134 @@ void GameCommands::SetSuspensionLimit(float param0)
 {
 	Game::GetInstance().GetScriptEngine().SetSuspensionLimit(param0);
 }
-void GameCommands::SetNormalSteering(float param0) {}
-void GameCommands::SetSlipSteering(float param0) {}
-void GameCommands::SetEBrakeEffect(float param0) {}
-void GameCommands::SetSlipSteeringNoEBrake(float param0) {}
-void GameCommands::SetSlipEffectNoEBrake(float param0) {}
-void GameCommands::SetCMOffsetX(float param0) {}
-void GameCommands::SetCMOffsetY(float param0) {}
-void GameCommands::SetCMOffsetZ(float param0) {}
-void GameCommands::SetSpringK(float param0) {}
-void GameCommands::SetDamperC(float param0) {}
-void GameCommands::SetSuspensionYOffset(float param0) {}
-void GameCommands::SetHitPoints(float param0) {}
-void GameCommands::SetBurnoutRange(float param0) {}
-void GameCommands::SetMaxSpeedBurstTime(float param0) {}
-void GameCommands::SetDonutTorque(float param0) {}
-void GameCommands::SetWeebleOffset(float param0) {}
-void GameCommands::SetWheelieRange(float param0) {}
-void GameCommands::SetWheelieOffsetY(float param0) {}
-void GameCommands::SetWheelieOffsetZ(float param0) {}
+void GameCommands::SetNormalSteering(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetNormalSteering", param0);
+}
+void GameCommands::SetSlipSteering(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetSlipSteering", param0);
+}
+void GameCommands::SetEBrakeEffect(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetEBrakeEffect", param0);
+}
+void GameCommands::SetSlipSteeringNoEBrake(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetSlipSteeringNoEBrake", param0);
+}
+void GameCommands::SetSlipEffectNoEBrake(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetSlipEffectNoEBrake", param0);
+}
+void GameCommands::SetCMOffsetX(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetCMOffsetX", param0);
+}
+void GameCommands::SetCMOffsetY(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetCMOffsetY", param0);
+}
+void GameCommands::SetCMOffsetZ(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetCMOffsetZ", param0);
+}
+void GameCommands::SetSpringK(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetSpringK", param0);
+}
+void GameCommands::SetDamperC(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetDamperC", param0);
+}
+void GameCommands::SetSuspensionYOffset(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetSuspensionYOffset", param0);
+}
+void GameCommands::SetHitPoints(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetHitPoints", param0);
+}
+void GameCommands::SetBurnoutRange(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetBurnoutRange", param0);
+}
+void GameCommands::SetMaxSpeedBurstTime(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetMaxSpeedBurstTime", param0);
+}
+void GameCommands::SetDonutTorque(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetDonutTorque", param0);
+}
+void GameCommands::SetWeebleOffset(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetWeebleOffset", param0);
+}
+void GameCommands::SetWheelieRange(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetWheelieRange", param0);
+}
+void GameCommands::SetWheelieOffsetY(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetWheelieOffsetY", param0);
+}
+void GameCommands::SetWheelieOffsetZ(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetWheelieOffsetZ", param0);
+}
 void GameCommands::SetShadowAdjustments(float param0, float param1, float param2, float param3, float param4, float param5,
                                         float param6, float param7)
 {
+	// Eight figures for the car's shadow, which the engine does not draw: kept.
+	const float values[] = {param0, param1, param2, param3, param4, param5, param6, param7};
+	for (int i = 0; i < 8; ++i)
+		Game::GetInstance().GetScriptEngine().SetCarSetting(fmt::format("SetShadowAdjustments{}", i), values[i]);
 }
-void GameCommands::SetCharactersVisible(int32_t param0) {}
-void GameCommands::SetIrisTransition(int32_t param0) {}
-void GameCommands::SetCharacterScale(float param0) {}
-void GameCommands::SetGamblingOdds(float param0) {}
-void GameCommands::SetDriver(const std::string& param0) {}
-void GameCommands::SetHasDoors(int32_t param0) {}
-void GameCommands::SetShininess(float param0) {}
-void GameCommands::SetHighRoof(int32_t param0) {}
-void GameCommands::SetHighSpeedGasScale(float param0) {}
-void GameCommands::SetGasScaleSpeedThreshold(float param0) {}
-void GameCommands::SetAllowSeatSlide(int32_t param0) {}
+void GameCommands::SetCharactersVisible(int32_t param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetCharactersVisible", static_cast<float>(param0));
+}
+void GameCommands::SetIrisTransition(int32_t param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetIrisTransition", static_cast<float>(param0));
+}
+void GameCommands::SetCharacterScale(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetCharacterScale", param0);
+}
+void GameCommands::SetGamblingOdds(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetGamblingOdds", param0);
+}
+void GameCommands::SetDriver(const std::string& param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarDriver(param0);
+}
+void GameCommands::SetHasDoors(int32_t param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetHasDoors", static_cast<float>(param0));
+}
+void GameCommands::SetShininess(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetShininess", param0);
+}
+void GameCommands::SetHighRoof(int32_t param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetHighRoof", static_cast<float>(param0));
+}
+void GameCommands::SetHighSpeedGasScale(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetHighSpeedGasScale", param0);
+}
+void GameCommands::SetGasScaleSpeedThreshold(float param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetGasScaleSpeedThreshold", param0);
+}
+void GameCommands::SetAllowSeatSlide(int32_t param0)
+{
+	Game::GetInstance().GetScriptEngine().SetCarSetting("SetAllowSeatSlide", static_cast<float>(param0));
+}
 void GameCommands::ClearVehicleSelectInfo(const std::string& param0, const std::string& param1 /*= ""*/,
                                           const std::string& param2 /*= ""*/)
 {

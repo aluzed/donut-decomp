@@ -1,6 +1,6 @@
 # GAME-001b — Extraire GameCamera (orbite/suivi/freecam, ~Game.cpp:403-554)
 
-- **Status:** TODO
+- **Status:** DONE (2026-10-21)
 - **Priority:** P1
 - **Module:** Game
 - **Depends on:** —
@@ -24,8 +24,21 @@ shake (`Game.cpp:578-585`). Les membres `_smoothCamPos`/`_camYaw`/`_camPitch` (`
 4. Supprimer tous les membres `_cam*`, `_smoothCamPos`, `_shakeAmount`, `_camera` de `Game.h`
    (déplacés dans `GameCamera`) ; `Game` ne garde qu'un `std::unique_ptr<GameCamera>`.
 
+## Done (2026-10-21)
+
+`src/Game/GameCamera.{h,cpp}` owns the view (`FreeCamera`) and everything that moves it:
+the mouse's orbit on foot (`Orbit`, its pitch clamped), the follow behind the car driven
+(`FollowVehicle`), the orbit round the character (`OrbitCharacter`), the easing and its
+reset (`Snap`), a mission's camera move (`PlayMove`/`UpdateMove`), a conversation's shot
+(`FrameConversation`), the shake (`AddShake`/`ApplyShake`) and keeping the view this side
+of walls (`Unoccluded`, `Looking`). `Game` keeps one `std::unique_ptr<GameCamera>`; its
+`_camera`, `_camYaw`, `_camPitch`, `_smoothCamPos`, `_shakeAmount`, `_cameraMove`,
+`unoccludedCameraPosition` and `cameraLooking` are gone. The code moved as it was, its
+comments with it. Checked with `val.sh 240`: the same 32 missions, 101 camera moves and
+conversation shots played.
+
 ## Critères d'acceptation
-- [ ] Aucune variable `_cam*` (`_camYaw`/`_camPitch`/`_smoothCamPos`/`_camera`/`_shakeAmount`) ne reste dans `Game`.
-- [ ] Le comportement caméra est identique : orbite souris tierce-personne, suivi véhicule lissé, clamp pitch, shake.
-- [ ] L'overlay debug caméra (`Game.cpp:803-816`) lit toujours la position/orientation via `GameCamera`.
-- [ ] Le jeu compile et la caméra se comporte à l'identique.
+- [x] No `_cam*` variable (`_camYaw`/`_camPitch`/`_smoothCamPos`/`_camera`/`_shakeAmount`) left in `Game`.
+- [x] The camera behaves as before: mouse orbit, eased car follow, pitch clamp, shake.
+- [x] The debug overlay reads the camera through `GameCamera::View()`.
+- [x] The game builds and the camera behaves the same.
