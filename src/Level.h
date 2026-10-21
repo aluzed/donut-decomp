@@ -343,9 +343,13 @@ private:
 		Vector3 color;
 		Vector3 direction;
 	};
+	// The lights of the file being read, by name, and its groups' names: the
+	// names repeat from file to file (each interior has its own
+	// "Simpsons_sun_directionalShape3"), so a group is made of its own file's.
 	std::map<std::string, Light> _lights;
+	std::map<std::string, std::vector<std::string>> _fileLightGroups;
 	std::unique_ptr<P3D::SpatialTree> _spatialTree;
-	std::map<std::string, std::vector<std::string>> _lightGroups;
+	std::map<std::string, std::vector<Light>> _lightGroups;
 	// Those that stand as bodies, by body.
 	std::unordered_map<const btCollisionObject*, std::size_t> _breakingBodies;
 	// Breaks one: its breaking plays, its body goes; `hitter`, given its

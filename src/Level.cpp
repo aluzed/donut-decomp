@@ -763,7 +763,7 @@ void Level::LoadP3D(const std::string& filename)
 				light = stream.ReadLPString();
 				light = light.substr(0, light.find('\0'));
 			}
-			_lightGroups[name] = std::move(names);
+			_fileLightGroups[name] = std::move(names);
 			break;
 		}
 		case P3D::ChunkType::Locator2:
@@ -968,6 +968,20 @@ void Level::LoadP3D(const std::string& filename)
 	range.composites[1] = _compositeModels.size();
 	range.billboards[1] = _billboardBatches.size();
 	_drawRanges[filename] = range;
+
+	// The file's light groups, made of its own lights: level 1's Simpsons'
+	// house (l1i02) names one of its lights as the terrain's sun does, and,
+	// read after it, it lit the town's cars from below.
+	for (const auto& [group, names] : _fileLightGroups)
+	{
+		std::vector<Light>& lights = _lightGroups[group];
+		lights.clear();
+		for (const std::string& name : names)
+			if (const auto light = _lights.find(name); light != _lights.end())
+				lights.push_back(light->second);
+	}
+	_fileLightGroups.clear();
+	_lights.clear();
 
 	const auto entry = fileLocators.find("InteriorEntryStart");
 	if (entry != fileLocators.end())
@@ -1816,17 +1830,14 @@ void Level::ApplyLights(GL::ShaderProgram& shader) const
 	Vector3 ambient = Vector3::Zero;
 	int count = 0;
 	shader.Bind();
-	for (const std::string& name : group->second)
+	for (const Light& light : group->second)
 	{
-		const auto light = _lights.find(name);
-		if (light == _lights.end())
-			continue;
-		if (light->second.ambient)
-			ambient += light->second.color;
+		if (light.ambient)
+			ambient += light.color;
 		else if (count < 4)
 		{
-			shader.SetUniformValue(fmt::format("lightDirections[{}]", count).c_str(), light->second.direction);
-			shader.SetUniformValue(fmt::format("lightColors[{}]", count).c_str(), light->second.color);
+			shader.SetUniformValue(fmt::format("lightDirections[{}]", count).c_str(), light.direction);
+			shader.SetUniformValue(fmt::format("lightColors[{}]", count).c_str(), light.color);
 			++count;
 		}
 	}
@@ -1839,10 +1850,10 @@ bool Level::GetSunDirection(Vector3& direction) const
 	const auto group = _lightGroups.find("sun");
 	if (group == _lightGroups.end())
 		return false;
-	for (const std::string& name : group->second)
-		if (const auto light = _lights.find(name); light != _lights.end() && !light->second.ambient)
+	for (const Light& light : group->second)
+		if (!light.ambient)
 		{
-			direction = light->second.direction;
+			direction = light.direction;
 			return true;
 		}
 	return false;

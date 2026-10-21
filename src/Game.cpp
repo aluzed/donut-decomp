@@ -3982,9 +3982,7 @@ void Game::renderShadows()
 		return;
 	}
 	ShadowMap::Disable(world);
-	// The level's light is given towards the sun (up, on level 1: y +0.39); its
-	// light goes the other way.
-	_shadows->Begin(_inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : _character->GetPosition(), -sun);
+	_shadows->Begin(_inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : _character->GetPosition(), sun);
 	Matrix4x4 lightViewProj = _shadows->GetLightViewProj();
 	drawShadowCasters(lightViewProj);
 	_shadows->End();
