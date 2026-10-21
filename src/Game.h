@@ -545,7 +545,15 @@ private:
 		bool played = false;
 		bool inside = false;
 		double lastPlayed = -100.0;
+		// GagSetInterior: the building it is in, empty outdoors.
+		std::string interior;
+		// GagSetPersist: played once ("single"), it stays as it ended, on
+		// the level's next load too; and it does so now.
+		bool persists = false;
+		bool ended = false;
 	};
+	// Whether it is where the player is: its building, or outdoors.
+	bool gagHere(const Gag& gag) const;
 	std::vector<Gag> _gags;
 	// GagCheckMovie: the Aztec's box office (level 3), worked by hand, shows
 	// the Itchy & Scratchy Movie to who holds its ticket (all the cards

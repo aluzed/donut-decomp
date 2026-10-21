@@ -3185,6 +3185,10 @@ void Game::loadGags()
 		}
 		else if (command == "GagSetCoins" && !args.empty())
 			gag->coins = std::atoi(args[0].c_str());
+		else if (command == "GagSetInterior" && !args.empty())
+			gag->interior = args[0];
+		else if (command == "GagSetPersist" && !args.empty())
+			gag->persists = std::atoi(args[0].c_str()) != 0;
 		else if (command == "GagSetTrigger" && args.size() == 3)
 		{
 			// ("action", PickleTrig, 1.5): a locator of the level's.
@@ -3220,6 +3224,9 @@ void Game::loadGags()
 					gag->morph = VertexAnimation::FromFile(file);
 				}
 				gag->played = found.count(gagId(*gag)) > 0;
+				// GagSetPersist: one played once and left as it ended stands so
+				// when the level is loaded again.
+				gag->ended = gag->persists && gag->played && gag->cycle == "single";
 				_gags.push_back(*gag);
 			}
 			gag.reset();
@@ -3301,7 +3308,7 @@ void Game::drawGags(const Matrix4x4& viewProjection)
 	GL::ShaderProgram& worldShader = _level->GetWorldShader();
 	for (auto& gag : _gags)
 	{
-		if (!gag.drawable || (gag.placed - _camera->GetPosition()).Length() > 150.0f)
+		if (!gag.drawable || (gag.placed - _camera->GetPosition()).Length() > 150.0f || !gagHere(gag))
 			continue;
 		// A scene with characters in it is seen only while it plays: Grandpa
 		// walks in, says his piece and is gone.
@@ -3318,6 +3325,8 @@ void Game::drawGags(const Matrix4x4& viewProjection)
 			float frame = 0.0f;
 			if (gag.cycle == "cycle")
 				frame = static_cast<float>(_elapsedSeconds) * rate;
+			else if (gag.ended && gag.animStartedAt < 0.0)
+				frame = frames;
 			else if (gag.animStartedAt >= 0.0)
 			{
 				frame = static_cast<float>(_elapsedSeconds - gag.animStartedAt) * rate;
@@ -3355,7 +3364,7 @@ bool Game::useGag()
 		return false;
 	const Vector3 me = _character->GetPosition();
 	for (auto& gag : _gags)
-		if (gag.byHand && (gag.position - me).Length() < gag.radius + 1.0f)
+		if (gag.byHand && gagHere(gag) && (gag.position - me).Length() < gag.radius + 1.0f)
 		{
 			playGag(gag);
 			return true;
@@ -3512,6 +3521,21 @@ void Game::updateWheelSprays(double dt)
 	}
 }
 
+bool Game::gagHere(const Gag& gag) const
+{
+	// GagSetInterior: in that building only (the observatory's, Professor
+	// Frink's), outdoors none of them.
+	if (gag.interior.empty())
+		return _interior.empty();
+	if (gag.interior.size() != _interior.size())
+		return false;
+	for (std::size_t i = 0; i < _interior.size(); ++i)
+		if (std::tolower(static_cast<unsigned char>(gag.interior[i])) !=
+		    std::tolower(static_cast<unsigned char>(_interior[i])))
+			return false;
+	return true;
+}
+
 void Game::updateGags()
 {
 	if (!_character)
@@ -3519,7 +3543,7 @@ void Game::updateGags()
 	const Vector3 me = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : _character->GetPosition();
 	for (auto& gag : _gags)
 	{
-		if (gag.byHand)
+		if (gag.byHand || !gagHere(gag))
 			continue;
 		const bool inside = (gag.position - me).Length() < gag.radius;
 		// Once on the way in, and not again for a few seconds.

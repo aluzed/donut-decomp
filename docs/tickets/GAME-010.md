@@ -1,6 +1,6 @@
 # GAME-010 — Système de collectibles (pièces, 7 cartes, ~50 gags) avec état persistant
 
-- **Status:** PARTIAL (2026-10-18: coins, cards)
+- **Status:** DONE (2026-10-21)
 - **Priority:** P2
 - **Module:** Game
 - **Depends on:** REGR-001
@@ -136,3 +136,19 @@ the scene's pose animation and draws them with the characters' shader. Such a sc
 seen only while it plays. Gags with `GagSetRandom(1)` on one trigger take turns: one of
 them, picked at random, plays (the couch has six). Checked: Grandpa walks in, mouth open,
 then hand to his head, and is gone when his gag ends; the room is empty at rest.
+
+## Closed (2026-10-21)
+
+Every collectible is in and kept: coins (the purse, in the save; the ones the broken
+crates and vending machines spill, P3D-010), the seven cards a level (the save), the
+wrenches, the phone booths, the doorbells, the gags (their sound, coins, animated model
+and characters, their count, `donut_gags.dat`), the wasp cameras (GAME-WASP), the cars
+and outfits bought. The acceptance list above, written before, is met.
+
+Two more gag commands read: `GagSetInterior` (134 gags) puts a gag in its building --
+seen, walked into and worked only there, and the outdoor ones only outdoors (the
+names are the game's own: KwikEMart, SimpsonsHouse, moe1...); `GagSetPersist` (87): one
+played once and left as it ended stands so when the level is loaded again.
+
+The gag commands not read are SCRIPT-I's: `GagSetSparkle`, `GagSetAnimCollision`,
+`GagSetIntro`/`GagSetOutro`, `GagBinding(s)`, `GagCheckCollCards`.
