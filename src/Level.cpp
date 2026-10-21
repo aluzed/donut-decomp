@@ -81,17 +81,15 @@ public:
 		{
 			if (child->IsType(P3D::ChunkType::CompositeDrawable))
 				_drawables.push_back(P3D::CompositeDrawable::Load(*child));
-			// version, name, type ("PTRN" or "EFX\0"), frame offset, then the
-			// hierarchy and the animation by name.
+			// A pose animation's controller ("PTRN"; the others are visibility,
+			// effects...): the animation it plays, by name.
 			else if (child->IsType(P3D::ChunkType::FrameController))
 			{
-				const auto& data = child->GetData();
-				const std::string name = readLPString(data, 4);
-				const std::size_t typeAt = 4 + 1 + data[4];
-				if (typeAt + 8 >= data.size() || std::memcmp(data.data() + typeAt, "PTRN", 4) != 0)
+				const P3D::FrameController controller(*child);
+				if (controller.GetType() != "PTRN")
 					continue;
-				const std::size_t hierarchyAt = typeAt + 8;
-				const std::string animation = readLPString(data, hierarchyAt + 1 + data[hierarchyAt]);
+				std::string animation = controller.GetAnimationName();
+				animation.erase(std::min(animation.find('\0'), animation.size()));
 				if (const auto found = animations.find(animation); found != animations.end() && _animations.empty())
 					_animations.push_back(P3D::Animation::Load(*found->second));
 			}

@@ -2,6 +2,7 @@
 
 #include "Core/FileSystem.h"
 #include "Core/MemoryStream.h"
+#include "P3D/P3D.generated.h"
 #include "P3D/P3DChunk.h"
 #include "P3D/P3DFile.h"
 
@@ -25,25 +26,13 @@ std::unique_ptr<VertexAnimation> VertexAnimation::FromFile(const std::string& pa
 	auto animation = std::make_unique<VertexAnimation>();
 	for (const auto& chunk : file.GetRoot().GetChildren())
 	{
-		// VertexAnimKeyFrame: version, name; VectorOffsetList: version, count,
-		// param ("POS"), count offsets.
+		// A key frame: its name, and every vertex's offset ("POS").
 		if (chunk->IsType(P3D::ChunkType::VertexAnimKeyFrame))
 		{
-			MemoryStream header(chunk->GetData());
-			header.Read<uint32_t>();
-			const std::string name = readName(header);
-			for (const auto& child : chunk->GetChildren())
-				if (child->IsType(P3D::ChunkType::VectorOffsetList))
-				{
-					MemoryStream stream(child->GetData());
-					stream.Read<uint32_t>();
-					const uint32_t count = stream.Read<uint32_t>();
-					stream.ReadString(4);
-					auto& offsets = animation->keys[name];
-					offsets.resize(count);
-					for (auto& offset : offsets)
-						offset = stream.Read<Vector3>();
-				}
+			const P3D::VertexAnimKeyFrame key(*chunk);
+			const std::string& name = key.GetName();
+			if (key.GetOffsets())
+				animation->keys[name.substr(0, name.find('\0'))] = key.GetOffsets()->GetOffsets();
 		}
 		// The animation: version, name, type, frames, rate; per group an entity
 		// channel ("VRTX": version, param, key count, frames u16, names).

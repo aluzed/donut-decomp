@@ -135,7 +135,7 @@ enum class ChunkType : uint32_t
 	FrameController = 0x121200,
 	FrameController2 = 0x121201,
 	MultiController2 = 0x121202,
-	Todo1 = 0x121203,
+	MultiController2Track = 0x121203,
 	VectorOffsetList = 0x121301,
 	VertexAnimKeyFrame = 0x121304,
 	Fence = 0x3000000,

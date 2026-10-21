@@ -1771,6 +1771,106 @@ MultiControllerTracks::MultiControllerTracks(const P3DChunk& chunk)
 	}
 }
 
+FrameController::FrameController(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::FrameController));
+
+	MemoryStream stream(chunk.GetData());
+	_version = stream.Read<uint32_t>();
+	_name = stream.ReadLPString();
+	_type = stream.ReadString(4);
+	_frameOffset = stream.Read<float>();
+	_hierarchyName = stream.ReadLPString();
+	_animationName = stream.ReadLPString();
+}
+
+FrameController2::FrameController2(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::FrameController2));
+
+	MemoryStream stream(chunk.GetData());
+	_version = stream.Read<uint32_t>();
+	_name = stream.ReadLPString();
+	_type = stream.ReadString(4);
+	_cycleMode = stream.ReadString(4);
+	_frameOffset = stream.Read<float>();
+	_numCycles = stream.Read<uint32_t>();
+	_hierarchyName = stream.ReadLPString();
+	_animationName = stream.ReadLPString();
+}
+
+MultiController2::MultiController2(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::MultiController2));
+
+	MemoryStream stream(chunk.GetData());
+	_version = stream.Read<uint32_t>();
+	_name = stream.ReadLPString();
+	_cycleMode = stream.ReadString(4);
+	_frameOffset = stream.Read<float>();
+	_numCycles = stream.Read<uint32_t>();
+	_length = stream.Read<float>();
+	_frameRate = stream.Read<float>();
+	_numTracks = stream.Read<uint32_t>();
+
+	for (auto const& child : chunk.GetChildren())
+	{
+		switch (child->GetType())
+		{
+		case ChunkType::MultiController2Track:
+		{
+			_tracks.push_back(std::make_unique<MultiController2Track>(*child));
+			break;
+		}
+		default: break;
+		}
+	}
+}
+
+MultiController2Track::MultiController2Track(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::MultiController2Track));
+
+	MemoryStream stream(chunk.GetData());
+	_version = stream.Read<uint32_t>();
+	_name = stream.ReadLPString();
+	_type = stream.ReadString(4);
+}
+
+VertexAnimKeyFrame::VertexAnimKeyFrame(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::VertexAnimKeyFrame));
+
+	MemoryStream stream(chunk.GetData());
+	_version = stream.Read<uint32_t>();
+	_name = stream.ReadLPString();
+
+	for (auto const& child : chunk.GetChildren())
+	{
+		switch (child->GetType())
+		{
+		case ChunkType::VectorOffsetList:
+		{
+			_offsets = std::make_unique<VectorOffsetList>(*child);
+			break;
+		}
+		default: break;
+		}
+	}
+}
+
+VectorOffsetList::VectorOffsetList(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::VectorOffsetList));
+
+	MemoryStream stream(chunk.GetData());
+	_version = stream.Read<uint32_t>();
+	_numOffsets = stream.Read<uint32_t>();
+	_param = stream.ReadString(4);
+	_offsets.resize(_numOffsets);
+	stream.ReadBytes(reinterpret_cast<uint8_t*>(_offsets.data()), _offsets.size() * sizeof(Vector3));
+}
+
 CollisionObject::CollisionObject(const P3DChunk& chunk)
 {
 	assert(chunk.IsType(ChunkType::CollisionObject));

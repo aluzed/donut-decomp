@@ -336,7 +336,7 @@ std::ostream& operator<<(std::ostream& os, ChunkType chunktype)
 	case ChunkType::FrameController: return os << "FrameController";
 	case ChunkType::FrameController2: return os << "FrameController2";
 	case ChunkType::MultiController2: return os << "MultiController2";
-	case ChunkType::Todo1: return os << "Todo1";
+	case ChunkType::MultiController2Track: return os << "MultiController2Track";
 	case ChunkType::VectorOffsetList: return os << "VectorOffsetList";
 	case ChunkType::VertexAnimKeyFrame: return os << "VertexAnimKeyFrame";
 	case ChunkType::Fence: return os << "Fence";

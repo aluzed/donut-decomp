@@ -109,6 +109,12 @@ class TriggerVolume;
 class Camera;
 class MultiController;
 class MultiControllerTracks;
+class FrameController;
+class FrameController2;
+class MultiController2;
+class MultiController2Track;
+class VertexAnimKeyFrame;
+class VectorOffsetList;
 class CollisionObject;
 class CollisionVolume;
 class CollisionSphere;
@@ -1908,6 +1914,144 @@ private:
 	std::vector<float> _trackStartTimes;
 	std::vector<float> _trackEndTimes;
 	std::vector<float> _trackScales;
+};
+
+class FrameController
+{
+public:
+	FrameController(const P3DChunk&);
+
+	static std::unique_ptr<FrameController> Load(const P3DChunk& chunk) { return std::make_unique<FrameController>(chunk); }
+
+	const uint32_t& GetVersion() const { return _version; }
+	const std::string& GetName() const { return _name; }
+	const std::string& GetType() const { return _type; }
+	const float& GetFrameOffset() const { return _frameOffset; }
+	const std::string& GetHierarchyName() const { return _hierarchyName; }
+	const std::string& GetAnimationName() const { return _animationName; }
+
+private:
+	uint32_t _version;
+	std::string _name;
+	std::string _type;
+	float _frameOffset;
+	std::string _hierarchyName;
+	std::string _animationName;
+};
+
+class FrameController2
+{
+public:
+	FrameController2(const P3DChunk&);
+
+	static std::unique_ptr<FrameController2> Load(const P3DChunk& chunk) { return std::make_unique<FrameController2>(chunk); }
+
+	const uint32_t& GetVersion() const { return _version; }
+	const std::string& GetName() const { return _name; }
+	const std::string& GetType() const { return _type; }
+	const std::string& GetCycleMode() const { return _cycleMode; }
+	const float& GetFrameOffset() const { return _frameOffset; }
+	const uint32_t& GetNumCycles() const { return _numCycles; }
+	const std::string& GetHierarchyName() const { return _hierarchyName; }
+	const std::string& GetAnimationName() const { return _animationName; }
+
+private:
+	uint32_t _version;
+	std::string _name;
+	std::string _type;
+	std::string _cycleMode;
+	float _frameOffset;
+	uint32_t _numCycles;
+	std::string _hierarchyName;
+	std::string _animationName;
+};
+
+class MultiController2
+{
+public:
+	MultiController2(const P3DChunk&);
+
+	static std::unique_ptr<MultiController2> Load(const P3DChunk& chunk) { return std::make_unique<MultiController2>(chunk); }
+
+	const uint32_t& GetVersion() const { return _version; }
+	const std::string& GetName() const { return _name; }
+	const std::string& GetCycleMode() const { return _cycleMode; }
+	const float& GetFrameOffset() const { return _frameOffset; }
+	const uint32_t& GetNumCycles() const { return _numCycles; }
+	const float& GetLength() const { return _length; }
+	const float& GetFrameRate() const { return _frameRate; }
+	const uint32_t& GetNumTracks() const { return _numTracks; }
+	const std::vector<std::unique_ptr<MultiController2Track>>& GetTracks() const { return _tracks; }
+
+private:
+	uint32_t _version;
+	std::string _name;
+	std::string _cycleMode;
+	float _frameOffset;
+	uint32_t _numCycles;
+	float _length;
+	float _frameRate;
+	uint32_t _numTracks;
+	std::vector<std::unique_ptr<MultiController2Track>> _tracks;
+};
+
+class MultiController2Track
+{
+public:
+	MultiController2Track(const P3DChunk&);
+
+	static std::unique_ptr<MultiController2Track> Load(const P3DChunk& chunk)
+	{
+		return std::make_unique<MultiController2Track>(chunk);
+	}
+
+	const uint32_t& GetVersion() const { return _version; }
+	const std::string& GetName() const { return _name; }
+	const std::string& GetType() const { return _type; }
+
+private:
+	uint32_t _version;
+	std::string _name;
+	std::string _type;
+};
+
+class VertexAnimKeyFrame
+{
+public:
+	VertexAnimKeyFrame(const P3DChunk&);
+
+	static std::unique_ptr<VertexAnimKeyFrame> Load(const P3DChunk& chunk)
+	{
+		return std::make_unique<VertexAnimKeyFrame>(chunk);
+	}
+
+	const uint32_t& GetVersion() const { return _version; }
+	const std::string& GetName() const { return _name; }
+	const std::unique_ptr<VectorOffsetList>& GetOffsets() const { return _offsets; }
+
+private:
+	uint32_t _version;
+	std::string _name;
+	std::unique_ptr<VectorOffsetList> _offsets;
+};
+
+class VectorOffsetList
+{
+public:
+	VectorOffsetList(const P3DChunk&);
+
+	static std::unique_ptr<VectorOffsetList> Load(const P3DChunk& chunk) { return std::make_unique<VectorOffsetList>(chunk); }
+
+	const uint32_t& GetVersion() const { return _version; }
+	const uint32_t& GetNumOffsets() const { return _numOffsets; }
+	const std::string& GetParam() const { return _param; }
+	const std::vector<Vector3>& GetOffsets() const { return _offsets; }
+
+private:
+	uint32_t _version;
+	uint32_t _numOffsets;
+	std::string _param;
+	std::vector<Vector3> _offsets;
 };
 
 class CollisionObject

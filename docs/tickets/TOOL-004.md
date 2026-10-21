@@ -33,7 +33,7 @@ and missing 2 it did. Regenerating would have broken the build.
    drawables' skins and effects strip their names' padding; `PrimitiveGroup` has
    `GetUvChannelCount`; `<cstdint>`; comments.
 
-**`p3d.json` is the repository's classes, all and only them**, in their order: 113,
+**`p3d.json` is the repository's classes, all and only them**, in their order: 113 (119 since P3D-004 added the controllers),
 adding `CompositeDrawableSkin` and `CompositeDrawableEffect` and their lists' children,
 and `Vector1Channel`'s values as `float` (the generator wrote `sizeof(f32)`, which did
 not compile). The 25 other definitions (`Light*`, `Tree*`, `StaticPropData`, `Locator`,

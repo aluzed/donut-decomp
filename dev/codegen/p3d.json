@@ -642,6 +642,57 @@
     "trackScales": "buffer<float[numTracks]>"
   },
 
+  "FrameController": {
+    "version": "u32",
+    "name": "string",
+    "type": "string[4]",
+    "frameOffset": "float",
+    "hierarchyName": "string",
+    "animationName": "string"
+  },
+
+  "FrameController2": {
+    "version": "u32",
+    "name": "string",
+    "type": "string[4]",
+    "cycleMode": "string[4]",
+    "frameOffset": "float",
+    "numCycles": "u32",
+    "hierarchyName": "string",
+    "animationName": "string"
+  },
+
+  "MultiController2": {
+    "version": "u32",
+    "name": "string",
+    "cycleMode": "string[4]",
+    "frameOffset": "float",
+    "numCycles": "u32",
+    "length": "float",
+    "frameRate": "float",
+    "numTracks": "u32",
+    "tracks": "children MultiController2Track"
+  },
+
+  "MultiController2Track": {
+    "version": "u32",
+    "name": "string",
+    "type": "string[4]"
+  },
+
+  "VertexAnimKeyFrame": {
+    "version": "u32",
+    "name": "string",
+    "offsets": "child VectorOffsetList"
+  },
+
+  "VectorOffsetList": {
+    "version": "u32",
+    "numOffsets": "u32",
+    "param": "string[4]",
+    "offsets": "buffer<vec3[numOffsets]>"
+  },
+
   "CollisionObject": {
     "name": "string",
     "version": "u32",
