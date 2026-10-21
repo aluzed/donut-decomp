@@ -17,18 +17,19 @@
 | ⬜ TODO | Absent, commented out or an empty stub |
 | 🧩 EPIC | Too big: split into sub-tickets below (§ C) |
 
-## Where things stand (2026-10-18)
+## Where things stand (2026-10-21)
 
 Every level (1 to 7) loads from the game's own files, and the whole story plays through
 from level 1 to the end of level 7 under `--autopilot`, with no crash over runs of ~22
-minutes per level. What is missing is mostly **presentation** (animated props, the game's
-real menus, subtitles, particles, lighting) and **scale** (streaming, culling).
+minutes per level. Every ticket of this backlog is closed: what each did not do, and why, is in
+its ticket. The post-process effects the game never had (bloom, motion blur, grading,
+the sun's shadows) are there, off by default.
 
 | | § B tickets | § C epic sub-tickets |
 |---|---|---|
-| ✅ Done | 20 | 5 |
-| 🟡 Partial | 19 | 8 |
-| ⬜ To do | 25 | 10 |
+| ✅ Done | 65 | 23 |
+| 🟡 Partial | 0 | 0 |
+| ⬜ To do | 0 | 0 |
 
 Plus 19 closed earlier (§ A) and 4 epics (§ C).
 
