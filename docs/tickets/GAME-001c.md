@@ -1,6 +1,6 @@
 # GAME-001c — Extraire GameHud/GameUiRenderer (tout le dessin 2D HUD/menu/texte d'aide)
 
-- **Status:** TODO
+- **Status:** DONE (2026-10-21)
 - **Priority:** P1
 - **Module:** Game
 - **Depends on:** —
@@ -26,8 +26,19 @@ Tout le rendu 2D vit en ligne dans `Game::Run` : projection ortho + `SpriteBatch
 4. Laisser les fenêtres imgui de debug (`imguiMenuBar`/`debugAboutMenu`/`drawControlsWindow`,
    `Game.cpp:1245-1497`) hors scope ici (non-HUD jeu) ou les regrouper dans un module debug séparé.
 
+## Done (2026-10-21)
+
+The HUD itself had already left (`UI/Hud.*`, `UI/GameHud.*`). What `Game::Run` still drew is
+in `UI/ScreenText.{h,cpp}`: `DrawTextMenu` (the plain pause and main menus, laid out, hovered
+and drawn), `DrawMissionResult` (the mission complete and failed screens, from a
+`MissionResult` the game fills: its title in the game's words, the times, the reason and
+hint, the countdown), `DrawHints` (the hints down the side and the frame rate),
+`CentredTextX`, and `ControlLabel`. The result screen's lines, which stood at fixed offsets
+from the middle, are centred; its words are the language's (UI-LANG). `Game.cpp` lost 145
+lines. Checked: `val.sh 240` as before, the result screen in French on screen.
+
 ## Critères d'acceptation
-- [ ] Tout le dessin 2D HUD/menu/aide est sorti de `Game::Run` vers `GameHud`/`GameUiRenderer`.
-- [ ] `ControlLabel` n'est plus dans `Game.cpp` (déplacé avec le HUD).
-- [ ] HUD, menus Pause/MainMenu, écrans Result et texte d'aide s'affichent à l'identique (mêmes positions/couleurs).
-- [ ] Le jeu compile et reste runnable à l'identique.
+- [x] The 2D drawing of the HUD, menus, results and hints is out of `Game::Run`.
+- [x] `ControlLabel` is out of `Game.cpp` (`UI/ScreenText`).
+- [x] The HUD, pause and main menus, results and hints show as before (the results now centred).
+- [x] The game builds and runs as before.

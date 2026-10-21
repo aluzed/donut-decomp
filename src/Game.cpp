@@ -22,6 +22,7 @@
 #include "FreeCamera.h"
 #include "Game/GameCamera.h"
 #include "UI/GameText.h"
+#include "UI/ScreenText.h"
 #include <cctype>
 #include <fstream>
 #include "FrontendProject.h"
@@ -96,39 +97,6 @@ const std::string kBuildString = "DEBUG BUILD";
 #else
 const std::string kBuildString = "Release Build";
 #endif
-
-namespace
-{
-// Human label for the input bound to `action`, preferring a gamepad binding
-// when a pad is connected (so the HUD matches the device in use). Reads the
-// live keymap so it stays correct after in-game rebinding.
-// The 2D projection is MakeOrtho(0, w, h, 0), so text is positioned from its
-// top-left corner with y growing downward. Centre a label horizontally.
-float centredTextX(const Font* font, const std::string& text, float viewportWidth)
-{
-	const float width = font != nullptr ? font->MeasureWidth(text) : 0.0f;
-	return (viewportWidth - width) * 0.5f;
-}
-
-std::string ControlLabel(GameAction action, bool preferGamepad)
-{
-	const Keymap& km = Input::GetKeymap();
-	const auto& binds = BindingsFor(km, action);
-	const InputSource* chosen = nullptr;
-	for (const auto& src : binds)
-	{
-		const bool isPad = src.kind == InputSourceKind::GamepadButton || src.kind == InputSourceKind::GamepadAxis;
-		if (isPad == preferGamepad)
-		{
-			chosen = &src;
-			break;
-		}
-	}
-	if (!chosen && !binds.empty())
-		chosen = &binds.front();
-	return chosen ? KeymapConfig::HumanLabel(*chosen) : "—";
-}
-} // namespace
 
 namespace
 {
@@ -5467,15 +5435,7 @@ void Game::Run()
 				{
 					_gameHud->Draw(hud, proj, deltaTime);
 					_hud->DrawCallouts(sprites, font, hud);
-					float hintY = viewportHeight * 0.32f;
-					for (const auto& hint : hud.hints)
-					{
-						sprites.DrawText(font, hint, Vector2(12.0f, hintY), hud.hintColour);
-						hintY += font != nullptr ? font->GetHeight() + 4.0f : 20.0f;
-					}
-					if (hud.fps > 0)
-						sprites.DrawText(font, fmt::format("{} fps", hud.fps),
-						                 Vector2(viewportWidth * 0.5f - 40.0f, 4.0f), Vector4(1.0f, 0.84f, 0.0f, 1.0f));
+					DrawHints(sprites, font, hud.hints, hud.hintColour, hud.fps, viewportWidth, viewportHeight);
 				}
 				else
 					_hud->Draw(sprites, font, hud);
@@ -5496,29 +5456,9 @@ void Game::Run()
 			}
 			if (_gameState == GameState::Paused)
 			{
-				const float pauseLineHeight = font != nullptr ? font->GetHeight() : 16.0f;
-				const float pauseSpacing = pauseLineHeight + 14.0f;
-				const float pauseTop = viewportHeight / 2.0f - 40.0f;
-
-				const std::string& paused = GameText("pause", _language);
-				sprites.DrawText(font, paused,
-					Vector2(centredTextX(font, paused, viewportWidth), pauseTop - pauseSpacing * 1.5f),
-					Vector4(1.0f, 1.0f, 0.0f, 1.0f));
-
-				for (size_t i = 0; i < _pauseMenu->GetButtons().size(); ++i)
-				{
-					const auto& btn = _pauseMenu->GetButtons()[i];
-					const float bw = font != nullptr ? font->MeasureWidth(btn.label) : btn.width;
-					_pauseMenu->SetButtonRect(i, centredTextX(font, btn.label, viewportWidth),
-					                          pauseTop + i * pauseSpacing, bw, pauseLineHeight);
-				}
-				_pauseMenu->Update(intent.mouseX, intent.mouseY);
-				for (const auto& btn : _pauseMenu->GetButtons())
-				{
-					Vector4 col = btn.hovered ? Vector4(1.0f, 0.3f, 0.3f, 1.0f)
-					                         : Vector4(0.5f, 0.5f, 0.5f, 1.0f);
-					sprites.DrawText(font, btn.label, Vector2(btn.x, btn.y), col);
-				}
+				DrawTextMenu(sprites, font, *_pauseMenu, GameText("pause", _language), Vector4(1.0f, 1.0f, 0.0f, 1.0f),
+				             Vector4(0.5f, 0.5f, 0.5f, 1.0f), Vector4(1.0f, 0.3f, 0.3f, 1.0f), viewportWidth,
+				             viewportHeight, intent.mouseX, intent.mouseY);
 				if (intent.uiClick)
 					_pauseMenu->CheckClick(intent.mouseX, intent.mouseY);
 				sprites.Flush(proj);
@@ -5526,71 +5466,26 @@ void Game::Run()
 				continue;
 			}
 
-			if (_gameState == GameState::MissionComplete)
+			if (_gameState == GameState::MissionComplete || _gameState == GameState::MissionFailed)
 			{
-				if (_scriptEngine->IsNewRecord())
-				{
-					sprites.DrawText(font, GameText("result.record", _language),
-						Vector2((viewportWidth / 2.0f) - 60, viewportHeight / 2.0f - 70),
-						Vector4(1.0f, 0.84f, 0.0f, 1.0f));
-				}
-
+				MissionResult result;
+				result.complete = _gameState == GameState::MissionComplete;
+				result.language = _language;
 				// In the game's words, when the phrase table is there.
-				const std::string& complete = _textBible.Get("MISSION_COMPLETE");
-				sprites.DrawText(font, complete.empty() ? GameText("result.complete", _language) : complete,
-					Vector2((viewportWidth / 2.0f) - 100, viewportHeight / 2.0f - 50),
-					Vector4(1.0f, 0.84f, 0.0f, 1.0f));
-				// The level's last story mission: the level is won too.
-				if (_storyIndex >= 0 && _storyIndex + 1 == static_cast<int>(_story.size()))
+				const std::string& term = _textBible.Get(result.complete ? "MISSION_COMPLETE" : "MISSION_FAILED");
+				result.title = !term.empty() ? term : GameText(result.complete ? "result.complete" : "result.failed", _language);
+				result.newRecord = _scriptEngine->IsNewRecord();
+				if (result.complete && _storyIndex >= 0 && _storyIndex + 1 == static_cast<int>(_story.size()))
 				{
 					const std::string& level = _textBible.Get("LEVEL_COMPLETE");
-					const std::string text = level.empty() ? GameText("result.level", _language) : level;
-					sprites.DrawText(font, text, Vector2(centredTextX(font, text, viewportWidth), viewportHeight / 2.0f - 90),
-					                 Vector4(1.0f, 0.5f, 0.1f, 1.0f));
+					result.levelComplete = level.empty() ? GameText("result.level", _language) : level;
 				}
-
-				const float elapsed = _scriptEngine->GetMissionTime();
-				std::string stats = fmt::format(fmt::runtime(GameText("result.time", _language)), elapsed);
-				sprites.DrawText(font, stats,
-					Vector2((viewportWidth / 2.0f) - 50, viewportHeight / 2.0f - 10),
-					Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-
-				float best = _scriptEngine->GetBestTime();
-				if (best < 999.0f)
-				{
-					std::string bestText = fmt::format(fmt::runtime(GameText("result.best", _language)), best);
-					sprites.DrawText(font, bestText,
-						Vector2((viewportWidth / 2.0f) - 40, viewportHeight / 2.0f + 10),
-						elapsed <= best ? Vector4(1.0f, 0.84f, 0.0f, 1.0f) : Vector4(0.5f, 0.5f, 0.5f, 1.0f));
-				}
-
-				int nextIn = 5 - static_cast<int>(_missionCompleteTimer);
-				std::string nextText = fmt::format(fmt::runtime(GameText("result.next", _language)), nextIn);
-				sprites.DrawText(font, nextText,
-					Vector2((viewportWidth / 2.0f) - 60, viewportHeight / 2.0f + 40),
-					Vector4(0.6f, 0.6f, 0.6f, 1.0f));
-			}
-
-			if (_gameState == GameState::MissionFailed)
-			{
-				const std::string& term = _textBible.Get("MISSION_FAILED");
-				const std::string failed = term.empty() ? GameText("result.failed", _language) : term;
-				sprites.DrawText(font, failed, Vector2(centredTextX(font, failed, viewportWidth), viewportHeight / 2.0f - 20),
-					Vector4(1.0f, 0.2f, 0.2f, 1.0f));
-				// Why, and the game's advice for it.
-				const std::string reason = _scriptEngine->GetFailureReason();
-				if (!reason.empty())
-					sprites.DrawText(font, reason, Vector2(centredTextX(font, reason, viewportWidth), viewportHeight / 2.0f + 10),
-					                 Vector4(1.0f, 0.6f, 0.6f, 1.0f));
-				const std::string hint = _scriptEngine->GetFailureHint();
-				if (!hint.empty())
-					sprites.DrawText(font, hint, Vector2(centredTextX(font, hint, viewportWidth), viewportHeight / 2.0f + 40),
-					                 Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-				int nextIn = 5 - static_cast<int>(_missionCompleteTimer);
-				std::string nextText = fmt::format(fmt::runtime(GameText("result.retry", _language)), nextIn);
-				sprites.DrawText(font, nextText,
-					Vector2((viewportWidth / 2.0f) - 60, viewportHeight / 2.0f + 70),
-					Vector4(0.6f, 0.6f, 0.6f, 1.0f));
+				result.elapsed = _scriptEngine->GetMissionTime();
+				result.best = _scriptEngine->GetBestTime();
+				result.reason = _scriptEngine->GetFailureReason();
+				result.hint = _scriptEngine->GetFailureHint();
+				result.nextIn = 5 - static_cast<int>(_missionCompleteTimer);
+				DrawMissionResult(sprites, font, result, viewportWidth, viewportHeight);
 			}
 		}
 
@@ -5629,30 +5524,9 @@ void Game::Run()
 		{
 			auto font = _resourceManager->GetFont("boulder_16");
 			SpriteBatch menuSprites;
-			const float menuLineHeight = font != nullptr ? font->GetHeight() : 16.0f;
-			const float menuSpacing = menuLineHeight + 14.0f;
-			const float menuTop = viewportHeight / 2.0f - 40.0f;
-
-			menuSprites.DrawText(font, "donut",
-				Vector2(centredTextX(font, "donut", viewportWidth), menuTop - menuSpacing * 1.5f),
-				Vector4(1.0f, 0.84f, 0.0f, 1.0f));
-
-			// lay out first, then hit-test: hover and click must use the rects the
-			// labels are actually drawn at, not the placeholder passed to AddButton
-			for (size_t i = 0; i < _mainMenu->GetButtons().size(); ++i)
-			{
-				const auto& btn = _mainMenu->GetButtons()[i];
-				const float bw = font != nullptr ? font->MeasureWidth(btn.label) : btn.width;
-				_mainMenu->SetButtonRect(i, centredTextX(font, btn.label, viewportWidth),
-				                         menuTop + i * menuSpacing, bw, menuLineHeight);
-			}
-			_mainMenu->Update(intent.mouseX, intent.mouseY);
-			for (const auto& btn : _mainMenu->GetButtons())
-			{
-				Vector4 col = btn.hovered ? Vector4(1.0f, 0.84f, 0.0f, 1.0f)
-				                         : Vector4(0.8f, 0.8f, 0.8f, 1.0f);
-				menuSprites.DrawText(font, btn.label, Vector2(btn.x, btn.y), col);
-			}
+			DrawTextMenu(menuSprites, font, *_mainMenu, "donut", Vector4(1.0f, 0.84f, 0.0f, 1.0f),
+			             Vector4(0.8f, 0.8f, 0.8f, 1.0f), Vector4(1.0f, 0.84f, 0.0f, 1.0f), viewportWidth, viewportHeight,
+			             intent.mouseX, intent.mouseY);
 			if (intent.mouseLeftClick)
 				_mainMenu->CheckClick(intent.mouseX, intent.mouseY);
 			menuSprites.Flush(proj);
