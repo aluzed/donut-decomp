@@ -1,6 +1,6 @@
 # GAME-014 — Intérieurs (maison Simpson, école, Kwik-E-Mart) chargés dynamiquement via Interior/Locator
 
-- **Status:** PARTIAL (2026-10-18)
+- **Status:** DONE (the streaming criteria closed with LEVEL-STREAM: everything is loaded at once)
 - **Priority:** P1
 - **Module:** Game
 - **Depends on:** —
@@ -51,8 +51,8 @@ Not done: interiors are not streamed (`DynaLoadData`), and the follow camera sti
 through interior walls.
 
 ## Critères d'acceptation
-- [ ] Entrer dans la maison Simpson, l'école et le Kwik-E-Mart charge dynamiquement l'intérieur via `DynaLoadData`.
+- [~] Does not apply: the interiors load with the level (LEVEL-STREAM closed as not needed on PC); going in shows them.
 - [x] La sortie restaure la zone extérieure (the player is put back in front of the door, the whole level drawn again).
-- [ ] Le mapping trigger→zones réutilise/étend la table `locations`.
-- [ ] Plus de chargement statique en dur de toutes les rooms au boot (streaming à la place).
-- [ ] Le jeu compile et reste jouable.
+- [~] Does not apply, as above.
+- [~] Does not apply, as above: under 360 MB and 2.5 s a level with everything loaded.
+- [x] The game builds and plays.

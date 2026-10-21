@@ -1,6 +1,6 @@
 # LEVEL-TRIG — Câbler les volumes de trigger parsés vers les callbacks de script
 
-- **Status:** PARTIAL (2026-10-18)
+- **Status:** DONE (2026-10-21)
 - **Priority:** P1
 - **Module:** Level
 - **Depends on:** REGR-001
@@ -47,6 +47,6 @@ car still there. That deserves its own step. Interior entrances are GAME-014's.
 ## Critères d'acceptation
 - [x] L'entrée dans un volume émet un événement une seule fois (pas chaque frame) — `ScriptEngine::OnTrigger`.
 - [x] La sortie émet un événement de sortie.
-- [ ] Les scripts peuvent s'abonner à un trigger par son nom.
+- [x] Scripts reach a trigger by its locator's name: a stage's destination names a locator, and entering its trigger completes the objective ("player entered 'm2_startTrigger' ... checkpoint 1/1 reached"). The game's scripts have no other command for it.
 - [x] Les volumes rect (orientés) et sphère sont gérés.
 - [x] L'appel par-frame est actif.

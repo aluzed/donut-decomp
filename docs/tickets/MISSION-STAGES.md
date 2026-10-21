@@ -1,6 +1,6 @@
 # MISSION-STAGES — Missions are sequences of stages
 
-- **Status:** PARTIAL (2026-10-18)
+- **Status:** DONE (every criterion met; see the backlog)
 - **Priority:** P1
 - **Module:** Scripting
 - **Depends on:** MISSION-LOOP, SCRIPT-D

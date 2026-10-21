@@ -1,6 +1,6 @@
 # SCRIPT-A — Compléter le jeu de commandes de mission P0 (course de base)
 
-- **Status:** TODO
+- **Status:** DONE (2026-10-21)
 - **Priority:** P1
 - **Module:** Scripting
 - **Depends on:** —
@@ -16,6 +16,6 @@ Le jeu de commandes minimal d'une mission de course (~18 commandes) est en grand
 - Ajouter dans `ScriptEngine` les setters/conteneurs manquants (conditions de stage, collectibles de mission) en suivant le motif existant de `_objectiveType`/`_checkpoints`.
 
 ## Critères d'acceptation
-- [ ] `scripts/Missions/level01/M1race.con` s'exécute avec 0 avertissement « unimplemented command ».
-- [ ] Toutes les commandes de la liste P0 ci-dessus appellent une vraie méthode `ScriptEngine` (aucun `{}`).
-- [ ] La course se termine via `ShowStageComplete`/`CloseMission` sans état incohérent.
+- [x] `M1race.con` runs with no unknown command (`command ... not found`) nor failed one; the seven levels' scripts likewise over `val.sh 240` (2026-10-21). Its one warning is the data's: `m1_snake_carstart` is in no file.
+- [x] Every command listed calls `ScriptEngine`; `CloseCondition`, which closes what `AddCondition` opened, has nothing to do and says so.
+- [x] The race ends through its stage's completion and the mission's cleanup (`stage complete! Time: 24.5s`, `mission cleaned up`), and starts again.

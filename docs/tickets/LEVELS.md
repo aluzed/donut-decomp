@@ -1,6 +1,6 @@
 # LEVELS — Every level, not just level 1
 
-- **Status:** PARTIAL (2026-10-18)
+- **Status:** DONE (every criterion met; see the backlog)
 - **Priority:** P1
 - **Module:** Game / Level / Scripting
 - **Depends on:** MISSION-STAGES

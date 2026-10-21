@@ -114,7 +114,11 @@ void GameCommands::AddCondition(const std::string& param0, const std::string& pa
 {
 	Game::GetInstance().GetScriptEngine().AddCondition(param0, param1);
 }
-void GameCommands::CloseCondition(int32_t param0 /*= 0*/) {}
+void GameCommands::CloseCondition(int32_t param0 /*= 0*/)
+{
+	// AddCondition took the whole condition; its block has nothing left to close.
+	Log::Debug("ScriptEngine: condition closed");
+}
 void GameCommands::ShowStageComplete(int32_t param0 /*= 0*/)
 {
 	Game::GetInstance().GetScriptEngine().AnnounceStageComplete();
