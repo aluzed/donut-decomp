@@ -26,6 +26,11 @@ struct QuadInstance
 	Vector2 uv1;
 	Vector2 uv2;
 	Vector2 uv3;
+	// A quad of no axis ("NOAX": the hospital's EMERGENCY, signs, windows'
+	// glows) stands as it is, turned by its display rotation; the others turn
+	// to the camera.
+	Quaternion rotation;
+	float fixed;
 };
 
 static std::array<Vector2, 4> quadVertices = {
@@ -36,6 +41,16 @@ static std::array<Vector2, 4> quadVertices = {
 };
 
 static std::array<uint32_t, 6> indices = {0, 1, 2, 2, 3, 0};
+
+// Its display rotation, stored w first, (w, x, y, z), and read into the
+// struct in that order; none, no turn.
+static Quaternion displayRotation(const P3D::BillboardQuad& quad)
+{
+	if (!quad.GetDisplayInfo())
+		return Quaternion::Identity;
+	const Quaternion& stored = quad.GetDisplayInfo()->GetRotation();
+	return Quaternion(stored.Y, stored.Z, stored.W, stored.X).Normal();
+}
 
 BillboardBatch::BillboardBatch(const P3D::BillboardQuadGroup& billboardQuadGroup)
 {
@@ -59,6 +74,8 @@ BillboardBatch::BillboardBatch(const P3D::BillboardQuadGroup& billboardQuadGroup
 		    billboardQuad->GetUv1(),
 		    billboardQuad->GetUv2(),
 		    billboardQuad->GetUv3(),
+		    displayRotation(*billboardQuad),
+		    billboardQuad->GetMode().rfind("NOAX", 0) == 0 ? 1.0f : 0.0f,
 		});
 	}
 
@@ -76,10 +93,12 @@ BillboardBatch::BillboardBatch(const P3D::BillboardQuadGroup& billboardQuadGroup
 	    GL::ArrayElement(_instanceBuffer.get(), 5, 2, GL::AE_FLOAT, instanceStride, 11 * sizeof(float), 1),
 	    GL::ArrayElement(_instanceBuffer.get(), 6, 2, GL::AE_FLOAT, instanceStride, 13 * sizeof(float), 1),
 	    GL::ArrayElement(_instanceBuffer.get(), 7, 2, GL::AE_FLOAT, instanceStride, 15 * sizeof(float), 1),
+	    GL::ArrayElement(_instanceBuffer.get(), 9, 4, GL::AE_FLOAT, instanceStride, offsetof(QuadInstance, rotation), 1),
+	    GL::ArrayElement(_instanceBuffer.get(), 10, 1, GL::AE_FLOAT, instanceStride, offsetof(QuadInstance, fixed), 1),
 	};
 
 	_vertexBinding = std::make_shared<GL::VertexBinding>();
-	_vertexBinding->Create(vertexLayout, 8, *_indexBuffer, GL::ElementType::AE_UINT);
+	_vertexBinding->Create(vertexLayout, 10, *_indexBuffer, GL::ElementType::AE_UINT);
 
 	_shader = billboardQuadGroup.GetShader();
 	_zTest = billboardQuadGroup.GetZTest() == 1;
