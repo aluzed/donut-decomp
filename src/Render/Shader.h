@@ -81,6 +81,13 @@ public:
 
 	BlendMode GetBlendMode() const { return _blendMode; }
 
+	// When it was loaded (ResourceManager's load index), and whether its
+	// texture has been found for it.
+	uint64_t GetLoadIndex() const { return _loadIndex; }
+	void SetLoadIndex(uint64_t index) { _loadIndex = index; }
+	bool IsTextureResolved() const { return _textureResolved; }
+	void SetTextureResolved() { _textureResolved = true; }
+
 protected:
 	std::string _name;
 	std::string _textureName;
@@ -103,6 +110,8 @@ protected:
 	Vector3 _ambient = Vector3(1.0f, 1.0f, 1.0f);
 	Vector3 _diffuse = Vector3(1.0f, 1.0f, 1.0f);
 	Vector3 _emissive = Vector3::Zero;
+	uint64_t _loadIndex = 0;
+	bool _textureResolved = false;
 	std::string _envTextureName;
 	const Texture* _envTexture = nullptr;
 	Vector3 _envColor = Vector3::Zero;

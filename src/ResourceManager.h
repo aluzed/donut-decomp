@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -46,6 +47,14 @@ public:
 	void ImGuiDebugWindow(bool* p_open) const;
 
 	Shader* GetShader(const std::string& name) const;
+	// The shader of that name loaded nearest to `near` (a load index): the one
+	// of the same file as what asks for it. The same names come back from
+	// file to file -- the living room's "treeshadow_m" and its texture are
+	// white, the levels' dark -- and the one loaded last took every file's
+	// place.
+	Shader* GetShader(const std::string& name, uint64_t near) const;
+	// How many textures and shaders have been loaded: where a file's are.
+	uint64_t GetLoadIndex() const { return _loadIndex; }
 	// Without the warning GetShader gives for a missing one.
 	bool HasShader(const std::string& name) const { return _shaders.count(name) > 0; }
 	Texture* GetTexture(const std::string& name) const;
@@ -73,6 +82,14 @@ protected:
 	std::vector<std::unique_ptr<Texture>> _retiredTextures;
 	std::vector<std::unique_ptr<Shader>> _retiredShaders;
 	std::vector<std::unique_ptr<Mesh>> _retiredGeometries;
+	// Every texture and shader loaded under each name, in load order, with
+	// its load index; and the next index.
+	std::unordered_map<std::string, std::vector<std::pair<uint64_t, Texture*>>> _textureLoads;
+	std::unordered_map<std::string, std::vector<std::pair<uint64_t, Shader*>>> _shaderLoads;
+	uint64_t _loadIndex = 0;
+	void addTexture(const std::string& name, std::unique_ptr<Texture> texture);
+	// A shader's texture, once: the one of its name loaded nearest to it.
+	void resolveTexture(Shader& shader) const;
 };
 
 } // namespace Donut

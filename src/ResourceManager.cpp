@@ -1,12 +1,13 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
-#include <set>
 #include <P3D/P3D.generated.h>
 #include <Render/Font.h>
 #include <Render/Mesh.h>
 #include <Render/Shader.h>
 #include <Render/Texture.h>
 #include <ResourceManager.h>
+#include <algorithm>
+#include <set>
 
 #include "Render/OpenGL/glad/glad.h"
 #include "Render/imgui/imgui.h"
@@ -30,7 +31,7 @@ void ResourceManager::LoadTexture(const P3D::Texture& texture)
 		_retiredTextures.push_back(std::move(old->second));
 	}
 
-	_textures[texture.GetName()] = std::make_unique<Texture>(texture);
+	addTexture(texture.GetName(), std::make_unique<Texture>(texture));
 }
 
 void ResourceManager::LoadTexture(const P3D::Sprite& sprite)
@@ -41,7 +42,7 @@ void ResourceManager::LoadTexture(const P3D::Sprite& sprite)
 		_retiredTextures.push_back(std::move(old->second));
 	}
 
-	_textures[sprite.GetName()] = std::make_unique<Texture>(sprite);
+	addTexture(sprite.GetName(), std::make_unique<Texture>(sprite));
 }
 
 void ResourceManager::LoadShader(const P3D::Shader& shader)
@@ -52,7 +53,10 @@ void ResourceManager::LoadShader(const P3D::Shader& shader)
 		_retiredShaders.push_back(std::move(old->second));
 	}
 
-	_shaders[shader.GetName()] = std::make_unique<Shader>(shader);
+	auto loaded = std::make_unique<Shader>(shader);
+	loaded->SetLoadIndex(_loadIndex);
+	_shaderLoads[shader.GetName()].emplace_back(_loadIndex++, loaded.get());
+	_shaders[shader.GetName()] = std::move(loaded);
 }
 
 void ResourceManager::LoadSet(const P3D::Set& set)
@@ -65,7 +69,7 @@ void ResourceManager::LoadSet(const P3D::Set& set)
 
 	std::srand((uint32_t)std::time(0));
 	int idx = std::rand() % set.GetTextures().size();
-	_textures[set.GetName()] = std::make_unique<Texture>(*set.GetTextures().at(idx));
+	addTexture(set.GetName(), std::make_unique<Texture>(*set.GetTextures().at(idx)));
 }
 
 void ResourceManager::LoadGeometry(const P3D::Geometry& geo)
@@ -83,7 +87,42 @@ void ResourceManager::AddTexture(const std::string& name, std::unique_ptr<Textur
 {
 	if (const auto old = _textures.find(name); old != _textures.end())
 		_retiredTextures.push_back(std::move(old->second));
+	addTexture(name, std::move(texture));
+}
+
+void ResourceManager::addTexture(const std::string& name, std::unique_ptr<Texture> texture)
+{
+	_textureLoads[name].emplace_back(_loadIndex++, texture.get());
 	_textures[name] = std::move(texture);
+}
+
+void ResourceManager::resolveTexture(Shader& shader) const
+{
+	if (shader.IsTextureResolved())
+		return;
+	const auto loads = _textureLoads.find(shader.GetDiffuseTextureName());
+	if (loads == _textureLoads.end() || loads->second.empty())
+	{
+		// Not loaded yet, perhaps: another texture meanwhile, and another look
+		// next time.
+		static std::set<std::string> warned;
+		if (warned.insert(shader.GetDiffuseTextureName()).second)
+			Log::Warn("could not find texture {}", shader.GetDiffuseTextureName());
+		if (!_textures.empty())
+			shader.SetDiffuseTexture(_textures.begin()->second.get()); // todo: set an error texture
+		return;
+	}
+	shader.SetTextureResolved();
+	const auto nearest = std::min_element(loads->second.begin(), loads->second.end(),
+	                                      [&](const auto& a, const auto& b)
+	                                      {
+		                                      const auto distance = [&](uint64_t index) {
+			                                      return index > shader.GetLoadIndex() ? index - shader.GetLoadIndex()
+			                                                                           : shader.GetLoadIndex() - index;
+		                                      };
+		                                      return distance(a.first) < distance(b.first);
+	                                      });
+	shader.SetDiffuseTexture(nearest->second);
 }
 
 void ResourceManager::AddFont(const std::string& name, std::unique_ptr<Font> font)
@@ -142,7 +181,10 @@ bool ResourceManager::ShowTextureAs(const std::string& textureName, const std::s
 		return false;
 	for (auto& [name, shader] : _shaders)
 		if (shader->GetDiffuseTextureName() == textureName)
+		{
 			shader->SetDiffuseTexture(texture->second.get());
+			shader->SetTextureResolved();
+		}
 	return true;
 }
 
@@ -153,6 +195,7 @@ bool ResourceManager::ShowShaderTexture(const std::string& shader, const std::st
 	if (foundShader == _shaders.end() || foundTexture == _textures.end())
 		return false;
 	foundShader->second->SetDiffuseTexture(foundTexture->second.get());
+	foundShader->second->SetTextureResolved();
 	return true;
 }
 
@@ -171,22 +214,33 @@ Shader* ResourceManager::GetShader(const std::string& name) const
 	}
 
 	auto const& shader = _shaders.at(name);
-
-	// todo: check if a texture is set/valid before setting texture again
-	const std::string texName = shader->GetDiffuseTextureName();
-	if (_textures.find(texName) != _textures.end())
-		shader->SetDiffuseTexture(_textures.at(texName).get());
-	else
-	{
-		Log::Warn("could not find texture {1} for shader {0}", name, texName);
-		shader->SetDiffuseTexture(_textures.begin()->second.get()); // todo: set an error texture
-	}
+	resolveTexture(*shader);
 
 	if (!shader->GetEnvTextureName().empty() && !shader->GetEnvTexture())
 		if (const auto env = _textures.find(shader->GetEnvTextureName()); env != _textures.end())
 			shader->SetEnvTexture(env->second.get());
 
 	return shader.get();
+}
+
+Shader* ResourceManager::GetShader(const std::string& name, uint64_t near) const
+{
+	const auto loads = _shaderLoads.find(name);
+	if (loads == _shaderLoads.end() || loads->second.empty())
+		return GetShader(name);
+	const auto nearest =
+	    std::min_element(loads->second.begin(), loads->second.end(),
+	                     [&](const auto& a, const auto& b)
+	                     {
+		                     const auto distance = [&](uint64_t index) { return index > near ? index - near : near - index; };
+		                     return distance(a.first) < distance(b.first);
+	                     });
+	Shader* shader = nearest->second;
+	resolveTexture(*shader);
+	if (!shader->GetEnvTextureName().empty() && !shader->GetEnvTexture())
+		if (const auto env = _textures.find(shader->GetEnvTextureName()); env != _textures.end())
+			shader->SetEnvTexture(env->second.get());
+	return shader;
 }
 
 Texture* ResourceManager::GetTexture(const std::string& name) const

@@ -61,6 +61,9 @@ protected:
 	virtual void DrawPrimGroup(const PrimGroup& primGroup);
 
 	std::string _name;
+	// The resources' load index when it was made: its shaders are those of
+	// its own file (ResourceManager::GetShader).
+	uint64_t _loadIndex = 0;
 	std::vector<PrimGroup> _primGroups;
 	// Kept for OffsetGroup: every vertex as built, and where each group's start.
 	std::vector<Vertex> _vertices;

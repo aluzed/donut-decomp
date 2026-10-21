@@ -13,7 +13,8 @@
 namespace Donut
 {
 
-Mesh::Mesh(const P3D::Geometry& geometry): _name(geometry.GetName())
+Mesh::Mesh(const P3D::Geometry& geometry)
+    : _name(geometry.GetName()), _loadIndex(Game::GetInstance().GetResourceManager().GetLoadIndex())
 {
 	CreateMeshBuffers(geometry);
 }
@@ -122,7 +123,7 @@ void Mesh::Draw(GL::ShaderProgram& shader, bool opaque)
 	for (auto& prim : _primGroups)
 	{
 		if (prim.cacheShader == nullptr)
-			prim.cacheShader = Game::GetInstance().GetResourceManager().GetShader(prim.shaderName);
+			prim.cacheShader = Game::GetInstance().GetResourceManager().GetShader(prim.shaderName, _loadIndex);
 		// A shader no file loaded (some of level 4's and 6's): the group is
 		// left undrawn rather than drawn through a null shader.
 		if (prim.cacheShader == nullptr)
