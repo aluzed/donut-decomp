@@ -71,6 +71,7 @@ Found so far; addresses are `Simpsons.exe`'s unless named.
 | Movies (`.rmv`) | `radMoviePlayerBink` (`0x5f70f8`), `IRadMoviePlayer2`, `BinkCallback`; logos played by `0x42f740` | Bink files under a radcore wrapper; `0x60f3d8`-`0x60f4ac` list them |
 | Rendering | `RenderManager`, `RenderLayer`, `WorldRenderLayer` (`0x60be24`), `FrontEndRenderLayer`; Pure3D's `tView` (`0x5f87e4`), `tPointCamera` (`0x5f8984`), `tLight` (`0x5f87fc`) | The render manager (`0x4a80a0`) gives each layer its views and cameras |
 | Reverb | `ReverbController` (`Win32ReverbController`), vtables `0x60a050`, `0x609b68`; constructor `0x4ce020`, event handler `0x4ce140` (undisassembled: `DisasmRange.java`) | The event (a place's event locator) picks one of the sound scripts' `reverbSettings`: see [AUDIO-008](tickets/AUDIO-008.md) |
+| Blending | `pddidx8r.dll`: the blend table at `0x1005d600` (16 bytes a mode: on, operation, source and destination through the factor table at `0x1005d680`), applied by `0x1000d090` | A shader's BLMD indexes it: 0 none, 1 alpha, 2 add (one, one), 3 reverse subtract (one, one), 4-6 modulate (destination colour times zero, source colour, source alpha), 7 reverse subtract (source alpha twice). `Render/Shader.cpp`'s `ApplyBlendMode` |
 | Fog | `tView` draw `0x572810`; `pddidx8r.dll` `EnableFog` `0x10005ce0` (context vtable +0x148), `SetFog` `0x10005d10` (+0x150) | Never on: see [LEVEL-FOG](tickets/LEVEL-FOG.md) |
 
 ## Notes for reading the decompiled C
