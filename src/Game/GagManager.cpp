@@ -27,12 +27,15 @@ void GagManager::Load(const std::string& levelDirectory, const Level& level, con
 	_levelDirectory = levelDirectory;
 	_gags.clear();
 	_movieGags.clear();
+	_cardGags.clear();
 	_primed = false;
 	std::ifstream script(fmt::format("scripts/{}/level.mfk", levelDirectory));
 	if (!script)
 		return;
 	std::optional<Gag> gag;
 	std::string checkMovie, refusal;
+	// GagCheckCollCards(char1, char2, accept, terms, refusal).
+	std::vector<std::string> checkCards;
 	int unplaced = 0;
 	for (std::string line; std::getline(script, line);)
 	{
@@ -85,6 +88,10 @@ void GagManager::Load(const std::string& levelDirectory, const Level& level, con
 			checkMovie = args[2];
 			refusal = args[3];
 		}
+		else if (command == "GagCheckCollCards" && args.size() >= 5)
+			checkCards = args;
+		else if (command == "GagSetSparkle" && !args.empty())
+			gag->sparkle = std::atoi(args[0].c_str()) != 0;
 		else if (command == "GagSetCoins" && !args.empty())
 			gag->coins = std::atoi(args[0].c_str());
 		else if (command == "GagSetInterior" && !args.empty())
@@ -113,8 +120,12 @@ void GagManager::Load(const std::string& levelDirectory, const Level& level, con
 		{
 			if (gag->sound.empty() && !checkMovie.empty() && gag->position != Vector3::Zero)
 				_movieGags.push_back({gag->position, gag->radius, checkMovie, refusal});
+			if (gag->sound.empty() && !checkCards.empty() && gag->position != Vector3::Zero)
+				_cardGags.push_back(
+				    {gag->position, gag->radius, gag->interior, checkCards[2], checkCards[3], checkCards[4], gag->sparkle});
 			checkMovie.clear();
 			refusal.clear();
+			checkCards.clear();
 			if (!gag->sound.empty())
 			{
 				// A model of its own: an animated one is posed gag by gag.
@@ -134,8 +145,9 @@ void GagManager::Load(const std::string& levelDirectory, const Level& level, con
 			gag.reset();
 		}
 	}
-	Log::Info("Game: {} gag(s) in the level, {} found before, {} whose trigger locator is not loaded", _gags.size(), GetFound(),
-	          unplaced);
+	Log::Info("Game: {} gag(s) in the level, {} found before, {} whose trigger locator is not loaded; {} with a movie, "
+	          "{} card trade(s)",
+	          _gags.size(), GetFound(), unplaced, _movieGags.size(), _cardGags.size());
 }
 
 std::string GagManager::Id(const Gag& gag) const
@@ -215,6 +227,36 @@ const GagManager::MovieGag* GagManager::FindMovieGag(const Vector3& player) cons
 		if ((gag.position - player).Length() < gag.radius + 1.0f)
 			return &gag;
 	return nullptr;
+}
+
+const GagManager::CardGag* GagManager::FindCardGag(const Vector3& player, const std::string& interior) const
+{
+	for (const auto& gag : _cardGags)
+	{
+		Gag place;
+		place.interior = gag.interior;
+		if (IsHere(place, interior) && (gag.position - player).Length() < gag.radius + 1.0f)
+			return &gag;
+	}
+	return nullptr;
+}
+
+std::vector<Vector3> GagManager::GetSparkles(const Vector3& player, const std::string& interior, float range,
+                                             bool cardsTraded) const
+{
+	std::vector<Vector3> sparkles;
+	for (const auto& gag : _gags)
+		if (gag.sparkle && !gag.played && IsHere(gag, interior) && (gag.position - player).Length() < range)
+			sparkles.push_back(gag.position);
+	if (!cardsTraded)
+		for (const auto& gag : _cardGags)
+		{
+			Gag place;
+			place.interior = gag.interior;
+			if (gag.sparkle && IsHere(place, interior) && (gag.position - player).Length() < range)
+				sparkles.push_back(gag.position);
+		}
+	return sparkles;
 }
 
 void GagManager::Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& skinShader, const Matrix4x4& viewProjection,

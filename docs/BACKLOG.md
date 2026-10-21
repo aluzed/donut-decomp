@@ -217,7 +217,7 @@ car, rewards), not through the commands.
 | SCRIPT-F | ✅ | Hit & Run: decay and chase cars read from `leveli.mfk`, `DisableHitAndRun`, `SetHitNRun`; the rest in no script (2026-10-21) |
 | SCRIPT-G | ✅ | Traffic and pedestrians: `SetMaxTraffic` caps the cars, `UsePedGroup` picks the level script's pedestrian group (2026-10-21) |
 | SCRIPT-H | ✅ | UI: `SetPresentationBitmap` shown; `SetFadeOut` and `SetIrisWipe` close the screen at a stage's end, `ShowHUD` hides the HUD. The car swaps behind the fades are stubs |
-| SCRIPT-I | 🟡 | Buying, dialogue, bonus missions, FMV done; `GagCheckCollCards`, `GagSetSparkle`, `GagSetAnimCollision`, `GagSetIntro`/`Outro`, `GagBinding(s)` not |
+| SCRIPT-I | ✅ | Buying, dialogue, bonus missions, FMV; conversation positions, closing conversations, gambling payouts, the card trade for the movie ticket, glinting gags (2026-10-21). Not: the givers' walks, a gag's moving collision |
 
 ### C.3 — RENDER-008: LOD and culling
 

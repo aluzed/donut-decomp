@@ -2218,6 +2218,12 @@ bool Game::SpendCoins(int amount)
 	return true;
 }
 
+void Game::AddCoins(int amount)
+{
+	_coins += amount;
+	saveCoins();
+}
+
 void Game::saveCoins() const
 {
 	// Coins an unattended run walks into were not earned either.
@@ -2543,12 +2549,52 @@ bool Game::useGag()
 		useMovieGag(*gag);
 		return true;
 	}
+	if (const GagManager::CardGag* gag = _gags.FindCardGag(me, _interior))
+	{
+		useCardGag(*gag);
+		return true;
+	}
 	return false;
+}
+
+void Game::useCardGag(const GagManager::CardGag& gag)
+{
+	if (_save.Entries("ticket").count("itchy") > 0)
+		return;
+	// Every card of every level: the ticket is the player's.
+	if (_save.Entries("card").size() >= 49)
+	{
+		playConversation(gag.accept);
+		if (!_autopilot)
+		{
+			_save.Add("ticket", "itchy");
+			_save.Save();
+		}
+		Log::Info("Game: the cards traded for the Itchy & Scratchy Movie ticket");
+		return;
+	}
+	// His terms the first time, then a sneer.
+	playConversation(_cardTermsHeard ? gag.refusal : gag.terms);
+	_cardTermsHeard = true;
+}
+
+bool Game::playConversation(const std::string& name)
+{
+	std::vector<std::pair<int, std::string>> lines;
+	for (const auto& sound : _audioManager->FindSounds("\\c_" + name + "_"))
+	{
+		const std::size_t at = sound.find("\\c_" + name + "_") + 4 + name.size();
+		lines.emplace_back(std::atoi(sound.c_str() + at), sound);
+	}
+	std::sort(lines.begin(), lines.end());
+	for (const auto& [n, sound] : lines) _audioManager->QueueDialogue(sound, AudioManager::DialoguePriority::Gameplay);
+	return !lines.empty();
 }
 
 void Game::useMovieGag(const GagManager::MovieGag& gag)
 {
-	if (_save.Entries("card").size() >= 49 && PlayStoryMovie(gag.movie, false))
+	// The ticket is Comic Book Guy's, for a whole set of cards (useCardGag).
+	if (_save.Entries("ticket").count("itchy") > 0 && PlayStoryMovie(gag.movie, false))
 		return;
 	// One of the refusals (c_aztec1 to c_aztec4), its lines in turn.
 	std::map<std::string, std::vector<std::pair<int, std::string>>> refusals;
@@ -2695,6 +2741,13 @@ void Game::updateGags()
 		return;
 	const Vector3 me = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : _character->GetPosition();
 	_gags.Update(me, _interior, _elapsedSeconds, [this](GagManager::Gag& gag) { playGag(gag); });
+	// The gags not yet found glint now and then.
+	if (_sparks && _elapsedSeconds - _sparkledAt > 0.6)
+	{
+		_sparkledAt = _elapsedSeconds;
+		for (const Vector3& at : _gags.GetSparkles(me, _interior, 40.0f, _save.Entries("ticket").count("itchy") > 0))
+			_sparks->Burst(2, at + Vector3(0.0f, 0.8f, 0.0f));
+	}
 }
 
 std::vector<Game::Reward> Game::rewards(const std::string& kind) const
@@ -2887,6 +2940,18 @@ void Game::SetPlayerPosition(const Vector3& pos)
 		_character->SetCentre(pos);
 		Log::Info("Game: player teleported to ({:.1f}, {:.1f}, {:.1f})", pos.X, pos.Y, pos.Z);
 	}
+}
+
+void Game::PlacePlayerOnFoot(const Vector3& pos, bool faces, const Vector3& lookAt)
+{
+	_inVehicle = false;
+	_activeVehicle = nullptr;
+	_boarding = {};
+	SetPlayerPosition(pos);
+	// A character model faces -Z, hence the half turn.
+	if (faces && _character)
+		_character->SetRotation(
+		    Quaternion::MakeFromEuler(Vector3(0.0f, std::atan2(lookAt.X - pos.X, lookAt.Z - pos.Z) + 3.14159265f, 0.0f)));
 }
 
 Vector3 Game::GetPlayerPosition() const

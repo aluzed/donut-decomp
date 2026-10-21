@@ -66,6 +66,8 @@ public:
 		// the level's next load too; and it does so now.
 		bool persists = false;
 		bool ended = false;
+		// GagSetSparkle: it glints until it is found.
+		bool sparkle = false;
 	};
 	// GagCheckMovie: the Aztec's box office (level 3), worked by hand, shows
 	// the Itchy & Scratchy Movie to who holds its ticket (all the cards
@@ -76,6 +78,17 @@ public:
 		Vector3 position;
 		float radius = 1.0f;
 		std::string movie, refusal;
+	};
+	// GagCheckCollCards: Comic Book Guy's Itchy & Scratchy Movie ticket (level
+	// 3), worked by hand: traded for a whole set of collector cards. The
+	// conversations of the trade, of its terms, of a refusal.
+	struct CardGag
+	{
+		Vector3 position;
+		float radius = 1.0f;
+		std::string interior;
+		std::string accept, terms, refusal;
+		bool sparkle = false;
 	};
 
 	// Reads scripts/<levelDirectory>/level.mfk's gags, their triggers at
@@ -97,6 +110,10 @@ public:
 	// The gag worked by hand within reach of `player`, or none.
 	Gag* FindByHand(const Vector3& player, const std::string& interior);
 	const MovieGag* FindMovieGag(const Vector3& player) const;
+	const CardGag* FindCardGag(const Vector3& player, const std::string& interior) const;
+	// Where the glinting gags not yet found are, within `range` of `player`;
+	// the card trade's too while `cardsTraded` is false.
+	std::vector<Vector3> GetSparkles(const Vector3& player, const std::string& interior, float range, bool cardsTraded) const;
 
 	void Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& skinShader, const Matrix4x4& viewProjection,
 	          const Vector3& camera, const std::string& interior, double now);
@@ -105,6 +122,7 @@ private:
 	std::string _levelDirectory;
 	std::vector<Gag> _gags;
 	std::vector<MovieGag> _movieGags;
+	std::vector<CardGag> _cardGags;
 	// False until the first look after loading: a gag the player starts the
 	// level standing in is not walked into.
 	bool _primed = false;

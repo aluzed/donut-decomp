@@ -275,7 +275,10 @@ void GameCommands::UseElapsedTime(int32_t param0 /*= 0*/)
 {
 	Game::GetInstance().GetScriptEngine().UseElapsedTime();
 }
-void GameCommands::SetRaceEnteryFee(int32_t param0) {}
+void GameCommands::SetRaceEnteryFee(int32_t param0)
+{
+	Game::GetInstance().GetScriptEngine().SetRaceFee(param0);
+}
 void GameCommands::SetParTime(int32_t param0)
 {
 	Game::GetInstance().GetScriptEngine().SetParTime(static_cast<float>(param0));
@@ -310,7 +313,10 @@ void GameCommands::AddAmbientPcAnimation(const std::string& param0, const std::s
 void GameCommands::SetCoinDrawable(const std::string& param0) {}
 void GameCommands::AmbientAnimationRandomize(int32_t param0, int32_t param1) {}
 void GameCommands::TurnGotoDialogOff(int32_t param0 /*= 0*/) {}
-void GameCommands::SetCompletionDialog(const std::string& param0, const std::string& param1 /*= ""*/) {}
+void GameCommands::SetCompletionDialog(const std::string& param0, const std::string& param1 /*= ""*/)
+{
+	Game::GetInstance().GetScriptEngine().SetCompletionDialog(param0);
+}
 void GameCommands::SetMissionResetPlayerOutCar(const std::string& param0, const std::string& param1)
 {
 	Game::GetInstance().GetScriptEngine().SetMissionResetPlayerOutCar(param0, param1);
@@ -327,6 +333,7 @@ void GameCommands::SetInitialWalk(const std::string& param0) {}
 void GameCommands::SetDialoguePositions(const std::string& param0, const std::string& param1, const std::string& param2,
                                         int32_t param3 /*= 0*/)
 {
+	Game::GetInstance().GetScriptEngine().SetDialoguePositions(param0, param1, param2);
 }
 void GameCommands::ActivateVehicle(const std::string& param0, const std::string& param1, const std::string& param2)
 {

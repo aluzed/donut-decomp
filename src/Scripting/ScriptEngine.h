@@ -114,6 +114,15 @@ public:
 	{
 		_dialogueCharacters = {first, second};
 	}
+	// SetDialoguePositions: where the player, the one they talk to and the
+	// player's car are put as the stage's conversation starts (locators).
+	void SetDialoguePositions(const std::string& player, const std::string& other, const std::string& car)
+	{
+		_dialoguePositions = {player, other, car};
+	}
+	// SetCompletionDialog: the conversation heard as the stage is completed
+	// ("nuisance": c_nuisance_<n>_noboxconv_..., over the driving).
+	void SetCompletionDialog(const std::string& conversation) { _completionDialog = conversation; }
 
 	// The conversation's shots: SetConversationCam(line, "pc_far") in a stage,
 	// or in the level script for a mission's (a third argument, "sr1"), and the
@@ -259,6 +268,9 @@ public:
 	void SetParTime(float seconds);
 	// A "coins" objective's entry fee.
 	void SetCoinFee(int coins);
+	// A gambling race's payout (SetRaceEnteryFee), times the odds of the car
+	// the player races in (its SetGamblingOdds), paid when it is won.
+	void SetRaceFee(int coins) { _raceFee = coins; }
 	// Whether a finished mission may set a best time. --autopilot turns it off:
 	// teleporting through a mission in seconds is not a record.
 	void SetRecordsEnabled(bool enabled) { _recordsEnabled = enabled; }
@@ -441,6 +453,16 @@ private:
 	bool _clockCountsUp = false;
 	float _parTime = 0.0f;
 	int _coinFee = 0;
+	int _raceFee = 0;
+	struct DialoguePositions
+	{
+		std::string player, other, car;
+	};
+	DialoguePositions _dialoguePositions;
+	std::string _completionDialog;
+	// The stage's conversation positions applied: the player, the other one,
+	// the car moved to theirs.
+	void placeForDialogue();
 	bool _recordsEnabled = true;
 	int _stageMessage = -1;
 	// Time since the mission's first stage began, for its completion time. The
@@ -522,8 +544,8 @@ private:
 	bool _conversationQueued = false;
 	bool _hitAndRunOff = false;
 	bool _hitNRunNow = false;
-	// The lines of `_conversation` for this mission, in order.
-	std::vector<std::string> conversationLines() const;
+	// The lines of conversation `name` for this mission, in order.
+	std::vector<std::string> conversationLines(const std::string& name) const;
 	// The player has had the car being followed within the follow distance.
 	bool _followInRange = false;
 	std::map<const Vehicle*, std::string> _vehicleDrivers;

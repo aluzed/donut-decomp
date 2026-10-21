@@ -100,6 +100,9 @@ public:
 
 	void LockMouse(bool lockMouse);
 	void SetPlayerPosition(const Vector3& pos);
+	// Out of any car, at `pos`, facing `lookAt` when `faces`: a conversation's
+	// mark.
+	void PlacePlayerOnFoot(const Vector3& pos, bool faces, const Vector3& lookAt);
 	Vector3 GetPlayerPosition() const;
 	// The vehicle the player is currently driving, or nullptr on foot. Lets the
 	// AI skip a car the player has taken over instead of fighting it for control.
@@ -136,6 +139,7 @@ public:
 	SaveGame& GetSave() { return _save; }
 	// Takes `amount` from the purse; false, taking nothing, if it holds less.
 	bool SpendCoins(int amount);
+	void AddCoins(int amount);
 	bool IsAutopilot() const { return _autopilot; }
 	// The player's character says one of their recorded lines of a kind
 	// ("d_bcrash", a big crash; "w_card", a card found...), now and then.
@@ -586,6 +590,14 @@ private:
 	void updateGags();
 	void saveGags() const;
 	void useMovieGag(const GagManager::MovieGag& gag);
+	void useCardGag(const GagManager::CardGag& gag);
+	// A conversation's lines heard in turn ("rewardintro": c_rewardintro_<n>_...);
+	// false when it has none.
+	bool playConversation(const std::string& name);
+	// Whether the card trade's terms were heard, this session.
+	bool _cardTermsHeard = false;
+	// When the gags last glinted.
+	double _sparkledAt = 0.0;
 	// When the running mission was loaded, for its title card.
 	double _missionLoadedAt = 0.0;
 	// The game's phrase table, in the language --language picks (E by default).

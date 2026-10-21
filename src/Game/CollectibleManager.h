@@ -10,7 +10,7 @@ namespace Donut
 
 class Level;
 class LineRenderer;
-class Matrix4x4;
+struct Matrix4x4;
 class Mesh;
 namespace GL
 {

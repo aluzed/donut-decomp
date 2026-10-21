@@ -35,6 +35,7 @@ void ScriptEngine::SelectMission(const std::string& id)
 
 	_missionActive = true;
 	_missionId = id;
+	_raceFee = 0;
 	_startCamera = _animatedCamera = {};
 	_hudShown = true;
 
@@ -221,6 +222,8 @@ void ScriptEngine::beginStage(std::size_t index)
 	_parTime = 0.0f;
 	_stageMessage = -1;
 	_coinFee = 0;
+	_dialoguePositions = {};
+	_completionDialog.clear();
 	_stageTransition = Transition::None;
 	_stageTransitionSeconds = 0.0f;
 	_hudIcon.clear();
@@ -249,6 +252,14 @@ void ScriptEngine::objectiveComplete()
 	{
 		_game.GetAudioManager().PlayRaw(SoundGenerator::Chirp(500, 900, 0.25f), 22050, 1, 16);
 		++_stagesAnnounced;
+	}
+
+	// Its closing words, heard over what comes next.
+	if (!_completionDialog.empty())
+	{
+		const auto lines = conversationLines(_completionDialog);
+		for (const auto& line : lines) _game.GetAudioManager().QueueDialogue(line, AudioManager::DialoguePriority::Gameplay);
+		Log::Info("ScriptEngine: completion conversation '{}', {} lines", _completionDialog, lines.size());
 	}
 
 	// Closed first, if the stage says so; the next stage once it is.
@@ -326,7 +337,8 @@ void ScriptEngine::updateObjective(double dt)
 		{
 			_conversationQueued = true;
 			_conversationLineBase = audio.GetDialogueLinesStarted();
-			const auto lines = conversationLines();
+			placeForDialogue();
+			const auto lines = conversationLines(_conversation);
 			for (const auto& line : lines)
 				audio.QueueDialogue(line, AudioManager::DialoguePriority::Gameplay);
 			Log::Info("ScriptEngine: conversation '{}', {} lines", _conversation, lines.size());
@@ -1920,11 +1932,41 @@ bool ScriptEngine::GetRacePosition(int& position, int& field) const
 	return true;
 }
 
-std::vector<std::string> ScriptEngine::conversationLines() const
+void ScriptEngine::placeForDialogue()
+{
+	const Level& level = _game.GetLevel();
+	const DialoguePositions& at = _dialoguePositions;
+	// The car out of the way, where the next stage wants it.
+	if (_playerCar && !at.car.empty() && level.HasLocator(at.car))
+	{
+		float heading = 0.0f;
+		const bool faces = level.GetLocatorHeading(at.car, heading);
+		_playerCar->Teleport(level.GetLocatorPosition(at.car),
+		                     faces ? Quaternion(Vector3(0.0f, 1.0f, 0.0f), heading) : _playerCar->GetRotation());
+	}
+	// The other one of the two speakers, on their mark.
+	const std::string& player = _game.GetPlayerCharacterName();
+	const std::string& other = _dialogueCharacters.first == player ? _dialogueCharacters.second : _dialogueCharacters.first;
+	const bool otherPlaced = !at.other.empty() && level.HasLocator(at.other);
+	const Vector3 otherPosition = otherPlaced ? level.GetLocatorPosition(at.other) : Vector3::Zero;
+	if (otherPlaced && !other.empty())
+	{
+		_npcPositions[other] = otherPosition;
+		_game.PlaceNpc(other, otherPosition);
+	}
+	// The player on foot on theirs, facing them.
+	if (!at.player.empty() && level.HasLocator(at.player))
+	{
+		_game.PlacePlayerOnFoot(level.GetLocatorPosition(at.player), otherPlaced, otherPosition);
+		Log::Info("ScriptEngine: conversation positions '{}', '{}', car at '{}'", at.player, at.other, at.car);
+	}
+}
+
+std::vector<std::string> ScriptEngine::conversationLines(const std::string& name) const
 {
 	// "conversations\c_<name>_<n>_<kind>_<speaker>_l<level><mission>.rsd": a story
 	// mission mN is "mN", a bonus mission bmN "bN", a street race srN "rN".
-	if (_conversation.empty())
+	if (name.empty())
 		return {};
 	std::string mission = _missionId;
 	if (mission.rfind("bm", 0) == 0)
@@ -1937,15 +1979,16 @@ std::vector<std::string> ScriptEngine::conversationLines() const
 	const std::string tail = fmt::format("_l{}{}.rsd", _game.GetLevelNumber(), mission);
 	const std::string levelTail = fmt::format("_l{}", _game.GetLevelNumber());
 	std::vector<std::pair<int, std::string>> numbered, levelWide;
-	for (const auto& name : _game.GetAudioManager().FindSounds("\\c_" + _conversation + "_"))
+	for (const auto& file : _game.GetAudioManager().FindSounds("\\c_" + name + "_"))
 	{
-		const std::size_t at = name.find("\\c_" + _conversation + "_") + 4 + _conversation.size();
-		const std::pair<int, std::string> line {std::atoi(name.c_str() + at), name};
-		if (name.size() >= tail.size() && name.compare(name.size() - tail.size(), tail.size(), tail) == 0)
+		const std::size_t at = file.find("\\c_" + name + "_") + 4 + name.size();
+		const std::pair<int, std::string> line {std::atoi(file.c_str() + at), file};
+		if (file.size() >= tail.size() && file.compare(file.size() - tail.size(), tail.size(), tail) == 0)
 			numbered.push_back(line);
-		else if (const std::size_t last = name.rfind('_'); last != std::string::npos &&
-		         name.compare(last, levelTail.size(), levelTail) == 0 &&
-		         (last + levelTail.size() == name.size() - 4 || !std::isdigit(static_cast<unsigned char>(name[last + levelTail.size()]))))
+		else if (const std::size_t last = file.rfind('_');
+		         last != std::string::npos && file.compare(last, levelTail.size(), levelTail) == 0 &&
+		         (last + levelTail.size() == file.size() - 4 ||
+		          !std::isdigit(static_cast<unsigned char>(file[last + levelTail.size()]))))
 			levelWide.push_back(line);
 	}
 	if (numbered.empty())
@@ -2197,6 +2240,16 @@ void ScriptEngine::missionComplete()
 		times[bestTimeKey()] = _bestTime;
 		saveBestTimes(times);
 		_game.GetAudioManager().PlayRaw(SoundGenerator::Chirp(600, 1200, 0.5f), 22050, 1, 16);
+	}
+
+	// A gambling race won pays its fee times the odds of the car raced in.
+	if (_raceFee > 0)
+	{
+		const Vehicle* car = _game.GetPlayerVehicle();
+		const float odds = car ? car->GetSetting("SetGamblingOdds", 1.0f) : 1.0f;
+		const int payout = static_cast<int>(std::lround(static_cast<float>(_raceFee) * odds));
+		_game.AddCoins(payout);
+		Log::Info("ScriptEngine: gambling race won, {} coins ({} at {:.1f} to 1)", payout, _raceFee, odds);
 	}
 
 	// A bonus mission or street race won is kept: the scrapbook counts them.
