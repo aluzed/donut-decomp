@@ -25,7 +25,16 @@
 #include "Scripting/ScriptEngine.h"
 #include "UI/GameHud.h"
 #include "Window.h"
+#include <algorithm>
+#include <cctype>
+#include <cmath>
+#include <cstdlib>
 #include <fstream>
+#include <map>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <vector>
 
 namespace Donut
 {

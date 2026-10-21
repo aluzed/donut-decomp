@@ -11,6 +11,9 @@
 
 #include "Core/Log.h"
 
+#include <algorithm>
+#include <string>
+
 namespace Donut
 {
 

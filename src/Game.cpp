@@ -695,18 +695,18 @@ void Game::bindWorkedObjects()
 		// What it works, and a switch's lever ("switch1": z6switch1), thrown as
 		// it is used: each near it (names repeat about the level: Wiggum's
 		// doorbell has a switch4 too), and not worked by another trigger.
-		const auto near = [&](const std::string& name) {
+		const auto nearTrigger = [&](const std::string& name) {
 			Vector3 at;
 			return !name.empty() && _level->GetAnimatedObjectPosition(name, at) && (at - trigger.position).Length() < 60.0f &&
 			       std::none_of(_workedObjects.begin(), _workedObjects.end(),
 			                    [&](const WorkedObject& w) { return w.object == name || w.lever == name; });
 		};
 		WorkedObject worked {i, action, _level->FindAnimatedObject(trigger.locator, trigger.actionTarget), {}};
-		if (!near(worked.object))
+		if (!nearTrigger(worked.object))
 			worked.object.clear();
 		if (action == "ToggleOnOff" || action == "PlayAnim")
 			worked.lever = _level->FindAnimatedObjectEnding(trigger.actionTarget, worked.object, trigger.position);
-		if (!near(worked.lever))
+		if (!nearTrigger(worked.lever))
 			worked.lever.clear();
 		if (worked.object.empty() && worked.lever.empty())
 			continue;
