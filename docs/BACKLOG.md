@@ -117,7 +117,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | RENDER-011 | ✅ | P2 | WorldSphere billboards (lens flare, sun halo) | Drawn with the billboard program, not the world's: the sun's warm halo, the sky's clouds (2026-10-19). Its lens flare (2026-10-21): the sun's glares on their skeleton's joints, seen as the camera looks within their range of the sun, dimmed as much as the sun is hidden (an occlusion query, read a frame later) |
 | RENDER-014 | ✅ | P2 | Multi-UV (channel 1 = lightmap) | Closed (2026-10-21): no UV list in the data has a second channel (19866 lists in 655 files, all channel 0); the channel is asked for, not caught |
 | RENDER-015 | ✅ | P2 | Lightmaps, static lighting | Closed (2026-10-21): the PC data has none: no second UV channel, no shader with a second texture (`TEX` 14053, `REFL` 157); the world is lit by its vertex colours |
-| RENDER-008 | 🧩 | P2 | LOD and spatial culling | § C.3 |
+| RENDER-008 | ✅ | P2 | LOD and spatial culling | § C.3: frustum culling done; the level's kd-tree tried and measured slower than the linear test (900 entities, 30-40 µs a frame), not kept; the game has no LOD (2026-10-21) |
 | RENDER-009 | 🧩 | P3 | Post-process | § C.4 |
 | RENDER-013 | ✅ | — | Shader cache | |
 | RENDER-CAR | ✅ | — | Cars drawn whole, with the world shader; follow cameras out of the scenery | |
@@ -222,8 +222,8 @@ car, rewards), not through the commands.
 | Sub-ticket | Status | Subject |
 |---|---|---|
 | RENDER-008a | ✅ | Frustum culling per drawable bounding box |
-| RENDER-008b | ⬜ | Spatial tree from the `Tree` chunks (after P3D-007) |
-| RENDER-008c | ⬜ | LOD by distance |
+| RENDER-008b | ✅ | Spatial tree from the `Tree` chunks: tried, slower than the linear test, not kept (2026-10-21) |
+| RENDER-008c | ✅ | LOD by distance: closed, the game has no LOD (2026-10-21) |
 
 ### C.4 — RENDER-009: post-process
 
@@ -246,8 +246,9 @@ car, rewards), not through the commands.
 3. **Gameplay left**: one save slot (GAME-011, done).
 4. **World look**: lights (P3D-002), lightmaps (RENDER-014/015), fog (LEVEL-FOG),
    sun halo (RENDER-011).
-5. **Scale**: the spatial tree (RENDER-008b; the frustum culling is done). LEVEL-STREAM
-   was closed: under 360 MB and 2.5 s a level with everything loaded.
+5. **Scale**: nothing left. The spatial tree (RENDER-008b) was slower than the linear
+   frustum test at 900 entities a level; LEVEL-STREAM was closed: under 360 MB and 2.5 s
+   a level with everything loaded.
 6. **Debt** (in parallel): GAME-001b..e, CI and tests (TOOL-007/010).
 
 ---

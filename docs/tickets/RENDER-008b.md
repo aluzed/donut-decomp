@@ -1,34 +1,38 @@
-# RENDER-008b — Octree / kd-tree depuis les chunks `Tree`
+# RENDER-008b — Octree / kd-tree from the `Tree` chunks
 
-- **Status:** TODO
+- **Status:** CLOSED (2026-10-21): built, measured, slower than the linear test; not kept
 - **Priority:** P2
 - **Module:** Render
 - **Depends on:** P3D-007, RENDER-008a
-- **Files:** `src/P3D/P3DChunk.h`, `src/Level.cpp`, `src/Render/CompositeModel.cpp`
+- **Files:** `src/Level.cpp` (`Level::Draw`), `src/P3D/SpatialTree.*`
 
-## Contexte
-Le culling par frustum naïf (RENDER-008a) teste chaque drawable linéairement.
-Les fichiers SH&R portent des chunks `Tree` / `TreeNode` (hiérarchie spatiale
-pré-calculée) qui permettent des requêtes O(log n). P3D-007 doit d'abord parser
-ces chunks (`P3DChunk.h`) ; ce ticket les exploite pour bâtir un octree/kd côté
-moteur.
+## Context
+RENDER-008a culls each drawable against the view frustum, one by one. The levels carry a
+kd-tree (`Tree`/`TreeNode`, read by P3D-007) that would let whole regions be left out at
+once.
 
-## Approche
-1. **Prérequis P3D-007** : disposer des nœuds `Tree`/`TreeNode` parsés (bounds +
-   références d'enfants/feuilles). Vérifier la structure exposée dans
-   `P3D.generated.h`.
-2. Construire au chargement du niveau (`Level.cpp`) un index spatial : soit
-   reprendre directement la hiérarchie `Tree` du fichier, soit la convertir en
-   octree maison à partir des AABB monde des drawables (RENDER-008a fournit
-   l'AABB par drawable).
-3. Implémenter une requête `QueryFrustum(frustum) -> liste de drawables` :
-   descente récursive, élague les sous-arbres dont l'AABB est hors frustum.
-4. Brancher la requête en amont de la boucle de rendu pour ne soumettre que les
-   drawables visibles (remplace le balayage linéaire de RENDER-008a).
+## Tried (2026-10-21)
+The static entities were placed in the level's tree as the game places its objects, each
+in the deepest node whose split it does not straddle, and each node kept the box of all its
+subtree holds, so that a node out of sight was left out with everything under it (exact:
+a box that passes the frustum test is inside every box above it, which pass too). The
+placement agrees with the file: in 2932 of level 1's 3103 nodes (1837 of level 3's 2111) we
+placed as many static entities as the file counts there.
 
-## Critères d'acceptation
-- [ ] Un index spatial est construit au chargement (octree/kd ou hiérarchie
-      `Tree`).
-- [ ] La requête frustum retourne le même ensemble visible que le test linéaire
-      de RENDER-008a (parité), mais sans tester chaque drawable.
-- [ ] Gain mesurable du temps CPU de culling sur une grande scène.
+Measured over 60 s of play, 600-frame averages, against the linear test on the same frames:
+
+| | static entities | in sight | tree | linear | mismatches |
+|---|---|---|---|---|---|
+| Level 1 | 949 | 270-326 | 44-68 µs | 30-44 µs | 0 |
+| Level 3 | 827 | 323-361 | 42-48 µs | 24-28 µs | 0 |
+
+The same entities in sight, and **the tree slower by half**. A level holds under a
+thousand static entities, and a third of them are in sight from the street: walking 3103
+nodes to skip two thirds costs more than testing them all, which takes 30-40 µs a frame
+(0.2% of 16 ms). The code was not kept.
+
+## Acceptance criteria
+- [x] A spatial index built at load (the level's own tree): done and measured, then removed.
+- [x] The tree's query returns the same visible set as the linear test (0 mismatches).
+- [ ] A measurable gain on culling time: **none**, it is slower at this scene size.
+  Worth trying again only if the culling ever shows in a profile.
