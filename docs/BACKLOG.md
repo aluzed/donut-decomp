@@ -235,7 +235,7 @@ car, rewards), not through the commands.
 | FX-002 | ✅ | Vignette |
 | FX-005 | ✅ | LUT colour grading: a 16³ table, six looks made by the game, off by default (2026-10-21) |
 | FX-001 | ✅ | Bloom: bright pass and blur passes at half size; `PostProcess` holds the post-process work (2026-10-21) |
-| FX-004 | ⬜ | Shadow mapping (ex RENDER-012) |
+| FX-004 | ✅ | Shadow mapping (ex RENDER-012): the characters' and cars' shadows from the level's sun on the world, off by default (2026-10-21) |
 | FX-003 | ✅ | Motion blur: the depth reprojected with the last frame's view (2026-10-21) |
 
 ---

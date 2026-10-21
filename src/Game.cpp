@@ -43,6 +43,7 @@
 #include "Render/PostProcess.h"
 #include "Render/SceneSkins.h"
 #include "Render/Shader.h"
+#include "Render/ShadowMap.h"
 #include "Render/SimpleMesh.h"
 #include "Render/SkidMarks.h"
 #include "Render/SkinModel.h"
@@ -344,6 +345,7 @@ void Game::loadShaders()
 	_meshShader = std::make_unique<GL::ShaderProgram>(meshVertSrc, meshFragSrc);
 
 	_postProcess = std::make_unique<PostProcess>();
+	_shadows = std::make_unique<ShadowMap>();
 
 	_playerMesh = SimpleMesh::CreateCapsule(0.3f, 1.8f, Vector4(0.2f, 1.0f, 0.2f, 1.0f), 12);
 	_carMesh = SimpleMesh::CreateBox(Vector3(0.9f, 0.5f, 2.2f), Vector4(0.2f, 0.5f, 1.0f, 1.0f));
@@ -3901,6 +3903,7 @@ void Game::drawDebugOverlays()
 	if (ImGui::Begin("Post-FX", NULL, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		_postProcess->DebugControls();
+		_shadows->DebugControls();
 	}
 	ImGui::End();
 }
@@ -3967,10 +3970,51 @@ void Game::updateCharacters(double deltaTime)
 		}
 }
 
+void Game::renderShadows()
+{
+	if (!_level)
+		return;
+	GL::ShaderProgram& world = _level->GetWorldShader();
+	Vector3 sun;
+	if (!_shadows->IsOn() || !_character || !_level->GetSunDirection(sun))
+	{
+		ShadowMap::Disable(world);
+		return;
+	}
+	ShadowMap::Disable(world);
+	// The level's light is given towards the sun (up, on level 1: y +0.39); its
+	// light goes the other way.
+	_shadows->Begin(_inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : _character->GetPosition(), -sun);
+	Matrix4x4 lightViewProj = _shadows->GetLightViewProj();
+	drawShadowCasters(lightViewProj);
+	_shadows->End();
+	_shadows->Apply(world);
+}
+
+void Game::drawShadowCasters(Matrix4x4& lightViewProj)
+{
+	if (!_inVehicle)
+		_character->Draw(lightViewProj, *_skinShaderProgram, *_resourceManager);
+	for (auto* people : {&_npcs, &_ambientNpcs})
+		for (auto& [name, npc] : *people) npc->Draw(lightViewProj, *_skinShaderProgram, *_resourceManager);
+	GL::ShaderProgram& world = _level->GetWorldShader();
+	if (_scriptEngine->IsMissionActive())
+		for (auto& vehicle : _scriptEngine->GetMissionVehicles())
+			if (vehicle->HasModel())
+				vehicle->Draw(lightViewProj, world, true);
+	if (Vehicle* parked = _scriptEngine->GetPlayerCar(); parked && parked->HasModel())
+		parked->Draw(lightViewProj, world, true);
+	if (_hitAndRun)
+		for (Vehicle* cop : _hitAndRun->GetCops()) cop->Draw(lightViewProj, world, true);
+	if (!_scriptEngine->IsTrafficSuppressed() && _interior.empty())
+		_trafficManager->DrawModels(world, lightViewProj);
+}
+
 void Game::renderScene(double deltaTime, int viewportWidth, int viewportHeight)
 {
 	// The 3D scene into the post-process frame buffer (FX-000); the HUD and
 	// ImGui are drawn afterwards on the screen, not filtered.
+	renderShadows();
 	_postProcess->BeginScene(viewportWidth, viewportHeight);
 
 	glEnable(GL_DEPTH_TEST);

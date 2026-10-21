@@ -203,6 +203,10 @@ private:
 	void updateCharacters(double deltaTime);
 	void renderScene(double deltaTime, int viewportWidth, int viewportHeight);
 	void drawPeople(Matrix4x4& viewProjection);
+	// What casts a shadow from the sun: the characters and the cars.
+	void drawShadowCasters(Matrix4x4& lightViewProj);
+	// The shadow map drawn, and the world's shader told of it (or of none).
+	void renderShadows();
 	void drawVehicles(Matrix4x4& viewProjection, double deltaTime);
 	void drawEffects(Matrix4x4& viewProjection, double deltaTime);
 	// True when the frame is done (the pause screens swap themselves).
@@ -448,6 +452,8 @@ private:
 	// The scene's frame buffer and its effects (bloom, motion blur, grading,
 	// vignette), all off unless the Post-FX window turns them on.
 	std::unique_ptr<class PostProcess> _postProcess;
+	// The sun's shadows of the characters and the cars, off unless set.
+	std::unique_ptr<class ShadowMap> _shadows;
 	std::unique_ptr<P3D::P3DFile> _animP3D;
 	std::unique_ptr<P3D::P3DFile> _globalP3D;
 	std::unique_ptr<P3D::TextureFont> _textureFontP3D;

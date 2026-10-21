@@ -1834,6 +1834,20 @@ void Level::ApplyLights(GL::ShaderProgram& shader) const
 	shader.SetUniformValue("lightCount", count);
 }
 
+bool Level::GetSunDirection(Vector3& direction) const
+{
+	const auto group = _lightGroups.find("sun");
+	if (group == _lightGroups.end())
+		return false;
+	for (const std::string& name : group->second)
+		if (const auto light = _lights.find(name); light != _lights.end() && !light->second.ambient)
+		{
+			direction = light->second.direction;
+			return true;
+		}
+	return false;
+}
+
 void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 {
 	_worldShader->Bind();

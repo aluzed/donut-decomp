@@ -20,6 +20,13 @@ uniform int materialLit = 1;
 uniform vec3 materialAmbient = vec3(1.0);
 uniform vec3 materialDiffuse = vec3(1.0);
 uniform vec3 materialEmissive = vec3(0.0);
+// The sun's shadows of the characters and the cars (FX-004): the depth from
+// the sun, where it is, how dark a shadow is. Off at 0, and on the world
+// only (unlit: the cars' own positions are not the world's).
+uniform float shadowStrength = 0.0;
+uniform sampler2D shadowTex;
+uniform mat4 lightViewProj;
+uniform float shadowTexel = 1.0 / 2048.0;
 
 in VertexData
 {
@@ -47,6 +54,21 @@ void main()
             diffuse += lightColors[i] * max(dot(n, -lightDirections[i]), 0.0);
         vec3 light = materialEmissive + materialAmbient * ambientLight + materialDiffuse * diffuse;
         color.rgb *= min(light, vec3(1.0));
+    }
+
+    if (shadowStrength > 0.0 && lighting == 0)
+    {
+        vec4 fromSun = lightViewProj * vec4(inData.worldPos, 1.0);
+        vec3 at = fromSun.xyz * 0.5 + 0.5;
+        if (at.x > 0.0 && at.x < 1.0 && at.y > 0.0 && at.y < 1.0 && at.z < 1.0)
+        {
+            // Nine taps, for a soft edge.
+            float shade = 0.0;
+            for (int x = -1; x <= 1; ++x)
+                for (int y = -1; y <= 1; ++y)
+                    shade += at.z - 0.002 > texture(shadowTex, at.xy + vec2(x, y) * shadowTexel).r ? 1.0 : 0.0;
+            color.rgb *= 1.0 - shadowStrength * 0.6 * shade / 9.0;
+        }
     }
 
     vec4 lightmap = texture(lightmapTex, inData.lightmapUV);

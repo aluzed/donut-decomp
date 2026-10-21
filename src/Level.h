@@ -110,6 +110,9 @@ public:
 	// three directional ones) on `shader`: the cars and the characters are lit
 	// by them; the world is lit already, by its vertex colours.
 	void ApplyLights(GL::ShaderProgram& shader) const;
+	// The way the level's sun shines (its "sun" group's first directional
+	// light); false when it has none.
+	bool GetSunDirection(Vector3& direction) const;
 	// Its spatial tree (its terrain's: a kd-tree over the level, each node's box
 	// and how many of the world's objects of each kind lie in it), for culling.
 	const P3D::SpatialTree* GetSpatialTree() const { return _spatialTree.get(); }
