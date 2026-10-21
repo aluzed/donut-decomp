@@ -37,6 +37,8 @@ public:
 	void setVelocityForTimeInterval(const btVector3& velocity, btScalar timeInterval) override;
 	void reset(btCollisionWorld* collisionWorld) override;
 	void warp(const btVector3& origin) override;
+	// How far its capsule's middle stands above its bottom.
+	float GetCentreHeight() const;
 	void preStep(btCollisionWorld* collisionWorld) override;
 	void playerStep(btCollisionWorld* collisionWorld, btScalar dt) override;
 	bool canJump() const override;

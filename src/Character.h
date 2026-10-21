@@ -64,11 +64,18 @@ public:
 	const std::string& GetName() const { return _name; }
 	const std::string& GetModelName() const { return _modelName; }
 	const std::string& GetAnimName() const { return _animName; }
-	// Puts the character there, its controller standing it on the ground.
-	void SetPosition(const Vector3& position);
+	// Its position is the middle of its controller's capsule, CentreHeight()
+	// above its feet; its model, whose feet are at its origin, is drawn that
+	// far down. Drawn at the capsule's middle, every character stood 0.875m up
+	// in the air.
+	float CentreHeight() const;
+	// Stands the character with its feet at `feet`, its controller with it.
+	void SetPosition(const Vector3& feet);
+	// The same with the capsule's middle at `centre`.
+	void SetCentre(const Vector3& centre);
 	// Where its controller has moved it, this step; no warp, which would set it
 	// down and stop any jump or fall.
-	void FollowController(const Vector3& position) { _position = position; }
+	void FollowController(const Vector3& centre) { _position = centre; }
 	void SetRotation(const Quaternion& rotation);
 	const Vector3& GetPosition() const { return _position; }
 	const Quaternion& GetRotation() const { return _rotation; }

@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace Donut
 {
@@ -24,13 +25,24 @@ public:
 	// hashed: h = (h * 64 + c) modulo its table's own number.
 	bool LoadCompiled(const std::string& path, char language);
 
-	// The phrase for `term`, or empty when there is none.
+	// The phrase for `term`, or empty when there is none. A phrase the data
+	// leaves untranslated ("???", the whole Italian column and some of the
+	// PC's own terms in French) counts as none, and the fallback's is given.
 	const std::string& Get(const std::string& term) const;
+	// Asked for what this one has not (the English bible).
+	void SetFallback(const TextBible* fallback) { _fallback = fallback; }
 
 private:
 	std::unordered_map<std::string, std::string> _phrases;
-	std::unordered_map<uint32_t, std::string> _compiled;
-	uint32_t _modulo = 0;
+	// Each compiled bible loaded, in turn: scrooby2's has fewer of the PC's
+	// terms translated than scrooby's.
+	struct Compiled
+	{
+		uint32_t modulo = 0;
+		std::unordered_map<uint32_t, std::string> phrases;
+	};
+	std::vector<Compiled> _compiled;
+	const TextBible* _fallback = nullptr;
 };
 
 } // namespace Donut

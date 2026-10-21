@@ -27,6 +27,16 @@ PedestrianManager::PedestrianManager(WorldPhysics& physics)
 
 PedestrianManager::~PedestrianManager() = default;
 
+namespace
+{
+// How far above a pedestrian's feet the ground under the next step may be: a
+// kerb, a step, a hill. The ground used to be looked for from 4m up, and the
+// first thing a ray down from there met was an awning, a tree, a car's roof:
+// people walked about on top of them, up to 3.5m in the air.
+constexpr float kStepUp = 0.7f;
+constexpr float kStepDown = 8.0f;
+} // namespace
+
 void PedestrianManager::Spawn(const Vector3& nearPosition, float radius)
 {
 	_pedestrians.reserve(_maxPedestrians);
@@ -41,6 +51,10 @@ void PedestrianManager::Spawn(const Vector3& nearPosition, float radius)
 	// At the player's height to start with, then stood on the ground in Update:
 	// a fixed 0.5m put them under every street that is not at sea level.
 	Vector3 pos = nearPosition + Vector3(std::cos(angle) * r, 0, std::sin(angle) * r);
+	// On the ground there to start with, within a storey of the player: not on
+	// whatever overhangs it.
+	if (float ground = 0.0f; _worldPhysics.FindGroundHeight(pos, 1.5f, kStepDown, ground, true))
+		pos.Y = ground;
 
 	Pedestrian p;
 	p.position = pos;
@@ -91,7 +105,7 @@ void PedestrianManager::Update(double deltaTime, const Vector3& playerPosition)
 			p.fleeing -= static_cast<float>(deltaTime);
 			p.position += p.velocity * static_cast<float>(deltaTime);
 			float ground = 0.0f;
-			if (_worldPhysics.FindGroundHeight(p.position, 4.0f, 8.0f, ground, true))
+			if (_worldPhysics.FindGroundHeight(p.position, kStepUp, kStepDown, ground, true))
 				p.position.Y = ground;
 			if (p.body >= 0)
 			{
@@ -153,7 +167,7 @@ void PedestrianManager::Update(double deltaTime, const Vector3& playerPosition)
 		// On the ground, not at a fixed 0.5m: Springfield has hills, and a
 		// pedestrian drawn as a person shows it.
 		float groundY = 0.0f;
-		if (_worldPhysics.FindGroundHeight(p.position, 4.0f, 8.0f, groundY, true))
+		if (_worldPhysics.FindGroundHeight(p.position, kStepUp, kStepDown, groundY, true))
 			p.position.Y = groundY;
 
 		if (p.body >= 0)

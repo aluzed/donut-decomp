@@ -5,6 +5,7 @@
 #include "Core/Log.h"
 #include "FrontendProject.h"
 #include "Game.h"
+#include "UI/GameText.h"
 #include "Game/GameInput.h"
 #include "Input/Input.h"
 #include "Input/Keymap.h"
@@ -150,8 +151,19 @@ OptionsMenu::OptionsMenu(AudioManager& audio, SDL_Window* window, std::function<
 	_gameSettings->BringSpriteToFront("MouseXSliderIcon");
 	_gameSettings->BringSpriteToFront("MouseYSliderIcon");
 	_gameSettings->BringSpriteToFront("WheelSliderIcon");
-	// The wheel's, greyed, at a half, where its knob stands.
-	_gameSettings->SetSpriteFill("Label06_Slider", 0.5f);
+	// The wheel's row, which the PC has no use for, is the language's: built
+	// like the subtitles' row above it, its arrows and value one row down,
+	// its slider hidden.
+	float x5, y5, w5, h5, x6, y6, w6, h6;
+	if (_gameSettings->GetTextBox("Label05", x5, y5, w5, h5) && _gameSettings->GetTextBox("Label06", x6, y6, w6, h6))
+	{
+		const float dy = y6 - y5;
+		_gameSettings->CopySprite("Label05_ArrowL", "Label06_ArrowL", dy);
+		_gameSettings->CopySprite("Label05_ArrowR", "Label06_ArrowR", dy);
+		_gameSettings->CopyText("Label05_Value", "Label06_Value", dy);
+	}
+	for (const char* slider : {"Wheel SensitivityBgd", "Label06_Slider", "WheelSliderIcon"})
+		_gameSettings->SetSpriteVisible(slider, false);
 	_keys = std::make_unique<FrontendProject>();
 	_keys->LoadP3D(kFrontend, "PCKeyboardConfig.pag");
 	_keys->SetTextsFitHeight(true);
@@ -601,7 +613,8 @@ void OptionsMenu::save() const
 		     << '\n';
 	file << "mouselook " << (_mouse.look ? 1 : 0) << "\nmousex " << _mouse.sensitivityX << "\nmousey "
 	     << _mouse.sensitivityY << "\ninvertx " << (_mouse.invertX ? 1 : 0) << "\ninverty " << (_mouse.invertY ? 1 : 0)
-	     << "\nsubtitles " << (_subtitles ? 1 : 0) << '\n';
+	     << "\nsubtitles " << (_subtitles ? 1 : 0) << "\nlanguage " << static_cast<int>(Game::GetInstance().GetLanguage())
+	     << '\n';
 	Log::Info("Options: volumes saved, music {:.1f}, effects {:.1f}, vehicle {:.1f}, voice {:.1f}",
 	          _audio.GetChannelVolume(AudioManager::Channel::Music),
 	          _audio.GetChannelVolume(AudioManager::Channel::Effects),
@@ -678,15 +691,20 @@ void OptionsMenu::drawGameSettings(const GameIntent& intent, const Matrix4x4& pr
 	// left and right, a click on its arrows or along its bar.
 	// The fifth, the force feedback's, the PC has none of: the subtitles in its
 	// place.
+	// The sixth, the steering wheel's, the PC has none of either: the language
+	// of the game's text there.
 	const std::vector<Entry> entries = {{"Label00", true}, {"Label01", true}, {"Label02", true}, {"Label03", true},
-	                                    {"Label04", true}, {"Label05", true}, {"Label06", false}};
+	                                    {"Label04", true}, {"Label05", true}, {"Label06", true}};
 	struct Toggle
 	{
 		int row;
 		bool* value;
 	};
 	const Toggle toggles[] = {{0, &_mouse.look}, {3, &_mouse.invertX}, {4, &_mouse.invertY}, {5, &_subtitles}};
-	_gameSettings->SetText("Label05", "Subtitles");
+	Game& game = Game::GetInstance();
+	_gameSettings->SetText("Label05", GameText("options.subtitles", game.GetLanguage()));
+	_gameSettings->SetText("Label06", GameText("options.language", game.GetLanguage()));
+	constexpr int kLanguageRow = 6;
 	struct Bar
 	{
 		int row;
@@ -708,6 +726,10 @@ void OptionsMenu::drawGameSettings(const GameIntent& intent, const Matrix4x4& pr
 			    inside(*_gameSettings, arrow + "R", intent.mouseX, intent.mouseY))
 				_choice = toggle.row, by = 1;
 		}
+		if (inside(*_gameSettings, "Label06_ArrowL", intent.mouseX, intent.mouseY))
+			_choice = kLanguageRow, by = -1;
+		else if (inside(*_gameSettings, "Label06_ArrowR", intent.mouseX, intent.mouseY))
+			_choice = kLanguageRow, by = 1;
 		float along = 0.0f;
 		for (const Bar& bar : bars)
 			if (inside(*_gameSettings, bar.bar, intent.mouseX, intent.mouseY, &along))
@@ -719,6 +741,18 @@ void OptionsMenu::drawGameSettings(const GameIntent& intent, const Matrix4x4& pr
 	for (const Bar& bar : bars)
 		if (bar.row == _choice && by != 0)
 			*bar.value += by * kStep;
+	// The language, round the five, at once.
+	bool languageChanged = false;
+	if (_choice == kLanguageRow && by != 0)
+	{
+		constexpr int kCount = static_cast<int>(sizeof(kGameLanguages));
+		int at = 0;
+		while (at < kCount && kGameLanguages[at] != game.GetLanguage())
+			++at;
+		game.SetLanguage(kGameLanguages[((at + by) % kCount + kCount) % kCount]);
+		languageChanged = true;
+	}
+	_gameSettings->SetText("Label06_Value", GameLanguageName(game.GetLanguage()));
 	for (const Bar& bar : bars)
 	{
 		// To a tenth, as the volumes.
@@ -735,7 +769,7 @@ void OptionsMenu::drawGameSettings(const GameIntent& intent, const Matrix4x4& pr
 	_gameSettings->Draw(proj);
 	_shown = true;
 	if (_mouse.look != was.look || _mouse.sensitivityX != was.sensitivityX || _mouse.sensitivityY != was.sensitivityY ||
-	    _mouse.invertX != was.invertX || _mouse.invertY != was.invertY || _subtitles != subtitled)
+	    _mouse.invertX != was.invertX || _mouse.invertY != was.invertY || _subtitles != subtitled || languageChanged)
 		save();
 	if (back)
 	{

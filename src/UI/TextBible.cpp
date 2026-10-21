@@ -89,6 +89,8 @@ bool TextBible::LoadCompiled(const std::string& path, char language)
 		if (at >= data.size() || static_cast<char>(data[at]) != language)
 			continue;
 		const uint32_t count = u32(at + 1), modulo = u32(at + 5), size = u32(at + 9);
+		Compiled& table = _compiled.emplace_back();
+		table.modulo = modulo;
 		const std::size_t hashes = at + 13, offsets = hashes + 4 * count, text = offsets + 4 * count;
 		if (text + size > data.size())
 			return false;
@@ -101,10 +103,9 @@ bool TextBible::LoadCompiled(const std::string& path, char language)
 				const unsigned unit = data[c] | data[c + 1] << 8;
 				phrase += static_cast<char>(unit < 256 ? unit : '?');
 			}
-			_compiled[u32(hashes + 4 * i)] = std::move(phrase);
+			table.phrases[u32(hashes + 4 * i)] = std::move(phrase);
 		}
-		_modulo = modulo;
-		Log::Info("TextBible: {} compiled phrases in language '{}' from {}", _compiled.size(), language, path);
+		Log::Info("TextBible: {} compiled phrases in language '{}' from {}", table.phrases.size(), language, path);
 		return true;
 	}
 	return false;
@@ -113,16 +114,21 @@ bool TextBible::LoadCompiled(const std::string& path, char language)
 const std::string& TextBible::Get(const std::string& term) const
 {
 	static const std::string kNone;
-	const auto found = _phrases.find(term);
-	if (found != _phrases.end())
+	const auto usable = [](const std::string& phrase) { return !phrase.empty() && phrase != "???"; };
+	if (const auto found = _phrases.find(term); found != _phrases.end() && usable(found->second))
 		return found->second;
-	if (_modulo == 0)
-		return kNone;
-	uint64_t hash = 0;
-	for (const unsigned char c : term)
-		hash = (hash * 64 + c) % _modulo;
-	const auto compiled = _compiled.find(static_cast<uint32_t>(hash));
-	return compiled == _compiled.end() ? kNone : compiled->second;
+	for (const Compiled& table : _compiled)
+	{
+		if (table.modulo == 0)
+			continue;
+		uint64_t hash = 0;
+		for (const unsigned char c : term)
+			hash = (hash * 64 + c) % table.modulo;
+		if (const auto found = table.phrases.find(static_cast<uint32_t>(hash));
+		    found != table.phrases.end() && usable(found->second))
+			return found->second;
+	}
+	return _fallback ? _fallback->Get(term) : kNone;
 }
 
 } // namespace Donut

@@ -15,6 +15,8 @@
 #include "ThirdParty/stb_image.h"
 #include "UI/TextBible.h"
 
+#include <set>
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -30,8 +32,19 @@ enum class Alignment
 	Center
 };
 
+namespace
+{
+// The pages alive, for RefreshAllTexts.
+std::set<FrontendProject*>& livePages()
+{
+	static std::set<FrontendProject*> pages;
+	return pages;
+}
+} // namespace
+
 FrontendProject::FrontendProject()
 {
+	livePages().insert(this);
 	glGenSamplers(1, &_sampler);
 	glSamplerParameteri(_sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glSamplerParameteri(_sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -41,6 +54,7 @@ FrontendProject::FrontendProject()
 
 FrontendProject::~FrontendProject()
 {
+	livePages().erase(this);
 	if (_sampler != 0)
 	{
 		glDeleteSamplers(1, &_sampler);
@@ -122,6 +136,7 @@ void FrontendProject::AddMultiText(const P3D::FrontendMultiText& multiText, int3
 	{
 		const std::string& phrase = bible.Get(string->GetKey());
 		text.strings.push_back(phrase.empty() ? string->GetKey() : phrase);
+		text.keys.push_back(string->GetKey());
 	}
 	// Its box: the position is its bottom left, y up.
 	text.width = static_cast<int32_t>(multiText.GetDimensionX());
@@ -354,34 +369,81 @@ void FrontendProject::SetTextIndex(const std::string& name, std::size_t index)
 void FrontendProject::SetTextWrapped(const std::string& name, const std::string& text)
 {
 	for (auto& entry : _texts)
-	{
-		if (entry.name != name || !entry.font || entry.height <= 0)
-			continue;
-		// Lines at the size that makes one the box's height: as many words a
-		// line as its width holds there.
-		const float scale = std::min(1.0f, entry.height / entry.font->GetHeight());
-		const float most = entry.width / scale;
-		std::string lines, line;
-		std::size_t at = 0;
-		while (at < text.size())
+		if (entry.name == name && entry.font && entry.height > 0)
 		{
-			const std::size_t end = std::min(text.find(' ', at), text.size());
-			const std::string word = text.substr(at, end - at);
-			at = end + 1;
-			const std::string longer = line.empty() ? word : line + " " + word;
-			if (!line.empty() && entry.font->MeasureWidth(longer) > most)
-			{
-				lines += (lines.empty() ? "" : "\n") + line;
-				line = word;
-			}
-			else
-				line = longer;
+			entry.shown = text.empty() ? " " : text;
+			entry.wrapped = true;
 		}
-		if (!line.empty())
-			lines += (lines.empty() ? "" : "\n") + line;
-		entry.shown = lines.empty() ? " " : lines;
-		entry.wrapped = true;
+}
+
+namespace
+{
+// `text` broken into lines no wider than `most` in `font`, at word breaks (a
+// word longer than that alone on its line).
+std::vector<std::string> wrapLines(const Font& font, const std::string& text, float most)
+{
+	std::vector<std::string> lines;
+	std::string line;
+	std::size_t at = 0;
+	while (at < text.size())
+	{
+		const std::size_t end = std::min(text.find(' ', at), text.size());
+		const std::string word = text.substr(at, end - at);
+		at = end + 1;
+		const std::string longer = line.empty() ? word : line + " " + word;
+		if (!line.empty() && font.MeasureWidth(longer) > most)
+		{
+			lines.push_back(line);
+			line = word;
+		}
+		else
+			line = longer;
 	}
+	if (!line.empty())
+		lines.push_back(line);
+	return lines;
+}
+} // namespace
+
+void FrontendProject::RefreshAllTexts()
+{
+	const auto& bible = Game::GetInstance().GetTextBible();
+	for (FrontendProject* page : livePages())
+		for (auto& text : page->_texts)
+			for (std::size_t i = 0; i < text.keys.size() && i < text.strings.size(); ++i)
+			{
+				const std::string& phrase = bible.Get(text.keys[i]);
+				text.strings[i] = phrase.empty() ? text.keys[i] : phrase;
+			}
+}
+
+bool FrontendProject::CopySprite(const std::string& name, const std::string& newName, float dy)
+{
+	for (std::size_t i = 0; i < _sprites.size(); ++i)
+		if (_sprites[i].name == name)
+		{
+			Sprite copy = _sprites[i];
+			copy.name = newName;
+			copy.positionY += static_cast<int32_t>(std::lround(dy));
+			copy.boxY += static_cast<int32_t>(std::lround(dy));
+			_sprites.push_back(copy);
+			return true;
+		}
+	return false;
+}
+
+bool FrontendProject::CopyText(const std::string& name, const std::string& newName, float dy)
+{
+	for (std::size_t i = 0; i < _texts.size(); ++i)
+		if (_texts[i].name == name)
+		{
+			Text copy = _texts[i];
+			copy.name = newName;
+			copy.y += static_cast<int32_t>(std::lround(dy));
+			_texts.push_back(copy);
+			return true;
+		}
+	return false;
 }
 
 bool FrontendProject::GetRect(const std::string& name, float& x, float& y, float& width, float& height) const
@@ -527,6 +589,46 @@ void FrontendProject::Draw(const Matrix4x4& proj)
 		                        : (text.current < text.strings.size() ? text.strings[text.current] : std::string());
 		if (value.empty())
 			continue;
+		if (text.wrapped && text.width > 0 && text.height > 0)
+		{
+			// Measured, not guessed: the largest size, from one line filling the
+			// box's height down, at which the text broken at the box's width
+			// fits its height too. Each line used to be drawn the box's height,
+			// one under the other: three lines stood out of the objective's
+			// frame by two.
+			const float fontHeight = text.font->GetHeight();
+			float scale = std::min(1.0f, text.height / fontHeight);
+			std::vector<std::string> lines = wrapLines(*text.font, value, text.width / scale);
+			constexpr float kSmallest = 0.35f;
+			while (lines.size() * fontHeight * scale > text.height && scale > kSmallest)
+			{
+				scale *= 0.92f;
+				lines = wrapLines(*text.font, value, text.width / scale);
+			}
+			// The block in its box as the text's alignment says, each line too.
+			const float lineHeight = fontHeight * scale;
+			float y = static_cast<float>(text.y);
+			const float block = lineHeight * static_cast<float>(lines.size());
+			if (static_cast<Alignment>(text.alignY) == Alignment::Center)
+				y += (text.height - block) * 0.5f;
+			else if (static_cast<Alignment>(text.alignY) == Alignment::Bottom)
+				y += text.height - block;
+			for (const std::string& line : lines)
+			{
+				const float width = std::min(text.font->MeasureWidth(line) * scale, static_cast<float>(text.width));
+				const float lineScale = std::min(scale, text.font->MeasureWidth(line) > 0.0f
+				                                            ? text.width / text.font->MeasureWidth(line)
+				                                            : scale);
+				float x = static_cast<float>(text.x);
+				if (static_cast<Alignment>(text.alignX) == Alignment::Center)
+					x += (text.width - width) * 0.5f;
+				else if (static_cast<Alignment>(text.alignX) == Alignment::Right)
+					x += text.width - width;
+				_spriteBatch.DrawText(text.font, line, Vector2(x, y), text.color, lineScale);
+				y += lineHeight;
+			}
+			continue;
+		}
 		// Shrunk to fit its box, as the game's are: "RESUME GAME" is wider in
 		// its font than the main menu's box between the arrows.
 		const float natural = text.font->MeasureWidth(value);

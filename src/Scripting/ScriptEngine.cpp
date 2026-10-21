@@ -10,6 +10,7 @@
 #include "Core/FileSystem.h"
 #include "Core/Log.h"
 #include "Game.h"
+#include "UI/GameText.h"
 #include "Level.h"
 #include "Physics/WorldPhysics.h"
 #include "Scripting/Commands.h"
@@ -874,17 +875,15 @@ std::string ScriptEngine::GetObjectiveText() const
 	// otherwise.
 	if (_objectiveType.empty())
 		return {};
-	// Without the game's own line, a plain one; nothing for a stage that asks
-	// nothing of the player (a conversation, a pause). It read "Objective:
-	// dialogue".
-	static const std::map<std::string, std::string> kPlain {
-	    {"goto", "Go to the marker"}, {"getin", "Get in the car"}, {"talkto", "Talk to them"},
-	    {"interior", "Go inside"}, {"gooutside", "Go outside"}, {"race", "Win the race"},
-	    {"follow", "Follow that car"}, {"destroy", "Destroy that car"}, {"dump", "Ram the truck, take what falls"},
-	    {"delivery", "Collect them all"}, {"losetail", "Lose your tail"}, {"coins", "Pay the fee"},
-	    {"buycar", "Buy the car"}, {"buyskin", "Buy the outfit"}};
-	const auto plain = kPlain.find(_objectiveType);
-	std::string text = plain != kPlain.end() ? plain->second : std::string();
+	// Without the game's own line, a plain one in the game's language; nothing
+	// for a stage that asks nothing of the player (a conversation, a pause). It
+	// read "Objective: dialogue", and then English under a French game.
+	static const std::set<std::string> kPlain {"goto",     "getin",    "talkto", "interior", "gooutside",
+	                                           "race",     "follow",   "destroy", "dump",    "delivery",
+	                                           "losetail", "coins",    "buycar",  "buyskin"};
+	std::string text = kPlain.count(_objectiveType)
+	                       ? GameText("objective." + _objectiveType, _game.GetLanguage())
+	                       : std::string();
 	if (_stageMessage >= 0)
 	{
 		const std::string& phrase = _game.GetTextBible().Get(fmt::format("MISSION_OBJECTIVE_{}", _stageMessage));
@@ -923,19 +922,20 @@ void ScriptEngine::SetCoinFee(int coins)
 
 std::string ScriptEngine::GetObjectiveTargetLabel() const
 {
+	const char language = _game.GetLanguage();
 	if (_objectiveType == "race")
-		return "Next checkpoint";
+		return GameText("target.checkpoint", language);
 	if (_objectiveType == "dump" && _pickups.empty())
-		return "Target";
+		return GameText("target.target", language);
 	if (_objectiveType == "delivery" || _objectiveType == "dump")
-		return "Nearest item";
+		return GameText("target.item", language);
 	if (_objectiveType == "follow" || _objectiveType == "destroy")
-		return "Target";
+		return GameText("target.target", language);
 	if (_objectiveType == "talkto")
-		return "Talk to " + _talkToTarget;
+		return fmt::format(fmt::runtime(GameText("target.talkto", language)), _talkToTarget);
 	if (_objectiveType == "destroyboss")
-		return "UFO beam";
-	return "Destination";
+		return GameText("target.target", language);
+	return GameText("target.destination", language);
 }
 
 void ScriptEngine::AnnounceStageComplete()

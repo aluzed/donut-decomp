@@ -79,6 +79,13 @@ public:
 	// y down; the page is drawn at `scale`): false when it has none of that
 	// name.
 	bool GetRect(const std::string& name, float& x, float& y, float& width, float& height) const;
+	// A copy of an element `dy` lower on the page under another name: a row
+	// built like the one above it. False when it has none of that name.
+	bool CopySprite(const std::string& name, const std::string& newName, float dy);
+	bool CopyText(const std::string& name, const std::string& newName, float dy);
+	// Every page loaded takes its texts again from the text bible: the
+	// game's language changed.
+	static void RefreshAllTexts();
 	// A point of the page (640 x 480, y down) on the screen, and how much
 	// larger the page is drawn, as at its last Draw.
 	Vector2 ToScreen(const Vector2& point) const { return point * _scale + _offset; }
@@ -133,8 +140,11 @@ private:
 		Vector4 color;
 		std::string shown;
 		Vector4 ownColor;
-		// In lines (SetTextWrapped), each its box's height.
+		// In lines (SetTextWrapped): `shown` is the text as given, broken into
+		// lines when drawn, at the largest size at which they all fit the box.
 		bool wrapped = false;
+		// The text bible's keys for its strings.
+		std::vector<std::string> keys;
 	};
 	std::vector<Text> _texts;
 

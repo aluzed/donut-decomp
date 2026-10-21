@@ -133,6 +133,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | PHYS-005 | ✅ | — | `BulletFenceShape` for fences | |
 | VEH-SINK | ✅ | — | The car drives, and the camera stays above ground | |
 | VEH-WHEELS | ✅ | — | Cars stand on their own wheels | Physics wheels at each model's hubs and radii, drawn with their suspension travel; traffic rides at each model's height (2026-10-21) |
+| CHAR-FEET | ✅ | P1 | Characters on their feet | Drawn at their feet, not their capsule's middle (0.875m up); pedestrians no longer step onto awnings (2026-10-21) |
 | — | ✅ | — | Traffic stops short of cars and of the player on foot (kinematic bodies pushed through them) | |
 | — | ✅ | — | A car that falls off the map is put back on the nearest road | |
 
@@ -165,7 +166,8 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | UI-FMV | ✅ | P3 | The game's movies | Bink, decoded with FFmpeg (optional): the logos and the introduction at start-up, level 1's on a new game, the story's `fmv` stages, the gags' (telescope, Larry the Looter, the Aztec's ticket), View Movies. Not the credits' movie |
 | UI-MENU | ✅ | — | Main and pause menus, hit-testing, pause freezes the game | |
 | UI-HUD | ✅ | — | Health, Hit & Run, nitro, speedometer, coins, cards, objective, laps, timer, radar with roads | `src/UI/Hud.*` |
-| UI-LANG | ✅ | — | `--language E/F/G/I/S` for the game's own text | |
+| UI-LANG | ✅ | — | The game's language | `--language E/F/G/I/S`, or the options' Language row (kept in `donut_settings.dat`); the engine's own words in the five languages (`UI/GameText`); "???" falls back to English (2026-10-21) | |
+| UI-TEXTFIT | ✅ | P1 | Objectives fit their frame | Wrapped text sized to its box's height as well as its width (2026-10-21) |
 | UI-RACE-GUIDE | ✅ | — | Checkpoint markers, next checkpoint on the radar and the HUD | |
 
 ### Tools and assets

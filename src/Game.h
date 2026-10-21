@@ -132,6 +132,11 @@ public:
 	// At a gag worked by hand, on foot: it plays. False away from one.
 	bool useGag();
 	const TextBible& GetTextBible() const { return _textBible; }
+	// The language of the game's text (E, F, G, I or S): the voices' by
+	// default, `--language` or the options' choice (kept in donut_settings.dat).
+	char GetLanguage() const { return _language; }
+	// Its text in that language from now on; the voices keep their own.
+	void SetLanguage(char language);
 	// A mission's NPC, standing at `position`, when their model has been
 	// extracted (art/chars/<name>_m.p3d). Placing one already there moves them.
 	void PlaceNpc(const std::string& name, const Vector3& position);
@@ -650,6 +655,9 @@ private:
 	void enterInterior(const Level::Trigger& door);
 	void updateInterior();
 	char _language = 'E';
+	// The English one, for the phrases the language's leaves untranslated.
+	TextBible _englishBible;
+	void loadTextBible();
 	// Tears down whatever mission is running and starts story mission `index`.
 	void startStoryMission(int index);
 	// Where the story continues, kept in donut_progress.dat: the level and the

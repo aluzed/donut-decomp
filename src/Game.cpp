@@ -21,6 +21,7 @@
 #include "Core/Math/Math.h"
 #include "FreeCamera.h"
 #include "Game/GameCamera.h"
+#include "UI/GameText.h"
 #include <cctype>
 #include <fstream>
 #include "FrontendProject.h"
@@ -241,9 +242,19 @@ Game::Game(int argc, char** argv)
 	// missions' text, the menus and the movies' soundtracks follow, rather than
 	// English text over French voices.
 	if (!languageGiven)
+	{
 		for (const char language : {'F', 'G', 'S'})
 			if (FileSystem::exists(fmt::format("art/audio/dialog/DIALOG{}.RCF", language)))
 				_language = language;
+		// Or the one chosen in the options, kept with the other settings (its
+		// letter's code: "language 70" for F).
+		std::ifstream settings("donut_settings.dat");
+		std::string key;
+		float value = 0.0f;
+		while (settings >> key >> value)
+			if (key == "language" && std::string("EFGIS").find(static_cast<char>(value)) != std::string::npos)
+				_language = static_cast<char>(value);
+	}
 
 	Commands::RunLine("HelloWorld();");
 	// for (const auto& entry : FileSystem::recursive_directory_iterator("scripts"))
@@ -265,7 +276,7 @@ Game::Game(int argc, char** argv)
 	glDebugMessageControl(GL_DEBUG_SOURCE_API, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, 0, GL_FALSE);
 
 	ImGui::CreateContext();
-	ImGui_ImplSDL2_InitForOpenGL(static_cast<SDL_Window*>(*_window), static_cast<SDL_GLContext*>(*_window));
+	ImGui_ImplSDL2_InitForOpenGL(static_cast<SDL_Window*>(*_window), static_cast<SDL_GLContext>(*_window));
 	ImGui_ImplOpenGL3_Init("#version 130");
 
 	Input::InitGamepad();
@@ -284,8 +295,10 @@ Game::Game(int argc, char** argv)
 	_audioManager->LoadSubtitles("audio/dialog/subtitles.tsv");
 	loadMovieLines("art/audio/dialog/movie_subtitles.tsv");
 	_resourceManager = std::make_unique<ResourceManager>();
-	_textBible.Load("art/frontend/scrooby2/resource/txtbible/srr2.txt", _language);
-	_textBible.LoadCompiled("art/frontend/scrooby2/resource/txtbible/srr2.p3d", _language);
+	_englishBible.Load("art/frontend/scrooby2/resource/txtbible/srr2.txt", 'E');
+	_englishBible.LoadCompiled("art/frontend/scrooby2/resource/txtbible/srr2.p3d", 'E');
+	_englishBible.LoadCompiled("art/frontend/scrooby/resource/txtbible/srr2.p3d", 'E');
+	loadTextBible();
 	_scriptEngine = std::make_unique<ScriptEngine>(*this);
 	_scriptEngine->SetRecordsEnabled(!_autopilot);
 
@@ -1785,7 +1798,8 @@ void Game::scriptedCamera(double deltaTime)
 	// Over the shoulder of the one facing the subject: "pc" frames the player's
 	// character, "npc" the other; "far" takes in both, "near" the subject alone.
 	const bool player = shot.shot.rfind("pc", 0) == 0;
-	const Vector3 head(0.0f, 1.5f, 0.0f);
+	// A head's height over the capsule's middle (0.875m over the feet).
+	const Vector3 head(0.0f, 0.6f, 0.0f);
 	const Vector3 subject = (player ? _character->GetPosition() : other->GetPosition()) + head;
 	const Vector3 facing = (player ? other->GetPosition() : _character->GetPosition()) + head;
 	_gameCamera->FrameConversation(subject, facing, shot.shot.find("near") != std::string::npos, player,
@@ -1795,6 +1809,30 @@ void Game::scriptedCamera(double deltaTime)
 		_conversationShot = now;
 		Log::Info("Game: conversation shot '{}' with '{}'", shot.shot, shot.other);
 	}
+}
+
+void Game::SetLanguage(char language)
+{
+	if (language == _language)
+		return;
+	_language = language;
+	loadTextBible();
+	// The pages loaded already show their text again from it.
+	FrontendProject::RefreshAllTexts();
+	Log::Info("Game: the game's text in {} from now on", GameLanguageName(_language));
+}
+
+void Game::loadTextBible()
+{
+	// The export (its rows by term), then both compiled bibles for the PC's
+	// own terms: scrooby2's, which the pages come from, has most of them in
+	// French as "???"; scrooby's has them translated.
+	_textBible = TextBible();
+	_textBible.Load("art/frontend/scrooby2/resource/txtbible/srr2.txt", _language);
+	_textBible.LoadCompiled("art/frontend/scrooby2/resource/txtbible/srr2.p3d", _language);
+	_textBible.LoadCompiled("art/frontend/scrooby/resource/txtbible/srr2.p3d", _language);
+	if (_language != 'E')
+		_textBible.SetFallback(&_englishBible);
 }
 
 void Game::AddShake(float amount)
@@ -3077,7 +3115,7 @@ bool Game::seatDriver(Character& character, const Vehicle& car)
 		root = joint->pose.Translation();
 	const Quaternion facing = car.GetRotation() * Quaternion(0.0f, 1.0f, 0.0f, 0.0f);
 	character.SetRotation(facing);
-	character.FollowController(seat - facing * root);
+	character.FollowController(seat - facing * root + Vector3(0.0f, character.CentreHeight(), 0.0f));
 	return true;
 }
 
@@ -3902,8 +3940,9 @@ void Game::SetPlayerPosition(const Vector3& pos)
 {
 	if (_character)
 	{
-		_character->SetPosition(pos);
-		_character->GetCharacterController().warp(BulletCast<btVector3>(pos));
+		// `pos` is where the capsule's middle goes (a metre over the ground,
+		// the way the scripts' and the autopilot's moves give it).
+		_character->SetCentre(pos);
 		Log::Info("Game: player teleported to ({:.1f}, {:.1f}, {:.1f})", pos.X, pos.Y, pos.Z);
 	}
 }
@@ -5408,9 +5447,10 @@ void Game::Run()
 					{
 						const float dist = (v->GetPosition() - _character->GetPosition()).Length();
 						if (dist < 5.0f)
-							hud.hints.push_back("Press E to enter vehicle!");
+							hud.hints.push_back(fmt::format(fmt::runtime(GameText("hint.getin", _language)),
+							                                ControlLabel(GameAction::Interact, pad)));
 						else if (!gameHud)
-							hud.hints.push_back(fmt::format("Vehicle: {:.0f}m", dist));
+							hud.hints.push_back(fmt::format(fmt::runtime(GameText("hint.vehicle", _language)), dist));
 						break;
 					}
 				}
@@ -5460,8 +5500,9 @@ void Game::Run()
 				const float pauseSpacing = pauseLineHeight + 14.0f;
 				const float pauseTop = viewportHeight / 2.0f - 40.0f;
 
-				sprites.DrawText(font, "PAUSED",
-					Vector2(centredTextX(font, "PAUSED", viewportWidth), pauseTop - pauseSpacing * 1.5f),
+				const std::string& paused = GameText("pause", _language);
+				sprites.DrawText(font, paused,
+					Vector2(centredTextX(font, paused, viewportWidth), pauseTop - pauseSpacing * 1.5f),
 					Vector4(1.0f, 1.0f, 0.0f, 1.0f));
 
 				for (size_t i = 0; i < _pauseMenu->GetButtons().size(); ++i)
@@ -5489,27 +5530,27 @@ void Game::Run()
 			{
 				if (_scriptEngine->IsNewRecord())
 				{
-					sprites.DrawText(font, "NEW RECORD!",
+					sprites.DrawText(font, GameText("result.record", _language),
 						Vector2((viewportWidth / 2.0f) - 60, viewportHeight / 2.0f - 70),
 						Vector4(1.0f, 0.84f, 0.0f, 1.0f));
 				}
 
 				// In the game's words, when the phrase table is there.
 				const std::string& complete = _textBible.Get("MISSION_COMPLETE");
-				sprites.DrawText(font, complete.empty() ? "MISSION COMPLETE!" : complete,
+				sprites.DrawText(font, complete.empty() ? GameText("result.complete", _language) : complete,
 					Vector2((viewportWidth / 2.0f) - 100, viewportHeight / 2.0f - 50),
 					Vector4(1.0f, 0.84f, 0.0f, 1.0f));
 				// The level's last story mission: the level is won too.
 				if (_storyIndex >= 0 && _storyIndex + 1 == static_cast<int>(_story.size()))
 				{
 					const std::string& level = _textBible.Get("LEVEL_COMPLETE");
-					const std::string text = level.empty() ? "Level Complete" : level;
+					const std::string text = level.empty() ? GameText("result.level", _language) : level;
 					sprites.DrawText(font, text, Vector2(centredTextX(font, text, viewportWidth), viewportHeight / 2.0f - 90),
 					                 Vector4(1.0f, 0.5f, 0.1f, 1.0f));
 				}
 
 				const float elapsed = _scriptEngine->GetMissionTime();
-				std::string stats = fmt::format("Time: {:.1f}s", elapsed);
+				std::string stats = fmt::format(fmt::runtime(GameText("result.time", _language)), elapsed);
 				sprites.DrawText(font, stats,
 					Vector2((viewportWidth / 2.0f) - 50, viewportHeight / 2.0f - 10),
 					Vector4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -5517,14 +5558,14 @@ void Game::Run()
 				float best = _scriptEngine->GetBestTime();
 				if (best < 999.0f)
 				{
-					std::string bestText = fmt::format("Best: {:.1f}s", best);
+					std::string bestText = fmt::format(fmt::runtime(GameText("result.best", _language)), best);
 					sprites.DrawText(font, bestText,
 						Vector2((viewportWidth / 2.0f) - 40, viewportHeight / 2.0f + 10),
 						elapsed <= best ? Vector4(1.0f, 0.84f, 0.0f, 1.0f) : Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 				}
 
 				int nextIn = 5 - static_cast<int>(_missionCompleteTimer);
-				std::string nextText = fmt::format("Next in {}...", nextIn);
+				std::string nextText = fmt::format(fmt::runtime(GameText("result.next", _language)), nextIn);
 				sprites.DrawText(font, nextText,
 					Vector2((viewportWidth / 2.0f) - 60, viewportHeight / 2.0f + 40),
 					Vector4(0.6f, 0.6f, 0.6f, 1.0f));
@@ -5533,7 +5574,7 @@ void Game::Run()
 			if (_gameState == GameState::MissionFailed)
 			{
 				const std::string& term = _textBible.Get("MISSION_FAILED");
-				const std::string failed = term.empty() ? "MISSION FAILED!" : term;
+				const std::string failed = term.empty() ? GameText("result.failed", _language) : term;
 				sprites.DrawText(font, failed, Vector2(centredTextX(font, failed, viewportWidth), viewportHeight / 2.0f - 20),
 					Vector4(1.0f, 0.2f, 0.2f, 1.0f));
 				// Why, and the game's advice for it.
@@ -5546,7 +5587,7 @@ void Game::Run()
 					sprites.DrawText(font, hint, Vector2(centredTextX(font, hint, viewportWidth), viewportHeight / 2.0f + 40),
 					                 Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 				int nextIn = 5 - static_cast<int>(_missionCompleteTimer);
-				std::string nextText = fmt::format("Retrying in {}...", nextIn);
+				std::string nextText = fmt::format(fmt::runtime(GameText("result.retry", _language)), nextIn);
 				sprites.DrawText(font, nextText,
 					Vector2((viewportWidth / 2.0f) - 60, viewportHeight / 2.0f + 70),
 					Vector4(0.6f, 0.6f, 0.6f, 1.0f));

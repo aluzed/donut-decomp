@@ -100,6 +100,11 @@ void CharacterController::setVelocityForTimeInterval(const btVector3& velocity, 
 	_position = BulletCast<Vector3>(transform.getOrigin());
 }
 
+float CharacterController::GetCentreHeight() const
+{
+	return _physShape->getHalfHeight() + _physShape->getRadius();
+}
+
 void CharacterController::warp(const btVector3& origin)
 {
 	// A locator marks a spot on the ground, and the controller's position is the

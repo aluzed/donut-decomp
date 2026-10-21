@@ -110,7 +110,8 @@ void Character::LoadAnimations(const std::string& name)
 
 void Character::Draw(const Matrix4x4& viewProjection, GL::ShaderProgram& shaderProgram, const ResourceManager& rm)
 {
-	Matrix4x4 model = Matrix4x4::MakeTranslate(_position) * Matrix4x4(_rotation);
+	// At its feet: the model's origin, the capsule's middle less its height.
+	Matrix4x4 model = Matrix4x4::MakeTranslate(_position - Vector3(0.0f, CentreHeight(), 0.0f)) * Matrix4x4(_rotation);
 	Matrix4x4 mvp = viewProjection * model;
 
 	shaderProgram.Bind();
@@ -196,10 +197,20 @@ void Character::Update(double deltatime)
 	_boneBuffer->SetBuffer(matrices.data(), matrices.size() * sizeof(Matrix4x4));
 }
 
-void Character::SetPosition(const Vector3& position)
+float Character::CentreHeight() const
 {
-	_position = position;
-	_characterController->warp(BulletCast<btVector3>(position));
+	return _characterController->GetCentreHeight();
+}
+
+void Character::SetPosition(const Vector3& feet)
+{
+	SetCentre(feet + Vector3(0.0f, CentreHeight(), 0.0f));
+}
+
+void Character::SetCentre(const Vector3& centre)
+{
+	_position = centre;
+	_characterController->warp(BulletCast<btVector3>(centre));
 }
 void Character::SetRotation(const Quaternion& rotation)
 {
