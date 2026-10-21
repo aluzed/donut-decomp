@@ -4092,7 +4092,13 @@ void Game::renderScene(double deltaTime, int viewportWidth, int viewportHeight)
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glFrontFace(GL_CW);
-	glClearColor(0.62f, 0.78f, 1.0f, 1.0f);
+	// Indoors, the room alone: its open side shows nothing, not the town's sky.
+	if (_level)
+		_level->SetSkyShown(_interior.empty());
+	if (_interior.empty())
+		glClearColor(0.62f, 0.78f, 1.0f, 1.0f);
+	else
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	_gameCamera->View().SetAspectRatio(static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight));
