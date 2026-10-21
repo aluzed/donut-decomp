@@ -38,6 +38,12 @@ bool Font::TryGetGlyph(int32_t id, Font::Glyph& glyph) const
 		glyph = _glyphs.at(kBase[id - 0xC0]);
 		return true;
 	}
+	// The French quotes, as plain ones.
+	if ((id == 0xAB || id == 0xBB) && _glyphs.find('"') != _glyphs.end())
+	{
+		glyph = _glyphs.at('"');
+		return true;
+	}
 	return false;
 }
 

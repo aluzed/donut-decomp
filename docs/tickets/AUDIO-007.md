@@ -115,3 +115,21 @@ when, the text. A movie's are shown as it plays, in the soundtrack played (the f
 for a movie with fewer); the logos and the intro, the loot and the telescope's say
 nothing it heard. Machine heard: "Je fais la fume d'un nouveau collin" for Krusty's new
 cola.
+
+## Proofread, and one language (2026-10-21)
+
+The machine's lines had mistakes ("PROSTERNEZ-VOUD!", "Wigom", "Or de mon chemin").
+Every line of `subtitles.tsv` was read again and corrected -- spelling, grammar,
+accents, the French dub's names (Wiggum, Milhouse, Kwik-E-Mart, Nahasapeemapetilon),
+words plainly misheard where the sense and the sound leave no doubt ("Prosternez-vous!",
+"Hors de mon chemin"), shouts out of capitals: 1284 of 3713 lines. Where nothing sure
+could be read the line was left as heard, nothing added (a few dozen, Frink's and the
+zombies' among them). The movies' French lines likewise. The tables live in `art/`,
+which is not the repository's: the corrections are this copy's.
+
+The game spoke French and wrote English: the missions, the menus, the HUD were the text
+bible's English. Not given `--language`, the game now takes the language of the
+CD's voices (`art/audio/dialog/DIALOGF.RCF`: French), so the missions, the menus, the
+subtitles and the movies' soundtracks are all one. Text is read in Latin-1 (the fonts'):
+the subtitles' and the movies' alike ("œ" as "oe"), the French quotes as plain ones when
+the font lacks them.

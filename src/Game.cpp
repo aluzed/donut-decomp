@@ -193,10 +193,12 @@ Game::Game(int argc, char** argv)
 	//   --level <n>          play level n (1 by default)
 	//   --clean              the game alone: no debug windows, lines or skeletons
 	//   --from <k>           with --story, start at the level's k-th story mission (from 0)
-	//   --language <E|F|G|I|S>  language of the game's own text (English)
+	//   --language <E|F|G|I|S>  language of the game's own text (the voices', French on a
+	//                        French CD; else English)
 	//   --no-movies          no movies at start-up or in the story
 	//   --minigame <n>[r]    a bonus game race on track n (reversed with r), the computer
 	//                        driving all four; the game quits at its standings
+	bool languageGiven = false;
 	for (int i = 1; i < argc; ++i)
 	{
 		const std::string_view arg = argv[i];
@@ -228,8 +230,19 @@ Game::Game(int argc, char** argv)
 		else if (arg == "--level" && i + 1 < argc)
 			_levelNumber = std::max(1, std::atoi(argv[++i]));
 		else if (arg == "--language" && i + 1 < argc)
+		{
 			_language = static_cast<char>(std::toupper(static_cast<unsigned char>(argv[++i][0])));
+			languageGiven = true;
+		}
 	}
+	// Not given, the language the voices speak: the CD's dialogue library is
+	// one language's (DIALOGF.RCF, French), and its subtitles with it; the
+	// missions' text, the menus and the movies' soundtracks follow, rather than
+	// English text over French voices.
+	if (!languageGiven)
+		for (const char language : {'F', 'G', 'S'})
+			if (FileSystem::exists(fmt::format("art/audio/dialog/DIALOG{}.RCF", language)))
+				_language = language;
 
 	Commands::RunLine("HelloWorld();");
 	// for (const auto& entry : FileSystem::recursive_directory_iterator("scripts"))
@@ -1618,6 +1631,9 @@ void Game::loadMovieLines(const std::string& path)
 		std::string movie, track, start, end, text;
 		if (!std::getline(fields, movie, '\t') || !std::getline(fields, track, '\t') ||
 		    !std::getline(fields, start, '\t') || !std::getline(fields, end, '\t') || !std::getline(fields, text))
+			continue;
+		text = AudioManager::ToLatin1(text);
+		if (text.empty())
 			continue;
 		_movieLines[{movie, std::atoi(track.c_str())}].push_back({std::atof(start.c_str()), std::atof(end.c_str()), text});
 		++count;

@@ -130,55 +130,57 @@ void AudioManager::PlayAudio(const std::string& name, const Vector3& position, f
 	}
 }
 
+std::string AudioManager::ToLatin1(const std::string& text)
+{
+	// UTF-8 to Latin-1, typographic quotes and the like to their nearest;
+	// a line with letters beyond it (heard as Russian or Czech: shouts the
+	// recogniser took for another language) is none.
+	bool foreign = false;
+	std::string out;
+	for (std::size_t i = 0; i < text.size();)
+	{
+		const unsigned char c = text[i];
+		unsigned code = c;
+		std::size_t length = 1;
+		if (c >= 0xF0 && i + 3 < text.size())
+			code = '?', length = 4;
+		else if (c >= 0xE0 && i + 2 < text.size())
+			code = (c & 0x0F) << 12 | (text[i + 1] & 0x3F) << 6 | (text[i + 2] & 0x3F), length = 3;
+		else if (c >= 0xC0 && i + 1 < text.size())
+			code = (c & 0x1F) << 6 | (text[i + 1] & 0x3F), length = 2;
+		i += length;
+		if (code == 0x2019 || code == 0x2018)
+			code = '\'';
+		else if (code == 0x201C || code == 0x201D)
+			code = '"';
+		else if (code == 0x2026)
+		{
+			out += "...";
+			continue;
+		}
+		else if (code == 0x0153)
+		{
+			out += "oe";
+			continue;
+		}
+		if (code >= 256)
+			foreign = true;
+		out += static_cast<char>(code < 256 ? code : '?');
+	}
+	return foreign ? std::string() : out;
+}
+
 void AudioManager::LoadSubtitles(const std::string& path)
 {
 	std::ifstream file(path);
 	if (!file)
 		return;
-	// UTF-8 to Latin-1, typographic quotes and the like to their nearest;
-	// a line with letters beyond it (heard as Russian or Czech: shouts the
-	// recogniser took for another language) is none.
-	const auto latin1 = [](const std::string& text) {
-		bool foreign = false;
-		std::string out;
-		for (std::size_t i = 0; i < text.size();)
-		{
-			const unsigned char c = text[i];
-			unsigned code = c;
-			std::size_t length = 1;
-			if (c >= 0xF0 && i + 3 < text.size())
-				code = '?', length = 4;
-			else if (c >= 0xE0 && i + 2 < text.size())
-				code = (c & 0x0F) << 12 | (text[i + 1] & 0x3F) << 6 | (text[i + 2] & 0x3F), length = 3;
-			else if (c >= 0xC0 && i + 1 < text.size())
-				code = (c & 0x1F) << 6 | (text[i + 1] & 0x3F), length = 2;
-			i += length;
-			if (code == 0x2019 || code == 0x2018)
-				code = '\'';
-			else if (code == 0x201C || code == 0x201D)
-				code = '"';
-			else if (code == 0x2026)
-			{
-				out += "...";
-				continue;
-			}
-			else if (code == 0x0153)
-			{
-				out += "oe";
-				continue;
-			}
-			if (code >= 256)
-				foreign = true;
-			out += static_cast<char>(code < 256 ? code : '?');
-		}
-		return foreign ? std::string() : out;
-	};
 	for (std::string line; std::getline(file, line);)
 	{
 		const std::size_t tab = line.find('\t');
 		if (tab == std::string::npos || tab + 1 >= line.size())
 			continue;
-		const std::string text = latin1(line.substr(tab + 1));
+		const std::string text = ToLatin1(line.substr(tab + 1));
 		if (!text.empty())
 			_subtitleTexts[line.substr(0, tab)] = text;
 	}

@@ -52,6 +52,9 @@ public:
 	// The lines' text, heard by machine (tools/transcribe_dialogue.py: a sound's
 	// name, a tab, its text, a line each, UTF-8); none without it.
 	void LoadSubtitles(const std::string& path);
+	// A text in UTF-8 as the game's fonts take it, in Latin-1 ("œ" as "oe");
+	// empty when it has letters beyond it.
+	static std::string ToLatin1(const std::string& text);
 	// The line being said: who says it (empty when the file does not tell),
 	// its text, in Latin-1 as the game's fonts are.
 	struct Subtitle
