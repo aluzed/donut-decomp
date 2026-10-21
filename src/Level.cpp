@@ -1857,6 +1857,11 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 	for (std::size_t i = 0; i < _instances.size(); ++i)
 		if (shown(&DrawRange::instances, i) && seen(*_instances[i]))
 			_instances[i]->Draw(*_worldInstancedShader, false);
+
+	// The sun's glares, over the world now drawn, as much as it shows.
+	if (_worldSphere != nullptr && _skyShown)
+		_worldSphere->DrawLensFlare(*_billboardBatchShader, viewProj);
+	_worldShader->Bind();
 }
 
 } // namespace Donut

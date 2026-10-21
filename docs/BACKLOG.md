@@ -114,7 +114,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 |---|---|---|---|---|
 | RENDER-006 | ✅ | — | AnimObjectWrapper `_shaders`/`_textures` | No wrapper in the game holds a shader or a texture: their file's own serve (2026-10-20) |
 | RENDER-007 | ✅ | P2 | `CompositeDrawable` methods | Closed (2026-10-21): `CompositeModel` does it (props on their joints, visibility, animation); the empty declaration, never defined nor used, removed |
-| RENDER-011 | 🟡 | P2 | WorldSphere billboards (lens flare, sun halo) | Drawn with the billboard program, not the world's (whose vertex layout is not theirs): the sun's warm halo shows; the sky's clouds show since the fog no longer mixes into the alpha (2026-10-19). Lens flares not done |
+| RENDER-011 | ✅ | P2 | WorldSphere billboards (lens flare, sun halo) | Drawn with the billboard program, not the world's: the sun's warm halo, the sky's clouds (2026-10-19). Its lens flare (2026-10-21): the sun's glares on their skeleton's joints, seen as the camera looks within their range of the sun, dimmed as much as the sun is hidden (an occlusion query, read a frame later) |
 | RENDER-014 | ✅ | P2 | Multi-UV (channel 1 = lightmap) | Closed (2026-10-21): no UV list in the data has a second channel (19866 lists in 655 files, all channel 0); the channel is asked for, not caught |
 | RENDER-015 | ✅ | P2 | Lightmaps, static lighting | Closed (2026-10-21): the PC data has none: no second UV channel, no shader with a second texture (`TEX` 14053, `REFL` 157); the world is lit by its vertex colours |
 | RENDER-008 | 🧩 | P2 | LOD and spatial culling | § C.3 |
