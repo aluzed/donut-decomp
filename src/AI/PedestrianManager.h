@@ -44,9 +44,9 @@ public:
 
 	void Spawn(const Vector3& nearPosition, float radius);
 	void Update(double deltaTime, const Vector3& playerPosition);
-	void Draw(GL::ShaderProgram& shader, SimpleMesh& mesh, const class Matrix4x4& viewProj);
+	void Draw(GL::ShaderProgram& shader, SimpleMesh& mesh, const struct Matrix4x4& viewProj);
 	// The pedestrians with a body, as skinned characters.
-	void DrawBodies(const class Matrix4x4& viewProj, GL::ShaderProgram& skinShader, const ResourceManager& resources);
+	void DrawBodies(const struct Matrix4x4& viewProj, GL::ShaderProgram& skinShader, const ResourceManager& resources);
 
 	// Reads the groups of people a level script lists for its pedestrians
 	// (CreatePedGroup(1); AddPed("olady1", 2); ...; ClosePedGroup()), as far as
