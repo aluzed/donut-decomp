@@ -268,6 +268,7 @@ Game::Game(int argc, char** argv)
 	_audioManager = std::make_unique<AudioManager>();
 	// The voices' subtitles, heard by machine (tools/transcribe_dialogue.py).
 	_audioManager->LoadSubtitles("audio/dialog/subtitles.tsv");
+	loadMovieLines("art/audio/dialog/movie_subtitles.tsv");
 	_resourceManager = std::make_unique<ResourceManager>();
 	_textBible.Load("art/frontend/scrooby2/resource/txtbible/srr2.txt", _language);
 	_textBible.LoadCompiled("art/frontend/scrooby2/resource/txtbible/srr2.p3d", _language);
@@ -1408,21 +1409,29 @@ void Game::drawTransition(const Matrix4x4& proj, int width, int height)
 
 void Game::drawSubtitle(const Matrix4x4& proj, int width, int height)
 {
-	const AudioManager::Subtitle* subtitle = _audioManager->GetSubtitle();
+	if (_optionsMenu && !_optionsMenu->AreSubtitlesShown())
+		return;
+	if (const AudioManager::Subtitle* subtitle = _audioManager->GetSubtitle())
+		drawCaption(subtitle->speaker, subtitle->text, proj, width, height);
+}
+
+void Game::drawCaption(const std::string& speaker, const std::string& text, const Matrix4x4& proj, int width,
+                       int height)
+{
 	const Font* font = _resourceManager->GetFont("boulder_16");
-	if (!subtitle || !font)
+	if (!font)
 		return;
 	// Low on the screen, in the middle, as many lines as it takes within
 	// four fifths of its width, the speaker's name before it in yellow; a
 	// shadow under it to read it over anything.
-	const std::string prefix = subtitle->speaker.empty() ? "" : subtitle->speaker + ": ";
+	const std::string prefix = speaker.empty() ? "" : speaker + ": ";
 	// Clear of the game HUD's radar, bottom right: half the screen wide, left
-	// of its middle.
-	const bool radar = _gameHud && _gameHud->IsLoaded();
+	// of its middle; over a movie, the screen's whole width.
+	const bool radar = _gameHud && _gameHud->IsLoaded() && _gameState != GameState::Movie;
 	const float most = width * (radar ? 0.5f : 0.8f);
 	const float middle = width * (radar ? 0.42f : 0.5f);
 	std::vector<std::string> lines(1, prefix);
-	std::istringstream words(subtitle->text);
+	std::istringstream words(text);
 	for (std::string word; words >> word;)
 	{
 		const std::string longer = lines.back().empty() || lines.back() == prefix ? lines.back() + word : lines.back() + " " + word;
@@ -1433,7 +1442,7 @@ void Game::drawSubtitle(const Matrix4x4& proj, int width, int height)
 	}
 	const float lineHeight = font->GetHeight() + 4.0f;
 	// Above the objective's box while it is up.
-	const float bottom = _gameHud && _gameHud->IsObjectiveShown() ? 0.66f : 0.86f;
+	const float bottom = _gameHud && _gameHud->IsObjectiveShown() && _gameState != GameState::Movie ? 0.66f : 0.86f;
 	float y = height * bottom - lineHeight * (lines.size() - 1);
 	SpriteBatch batch;
 	for (std::size_t i = 0; i < lines.size(); ++i, y += lineHeight)
@@ -1583,6 +1592,8 @@ bool Game::playMovies(std::vector<std::string> files, GameState after, bool skip
 		if (!FileSystem::exists(path) ||
 		    !_moviePlayer->Open(path, track, _audioManager->GetChannelVolume(AudioManager::Channel::Music)))
 			continue;
+		// A movie with fewer soundtracks plays its first.
+		_moviePlaying = {upper, _movieLines.count({upper, track}) ? track : 0};
 		if (_gameState != GameState::Movie)
 		{
 			_afterMovies = after;
@@ -1597,10 +1608,40 @@ bool Game::playMovies(std::vector<std::string> files, GameState after, bool skip
 	return false;
 }
 
+void Game::loadMovieLines(const std::string& path)
+{
+	std::ifstream table(path);
+	std::size_t count = 0;
+	for (std::string line; std::getline(table, line);)
+	{
+		std::istringstream fields(line);
+		std::string movie, track, start, end, text;
+		if (!std::getline(fields, movie, '\t') || !std::getline(fields, track, '\t') ||
+		    !std::getline(fields, start, '\t') || !std::getline(fields, end, '\t') || !std::getline(fields, text))
+			continue;
+		_movieLines[{movie, std::atoi(track.c_str())}].push_back({std::atof(start.c_str()), std::atof(end.c_str()), text});
+		++count;
+	}
+	if (count > 0)
+		Log::Info("Game: {} movie lines' subtitles from {}", count, path);
+}
+
 void Game::drawMovie(const GameIntent& intent, const Matrix4x4& proj, double dt, int width, int height)
 {
 	_moviePlayer->Update(dt);
 	_moviePlayer->Draw(proj, width, height);
+	// What is said now, subtitled as the game's lines are.
+	if (!_optionsMenu || _optionsMenu->AreSubtitlesShown())
+		if (const auto lines = _movieLines.find(_moviePlaying); lines != _movieLines.end())
+		{
+			const double now = _moviePlayer->GetTime();
+			for (const MovieLine& line : lines->second)
+				if (now >= line.start && now <= line.end + 0.6)
+				{
+					drawCaption("", line.text, proj, width, height);
+					break;
+				}
+		}
 	// Over at its end, or skipped (not on the frame it begins): the next, or
 	// back to where it was played from. To View Movies with the show's
 	// theme; to the game with the level's music, unless the movie stopped it.
@@ -4867,6 +4908,27 @@ void Game::Run()
 
 		// Counted afresh each frame, shown the next (the overlay is built first).
 		CullStats::drawn = CullStats::culled = 0;
+		// The one saying a line moves their jaw with it; the others keep it shut.
+		{
+			std::string speaker;
+			const float open = _audioManager->GetMouthOpen(speaker);
+			const auto mouth = [&](Character* character) {
+				if (!character)
+					return;
+				std::string name = character->GetName();
+				std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return std::tolower(c); });
+				character->SetMouthOpen(!speaker.empty() && name == speaker ? open : 0.0f);
+			};
+			mouth(_character.get());
+			for (auto& [name, npc] : _npcs)
+				mouth(npc.get());
+			for (auto& [name, npc] : _ambientNpcs)
+				mouth(npc.get());
+			for (auto& giver : _bonusGivers)
+				mouth(giver.npc.get());
+			for (auto& [car, driver] : _carDrivers)
+				mouth(driver.get());
+		}
 		if (_level != nullptr)
 		{
 			_level->Draw(viewProjection);

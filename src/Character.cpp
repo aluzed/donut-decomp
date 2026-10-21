@@ -18,6 +18,15 @@
 namespace Donut
 {
 
+namespace
+{
+// A mouth fully open: the jaw turned this far (radians), about its own Z (seen
+// from the front, the one that opens it straight down; X and Y twist it).
+// Not more: Marge's hair is partly bound to her jaw.
+constexpr float kJawOpen = 0.25f;
+constexpr float kJawAxis[3] = {0.0f, 0.0f, 1.0f};
+} // namespace
+
 Character::Character(std::string name): _name(std::move(name)), _position(Vector3(0.0f)), _rotation(Quaternion::Identity)
 {
 	_characterController = std::make_unique<CharacterController>(this, &Game::GetInstance().GetWorldPhysics());
@@ -167,6 +176,15 @@ void Character::Update(double deltatime)
 
 	if (_currentAnimation != nullptr)
 		_skeleton->UpdatePose(*_currentAnimation, _animTime, _animLoops);
+	// Its mouth, opened by its jaw as it speaks.
+	if (_jaw == -2)
+	{
+		const auto* jaw = FindJoint("Jaw");
+		_jaw = jaw ? static_cast<int>(jaw - _skeleton->GetJoints().data()) : -1;
+	}
+	if (_jaw >= 0 && _mouthOpen > 0.0f && _currentAnimation != nullptr)
+		_skeleton->TurnJoint(static_cast<std::size_t>(_jaw),
+		                     Matrix4x4(Quaternion(Vector3(kJawAxis[0], kJawAxis[1], kJawAxis[2]), _mouthOpen * kJawOpen)));
 
 	// update our bonebuffer
 	auto joints = _skeleton->GetJoints();

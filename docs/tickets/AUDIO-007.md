@@ -1,6 +1,6 @@
 # AUDIO-007 — Dialogue: subtitles and lip sync
 
-- **Status:** IN PROGRESS (subtitles done; lip sync not)
+- **Status:** DONE (2026-10-21: subtitles, their setting, the movies' lines, lip sync)
 - **Priority:** P2
 - **Module:** Audio
 - **Files:** `src/Audio/AudioManager.{h,cpp}` (dialogue queue, `LoadSubtitles`,
@@ -91,3 +91,27 @@ accents; level 1 m1's first line, "Lisa: Merci d'apporter ma maquette...", its s
 told by its code.
 
 Not done: a setting to hide them; the movies' lines (not transcribed); lip sync.
+
+## Lip sync, the setting, the movies (2026-10-21)
+
+**Lip sync.** The characters have a `Jaw` joint (Homer's skeleton, joint 18, under
+`Head`). The line being said opens its speaker's jaw by its loudness: each sound
+played is measured a 30th of a second at a time (RMS of its 16-bit samples, against its
+loudest), and while a line plays its speaker (the folder of a character's own lines,
+or a conversation's speaker by their code, as for the subtitles) has their mouth
+opened by it, nothing below a fifth of its loudest. The jaw turns about its own Z up to
+0.25 rad: seen from the front, Z opens it straight down, X and Y twist it; more, and
+Marge's hair, partly bound to her jaw, came along. The player, the mission's people,
+the level's, the bonus missions' givers and the drivers all speak so.
+
+**A setting**: the game settings' fifth row, its force feedback on the consoles (the
+PC has none), is "Subtitles", yes or no, kept in `donut_settings.dat` with the others.
+
+**The movies' lines**, heard by machine too (`tools/transcribe_movies.py`: FFmpeg
+takes each soundtrack, Silero's voice detector cuts it where someone speaks, Parakeet
+on the card hears each stretch): 290 lines over the four soundtracks (English, French,
+German, Spanish), in `art/audio/dialog/movie_subtitles.tsv`, the movie, the track,
+when, the text. A movie's are shown as it plays, in the soundtrack played (the first,
+for a movie with fewer); the logos and the intro, the loot and the telescope's say
+nothing it heard. Machine heard: "Je fais la fume d'un nouveau collin" for Krusty's new
+cola.

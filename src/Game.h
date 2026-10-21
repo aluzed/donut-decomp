@@ -282,6 +282,19 @@ private:
 	bool movieUnlocked(int movie);
 	void playMovie(int movie);
 	void drawMovie(const struct GameIntent& intent, const Matrix4x4& proj, double dt, int width, int height);
+	// The movies' lines (tools/transcribe_movies.py), by movie and soundtrack:
+	// when each starts and ends, and its text; the one playing, its track.
+	struct MovieLine
+	{
+		double start, end;
+		std::string text;
+	};
+	std::map<std::pair<std::string, int>, std::vector<MovieLine>> _movieLines;
+	std::pair<std::string, int> _moviePlaying;
+	void loadMovieLines(const std::string& path);
+	// A caption low on the screen, in the middle: the speaker's name, if any,
+	// in yellow before it; as many lines as it takes.
+	void drawCaption(const std::string& speaker, const std::string& text, const Matrix4x4& proj, int width, int height);
 	std::unique_ptr<FrontendProject> _loadingPage;
 	// The game's pause screen (ingame.p3d's Pause.pag and PauseMission.pag):
 	// its entry picked, and up and down and the mouse as they were.

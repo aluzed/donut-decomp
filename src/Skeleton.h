@@ -44,6 +44,9 @@ public:
 	void ResetPose();
 	// `time` in seconds; with `loop` false, a time past the end holds the last frame.
 	void UpdatePose(SkinAnimation& animation, double time, bool loop = true);
+	// Turns joint `index` by `turn` in its own frame, over the pose it has (a
+	// jaw opened as its character speaks), its children with it.
+	void TurnJoint(std::size_t index, const Matrix4x4& turn);
 
 	const std::string& GetName() { return _name; }
 	const std::vector<Joint>& GetJoints() const { return _joints; }

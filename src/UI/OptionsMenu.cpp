@@ -586,6 +586,8 @@ void OptionsMenu::load()
 			_mouse.invertX = value != 0.0f;
 		else if (key == "inverty")
 			_mouse.invertY = value != 0.0f;
+		else if (key == "subtitles")
+			_subtitles = value != 0.0f;
 	}
 }
 
@@ -599,7 +601,7 @@ void OptionsMenu::save() const
 		     << '\n';
 	file << "mouselook " << (_mouse.look ? 1 : 0) << "\nmousex " << _mouse.sensitivityX << "\nmousey "
 	     << _mouse.sensitivityY << "\ninvertx " << (_mouse.invertX ? 1 : 0) << "\ninverty " << (_mouse.invertY ? 1 : 0)
-	     << '\n';
+	     << "\nsubtitles " << (_subtitles ? 1 : 0) << '\n';
 	Log::Info("Options: volumes saved, music {:.1f}, effects {:.1f}, vehicle {:.1f}, voice {:.1f}",
 	          _audio.GetChannelVolume(AudioManager::Channel::Music),
 	          _audio.GetChannelVolume(AudioManager::Channel::Effects),
@@ -674,14 +676,17 @@ void OptionsMenu::drawGameSettings(const GameIntent& intent, const Matrix4x4& pr
 	// and down, inverted across and up and down; the vehicle's force feedback
 	// and wheel, which the game has neither of, greyed. A value changes with
 	// left and right, a click on its arrows or along its bar.
+	// The fifth, the force feedback's, the PC has none of: the subtitles in its
+	// place.
 	const std::vector<Entry> entries = {{"Label00", true}, {"Label01", true}, {"Label02", true}, {"Label03", true},
-	                                    {"Label04", true}, {"Label05", false}, {"Label06", false}};
+	                                    {"Label04", true}, {"Label05", true}, {"Label06", false}};
 	struct Toggle
 	{
 		int row;
 		bool* value;
 	};
-	const Toggle toggles[] = {{0, &_mouse.look}, {3, &_mouse.invertX}, {4, &_mouse.invertY}};
+	const Toggle toggles[] = {{0, &_mouse.look}, {3, &_mouse.invertX}, {4, &_mouse.invertY}, {5, &_subtitles}};
+	_gameSettings->SetText("Label05", "Subtitles");
 	struct Bar
 	{
 		int row;
@@ -693,6 +698,7 @@ void OptionsMenu::drawGameSettings(const GameIntent& intent, const Matrix4x4& pr
 	if (_shown)
 		pick(*_gameSettings, entries, intent);
 	const Mouse was = _mouse;
+	const bool subtitled = _subtitles;
 	if (_shown && intent.mouseLeftClick)
 	{
 		for (const Toggle& toggle : toggles)
@@ -725,13 +731,11 @@ void OptionsMenu::drawGameSettings(const GameIntent& intent, const Matrix4x4& pr
 	// NO and YES, the page's own strings.
 	for (const Toggle& toggle : toggles)
 		_gameSettings->SetTextIndex(fmt::format("Label{:02}_Value", toggle.row), *toggle.value ? 1 : 0);
-	_gameSettings->SetTextIndex("Label05_Value", 0);
-	_gameSettings->SetTextColor("Label05_Value", Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 	colour(*_gameSettings, entries);
 	_gameSettings->Draw(proj);
 	_shown = true;
 	if (_mouse.look != was.look || _mouse.sensitivityX != was.sensitivityX || _mouse.sensitivityY != was.sensitivityY ||
-	    _mouse.invertX != was.invertX || _mouse.invertY != was.invertY)
+	    _mouse.invertX != was.invertX || _mouse.invertY != was.invertY || _subtitles != subtitled)
 		save();
 	if (back)
 	{

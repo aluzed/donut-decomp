@@ -84,6 +84,8 @@ public:
 	const Skeleton::Joint* FindJoint(const std::string& name) const;
 
 	void Update(double deltatime);
+	// How open its mouth is, 0 to 1 (its Jaw joint turned): a line being said.
+	void SetMouthOpen(float open) { _mouthOpen = open; }
 	void Draw(const Matrix4x4& viewProjection, GL::ShaderProgram&, const ResourceManager&);
 
 	// maybe change this to just anim names
@@ -95,6 +97,9 @@ private:
 	void addAnimation(const P3D::Animation&);
 
 	double _animTime = 0.0;
+	float _mouthOpen = 0.0f;
+	// Its Jaw joint, -2 until looked for, -1 when it has none.
+	int _jaw = -2;
 	bool _animLoops = true;
 
 	// only used as an entity name for now

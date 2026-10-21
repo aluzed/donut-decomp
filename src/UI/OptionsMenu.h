@@ -69,6 +69,9 @@ public:
 		bool invertX = false, invertY = false;
 	};
 	const Mouse& GetMouse() const { return _mouse; }
+	// Whether the lines said are subtitled (the game settings' fifth row, its
+	// force feedback's on the consoles: the PC has none).
+	bool AreSubtitlesShown() const { return _subtitles; }
 
 	// The page open: the living room's camera goes to its object.
 	Screen GetScreen() const { return _screen; }
@@ -92,6 +95,7 @@ private:
 	std::unique_ptr<FrontendProject> _keys;
 	std::unique_ptr<FrontendProject> _controller;
 	std::unique_ptr<FrontendProject> _gameSettings;
+	bool _subtitles = true;
 	Mouse _mouse;
 	void drawController(const GameIntent& intent, const Matrix4x4& proj, bool back, bool confirm);
 	void drawGameSettings(const GameIntent& intent, const Matrix4x4& proj, bool back, int by);

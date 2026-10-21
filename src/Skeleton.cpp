@@ -62,6 +62,25 @@ void Skeleton::UpdatePose(SkinAnimation& animation, double time, bool loop)
 	updateJoints();
 }
 
+void Skeleton::TurnJoint(std::size_t index, const Matrix4x4& turn)
+{
+	if (index >= _joints.size())
+		return;
+	// Its children follow: each pose is its parent's times its own local
+	// transform, which stays.
+	const Matrix4x4 before = _joints[index].pose;
+	_joints[index].pose = before * turn;
+	const Matrix4x4 moved = _joints[index].pose * before.Inverse();
+	for (std::size_t i = index + 1; i < _joints.size(); ++i)
+		for (int parent = _joints[i].parent; parent > 0; parent = _joints[parent].parent)
+			if (static_cast<std::size_t>(parent) == index)
+			{
+				_joints[i].pose = moved * _joints[i].pose;
+				break;
+			}
+	updateJoints();
+}
+
 void Skeleton::updateJoints()
 {
 	for (auto i = 0; i < _joints.size(); i++)

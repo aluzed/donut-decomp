@@ -216,12 +216,9 @@ void AudioManager::LoadSubtitles(const std::string& path)
 	Log::Info("Audio: {} lines' subtitles from {}, {} speakers", _subtitleTexts.size(), path, _speakerCodes.size());
 }
 
-void AudioManager::showSubtitle(const std::string& name, const RCL::RSDFile& rsdFile)
+std::string AudioManager::speakerOf(const std::string& name) const
 {
-	const auto found = _subtitleTexts.find(name);
-	if (found == _subtitleTexts.end() || found->second.empty())
-		return;
-	// Who: the folder of a character's own line; a conversation's speaker by
+	// The folder of a character's own line; a conversation's speaker by
 	// their code. The generic people are not named.
 	const std::size_t slash = name.find('\\');
 	std::string speaker = slash == std::string::npos ? "" : name.substr(0, slash);
@@ -249,6 +246,15 @@ void AudioManager::showSubtitle(const std::string& name, const RCL::RSDFile& rsd
 	}
 	if (speaker.rfind("generic", 0) == 0)
 		speaker.clear();
+	return speaker;
+}
+
+void AudioManager::showSubtitle(const std::string& name, const RCL::RSDFile& rsdFile)
+{
+	const auto found = _subtitleTexts.find(name);
+	if (found == _subtitleTexts.end() || found->second.empty())
+		return;
+	std::string speaker = speakerOf(name);
 	// "dr.frink" is Dr. Frink, "sea_captain" Sea Captain.
 	for (std::size_t i = 0; i < speaker.size(); ++i)
 	{
@@ -279,6 +285,24 @@ void AudioManager::PlayDialogue(const std::string& name)
 void AudioManager::QueueDialogue(const std::string& name, DialoguePriority priority)
 {
 	_dialogueQueue.push_back({name, priority});
+}
+
+float AudioManager::GetMouthOpen(std::string& speaker) const
+{
+	speaker.clear();
+	if (_dialogueSource < 0 || _dialogueEnvelope.empty())
+		return 0.0f;
+	const ALuint id = _sources[_dialogueSource].id;
+	ALint state = AL_STOPPED;
+	alGetSourcei(id, AL_SOURCE_STATE, &state);
+	if (state != AL_PLAYING)
+		return 0.0f;
+	ALfloat seconds = 0.0f;
+	alGetSourcef(id, AL_SEC_OFFSET, &seconds);
+	const std::size_t at = std::min(_dialogueEnvelope.size() - 1, static_cast<std::size_t>(seconds * 30.0f));
+	speaker = _dialogueSpeaker;
+	// Quiet stretches shut: below a fifth of its loudest, closed.
+	return std::clamp((_dialogueEnvelope[at] - 0.2f) / 0.6f, 0.0f, 1.0f);
 }
 
 bool AudioManager::IsDialoguePlaying() const
@@ -317,6 +341,8 @@ void AudioManager::processDialogueQueue()
 	if (src->inUse)
 	{
 		_dialogueSource = static_cast<int>(src - _sources.data());
+		_dialogueSpeaker = speakerOf(name);
+		_dialogueEnvelope = _lastEnvelope;
 		alSourcef(src->id, AL_GAIN, volume(Channel::Voice));
 	}
 }
@@ -949,6 +975,28 @@ void AudioManager::playOnSource(Source* src, const RCL::RSDFile& rsdFile)
 	const auto& data = rsdFile.GetData();
 
 	alBufferData(src->buffer, format, data.data(), static_cast<ALsizei>(data.size()), rsdFile.GetSampleRate());
+	// Its loudness, a 30th of a second at a time (16-bit samples), against its
+	// loudest: a line's, for the speaker's mouth.
+	{
+		const std::size_t channels = std::max<uint32_t>(1, rsdFile.GetNumChannels());
+		const std::size_t step = std::max<std::size_t>(1, rsdFile.GetSampleRate() / 30) * channels;
+		const auto* samples = reinterpret_cast<const int16_t*>(data.data());
+		const std::size_t count = data.size() / 2;
+		_lastEnvelope.clear();
+		float loudest = 0.0f;
+		for (std::size_t at = 0; at < count; at += step)
+		{
+			double sum = 0.0;
+			const std::size_t end = std::min(count, at + step);
+			for (std::size_t i = at; i < end; ++i)
+				sum += static_cast<double>(samples[i]) * samples[i];
+			const float rms = static_cast<float>(std::sqrt(sum / static_cast<double>(end - at)));
+			_lastEnvelope.push_back(rms);
+			loudest = std::max(loudest, rms);
+		}
+		for (float& level : _lastEnvelope)
+			level = loudest > 0.0f ? level / loudest : 0.0f;
+	}
 	alSourcei(src->id, AL_BUFFER, src->buffer);
 	alSourcei(src->id, AL_LOOPING, AL_FALSE);
 	// A pooled source keeps what the last sound on it was given.

@@ -65,6 +65,11 @@ public:
 	void QueueDialogue(const std::string& name, DialoguePriority priority);
 	// A line queued or still being spoken.
 	bool IsDialoguePlaying() const;
+	// How open the speaker's mouth is now, 0 to 1, from the loudness of the
+	// line being said (its envelope, a 30th of a second at a time, against
+	// its loudest); `speaker` who says it ("homer", "marge"), empty when no
+	// line plays or it is no one's.
+	float GetMouthOpen(std::string& speaker) const;
 
 	void SetListenerPosition(const Vector3& position, const Vector3& direction, const Vector3& up);
 	void SetVolume(float volume);
@@ -183,6 +188,14 @@ private:
 	void showSubtitle(const std::string& name, const RCL::RSDFile& rsdFile);
 	// The source speaking the current line, or -1.
 	int _dialogueSource = -1;
+	// The line being said: who says it, and its loudness a 30th of a second at
+	// a time, 0 to 1 against its loudest. The last sound played's, to be taken
+	// for a line.
+	std::string _dialogueSpeaker;
+	std::vector<float> _dialogueEnvelope, _lastEnvelope;
+	// Who says line `name`: the folder of a character's own lines, or a
+	// conversation's speaker by their code; empty for the generic people.
+	std::string speakerOf(const std::string& name) const;
 	std::unique_ptr<MusicSource> _music;
 	float _channelVolumes[4] = {1.0f, 1.0f, 1.0f, 1.0f};
 	float volume(Channel channel) const { return _channelVolumes[static_cast<int>(channel)]; }
