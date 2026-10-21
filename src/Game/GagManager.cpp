@@ -66,9 +66,9 @@ void GagManager::Load(const std::string& levelDirectory, const Level& level, con
 		else if (command == "GagSetPosition" && args.size() == 1)
 			gag->placed = level.GetLocatorPosition(args[0]);
 		else if (command == "GagSetPosition" && args.size() == 3)
-			gag->placed = Vector3(static_cast<float>(std::atof(args[0].c_str())),
-			                      static_cast<float>(std::atof(args[1].c_str())),
-			                      static_cast<float>(std::atof(args[2].c_str())));
+			gag->placed =
+			    Vector3(static_cast<float>(std::atof(args[0].c_str())), static_cast<float>(std::atof(args[1].c_str())),
+			            static_cast<float>(std::atof(args[2].c_str())));
 		else if (command == "GagSetSound" && !args.empty())
 			gag->sound = args[0];
 		else if (command == "GagSetRandom" && !args.empty())
@@ -104,9 +104,9 @@ void GagManager::Load(const std::string& levelDirectory, const Level& level, con
 		{
 			// ("touch", x, y, z, radius).
 			gag->byHand = args[0] == "action";
-			gag->position = Vector3(static_cast<float>(std::atof(args[1].c_str())),
-			                        static_cast<float>(std::atof(args[2].c_str())),
-			                        static_cast<float>(std::atof(args[3].c_str())));
+			gag->position =
+			    Vector3(static_cast<float>(std::atof(args[1].c_str())), static_cast<float>(std::atof(args[2].c_str())),
+			            static_cast<float>(std::atof(args[3].c_str())));
 			gag->radius = static_cast<float>(std::atof(args[4].c_str()));
 		}
 		else if (command == "GagEnd")
@@ -134,8 +134,8 @@ void GagManager::Load(const std::string& levelDirectory, const Level& level, con
 			gag.reset();
 		}
 	}
-	Log::Info("Game: {} gag(s) in the level, {} found before, {} whose trigger locator is not loaded", _gags.size(),
-	          GetFound(), unplaced);
+	Log::Info("Game: {} gag(s) in the level, {} found before, {} whose trigger locator is not loaded", _gags.size(), GetFound(),
+	          unplaced);
 }
 
 std::string GagManager::Id(const Gag& gag) const
@@ -166,14 +166,12 @@ bool GagManager::IsHere(const Gag& gag, const std::string& interior)
 	if (gag.interior.size() != interior.size())
 		return false;
 	for (std::size_t i = 0; i < interior.size(); ++i)
-		if (std::tolower(static_cast<unsigned char>(gag.interior[i])) !=
-		    std::tolower(static_cast<unsigned char>(interior[i])))
+		if (std::tolower(static_cast<unsigned char>(gag.interior[i])) != std::tolower(static_cast<unsigned char>(interior[i])))
 			return false;
 	return true;
 }
 
-void GagManager::Update(const Vector3& player, const std::string& interior, double now,
-                        const std::function<void(Gag&)>& play)
+void GagManager::Update(const Vector3& player, const std::string& interior, double now, const std::function<void(Gag&)>& play)
 {
 	for (auto& gag : _gags)
 	{
@@ -196,8 +194,7 @@ void GagManager::Update(const Vector3& player, const std::string& interior, doub
 					}
 			Gag& picked = shared.empty() ? gag : *shared[static_cast<std::size_t>(rand()) % shared.size()];
 			play(picked);
-			for (Gag* other : shared)
-				other->lastPlayed = now;
+			for (Gag* other : shared) other->lastPlayed = now;
 		}
 		gag.inside = inside;
 	}
@@ -265,8 +262,7 @@ void GagManager::Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& skinSha
 				gag.skins->Pose(frame, gag.cycle == "cycle");
 		}
 		const Matrix4x4 model = Matrix4x4::MakeTranslate(gag.placed);
-		for (const bool opaque : {true, false})
-			gag.drawable->Draw(worldShader, viewProjection, model, opaque);
+		for (const bool opaque : {true, false}) gag.drawable->Draw(worldShader, viewProjection, model, opaque);
 		if (gag.skins)
 		{
 			glDisable(GL_CULL_FACE); // skinned characters, as for the player

@@ -2478,8 +2478,7 @@ void Game::saveGags() const
 	if (_autopilot)
 		return;
 	auto& save = const_cast<SaveGame&>(_save);
-	for (const std::string& id : _gags.GetFoundIds())
-		save.Add("gag", id);
+	for (const std::string& id : _gags.GetFoundIds()) save.Add("gag", id);
 	save.Save();
 }
 
@@ -3247,8 +3246,7 @@ void Game::updateCheckpoints()
 	// "goto" is often a walk to a door.
 	if (_scriptEngine->IsMissionActive() && _character)
 	{
-		const Vector3 playerPos = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()
-		                                                       : _character->GetPosition();
+		const Vector3 playerPos = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : _character->GetPosition();
 		const auto& checkpoints = _scriptEngine->GetCheckpoints();
 		const int current = _scriptEngine->GetCurrentCheckpoint();
 		if (current >= 0 && current < static_cast<int>(checkpoints.size()) &&
@@ -3271,18 +3269,18 @@ void Game::updateDriving(const GameIntent& intent)
 			startBoarding(car, false);
 			Log::Info("Game: exited vehicle");
 		}
-	else if (intent.honk)
-	{
-		if (_hornCooldown <= 0.0f)
+		else if (intent.honk)
 		{
-			// The car's own horn when its sound script names one.
-			if (const std::string horn = _audioManager->CarSoundFile(_activeVehicle->GetName(), "_horn"); !horn.empty())
-				_audioManager->PlayAudio(horn);
-			else
-				_audioManager->PlayRaw(SoundGenerator::Horn(0.4f), 22050, 1, 16);
-			_hornCooldown = 0.4f;
+			if (_hornCooldown <= 0.0f)
+			{
+				// The car's own horn when its sound script names one.
+				if (const std::string horn = _audioManager->CarSoundFile(_activeVehicle->GetName(), "_horn"); !horn.empty())
+					_audioManager->PlayAudio(horn);
+				else
+					_audioManager->PlayRaw(SoundGenerator::Horn(0.4f), 22050, 1, 16);
+				_hornCooldown = 0.4f;
+			}
 		}
-	}
 		else if (intent.vehicleJump)
 		{
 			_activeVehicle->Jump();
@@ -3347,13 +3345,13 @@ void Game::updateAudio(double deltaTime)
 	// The place's background: the level's outdoors, or a small room indoors.
 	// The game picks it by zone with a script (ambience.rms) not read here.
 	{
-		static const char* const kOutdoors[] = {"suburb_day_loop",    "city_busy_loop",       "squidport_amb_loop_02",
-		                                       "suburb_night_loop",  "city_night_loop",      "squidport_night_loop",
-		                                       "halloween_amb_loop"};
+		static const char* const kOutdoors[] = {"suburb_day_loop",   "city_busy_loop",  "squidport_amb_loop_02",
+		                                        "suburb_night_loop", "city_night_loop", "squidport_night_loop",
+		                                        "halloween_amb_loop"};
 		const int level = std::clamp(_levelNumber, 1, 7);
 		std::string indoors = _interior;
 		std::transform(indoors.begin(), indoors.end(), indoors.begin(), [](unsigned char c) { return std::tolower(c); });
-		_audioManager->PlayAmbience(_interior.empty()                         ? kOutdoors[level - 1]
+		_audioManager->PlayAmbience(_interior.empty()                          ? kOutdoors[level - 1]
 		                            : indoors.find("dmv") != std::string::npos ? "\\dmv.rsd"
 		                                                                       : "room_small_01");
 	}
@@ -3447,7 +3445,8 @@ void Game::updateMissionResult(double deltaTime)
 				if (levelWon && levelAvailable(_levelNumber + 1))
 				{
 					saveStoryProgress(_levelNumber + 1, 0);
-					const auto nextLevel = [this]() {
+					const auto nextLevel = [this]()
+					{
 						switchLevel(_levelNumber + 1);
 						if (!_story.empty())
 							startStoryMission(0);
@@ -3487,7 +3486,8 @@ void Game::updateMissionResult(double deltaTime)
 				else
 				{
 					_scriptEngine->CleanupMission();
-					if (_collectibleManager) _collectibleManager->SpawnOnPath();
+					if (_collectibleManager)
+						_collectibleManager->SpawnOnPath();
 					runMissionScript();
 				}
 			}
@@ -3501,7 +3501,8 @@ void Game::updateFallOff()
 	{
 		Log::Warn("Game: player fell off the map, respawning...");
 		_health -= 20.0f;
-		if (_health <= 0.0f) _health = 100.0f;
+		if (_health <= 0.0f)
+			_health = 100.0f;
 		SetPlayerPosition(_safe.onFoot);
 	}
 
@@ -3509,14 +3510,12 @@ void Game::updateFallOff()
 	{
 		const int node = _pathGraph ? _pathGraph->FindNearestRoadNode(_safe.carPos) : -1;
 		const Vector3 road = node >= 0 ? _pathGraph->GetNodes()[node].position : _safe.carPos;
-		Log::Warn("Game: vehicle fell off the map, put back on the road at ({:.1f}, {:.1f}, {:.1f})", road.X, road.Y,
-		          road.Z);
+		Log::Warn("Game: vehicle fell off the map, put back on the road at ({:.1f}, {:.1f}, {:.1f})", road.X, road.Y, road.Z);
 		_activeVehicle->Teleport(road, Quaternion::MakeFromEuler(Vector3(0.0f, _safe.carYaw, 0.0f)));
 		// Known safe again only once it is back on its wheels.
 		_safe.car = nullptr;
 	}
-	else if (_activeVehicle && _inVehicle && !_activeVehicle->IsAirborne() &&
-	         _activeVehicle->GetPosition().Y > _fallOffY)
+	else if (_activeVehicle && _inVehicle && !_activeVehicle->IsAirborne() && _activeVehicle->GetPosition().Y > _fallOffY)
 	{
 		_safe.car = _activeVehicle;
 		_safe.carPos = _activeVehicle->GetPosition();
@@ -3560,8 +3559,8 @@ void Game::drawGuides()
 		if (!_inVehicle)
 		{
 			_lineRenderer->DrawSkeleton(_character->GetPosition(), _character->GetSkeleton());
-			_lineRenderer->DrawBox(_character->GetPosition(), _character->GetRotation(),
-				Vector3(-0.3f, 0.0f, -0.2f), Vector3(0.3f, 1.8f, 0.3f), Vector4(0.2f, 1.0f, 0.2f, 1.0f));
+			_lineRenderer->DrawBox(_character->GetPosition(), _character->GetRotation(), Vector3(-0.3f, 0.0f, -0.2f),
+			                       Vector3(0.3f, 1.8f, 0.3f), Vector4(0.2f, 1.0f, 0.2f, 1.0f));
 		}
 	}
 
@@ -3573,9 +3572,9 @@ void Game::drawGuides()
 		int currentCp = _scriptEngine->GetCurrentCheckpoint();
 		for (int i = 0; i < static_cast<int>(checkpoints.size()); ++i)
 		{
-			Vector4 cpCol = i == currentCp ? Vector4(1.0f, 1.0f, 0.0f, 1.0f) :
-			                i < currentCp  ? Vector4(0.0f, 1.0f, 0.0f, 1.0f) :
-			                                 Vector4(1.0f, 0.0f, 0.0f, 1.0f);
+			Vector4 cpCol = i == currentCp  ? Vector4(1.0f, 1.0f, 0.0f, 1.0f)
+			                : i < currentCp ? Vector4(0.0f, 1.0f, 0.0f, 1.0f)
+			                                : Vector4(1.0f, 0.0f, 0.0f, 1.0f);
 			Vector3 cpBase = checkpoints[i] + Vector3(0, 0.5f, 0);
 			_lineRenderer->DrawLine(cpBase, cpBase + Vector3(0, 15.0f, 0), cpCol);
 
@@ -3588,8 +3587,7 @@ void Game::drawGuides()
 			{
 				float t1 = s / (float)segments;
 				float t2 = (s + 1) / (float)segments;
-				_lineRenderer->DrawLine(from + (to - from) * t1, from + (to - from) * t2,
-					Vector4(1.0f, 1.0f, 1.0f, 0.3f));
+				_lineRenderer->DrawLine(from + (to - from) * t1, from + (to - from) * t2, Vector4(1.0f, 1.0f, 1.0f, 0.3f));
 			}
 		}
 	}
@@ -3638,11 +3636,9 @@ void Game::updateWorld(double deltaTime, bool simulate)
 			obstacles.push_back(_character->GetPosition());
 		if (const Vehicle* parked = _scriptEngine->GetPlayerCar(); parked && parked != _activeVehicle)
 			obstacles.push_back(parked->GetPosition());
-		for (const auto& vehicle : _scriptEngine->GetMissionVehicles())
-			obstacles.push_back(vehicle->GetPosition());
+		for (const auto& vehicle : _scriptEngine->GetMissionVehicles()) obstacles.push_back(vehicle->GetPosition());
 		if (_hitAndRun)
-			for (const Vehicle* cop : _hitAndRun->GetCops())
-				obstacles.push_back(cop->GetPosition());
+			for (const Vehicle* cop : _hitAndRun->GetCops()) obstacles.push_back(cop->GetPosition());
 		_trafficManager->SetObstacles(std::move(obstacles));
 		_trafficManager->Update(deltaTime);
 		for (const auto& [model, position] : _trafficManager->TakeHonks())
@@ -3670,8 +3666,7 @@ void Game::updateGameplay(double deltaTime, bool simulate)
 		// actually is -- the car, when driving. This used to log "entered
 		// trigger zone" every two seconds for as long as the player stood in
 		// one, without saying which.
-		const Vector3 playerPos = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()
-		                                                       : _character->GetPosition();
+		const Vector3 playerPos = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : _character->GetPosition();
 		// A player who came to the door at the wheel is already inside its
 		// volume when they get out, and its entry has gone by: a door is
 		// gone through by a player on foot standing in it, not only on
@@ -3719,9 +3714,8 @@ void Game::updateGameplay(double deltaTime, bool simulate)
 				_messages.card = _textBible.Get(fmt::format("CARD_TITLE_{:02}", index));
 				_messages.cardFound = index;
 				_messages.itemsCount.clear();
-				_messages.itemsDone = _collectibleManager->GetCardsFound() == _collectibleManager->GetCardsTotal()
-				                 ? "CARD_LEVEL_COMPLETE"
-				                 : "";
+				_messages.itemsDone =
+				    _collectibleManager->GetCardsFound() == _collectibleManager->GetCardsTotal() ? "CARD_LEVEL_COMPLETE" : "";
 				if (_collectibleManager->GetCardsFound() == _collectibleManager->GetCardsTotal())
 				{
 					const std::string& all = _textBible.Get("CARD_LEVEL_COMPLETE");
@@ -3745,8 +3739,7 @@ void Game::updateGameplay(double deltaTime, bool simulate)
 			_ufo->Update(deltaTime);
 			Vector3 blast;
 			bool lastBarrel = false;
-			while (_ufo->TakeBlast(blast, lastBarrel))
-				bossBlast(blast, lastBarrel);
+			while (_ufo->TakeBlast(blast, lastBarrel)) bossBlast(blast, lastBarrel);
 		}
 		// The wasp cameras: a jump at one, or a car driven into it,
 		// destroys it, for coins.
@@ -3756,11 +3749,10 @@ void Game::updateGameplay(double deltaTime, bool simulate)
 			const Vector3 at = driving ? _activeVehicle->GetPosition() : _character->GetPosition();
 			// A jump, not merely being off the ground: a teleport sets the
 			// player down from a little above, and destroyed a wasp nearby.
-			const bool attacking = driving ? std::abs(_activeVehicle->GetSpeedKmh()) > 10.0f
-			                               : _elapsedSeconds - _moves.lastJumpAt < 1.0;
+			const bool attacking =
+			    driving ? std::abs(_activeVehicle->GetSpeedKmh()) > 10.0f : _elapsedSeconds - _moves.lastJumpAt < 1.0;
 			const auto wasps = _waspManager->Update(deltaTime, at, attacking, driving ? 3.5f : 2.5f);
-			for (const auto& [sound, where] : wasps.sounds)
-				_audioManager->PlayAudio(sound, where);
+			for (const auto& [sound, where] : wasps.sounds) _audioManager->PlayAudio(sound, where);
 			// Shot: a zap, a jolt and the damage, on foot or at the wheel.
 			if (wasps.damage > 0.0f)
 			{
@@ -3781,8 +3773,7 @@ void Game::updateGameplay(double deltaTime, bool simulate)
 		}
 		if (_collectibleManager)
 		{
-			const Vector3 collector = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()
-			                                                      : _character->GetPosition();
+			const Vector3 collector = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : _character->GetPosition();
 			_collectibleManager->Update(collector, 3.0f);
 			if (const int fresh = _collectibleManager->TakeNewlyCollected(); fresh > 0)
 			{
@@ -3804,7 +3795,7 @@ void Game::drawDebugWindows()
 
 	imguiMenuBar();
 
-	//if (_character != nullptr)
+	// if (_character != nullptr)
 	//	guiModelMenu(*_character);
 
 	// ImGui::ShowDemoWindow();
@@ -3827,8 +3818,7 @@ bool Game::handleIntents(const GameIntent& intent)
 	bool keepRunning = true;
 	// Escape in the options goes back a page, not out of the pause; nor
 	// in the pause between missions, which has pages of its own.
-	if (intent.pauseToggle && !(_optionsMenu && _optionsMenu->IsOpen()) &&
-	    !(_pauseSunday && _pauseSunday->IsOpen()))
+	if (intent.pauseToggle && !(_optionsMenu && _optionsMenu->IsOpen()) && !(_pauseSunday && _pauseSunday->IsOpen()))
 	{
 		if (_states.Is(GameState::InGame))
 		{
@@ -3861,8 +3851,13 @@ bool Game::handleIntents(const GameIntent& intent)
 	{
 		Log::Info("Game: restarting mission...");
 		_scriptEngine->CleanupMission();
-		if (_collectibleManager) _collectibleManager->SpawnOnPath();
-		if (_inVehicle) { _inVehicle = false; _activeVehicle = nullptr; }
+		if (_collectibleManager)
+			_collectibleManager->SpawnOnPath();
+		if (_inVehicle)
+		{
+			_inVehicle = false;
+			_activeVehicle = nullptr;
+		}
 		runMissionScript();
 	}
 
@@ -3905,8 +3900,7 @@ void Game::drawDebugOverlays()
 	ImGui::SetNextWindowSize(ImVec2(220, 0), ImGuiCond_Once);
 	// Under the minimap: ImGui's default corner sat on the HUD's coin count.
 	ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x - 240.0f, 175.0f), ImGuiCond_Once);
-	if (ImGui::Begin("Post-FX", NULL,
-	                 ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize))
+	if (ImGui::Begin("Post-FX", NULL, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		ImGui::SliderFloat("Vignette", &_vignetteIntensity, 0.0f, 1.0f);
 	}
@@ -3940,9 +3934,8 @@ void Game::updateCharacters(double deltaTime)
 	// Someone near the player while a line is being spoken is in the
 	// conversation, and gestures.
 	const bool speaking = _audioManager->IsDialoguePlaying() && _character && !_inVehicle;
-	const auto talkingNear = [&](const Vector3& position) {
-		return speaking && (position - _character->GetPosition()).Length() < 8.0f;
-	};
+	const auto talkingNear = [&](const Vector3& position)
+	{ return speaking && (position - _character->GetPosition()).Length() < 8.0f; };
 	for (auto& [car, driver] : _carDrivers)
 		if (driver)
 			driver->Update(deltaTime);
@@ -3953,27 +3946,27 @@ void Game::updateCharacters(double deltaTime)
 			{
 				const Vector3 toPlayer = _character->GetPosition() - giver.position;
 				if (toPlayer.X * toPlayer.X + toPlayer.Z * toPlayer.Z < 100.0f)
-					giver.npc->SetRotation(Quaternion::MakeFromEuler(
-					    Vector3(0.0f, std::atan2(toPlayer.X, toPlayer.Z) + 3.14159265f, 0.0f)));
+					giver.npc->SetRotation(
+					    Quaternion::MakeFromEuler(Vector3(0.0f, std::atan2(toPlayer.X, toPlayer.Z) + 3.14159265f, 0.0f)));
 			}
 			animateNpc(*giver.npc, talkingNear(giver.npc->GetPosition()));
 			giver.npc->Update(deltaTime);
 		}
 	for (auto* people : {&_npcs, &_ambientNpcs})
-	for (auto& [name, npc] : *people)
-	{
-		animateNpc(*npc, talkingNear(npc->GetPosition()));
-		// Someone the player walks up to turns to face them. The model faces
-		// -Z, hence the half turn.
-		if (_character && !_inVehicle)
+		for (auto& [name, npc] : *people)
 		{
-			const Vector3 toPlayer = _character->GetPosition() - npc->GetPosition();
-			if (toPlayer.X * toPlayer.X + toPlayer.Z * toPlayer.Z < 100.0f)
-				npc->SetRotation(Quaternion::MakeFromEuler(
-				    Vector3(0.0f, std::atan2(toPlayer.X, toPlayer.Z) + 3.14159265f, 0.0f)));
+			animateNpc(*npc, talkingNear(npc->GetPosition()));
+			// Someone the player walks up to turns to face them. The model faces
+			// -Z, hence the half turn.
+			if (_character && !_inVehicle)
+			{
+				const Vector3 toPlayer = _character->GetPosition() - npc->GetPosition();
+				if (toPlayer.X * toPlayer.X + toPlayer.Z * toPlayer.Z < 100.0f)
+					npc->SetRotation(
+					    Quaternion::MakeFromEuler(Vector3(0.0f, std::atan2(toPlayer.X, toPlayer.Z) + 3.14159265f, 0.0f)));
+			}
+			npc->Update(deltaTime);
 		}
-		npc->Update(deltaTime);
-	}
 }
 
 void Game::renderScene(double deltaTime, int viewportWidth, int viewportHeight)
@@ -4086,7 +4079,11 @@ bool Game::drawHud(SpriteBatch& sprites, const GameIntent& intent, const Matrix4
 		if (const BonusGiver* giver = bonusGiverNear())
 		{
 			const std::string& title = _textBible.Get(fmt::format("MISSION_TITLE_L{}_M{}", _levelNumber,
-			    giver->mission == "sr1" ? 8 : giver->mission == "sr2" ? 9 : giver->mission == "sr3" ? 10 : giver->mission == "gr1" ? 11 : 12));
+			                                                      giver->mission == "sr1"   ? 8
+			                                                      : giver->mission == "sr2" ? 9
+			                                                      : giver->mission == "sr3" ? 10
+			                                                      : giver->mission == "gr1" ? 11
+			                                                                                : 12));
 			hud.hints.push_back(fmt::format("E: {}", title.empty() ? giver->mission : title));
 		}
 		hud.cardsTotal = 7;
@@ -4131,8 +4128,8 @@ bool Game::drawHud(SpriteBatch& sprites, const GameIntent& intent, const Matrix4
 		if (_states.Is(GameState::Paused))
 		{
 			DrawTextMenu(sprites, font, *_pauseMenu, GameText("pause", _language), Vector4(1.0f, 1.0f, 0.0f, 1.0f),
-			             Vector4(0.5f, 0.5f, 0.5f, 1.0f), Vector4(1.0f, 0.3f, 0.3f, 1.0f), viewportWidth,
-			             viewportHeight, intent.mouseX, intent.mouseY);
+			             Vector4(0.5f, 0.5f, 0.5f, 1.0f), Vector4(1.0f, 0.3f, 0.3f, 1.0f), viewportWidth, viewportHeight,
+			             intent.mouseX, intent.mouseY);
 			if (intent.uiClick)
 				_pauseMenu->CheckClick(intent.mouseX, intent.mouseY);
 			sprites.Flush(proj);
@@ -4170,8 +4167,7 @@ void Game::drawScreens(SpriteBatch& sprites, const GameIntent& intent, const Mat
 		updateLivingRoomCamera();
 		if (_livingRoom && _livingRoom->IsLoaded() && _level)
 			_livingRoom->Draw(_level->GetWorldShader(), *_skinShaderProgram, _level->GetBillboardShader(),
-			                  static_cast<float>(viewportWidth) / std::max(1, viewportHeight),
-			                  deltaTime);
+			                  static_cast<float>(viewportWidth) / std::max(1, viewportHeight), deltaTime);
 		if (_optionsMenu && _optionsMenu->IsOpen())
 			_optionsMenu->Draw(intent, proj);
 		else if (_scrapBook && _scrapBook->IsOpen())
@@ -4183,16 +4179,15 @@ void Game::drawScreens(SpriteBatch& sprites, const GameIntent& intent, const Mat
 	{
 		auto font = _resourceManager->GetFont("boulder_16");
 		SpriteBatch menuSprites;
-		DrawTextMenu(menuSprites, font, *_mainMenu, "donut", Vector4(1.0f, 0.84f, 0.0f, 1.0f),
-		             Vector4(0.8f, 0.8f, 0.8f, 1.0f), Vector4(1.0f, 0.84f, 0.0f, 1.0f), viewportWidth, viewportHeight,
-		             intent.mouseX, intent.mouseY);
+		DrawTextMenu(menuSprites, font, *_mainMenu, "donut", Vector4(1.0f, 0.84f, 0.0f, 1.0f), Vector4(0.8f, 0.8f, 0.8f, 1.0f),
+		             Vector4(1.0f, 0.84f, 0.0f, 1.0f), viewportWidth, viewportHeight, intent.mouseX, intent.mouseY);
 		if (intent.mouseLeftClick)
 			_mainMenu->CheckClick(intent.mouseX, intent.mouseY);
 		menuSprites.Flush(proj);
 	}
 
-	if (_states.Is(GameState::InGame) || _states.Is(GameState::Paused) ||
-	    _states.Is(GameState::MissionComplete) || _states.Is(GameState::MissionFailed))
+	if (_states.Is(GameState::InGame) || _states.Is(GameState::Paused) || _states.Is(GameState::MissionComplete) ||
+	    _states.Is(GameState::MissionFailed))
 		drawSubtitle(proj, viewportWidth, viewportHeight);
 	sprites.Flush(proj);
 	if (_states.Is(GameState::InGame) || _states.Is(GameState::Paused))
@@ -4221,7 +4216,8 @@ void Game::drawPeople(Matrix4x4& viewProjection)
 	{
 		std::string speaker;
 		const float open = _audioManager->GetMouthOpen(speaker);
-		const auto mouth = [&](Character* character) {
+		const auto mouth = [&](Character* character)
+		{
 			if (!character)
 				return;
 			std::string name = character->GetName();
@@ -4229,14 +4225,10 @@ void Game::drawPeople(Matrix4x4& viewProjection)
 			character->SetMouthOpen(!speaker.empty() && name == speaker ? open : 0.0f);
 		};
 		mouth(_character.get());
-		for (auto& [name, npc] : _npcs)
-			mouth(npc.get());
-		for (auto& [name, npc] : _ambientNpcs)
-			mouth(npc.get());
-		for (auto& giver : _bonusGivers)
-			mouth(giver.npc.get());
-		for (auto& [car, driver] : _carDrivers)
-			mouth(driver.get());
+		for (auto& [name, npc] : _npcs) mouth(npc.get());
+		for (auto& [name, npc] : _ambientNpcs) mouth(npc.get());
+		for (auto& giver : _bonusGivers) mouth(giver.npc.get());
+		for (auto& [car, driver] : _carDrivers) mouth(driver.get());
 	}
 	if (_level != nullptr)
 	{
@@ -4277,8 +4269,7 @@ void Game::drawPeople(Matrix4x4& viewProjection)
 	// reason as the player; someone the mission has placed is not also
 	// standing in their usual spot.
 	glDisable(GL_CULL_FACE);
-	for (auto& [name, npc] : _npcs)
-		npc->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
+	for (auto& [name, npc] : _npcs) npc->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
 	for (auto& [name, npc] : _ambientNpcs)
 		if (_npcs.find(name) == _npcs.end())
 			npc->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
@@ -4313,12 +4304,10 @@ void Game::drawVehicles(Matrix4x4& viewProjection, double deltaTime)
 			}
 			else
 			{
-				_carMesh->Draw(*_meshShader,
-					Matrix4x4::MakeTranslate(v->GetPosition()) * Matrix4x4(v->GetRotation()),
-					viewProjection, Vector4(0.2f, 0.5f, 1.0f, 1.0f));
+				_carMesh->Draw(*_meshShader, Matrix4x4::MakeTranslate(v->GetPosition()) * Matrix4x4(v->GetRotation()),
+				               viewProjection, Vector4(0.2f, 0.5f, 1.0f, 1.0f));
 				Vector3 beaconBase = v->GetPosition() + Vector3(0, 1.0f, 0);
-				_lineRenderer->DrawLine(beaconBase, beaconBase + Vector3(0, 20.0f, 0),
-					Vector4(0.0f, 1.0f, 1.0f, 1.0f));
+				_lineRenderer->DrawLine(beaconBase, beaconBase + Vector3(0, 20.0f, 0), Vector4(0.0f, 1.0f, 1.0f, 1.0f));
 
 				if (_inVehicle && v.get() == _activeVehicle)
 				{
@@ -4328,9 +4317,8 @@ void Game::drawVehicles(Matrix4x4& viewProjection, double deltaTime)
 					for (int e = 0; e < 3; ++e)
 					{
 						Vector3 offset(rand() % 10 * 0.02f - 0.1f, rand() % 10 * 0.02f, rand() % 10 * 0.02f);
-						_lineRenderer->DrawLine(exhaustPos + offset,
-							exhaustPos + exhaustDir * (0.5f + speed * 0.02f) + offset,
-							Vector4(0.5f, 0.5f, 0.5f, 1.0f));
+						_lineRenderer->DrawLine(exhaustPos + offset, exhaustPos + exhaustDir * (0.5f + speed * 0.02f) + offset,
+						                        Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 					}
 				}
 			}
@@ -4402,8 +4390,7 @@ void Game::drawEffects(Matrix4x4& viewProjection, double deltaTime)
 				_dashDust = std::make_unique<ParticleSystem>(*dash);
 		if (_dashDust && _character)
 			_dashDust->Update(deltaTime,
-			                  Matrix4x4::MakeTranslate(_character->GetPosition() -
-			                                           Vector3(0.0f, kFeetBelowCentre, 0.0f)) *
+			                  Matrix4x4::MakeTranslate(_character->GetPosition() - Vector3(0.0f, kFeetBelowCentre, 0.0f)) *
 			                      Matrix4x4(_character->GetRotation()),
 			                  -1.0f, _moves.dashKicksUpDust && !_inVehicle);
 		GL::ShaderProgram& billboards = _level->GetBillboardShader();
@@ -4429,9 +4416,8 @@ void Game::drawEffects(Matrix4x4& viewProjection, double deltaTime)
 	if (_scriptEngine->IsMissionActive() && !_scriptEngine->GetCheckpoints().empty())
 	{
 		_carMesh->Draw(*_meshShader,
-			Matrix4x4::MakeTranslate(_scriptEngine->GetAIPosition()) *
-				Matrix4x4(_scriptEngine->GetAIRotation()),
-			viewProjection, Vector4(1.0f, 0.2f, 0.2f, 1.0f));
+		               Matrix4x4::MakeTranslate(_scriptEngine->GetAIPosition()) * Matrix4x4(_scriptEngine->GetAIRotation()),
+		               viewProjection, Vector4(1.0f, 0.2f, 0.2f, 1.0f));
 	}
 
 	if (_hitAndRun && _interior.empty())
@@ -4452,10 +4438,8 @@ void Game::drawEffects(Matrix4x4& viewProjection, double deltaTime)
 		{
 			for (auto& cop : chase->GetCopCars())
 			{
-				_carMesh->Draw(*_meshShader,
-					Matrix4x4::MakeTranslate(cop->GetPosition()) *
-						Matrix4x4(cop->GetRotation()),
-					viewProjection, Vector4(0.1f, 0.1f, 0.1f, 1.0f));
+				_carMesh->Draw(*_meshShader, Matrix4x4::MakeTranslate(cop->GetPosition()) * Matrix4x4(cop->GetRotation()),
+				               viewProjection, Vector4(0.1f, 0.1f, 0.1f, 1.0f));
 			}
 		}
 	}
@@ -4495,8 +4479,7 @@ void Game::fillMissionHud(HudState& hud)
 				hud.missionBlips.emplace_back(v->GetPosition().X, v->GetPosition().Z);
 
 		const auto& cps = _scriptEngine->GetCheckpoints();
-		for (const auto& cp : cps)
-			hud.checkpointBlips.emplace_back(cp.X, cp.Z);
+		for (const auto& cp : cps) hud.checkpointBlips.emplace_back(cp.X, cp.Z);
 
 		// Wherever the objective wants the player -- a checkpoint, a
 		// destination, an item to pick up, someone to talk to -- not only
@@ -4505,9 +4488,8 @@ void Game::fillMissionHud(HudState& hud)
 		Vector3 target;
 		if (_scriptEngine->GetObjectiveTarget(target))
 		{
-			const Vector3 from = _inVehicle && _activeVehicle
-			                         ? _activeVehicle->GetPosition()
-			                         : (_character ? _character->GetPosition() : Vector3::Zero);
+			const Vector3 from = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()
+			                                                  : (_character ? _character->GetPosition() : Vector3::Zero);
 			hud.hasNextCheckpoint = true;
 			hud.nextCheckpointXZ = Vector2(target.X, target.Z);
 			hud.nextCheckpointDistance = (target - from).Length();
@@ -4535,13 +4517,11 @@ void Game::fillRadarHud(HudState& hud, bool gameHud)
 			hud.alertTerm = "BUSTED";
 		else if (hud.busted)
 			hud.banner = "BUSTED!";
-		for (const auto& cop : chase->GetCopCars())
-			hud.policeBlips.emplace_back(cop->GetPosition().X, cop->GetPosition().Z);
+		for (const auto& cop : chase->GetCopCars()) hud.policeBlips.emplace_back(cop->GetPosition().X, cop->GetPosition().Z);
 	}
 
-	const Vector3 playerPos = _inVehicle && _activeVehicle
-	                              ? _activeVehicle->GetPosition()
-	                              : (_character ? _character->GetPosition() : Vector3::Zero);
+	const Vector3 playerPos =
+	    _inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : (_character ? _character->GetPosition() : Vector3::Zero);
 	hud.playerXZ = Vector2(playerPos.X, playerPos.Z);
 	// For the game's radar: the stage's icon, the player's car while
 	// on foot, the phone booths, shops, bonus missions and races.
@@ -4559,8 +4539,7 @@ void Game::fillRadarHud(HudState& hud, bool gameHud)
 			else if (trigger.action == "PurchaseSkin")
 				hud.shops.emplace_back(trigger.position.X, trigger.position.Z);
 		}
-	for (const CarSeller& seller : _carSellers)
-		hud.shops.emplace_back(seller.position.X, seller.position.Z);
+	for (const CarSeller& seller : _carSellers) hud.shops.emplace_back(seller.position.X, seller.position.Z);
 	for (const BonusGiver& giver : _bonusGivers)
 		(giver.mission.rfind("bm", 0) == 0 ? hud.bonusMissions : hud.streetRaces)
 		    .emplace_back(giver.position.X, giver.position.Z);
@@ -4585,30 +4564,31 @@ void Game::fillHintHud(HudState& hud, bool pad, bool gameHud)
 		hud.hintColour = Vector4(0.5f, 0.8f, 1.0f, 1.0f);
 		if (!gameHud)
 			hud.hints.push_back(fmt::format("{}: Drive | {}: Boost | {}: Horn | {}: Exit",
-				ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Boost, pad),
-				ControlLabel(GameAction::Honk, pad), ControlLabel(GameAction::Interact, pad)));
+			                                ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Boost, pad),
+			                                ControlLabel(GameAction::Honk, pad), ControlLabel(GameAction::Interact, pad)));
 	}
 	else if (_states.Is(GameState::InGame))
 	{
 		if (!gameHud)
 			hud.hints.push_back(fmt::format("{}: Move | {}: Action | {}: Restart | {}: Pause",
-				ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Interact, pad),
-				ControlLabel(GameAction::RestartMission, pad), ControlLabel(GameAction::PauseToggle, pad)));
+			                                ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Interact, pad),
+			                                ControlLabel(GameAction::RestartMission, pad),
+			                                ControlLabel(GameAction::PauseToggle, pad)));
 
 		if (_showHelp)
 		{
 			hud.hints.push_back("=== CONTROLS ===");
 			hud.hints.push_back(fmt::format("{}: Move/Drive", ControlLabel(GameAction::MoveForward, pad)));
-			hud.hints.push_back(fmt::format("{}: Action | {}: Boost",
-				ControlLabel(GameAction::Interact, pad), ControlLabel(GameAction::Boost, pad)));
-			hud.hints.push_back(fmt::format("{}: Horn | {}: Restart | {}: Reset",
-				ControlLabel(GameAction::Honk, pad), ControlLabel(GameAction::RestartMission, pad),
-				ControlLabel(GameAction::ResetBestTime, pad)));
-			hud.hints.push_back(fmt::format("{}: Jump | {}: Debug | {}: Help",
-				ControlLabel(GameAction::VehicleJump, pad), ControlLabel(GameAction::ToggleDebugDraw, pad),
-				ControlLabel(GameAction::ToggleHelp, pad)));
-			hud.hints.push_back(fmt::format("{}: Pause | {}: Fly",
-				ControlLabel(GameAction::PauseToggle, pad), ControlLabel(GameAction::CameraLook, pad)));
+			hud.hints.push_back(fmt::format("{}: Action | {}: Boost", ControlLabel(GameAction::Interact, pad),
+			                                ControlLabel(GameAction::Boost, pad)));
+			hud.hints.push_back(fmt::format("{}: Horn | {}: Restart | {}: Reset", ControlLabel(GameAction::Honk, pad),
+			                                ControlLabel(GameAction::RestartMission, pad),
+			                                ControlLabel(GameAction::ResetBestTime, pad)));
+			hud.hints.push_back(fmt::format("{}: Jump | {}: Debug | {}: Help", ControlLabel(GameAction::VehicleJump, pad),
+			                                ControlLabel(GameAction::ToggleDebugDraw, pad),
+			                                ControlLabel(GameAction::ToggleHelp, pad)));
+			hud.hints.push_back(fmt::format("{}: Pause | {}: Fly", ControlLabel(GameAction::PauseToggle, pad),
+			                                ControlLabel(GameAction::CameraLook, pad)));
 		}
 
 		if (_character && _scriptEngine->IsMissionActive())
@@ -4617,8 +4597,8 @@ void Game::fillHintHud(HudState& hud, bool pad, bool gameHud)
 			{
 				const float dist = (v->GetPosition() - _character->GetPosition()).Length();
 				if (dist < 5.0f)
-					hud.hints.push_back(fmt::format(fmt::runtime(GameText("hint.getin", _language)),
-					                                ControlLabel(GameAction::Interact, pad)));
+					hud.hints.push_back(
+					    fmt::format(fmt::runtime(GameText("hint.getin", _language)), ControlLabel(GameAction::Interact, pad)));
 				else if (!gameHud)
 					hud.hints.push_back(fmt::format(fmt::runtime(GameText("hint.vehicle", _language)), dist));
 				break;

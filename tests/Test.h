@@ -52,23 +52,25 @@ inline void Fail(const char* file, int line, const std::string& what)
 
 #define TEST_CONCAT2(a, b) a##b
 #define TEST_CONCAT(a, b) TEST_CONCAT2(a, b)
-#define TEST(name)                                                                                   \
-	static void TEST_CONCAT(test_, name)();                                                          \
-	static Test::Register TEST_CONCAT(register_, name)(#name, &TEST_CONCAT(test_, name));           \
+#define TEST(name)                                                                                                             \
+	static void TEST_CONCAT(test_, name)();                                                                                    \
+	static Test::Register TEST_CONCAT(register_, name)(#name, &TEST_CONCAT(test_, name));                                      \
 	static void TEST_CONCAT(test_, name)()
-#define CHECK(condition)                                    \
-	do                                                      \
-	{                                                       \
-		if (!(condition))                                   \
-			Test::Fail(__FILE__, __LINE__, #condition);     \
+#define CHECK(condition)                                                                                                       \
+	do {                                                                                                                       \
+		if (!(condition))                                                                                                      \
+			Test::Fail(__FILE__, __LINE__, #condition);                                                                        \
 	} while (false)
-#define REQUIRE(condition)                                  \
-	do                                                      \
-	{                                                       \
-		if (!(condition))                                   \
-		{                                                   \
-			Test::Fail(__FILE__, __LINE__, #condition);     \
-			return;                                         \
-		}                                                   \
+#define REQUIRE(condition)                                                                                                     \
+	do {                                                                                                                       \
+		if (!(condition))                                                                                                      \
+		{                                                                                                                      \
+			Test::Fail(__FILE__, __LINE__, #condition);                                                                        \
+			return;                                                                                                            \
+		}                                                                                                                      \
 	} while (false)
-#define SKIP(why) throw Test::Skipped {why}
+#define SKIP(why)                                                                                                              \
+	throw Test::Skipped                                                                                                        \
+	{                                                                                                                          \
+		why                                                                                                                    \
+	}

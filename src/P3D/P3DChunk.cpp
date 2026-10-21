@@ -196,8 +196,7 @@ P3DChunk::P3DChunk(const std::vector<uint8_t>& chunk)
 	// Its sizes, kept within what there is: a file cut short, or with bytes
 	// after its last chunk, used to be read past its end.
 	const std::size_t totalSize = std::min<std::size_t>(*reinterpret_cast<const uint32_t*>(&chunk[8]), chunk.size());
-	const std::size_t dataSize =
-	    std::clamp<std::size_t>(*reinterpret_cast<const uint32_t*>(&chunk[4]), 12, totalSize);
+	const std::size_t dataSize = std::clamp<std::size_t>(*reinterpret_cast<const uint32_t*>(&chunk[4]), 12, totalSize);
 
 	// define our data and ignore the first 12 bytes
 	_data = std::vector<uint8_t>(chunk.begin() + 12, chunk.begin() + dataSize);
@@ -209,8 +208,7 @@ P3DChunk::P3DChunk(const std::vector<uint8_t>& chunk)
 		const uint32_t tSize = *reinterpret_cast<const uint32_t*>(&chunk[at + 8]);
 		if (tSize < 12 || tSize > totalSize - at)
 			break;
-		_children.push_back(std::make_unique<P3DChunk>(
-		    std::vector<uint8_t>(chunk.begin() + at, chunk.begin() + at + tSize)));
+		_children.push_back(std::make_unique<P3DChunk>(std::vector<uint8_t>(chunk.begin() + at, chunk.begin() + at + tSize)));
 		at += tSize;
 	}
 }

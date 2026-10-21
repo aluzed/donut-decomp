@@ -1,0 +1,63 @@
+# Builds on Linux and Windows and runs the tests (ctest, TOOL-007), without the
+# game's files: the tests that need them are skipped. The style is checked on
+# the lines each push or pull request changes, against .clang-format (most of
+# the older code predates it; a change is held to it, the rest is left alone).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev libbullet-dev libopenal-dev libfmt-dev zlib1g-dev
+      - name: Build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          cmake --build build -j$(nproc)
+      - name: Tests
+        run: ctest --test-dir build --output-on-failure
+
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        shell: pwsh
+        run: |
+          echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
+          & "$env:VCPKG_INSTALLATION_ROOT/vcpkg" install --triplet x64-windows sdl2 bullet3 openal-soft fmt zlib
+      - name: Build
+        run: |
+          cmake -S . -B build -A x64
+          cmake --build build --config RelWithDebInfo -j 4
+      - name: Tests
+        run: ctest --test-dir build -C RelWithDebInfo --output-on-failure
+
+  format:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: clang-format 18
+        run: pip install clang-format==18.1.8
+      - name: Style of the changed lines
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          base="$BASE"
+          if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then base=HEAD~1; fi
+          out=$(git clang-format --binary "$(which clang-format)" --diff "$base" HEAD -- src tests || true)
+          if echo "$out" | grep -q '^diff '; then
+            echo "$out"
+            echo "::error::lines changed since $base are not formatted as .clang-format says (git clang-format $base)"
+            exit 1
+          fi
+          echo "the changed lines are formatted"

@@ -93,8 +93,7 @@ public:
 
 	// The gags walked into by a player at `player`, each played by `play`,
 	// once on the way in and not again for a few seconds.
-	void Update(const Vector3& player, const std::string& interior, double now,
-	            const std::function<void(Gag&)>& play);
+	void Update(const Vector3& player, const std::string& interior, double now, const std::function<void(Gag&)>& play);
 	// The gag worked by hand within reach of `player`, or none.
 	Gag* FindByHand(const Vector3& player, const std::string& interior);
 	const MovieGag* FindMovieGag(const Vector3& player) const;

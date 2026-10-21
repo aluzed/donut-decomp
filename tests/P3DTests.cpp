@@ -30,8 +30,7 @@ using Bytes = std::vector<uint8_t>;
 
 void put32(Bytes& out, uint32_t value)
 {
-	for (int i = 0; i < 4; ++i)
-		out.push_back(static_cast<uint8_t>(value >> (8 * i)));
+	for (int i = 0; i < 4; ++i) out.push_back(static_cast<uint8_t>(value >> (8 * i)));
 }
 
 void putName(Bytes& out, const std::string& name)
@@ -45,14 +44,12 @@ Bytes chunk(uint32_t type, const Bytes& data, const std::vector<Bytes>& children
 {
 	Bytes out;
 	std::size_t total = 12 + data.size();
-	for (const auto& child : children)
-		total += child.size();
+	for (const auto& child : children) total += child.size();
 	put32(out, type);
 	put32(out, static_cast<uint32_t>(12 + data.size()));
 	put32(out, static_cast<uint32_t>(total));
 	out.insert(out.end(), data.begin(), data.end());
-	for (const auto& child : children)
-		out.insert(out.end(), child.begin(), child.end());
+	for (const auto& child : children) out.insert(out.end(), child.begin(), child.end());
 	return out;
 }
 

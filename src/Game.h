@@ -795,7 +795,7 @@ private:
 		bool controls = false;
 	};
 	DebugWindows _debugWindows;
-	
+
 	static Game* instance;
 };
 

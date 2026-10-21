@@ -4,8 +4,8 @@
 
 #include "Game.h"
 
-#include "Character.h"
 #include "AI/TrafficManager.h"
+#include "Character.h"
 #include "Render/imgui/imgui.h"
 #include "Scripting/ScriptEngine.h"
 
@@ -50,8 +50,8 @@ Vector3 Game::clearSpotNear(const Vector3& at) const
 	if (clearOfTraffic(at))
 		return at;
 	for (const float away : {3.0f, 5.0f, 8.0f, 12.0f})
-		for (const Vector3& side : {Vector3(1.0f, 0.0f, 0.0f), Vector3(-1.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, 1.0f),
-		                            Vector3(0.0f, 0.0f, -1.0f)})
+		for (const Vector3& side :
+		     {Vector3(1.0f, 0.0f, 0.0f), Vector3(-1.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, 1.0f), Vector3(0.0f, 0.0f, -1.0f)})
 		{
 			const Vector3 spot = at + side * away;
 			float ground = 0.0f;

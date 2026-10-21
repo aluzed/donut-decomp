@@ -100,8 +100,7 @@ void Game::openMiniGame()
 	_miniMenu->OpenSetup(miniGameCars(), miniGameTracks());
 	_mini.stage = MiniStage::Menu;
 	_states.Fire(GameEvent::OpenMiniGame);
-	for (auto& held : _mini.held)
-		held.fill(true);
+	for (auto& held : _mini.held) held.fill(true);
 }
 
 void Game::leaveMiniGame()
@@ -300,7 +299,6 @@ void Game::miniGameFrame(double dt, const GameIntent& intent)
 				                 [](const auto& a, const auto& b) { return a.points > b.points; });
 				_miniMenu->OpenSummary(std::move(standings));
 				_mini.stage = MiniStage::Summary;
-
 			}
 		}
 		else if (pads[0].back || std::any_of(pads.begin() + 1, pads.end(), [](const auto& p) { return p.start; }))

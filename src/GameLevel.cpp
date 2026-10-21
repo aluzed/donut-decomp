@@ -5,26 +5,26 @@
 
 #include "Game.h"
 
-#include "Audio/AudioManager.h"
-#include "Character.h"
-#include "Render/SkidMarks.h"
-#include "UI/GameHud.h"
-#include "Game/GameCamera.h"
-#include <fstream>
-#include "FrontendProject.h"
-#include "Game/CollectibleManager.h"
 #include "AI/PathGraph.h"
-#include "Game/HitAndRun.h"
 #include "AI/PedestrianManager.h"
 #include "AI/TrafficManager.h"
-#include "P3D/P3DFile.h"
-#include "Render/CompositeModel.h"
+#include "Audio/AudioManager.h"
+#include "Character.h"
+#include "FrontendProject.h"
+#include "Game/CollectibleManager.h"
+#include "Game/GameCamera.h"
+#include "Game/HitAndRun.h"
 #include "Game/UfoBoss.h"
 #include "Game/WaspManager.h"
+#include "P3D/P3DFile.h"
+#include "Render/CompositeModel.h"
+#include "Render/SkidMarks.h"
 #include "Render/imgui/imgui.h"
 #include "Scripting/Commands.h"
 #include "Scripting/ScriptEngine.h"
+#include "UI/GameHud.h"
 #include "Window.h"
+#include <fstream>
 
 namespace Donut
 {
@@ -77,7 +77,8 @@ void Game::startStoryMission(int index)
 		_activeVehicle = nullptr;
 	}
 	_scriptEngine->CleanupMission();
-	if (_collectibleManager) _collectibleManager->SpawnOnPath();
+	if (_collectibleManager)
+		_collectibleManager->SpawnOnPath();
 	runMissionScript();
 
 	// The mission placed the player; this runs once the character exists.
@@ -209,8 +210,7 @@ void Game::loadLevel()
 	// interiors, which live under the map and are reached through doors. The
 	// game streams these in and out as the player moves; they are all loaded
 	// here. This was level 1's list, written out.
-	for (const std::string& file : levelWorldFiles())
-		_level->LoadP3D(file);
+	for (const std::string& file : levelWorldFiles()) _level->LoadP3D(file);
 	// The radar's map of the level.
 	if (_gameHud)
 		_gameHud->LoadMap(_levelNumber);
@@ -244,8 +244,7 @@ void Game::loadLevel()
 	// was "respawned" over and over.
 	{
 		float lowest = 0.0f;
-		for (const auto& node : _pathGraph->GetNodes())
-			lowest = std::min(lowest, node.position.Y);
+		for (const auto& node : _pathGraph->GetNodes()) lowest = std::min(lowest, node.position.Y);
 		_fallOffY = std::min(-50.0f, lowest - 40.0f);
 		Log::Info("Game: level {} falls off below y = {:.0f}", _levelNumber, _fallOffY);
 	}
@@ -257,8 +256,7 @@ void Game::loadLevel()
 	// The wasp cameras, at the spawn points the level script lists, their
 	// locators in the mission art.
 	_level->LoadP3D(fmt::format("missions/{}/wasps.p3d", levelDirectory()));
-	_waspManager = std::make_unique<WaspManager>(_levelNumber, fmt::format("scripts/{}/leveli.mfk", levelDirectory()),
-	                                             *_level);
+	_waspManager = std::make_unique<WaspManager>(_levelNumber, fmt::format("scripts/{}/leveli.mfk", levelDirectory()), *_level);
 	_ufo = UfoBoss::FromLevelScript(fmt::format("scripts/{}/leveli.mfk", levelDirectory()), *_level, *_worldPhysics);
 	_collectibleManager->SpawnOnPath();
 
@@ -375,8 +373,7 @@ void Game::loadLevel()
 			if (args.size() < 4)
 				continue;
 			const Vector3 spot = _level->GetLocatorPosition(args[2]);
-			if (spot == Vector3::Zero ||
-			    !FileSystem::exists(fmt::format("scripts/{}/{}i.mfk", levelDirectory(), args[3])))
+			if (spot == Vector3::Zero || !FileSystem::exists(fmt::format("scripts/{}/{}i.mfk", levelDirectory(), args[3])))
 				continue;
 			BonusGiver giver {args[3], spot, makeNpc(args[0])};
 			if (giver.npc)
@@ -400,8 +397,8 @@ void Game::loadLevel()
 		std::vector<std::string> tracks;
 		for (const std::string& track : _audioManager->FindSounds(set != kSets.end() ? set->second : "_main.rsd"))
 			if (track.find("\\music\\") != std::string::npos && track.size() > 4 &&
-			    track.compare(track.size() - 4, 4, ".rsd") == 0 &&
-			    track.find("_end_") == std::string::npos && track.find("reward") == std::string::npos)
+			    track.compare(track.size() - 4, 4, ".rsd") == 0 && track.find("_end_") == std::string::npos &&
+			    track.find("reward") == std::string::npos)
 				tracks.push_back(track);
 		_audioManager->PlayMusicPlaylist(std::move(tracks));
 	}
@@ -537,8 +534,7 @@ std::vector<std::string> Game::levelWorldFiles() const
 			terrain = name;
 		else if ((rest[0] == 'z' || rest[0] == 'r') && rest.size() > 1 && std::isdigit(static_cast<unsigned char>(rest[1])))
 		{
-			if (rest.back() == 'b' &&
-			    FileSystem::exists(fmt::format("./art/{}a.p3d", name.substr(0, name.size() - 5))) &&
+			if (rest.back() == 'b' && FileSystem::exists(fmt::format("./art/{}a.p3d", name.substr(0, name.size() - 5))) &&
 			    !levelScriptsName(lower))
 				continue;
 			world.push_back(name);
