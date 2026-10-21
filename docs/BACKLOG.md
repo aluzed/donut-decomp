@@ -198,7 +198,7 @@ the same.
 | GAME-001b | ✅ | `GameCamera` (follow, orbit, camera moves, conversation shots, shake) (2026-10-21) |
 | GAME-001c | ✅ | 2D drawing out of `Game::Run`: the HUD in `UI/Hud.*`, menus, results and hints in `UI/ScreenText` (2026-10-21) |
 | GAME-001d | ✅ | `GameStateMachine`: the states' transitions from one table of events (2026-10-21) |
-| GAME-001e | ⬜ | Out of `Game`: the autopilot, the story and level loading, interiors, gags |
+| GAME-001e | ✅ | `Run` and the constructor as their phases (137 lines); `GagManager`; levels, story, interiors and the autopilot in files of their own; members grouped, 190 -> 142 (2026-10-21) |
 
 ### C.2 — SCRIPT: `.con`/`.mfk` commands
 

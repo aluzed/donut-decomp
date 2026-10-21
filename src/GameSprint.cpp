@@ -96,11 +96,11 @@ void Game::openMiniGame()
 		return;
 	if (!_extraPads)
 		_extraPads = std::make_unique<ExtraPads>();
-	_miniTally = {};
+	_mini.tally = {};
 	_miniMenu->OpenSetup(miniGameCars(), miniGameTracks());
-	_miniStage = MiniStage::Menu;
+	_mini.stage = MiniStage::Menu;
 	_states.Fire(GameEvent::OpenMiniGame);
-	for (auto& held : _miniHeld)
+	for (auto& held : _mini.held)
 		held.fill(true);
 }
 
@@ -109,7 +109,7 @@ void Game::leaveMiniGame()
 	_sprint.reset();
 	_sprintDrivers.clear();
 	// The story's level back, where the track stood.
-	if (_trackLoaded)
+	if (_mini.trackLoaded)
 		switchLevel(_levelNumber);
 	_states.Fire(GameEvent::ToMainMenu);
 }
@@ -133,7 +133,7 @@ std::array<MiniGameMenu::Pad, 4> Game::miniPads(const GameIntent& intent)
 	{
 		const ExtraPads::Pad& pad = extra[i];
 		MiniGameMenu::Pad& to = pads[i + 1];
-		auto& held = _miniHeld[i + 1];
+		auto& held = _mini.held[i + 1];
 		const bool now[5] = {pad.a, pad.b, pad.x, pad.start, pad.nitro};
 		bool pressed[5];
 		for (int b = 0; b < 5; ++b)
@@ -159,7 +159,7 @@ void Game::startSprint(const SuperSprint::Setup& setup)
 	_sprint.reset();
 	_sprintDrivers.clear();
 	// The track in the level's place, once: the next race on it keeps it.
-	if (!_trackLoaded || _loadedTrack != setup.track)
+	if (!_mini.trackLoaded || _mini.loadedTrack != setup.track)
 	{
 		unloadLevel();
 		_level = std::make_unique<Level>();
@@ -168,8 +168,8 @@ void Game::startSprint(const SuperSprint::Setup& setup)
 			_level->LoadP3D(file);
 		_level->LoadP3D("missions/generic/nitro.p3d");
 		_pathGraph = std::make_unique<PathGraph>(*_level, *_worldPhysics);
-		_trackLoaded = true;
-		_loadedTrack = setup.track;
+		_mini.trackLoaded = true;
+		_mini.loadedTrack = setup.track;
 	}
 	_sprint = std::make_unique<SuperSprint>(*_level, *_worldPhysics, *_pathGraph, setup);
 	for (const auto& racer : _sprint->GetRacers())
@@ -181,9 +181,9 @@ void Game::startSprint(const SuperSprint::Setup& setup)
 					driver->SetAnimation(anim);
 		_sprintDrivers.push_back(std::move(driver));
 	}
-	_miniStage = MiniStage::Race;
-	_miniFinishedFor = 0.0;
-	_miniNitroHeld = true;
+	_mini.stage = MiniStage::Race;
+	_mini.finishedFor = 0.0;
+	_mini.nitroHeld = true;
 	_audioManager->PlayMusicEvent("SuperSprint");
 }
 
@@ -200,12 +200,12 @@ void Game::miniGameFrame(double dt, const GameIntent& intent)
 	const Matrix4x4 proj = Matrix4x4::MakeOrtho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f);
 	const std::array<MiniGameMenu::Pad, 4> pads = miniPads(intent);
 
-	if (_miniStage == MiniStage::Menu)
+	if (_mini.stage == MiniStage::Menu)
 	{
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		// Over the living room, as the main menu.
-		if (_livingRoom && _livingRoom->IsLoaded() && _level && !_trackLoaded)
+		if (_livingRoom && _livingRoom->IsLoaded() && _level && !_mini.trackLoaded)
 			_livingRoom->Draw(_level->GetWorldShader(), *_skinShaderProgram, _level->GetBillboardShader(),
 			                  static_cast<float>(width) / std::max(1, height), dt);
 		glDisable(GL_DEPTH_TEST);
@@ -222,15 +222,15 @@ void Game::miniGameFrame(double dt, const GameIntent& intent)
 		return;
 	}
 
-	if (_miniStage == MiniStage::Race && _sprint)
+	if (_mini.stage == MiniStage::Race && _sprint)
 	{
 		// The players' hands on their wheels.
 		std::array<SuperSprint::Controls, SuperSprint::kRacers> controls {};
 		controls[0].gas = intent.moveForward;
 		controls[0].brake = intent.moveBackward;
 		controls[0].steer = intent.moveRight - intent.moveLeft;
-		controls[0].nitro = intent.boostHeld && !_miniNitroHeld;
-		_miniNitroHeld = intent.boostHeld;
+		controls[0].nitro = intent.boostHeld && !_mini.nitroHeld;
+		_mini.nitroHeld = intent.boostHeld;
 		if (_extraPads)
 		{
 			const auto& extra = _extraPads->Poll();
@@ -239,8 +239,8 @@ void Game::miniGameFrame(double dt, const GameIntent& intent)
 				controls[i + 1].gas = extra[i].gas;
 				controls[i + 1].brake = extra[i].brake;
 				controls[i + 1].steer = extra[i].steer;
-				controls[i + 1].nitro = extra[i].nitro && !_miniHeld[i + 1][4];
-				_miniHeld[i + 1][4] = extra[i].nitro;
+				controls[i + 1].nitro = extra[i].nitro && !_mini.held[i + 1][4];
+				_mini.held[i + 1][4] = extra[i].nitro;
 			}
 		}
 		_worldPhysics->Update(static_cast<float>(dt));
@@ -264,7 +264,7 @@ void Game::miniGameFrame(double dt, const GameIntent& intent)
 
 		if (_sprint->GetPhase() == SuperSprint::Phase::Finished)
 		{
-			if (_miniFinishedFor == 0.0)
+			if (_mini.finishedFor == 0.0)
 			{
 				// A player first: the winner's music, else the loser's.
 				bool playerWon = false;
@@ -272,15 +272,15 @@ void Game::miniGameFrame(double dt, const GameIntent& intent)
 					playerWon = playerWon || (racer.entry.player >= 0 && racer.place == 1 && racer.finished);
 				_audioManager->PlayMusicEvent(playerWon ? "Win_SuperSprint" : "Lose_SuperSprint");
 			}
-			_miniFinishedFor += dt;
-			if (_miniFinishedFor > kStandingsAfter)
+			_mini.finishedFor += dt;
+			if (_mini.finishedFor > kStandingsAfter)
 			{
 				// The race's points into the series', then its standings.
 				std::vector<MiniGameMenu::Standing> standings;
 				for (int i = 0; i < SuperSprint::kRacers; ++i)
 				{
 					const auto& racer = _sprint->GetRacers()[i];
-					MiniTally& tally = _miniTally[i];
+					MiniTally& tally = _mini.tally[i];
 					if (racer.finished)
 					{
 						tally.points += kPoints[racer.place - 1];
@@ -299,14 +299,14 @@ void Game::miniGameFrame(double dt, const GameIntent& intent)
 				std::stable_sort(standings.begin(), standings.end(),
 				                 [](const auto& a, const auto& b) { return a.points > b.points; });
 				_miniMenu->OpenSummary(std::move(standings));
-				_miniStage = MiniStage::Summary;
+				_mini.stage = MiniStage::Summary;
 
 			}
 		}
 		else if (pads[0].back || std::any_of(pads.begin() + 1, pads.end(), [](const auto& p) { return p.start; }))
 		{
 			_miniMenu->OpenPause();
-			_miniStage = MiniStage::Paused;
+			_mini.stage = MiniStage::Paused;
 		}
 	}
 
@@ -316,7 +316,7 @@ void Game::miniGameFrame(double dt, const GameIntent& intent)
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	if (_miniStage == MiniStage::Paused)
+	if (_mini.stage == MiniStage::Paused)
 	{
 		MiniGameMenu::Pad pad = pads[0];
 		for (int i = 1; i < 4; ++i)
@@ -329,34 +329,34 @@ void Game::miniGameFrame(double dt, const GameIntent& intent)
 		}
 		switch (_miniMenu->DrawPause(pad, proj))
 		{
-		case MiniGameMenu::PauseResult::Continue: _miniStage = MiniStage::Race; break;
+		case MiniGameMenu::PauseResult::Continue: _mini.stage = MiniStage::Race; break;
 		case MiniGameMenu::PauseResult::Quit:
 			_sprint.reset();
 			_sprintDrivers.clear();
 			_miniMenu->ReturnToTracks();
-			_miniStage = MiniStage::Menu;
+			_mini.stage = MiniStage::Menu;
 			break;
 		case MiniGameMenu::PauseResult::None: break;
 		}
 	}
-	else if (_miniStage == MiniStage::Summary)
+	else if (_mini.stage == MiniStage::Summary)
 	{
 		// --minigame: the standings shown a while, and the game closes.
-		_miniFinishedFor += dt;
-		if (_miniGameDemo > 0 && _miniFinishedFor > kStandingsAfter + 3.0)
+		_mini.finishedFor += dt;
+		if (_launch.miniGameDemo > 0 && _mini.finishedFor > kStandingsAfter + 3.0)
 		{
 			Log::Info("Game: the bonus game's race is over, its standings shown; closing");
 			SDL_Event quit;
 			quit.type = SDL_QUIT;
 			SDL_PushEvent(&quit);
-			_miniGameDemo = 0;
+			_launch.miniGameDemo = 0;
 		}
 		if (_miniMenu->DrawSummary(pads[0], proj))
 		{
 			_sprint.reset();
 			_sprintDrivers.clear();
 			_miniMenu->ReturnToTracks();
-			_miniStage = MiniStage::Menu;
+			_mini.stage = MiniStage::Menu;
 		}
 	}
 	_window->Swap();
@@ -407,7 +407,7 @@ void Game::drawSprint(int width, int height)
 	_lineRenderer->Discard();
 
 	// Not under the standings.
-	if (_miniStage != MiniStage::Summary)
+	if (_mini.stage != MiniStage::Summary)
 		drawSprintHud(Matrix4x4::MakeOrtho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f), viewProj,
 		              width, height);
 }

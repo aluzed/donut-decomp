@@ -114,13 +114,6 @@ constexpr float kStride = 1.1f;
 constexpr float kFeetBelowCentre = 0.9f;
 // How fast the credits roll, pixels a second.
 constexpr float kCreditsSpeed = 60.0f;
-// How far above the ground something to pick up must be for the autopilot to
-// put the car down at its height rather than on the ground.
-constexpr float kHighPickup = 3.0f;
-// How near a traffic car, and a mission's car, the autopilot may put the
-// player's car down: beside a car, still within reach of what lies by it.
-constexpr float kTrafficClearance = 6.0f;
-constexpr float kVehicleClearance = 3.0f;
 // The effects file's dust of a dash.
 constexpr uint32_t kDashDust = 9;
 // The effects file's car damage effect (smoke, then fire), and the health the
@@ -152,6 +145,35 @@ Game::Game(int argc, char** argv)
 	// from it as the level loads.
 	_save.Load();
 
+	parseArguments(argc, argv);
+	Commands::RunLine("HelloWorld();");
+
+	openWindow();
+	loadSystems();
+	loadShaders();
+	spawnPlayer();
+
+	// load control bindings (writes a default keymap.conf if none exists)
+	Input::LoadKeymap("keymap.conf");
+
+	_gameCamera = std::make_unique<GameCamera>();
+	_states.Start(_launch.autoStart ? GameState::InGame : GameState::Splash);
+
+	_frontend = std::make_unique<FrontendProject>();
+	if (FileSystem::exists("./art/frontend/scrooby/bootup.p3d"))
+		_frontend->LoadP3D("./art/frontend/scrooby/bootup.p3d");
+
+	if (_launch.startStory && !_story.empty())
+		startStoryMission(std::min(_launch.storyFrom, static_cast<int>(_story.size()) - 1));
+
+	_coins = std::max(0, std::atoi(_save.Get("coins", "0").c_str()));
+
+	buildMenus();
+	buildInGameScreens();
+}
+
+void Game::parseArguments(int argc, char** argv)
+{
 	// Unattended-run switches. Measuring whether the race opponent gets round the
 	// circuit means watching a 120s mission, and every run had to be nursed by
 	// hand through the splash screen and then killed. These make a run repeatable:
@@ -173,29 +195,29 @@ Game::Game(int argc, char** argv)
 	{
 		const std::string_view arg = argv[i];
 		if (arg == "--autostart")
-			_autoStart = true;
+			_launch.autoStart = true;
 		else if (arg == "--quit-after" && i + 1 < argc)
-			_quitAfterSeconds = std::atof(argv[++i]);
+			_launch.quitAfterSeconds = std::atof(argv[++i]);
 		else if (arg == "--mission" && i + 1 < argc)
 		{
 			_missionScript = argv[++i];
-			_missionScriptGiven = true;
+			_launch.missionScriptGiven = true;
 		}
 		else if (arg == "--autopilot")
 			_autopilot = true;
 		else if (arg == "--story")
-			_startStory = true;
+			_launch.startStory = true;
 		else if (arg == "--from" && i + 1 < argc)
-			_storyFrom = std::max(0, std::atoi(argv[++i]));
+			_launch.storyFrom = std::max(0, std::atoi(argv[++i]));
 		else if (arg == "--clean")
-			_clean = true;
+			_launch.clean = true;
 		else if (arg == "--no-movies")
-			_noMovies = true;
+			_launch.noMovies = true;
 		else if (arg == "--minigame" && i + 1 < argc)
 		{
 			const std::string_view track = argv[++i];
-			_miniGameDemo = std::clamp(std::atoi(track.data()), 1, 7);
-			_miniGameDemoReverse = !track.empty() && (track.back() == 'r' || track.back() == 'R');
+			_launch.miniGameDemo = std::clamp(std::atoi(track.data()), 1, 7);
+			_launch.miniGameDemoReverse = !track.empty() && (track.back() == 'r' || track.back() == 'R');
 		}
 		else if (arg == "--level" && i + 1 < argc)
 			_levelNumber = std::max(1, std::atoi(argv[++i]));
@@ -223,17 +245,10 @@ Game::Game(int argc, char** argv)
 			if (key == "language" && std::string("EFGIS").find(static_cast<char>(value)) != std::string::npos)
 				_language = static_cast<char>(value);
 	}
+}
 
-	Commands::RunLine("HelloWorld();");
-	// for (const auto& entry : FileSystem::recursive_directory_iterator("scripts"))
-	//{
-	//	const auto& path = entry.path();
-	//	const auto& extension = path.extension().string();
-	//	if (extension != ".con" && extension != ".mfk") continue;
-
-	//	Commands::RunScript(path.string());
-	//}
-
+void Game::openWindow()
+{
 	const std::string windowTitle = fmt::format("donut [{0}]", kBuildString);
 
 	const int windowWidth = 1280, windowHeight = 960;
@@ -248,12 +263,10 @@ Game::Game(int argc, char** argv)
 	ImGui_ImplOpenGL3_Init("#version 130");
 
 	Input::InitGamepad();
+}
 
-	// const float dpi_scale = 2.0f;
-	// ImGuiIO& io = ImGui::GetIO();
-	// ImGui::GetStyle().ScaleAllSizes(dpi_scale);
-	// io.FontGlobalScale = dpi_scale;
-
+void Game::loadSystems()
+{
 	_lineRenderer = std::make_unique<LineRenderer>(1000000);
 	_worldPhysics = std::make_unique<WorldPhysics>(_lineRenderer.get());
 
@@ -272,7 +285,6 @@ Game::Game(int argc, char** argv)
 
 	if (FileSystem::exists("./assets/audio/ambience/ambience.rcf"))
 		_audioManager->LoadRCF("./assets/audio/ambience/ambience.rcf");
-
 
 	if (FileSystem::exists("./art/frontend/scrooby2/resource/fonts/font0_16.p3d"))
 	{
@@ -324,8 +336,10 @@ Game::Game(int argc, char** argv)
 	loadLevel();
 	_gameInput = std::make_unique<GameInput>();
 	Input::CaptureTextEntry(this, &Game::OnInputTextEntry);
+}
 
-
+void Game::loadShaders()
+{
 	const auto skinVertSrc = File::ReadAll("shaders/skin.vert");
 	const auto skinFragSrc = File::ReadAll("shaders/skin.frag");
 	_skinShaderProgram = std::make_unique<GL::ShaderProgram>(skinVertSrc, skinFragSrc);
@@ -340,7 +354,10 @@ Game::Game(int argc, char** argv)
 
 	_playerMesh = SimpleMesh::CreateCapsule(0.3f, 1.8f, Vector4(0.2f, 1.0f, 0.2f, 1.0f), 12);
 	_carMesh = SimpleMesh::CreateBox(Vector3(0.9f, 0.5f, 2.2f), Vector4(0.2f, 0.5f, 1.0f, 1.0f));
+}
 
+void Game::spawnPlayer()
+{
 	runMissionScript();
 
 	loadGlobal();
@@ -371,23 +388,10 @@ Game::Game(int argc, char** argv)
 				SetPlayerPosition(pts[pts.size() / 2] + Vector3(0.0f, 1.0f, 0.0f));
 		}
 	}
+}
 
-	// load control bindings (writes a default keymap.conf if none exists)
-	Input::LoadKeymap("keymap.conf");
-
-	_gameCamera = std::make_unique<GameCamera>();
-	_states.Start(_autoStart ? GameState::InGame : GameState::Splash);
-
-	_frontend = std::make_unique<FrontendProject>();
-	if (FileSystem::exists("./art/frontend/scrooby/bootup.p3d"))
-		_frontend->LoadP3D("./art/frontend/scrooby/bootup.p3d");
-
-
-	if (_startStory && !_story.empty())
-		startStoryMission(std::min(_storyFrom, static_cast<int>(_story.size()) - 1));
-
-	_coins = std::max(0, std::atoi(_save.Get("coins", "0").c_str()));
-
+void Game::buildMenus()
+{
 	_mainMenu = std::make_unique<GameMenu>();
 	// The credits' background (frontend.p3d's CreditsBgd.pag), over which
 	// the text bible's CREDITS_00..31 roll.
@@ -451,7 +455,7 @@ Game::Game(int argc, char** argv)
 			startStoryMission(0);
 		_states.Fire(GameEvent::Play);
 		// Level 1's introduction (FMV1A) before its first mission.
-		if (!_noMovies && !_autopilot)
+		if (!_launch.noMovies && !_autopilot)
 			playMovies({"FMV1A.RMV"}, GameState::InGame);
 	});
 	// Any level the scripts were copied for, from its story's start.
@@ -485,7 +489,7 @@ Game::Game(int argc, char** argv)
 	    movies ? std::function<void(int)>([this](int movie) { playMovie(movie); }) : nullptr);
 	// At start-up, as the game: the studios' logos, then its introduction;
 	// a key skips them all.
-	if (_states.Is(GameState::Splash) && !_noMovies)
+	if (_states.Is(GameState::Splash) && !_launch.noMovies)
 		playMovies({"RADLOGO.RMV", "FOXLOGO.RMV", "GRACIE.RMV", "VUGLOGO.RMV", "INTRO.RMV"}, GameState::Splash, true);
 	_phoneBooth = std::make_unique<PhoneBoothMenu>([this](const std::string& car) { callCar(car); });
 	// A shop's item had: an outfit worn, a car left by its seller, the player
@@ -511,13 +515,13 @@ Game::Game(int argc, char** argv)
 		_mainMenuGlows.push_back("mini");
 		_mainMenu->AddButton(bonus.empty() ? "Bonus Game" : bonus, 0, 0, 200, 40, [this]() { openMiniGame(); });
 	}
-	if (_miniGameDemo > 0 && _miniMenu->IsLoaded())
+	if (_launch.miniGameDemo > 0 && _miniMenu->IsLoaded())
 	{
 		openMiniGame();
 		SuperSprint::Setup demo;
-		demo.track = _miniGameDemo;
+		demo.track = _launch.miniGameDemo;
 		demo.laps = 2;
-		demo.reverse = _miniGameDemoReverse;
+		demo.reverse = _launch.miniGameDemoReverse;
 		const auto cars = miniGameCars();
 		const char* characters[] = {"homer", "bart", "lisa", "marge"};
 		for (int i = 0; i < SuperSprint::kRacers; ++i)
@@ -550,7 +554,10 @@ Game::Game(int argc, char** argv)
 		quitEvent.type = SDL_QUIT;
 		SDL_PushEvent(&quitEvent);
 	});
+}
 
+void Game::buildInGameScreens()
+{
 	_hud = std::make_unique<Hud>();
 	_gameHud = std::make_unique<GameHud>();
 	_gameHud->LoadMap(_levelNumber);
@@ -667,7 +674,7 @@ PauseSundayMenu::Stats Game::levelStats(int storyWon, int storyTotal) const
 	int cardsFound = 0;
 	for (int n = 0; n < 7; ++n)
 		cardsFound += book.cardsFound.count(first + n) > 0;
-	const int gagsFound = static_cast<int>(std::count_if(_gags.begin(), _gags.end(), [](const Gag& g) { return g.played; }));
+	const int gagsFound = _gags.GetFound();
 	count("StoryMissions_Unlocked", storyWon, storyTotal);
 	count("BonusMissions_Unlocked", std::min(bonus, 1), 1);
 	count("StreetRaces_Unlocked", std::min(races, 3), 3);
@@ -676,7 +683,7 @@ PauseSundayMenu::Stats Game::levelStats(int storyWon, int storyTotal) const
 	count("Vehicles_Unlocked", cars, carsTotal);
 	if (_waspManager)
 		count("Wasps_Unlocked", _waspManager->GetDestroyed(), _waspManager->GetTotal());
-	count("Gags_Unlocked", gagsFound, static_cast<int>(_gags.size()));
+	count("Gags_Unlocked", gagsFound, _gags.GetTotal());
 	stats.percent = all > 0 ? done * 100 / all : 0;
 	return stats;
 }
@@ -795,7 +802,7 @@ void Game::updateTutorial()
 	if (seen.cards >= 0 && cards > seen.cards)
 		tutorial("card");
 	seen.cards = cards;
-	const int gags = static_cast<int>(std::count_if(_gags.begin(), _gags.end(), [](const Gag& g) { return g.played; }));
+	const int gags = _gags.GetFound();
 	if (seen.gags >= 0 && gags > seen.gags)
 		tutorial("gag");
 	seen.gags = gags;
@@ -948,9 +955,9 @@ void Game::LoadModel(const std::string& name, const std::string& anim)
 	for (const auto& [animation, data] : _character->GetAnimations())
 		if (const std::size_t underscore = animation.find('_'); underscore != std::string::npos)
 			_playerAnimations[animation.substr(underscore + 1)] = animation;
-	_playerOneShot = false;
-	_playerIdleFor = 0.0;
-	_playerAirborneFor = 0.0;
+	_moves.oneShot = false;
+	_moves.idleFor = 0.0;
+	_moves.airborneFor = 0.0;
 	playPlayerAnimation("loco_idle_rest", true);
 }
 
@@ -965,7 +972,7 @@ Vector3 Game::driverDoor(const Vehicle& car) const
 void Game::startBoarding(Vehicle* car, bool in)
 {
 	_boarding = {car, in, -1};
-	_playerIdleFor = 0.0;
+	_moves.idleFor = 0.0;
 	updateBoarding();
 }
 
@@ -1031,7 +1038,7 @@ bool Game::playPlayerAnimation(const std::string& what, bool loop)
 	// Only on a change, or a looped one would restart every frame.
 	if (_character->GetAnimName() != found->second || !loop)
 		_character->SetAnimation(found->second, loop);
-	_playerOneShot = !loop;
+	_moves.oneShot = !loop;
 	return true;
 }
 
@@ -1074,28 +1081,28 @@ void Game::updateFootsteps(bool onGround)
 			_audioManager->PlayAudio(sound.file, feet, sound.trim, sound.pitch);
 	};
 
-	if (onGround && !_footstepWasOnGround)
+	if (onGround && !_moves.footstepWasOnGround)
 	{
 		// Down from a jump.
 		step("_jump");
-		_lastFootstepAt = feet;
+		_moves.lastFootstepAt = feet;
 	}
-	_footstepWasOnGround = onGround;
+	_moves.footstepWasOnGround = onGround;
 	if (!onGround)
 		return;
 	// A stride's way along the ground since the last step (driven or not: the
 	// autopilot walks without the controls).
-	const Vector3 gone = feet - _lastFootstepAt;
+	const Vector3 gone = feet - _moves.lastFootstepAt;
 	if (gone.X * gone.X + gone.Z * gone.Z < kStride * kStride)
 		return;
 	// Put back somewhere else (out of a car, into a building): no step for it.
 	if (gone.X * gone.X + gone.Z * gone.Z > 4.0f * kStride * kStride)
 	{
-		_lastFootstepAt = feet;
+		_moves.lastFootstepAt = feet;
 		return;
 	}
 	step("");
-	_lastFootstepAt = feet;
+	_moves.lastFootstepAt = feet;
 }
 
 void Game::updatePlayerAnimation(double dt, bool moving, bool onGround)
@@ -1106,8 +1113,8 @@ void Game::updatePlayerAnimation(double dt, bool moving, bool onGround)
 	static const char* const kIdles[] = {"idle_scratch", "idle_bumshake", "idle_check_shoes", "idle_dancing",
 	                                     "idle_donut",   "idle_fat",      "idle_chili",       "idle_scuzzy"};
 
-	_playerAirborneFor = onGround ? 0.0 : _playerAirborneFor + dt;
-	const bool wasFalling = _playerAirborneFor == 0.0 && _character->GetAnimName() == _playerAnimations["jump_idle_in_air"];
+	_moves.airborneFor = onGround ? 0.0 : _moves.airborneFor + dt;
+	const bool wasFalling = _moves.airborneFor == 0.0 && _character->GetAnimName() == _playerAnimations["jump_idle_in_air"];
 
 	// In the air for more than a moment (a drop off a kerb is not a jump), or
 	// off the ground once a jump's take-off has played.
@@ -1118,9 +1125,9 @@ void Game::updatePlayerAnimation(double dt, bool moving, bool onGround)
 	const bool kicking = _character->GetAnimName() == _playerAnimations["jump_kick"] && !_character->IsAnimationFinished();
 	if (kicking && !onGround)
 		return;
-	if (_playerAirborneFor > 0.25 || (!onGround && (tookOff || falling)))
+	if (_moves.airborneFor > 0.25 || (!onGround && (tookOff || falling)))
 	{
-		_playerIdleFor = 0.0;
+		_moves.idleFor = 0.0;
 		playPlayerAnimation("jump_idle_in_air", true);
 		return;
 	}
@@ -1133,12 +1140,12 @@ void Game::updatePlayerAnimation(double dt, bool moving, bool onGround)
 	}
 	// A one-shot plays through, unless the player sets off: a landing or an
 	// idle is cut short by moving, a victory too.
-	if (_playerOneShot && !_character->IsAnimationFinished() && !moving)
+	if (_moves.oneShot && !_character->IsAnimationFinished() && !moving)
 		return;
 	if (moving)
 	{
-		_playerIdleFor = 0.0;
-		if (!(_playerDashing && playPlayerAnimation("loco_dash", true)) && !playPlayerAnimation("loco_run", true))
+		_moves.idleFor = 0.0;
+		if (!(_moves.dashing && playPlayerAnimation("loco_dash", true)) && !playPlayerAnimation("loco_run", true))
 			playPlayerAnimation("loco_walk", true);
 		return;
 	}
@@ -1150,22 +1157,22 @@ void Game::updatePlayerAnimation(double dt, bool moving, bool onGround)
 			company = company || (npc->GetPosition() - _character->GetPosition()).Length() < 8.0f;
 	for (const auto& giver : _bonusGivers)
 		company = company || (giver.npc && (giver.position - _character->GetPosition()).Length() < 8.0f);
-	if (company && _audioManager->IsDialoguePlaying() && _elapsedSeconds >= _playerGestureAt)
+	if (company && _audioManager->IsDialoguePlaying() && _elapsedSeconds >= _moves.gestureAt)
 	{
 		std::vector<std::string> gestures;
 		for (const auto& [what, name] : _playerAnimations)
 			if (what.rfind("dialogue_", 0) == 0)
 				gestures.push_back(what);
-		_playerGestureAt = _elapsedSeconds + 2.0 + (rand() % 15) / 10.0;
-		_playerIdleFor = 0.0;
+		_moves.gestureAt = _elapsedSeconds + 2.0 + (rand() % 15) / 10.0;
+		_moves.idleFor = 0.0;
 		if (!gestures.empty() && playPlayerAnimation(gestures[static_cast<std::size_t>(rand()) % gestures.size()], false))
 			return;
 	}
 
-	_playerIdleFor += dt;
-	if (_playerIdleFor > 8.0)
+	_moves.idleFor += dt;
+	if (_moves.idleFor > 8.0)
 	{
-		_playerIdleFor = 0.0;
+		_moves.idleFor = 0.0;
 		for (int tries = 0; tries < 4; ++tries)
 			if (playPlayerAnimation(kIdles[static_cast<std::size_t>(rand()) % std::size(kIdles)], false))
 				return;
@@ -1178,85 +1185,6 @@ void Game::LockMouse(bool lockMouse)
 	if (!_gameInput)
 		return;
 	_gameInput->LockMouse(static_cast<SDL_Window*>(*_window), lockMouse);
-}
-
-void Game::runMissionScript()
-{
-	_missionLoadedAt = _elapsedSeconds;
-	// Every mission starts with a sound car.
-	_health = 100.0f;
-	// A mission starts outdoors, wherever the last one left the player.
-	_interior.clear();
-	if (_level)
-		_level->SetDrawOnly({});
-
-	// The game splits each mission in two: <id>l.mfk loads its files and cars,
-	// <id>i.mfk sets it up. Given the set-up script, run the loader first.
-	const std::string suffix = "i.mfk";
-	if (_missionScript.size() > suffix.size() &&
-	    _missionScript.compare(_missionScript.size() - suffix.size(), suffix.size(), suffix) == 0)
-	{
-		const std::string loader = _missionScript.substr(0, _missionScript.size() - suffix.size()) + "l.mfk";
-		if (FileSystem::exists(loader))
-			_scriptEngine->RunFile(loader);
-	}
-
-	if (!FileSystem::exists(_missionScript))
-	{
-		Log::Warn("Game: mission script '{}' not found", _missionScript);
-		return;
-	}
-	_scriptEngine->RunFile(_missionScript);
-}
-
-void Game::startStoryMission(int index)
-{
-	_storyIndex = index;
-	_missionScript = _story[index];
-	Log::Info("Game: story mission {}/{}: {}", index + 1, _story.size(), _missionScript);
-
-	if (_inVehicle)
-	{
-		_inVehicle = false;
-		_activeVehicle = nullptr;
-	}
-	_scriptEngine->CleanupMission();
-	if (_collectibleManager) _collectibleManager->SpawnOnPath();
-	runMissionScript();
-
-	// The mission placed the player; this runs once the character exists.
-	Vector3 start;
-	if (_scriptEngine->GetPlayerStart(start))
-		SetPlayerPosition(start);
-}
-
-Game::StoryProgress Game::loadStoryProgress() const
-{
-	// "<mission> <level>"; a file written before there were levels holds only
-	// the mission, of level 1.
-	std::istringstream file(_save.Get("progress"));
-	StoryProgress progress;
-	if (!(file >> progress.mission) || progress.mission < 0)
-		return {};
-	if (!(file >> progress.level) || progress.level < 1)
-		progress.level = 1;
-	return progress;
-}
-
-void Game::saveStoryProgress(int level, int next) const
-{
-	// An unattended run proves the missions play through; it has not won them.
-	if (_autopilot)
-		return;
-	auto& save = const_cast<SaveGame&>(_save);
-	save.Set("progress", fmt::format("{} {}", next, level));
-	save.Save();
-	Log::Info("Game: story progress saved, level {} mission {}", level, next + 1);
-}
-
-bool Game::levelAvailable(int level) const
-{
-	return FileSystem::exists(fmt::format("scripts/level{:02}/level.mfk", level));
 }
 
 void Game::drawPausePage(const GameIntent& intent, const Matrix4x4& proj)
@@ -1531,9 +1459,9 @@ void Game::playMovie(int movie)
 
 bool Game::PlayStoryMovie(const std::string& file, bool stopMusic)
 {
-	if (_noMovies || _autopilot || !playMovies({file}, GameState::InGame))
+	if (_launch.noMovies || _autopilot || !playMovies({file}, GameState::InGame))
 		return false;
-	_moviesStopMusic = stopMusic;
+	_movies.stopMusic = stopMusic;
 	return true;
 }
 
@@ -1560,16 +1488,16 @@ bool Game::playMovies(std::vector<std::string> files, GameState after, bool skip
 		    !_moviePlayer->Open(path, track, _audioManager->GetChannelVolume(AudioManager::Channel::Music)))
 			continue;
 		// A movie with fewer soundtracks plays its first.
-		_moviePlaying = {upper, _movieLines.count({upper, track}) ? track : 0};
+		_movies.playing = {upper, _movieLines.count({upper, track}) ? track : 0};
 		if (!_states.Is(GameState::Movie))
 		{
-			_afterMovies = after;
-			_moviesSkipTogether = skipTogether;
-			_moviesStopMusic = false;
+			_movies.after = after;
+			_movies.skipTogether = skipTogether;
+			_movies.stopMusic = false;
 			_audioManager->StopMusic();
 			_states.Fire(GameEvent::PlayMovie);
 		}
-		_moviesNext = std::move(files);
+		_movies.next = std::move(files);
 		return true;
 	}
 	return false;
@@ -1602,7 +1530,7 @@ void Game::drawMovie(const GameIntent& intent, const Matrix4x4& proj, double dt,
 	_moviePlayer->Draw(proj, width, height);
 	// What is said now, subtitled as the game's lines are.
 	if (!_optionsMenu || _optionsMenu->AreSubtitlesShown())
-		if (const auto lines = _movieLines.find(_moviePlaying); lines != _movieLines.end())
+		if (const auto lines = _movieLines.find(_movies.playing); lines != _movieLines.end())
 		{
 			const double now = _moviePlayer->GetTime();
 			for (const MovieLine& line : lines->second)
@@ -1619,14 +1547,14 @@ void Game::drawMovie(const GameIntent& intent, const Matrix4x4& proj, double dt,
 	if (_moviePlayer->IsPlaying() && !skipped)
 		return;
 	_moviePlayer->Stop();
-	if (skipped && _moviesSkipTogether)
-		_moviesNext.clear();
-	if (!_moviesNext.empty() && playMovies(std::move(_moviesNext), _afterMovies, _moviesSkipTogether))
+	if (skipped && _movies.skipTogether)
+		_movies.next.clear();
+	if (!_movies.next.empty() && playMovies(std::move(_movies.next), _movies.after, _movies.skipTogether))
 		return;
-	_states.Fire(eventTo(_afterMovies));
-	if (_afterMovies == GameState::MainMenu)
+	_states.Fire(eventTo(_movies.after));
+	if (_movies.after == GameState::MainMenu)
 		_menuMusic = false;
-	else if (_afterMovies == GameState::InGame && !_moviesStopMusic)
+	else if (_movies.after == GameState::InGame && !_movies.stopMusic)
 		_audioManager->ResumeMusicBase();
 }
 
@@ -1652,93 +1580,6 @@ Texture* Game::presentationPicture(const std::string& path)
 	if (!texture)
 		_missingPictures.insert(name);
 	return texture;
-}
-
-void Game::showLoadingScreen(int level)
-{
-	if (!_loadingPage || !_window)
-		return;
-	// The level's picture, in the place the page leaves blank for it
-	// (dynaload/images/loading<n>.p3d: a sprite in tiles).
-	const std::string picture = fmt::format("./art/frontend/dynaload/images/loading{}.p3d", level);
-	const std::string pictureName = fmt::format("loading{}.png", level);
-	if (!_resourceManager->GetTexture(pictureName) && FileSystem::exists(picture))
-	{
-		const P3D::P3DFile file(picture);
-		for (const auto& chunk : file.GetRoot().GetChildren())
-			if (chunk->IsType(P3D::ChunkType::Sprite))
-				_resourceManager->LoadTexture(*P3D::Sprite::Load(*chunk));
-	}
-	if (Texture* texture = _resourceManager->GetTexture(pictureName))
-		_loadingPage->SetSpriteTexture("Loading", texture);
-	else
-		_loadingPage->SetSpriteVisible("Loading", false);
-	// One frame of it, drawn before the load holds everything up.
-	int width = 0, height = 0;
-	SDL_GL_GetDrawableSize(*_window, &width, &height);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glViewport(0, 0, width, height);
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glDisable(GL_DEPTH_TEST);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	_loadingPage->Draw(Matrix4x4::MakeOrtho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
-	_window->Swap();
-	glEnable(GL_DEPTH_TEST);
-}
-
-void Game::switchLevel(int level)
-{
-	Log::Info("Game: leaving level {} for level {}", _levelNumber, level);
-	showLoadingScreen(level);
-	unloadLevel();
-	_levelNumber = level;
-	_storyIndex = -1;
-	loadLevel();
-	LoadModel(_playerCharacter, _playerCharacter);
-	if (!_wornSkin.empty())
-		BuySkin(_wornSkin);
-	_gameCamera->Snap();
-	_trackLoaded = false;
-}
-
-void Game::unloadLevel()
-{
-	// Everything that lives in the physics world goes before it: the mission's
-	// cars and drivers, the NPCs, the pedestrians and the player.
-	_scriptEngine->CleanupMission();
-	_inVehicle = false;
-	_activeVehicle = nullptr;
-	_interior.clear();
-	ClearNpcs();
-	_ambientNpcs.clear();
-	_bonusGivers.clear();
-	_carDrivers.clear();
-	_hitAndRun.reset();
-	_pedestrianManager.reset();
-	_trafficManager.reset();
-	_collectibleManager.reset();
-	_waspManager.reset();
-	_ufo.reset();
-	_sparks.reset();
-	_dust.reset();
-	_wheelSprays.clear();
-	_dashDust.reset();
-	_carSmoke.reset();
-	_carSmokeVehicle = nullptr;
-	if (_audioManager)
-	{
-		_audioManager->SetLoop("skid", "");
-		_audioManager->SetLoop("siren", "");
-	}
-	if (_skidMarks)
-		_skidMarks->Clear();
-	_pathGraph.reset();
-	_character.reset();
-	_footstepScript.clear();
-	_level.reset();
-	_worldPhysics = std::make_unique<WorldPhysics>(_lineRenderer.get());
 }
 
 void Game::scriptedCamera(double deltaTime)
@@ -1836,10 +1677,10 @@ void Game::updateCarDamageLook(double dt)
 
 	// Shaders are shared by name, and a car's are reset to their own texture
 	// when a mesh first asks for them: what is shown is put again now and then.
-	_damageLookAge += dt;
-	if (model == _damageLookModel && stage == _damageLookStage && (stage == 0 || _damageLookAge < 2.0))
+	_carDamage.lookAge += dt;
+	if (model == _carDamage.lookModel && stage == _carDamage.lookStage && (stage == 0 || _carDamage.lookAge < 2.0))
 		return;
-	_damageLookAge = 0.0;
+	_carDamage.lookAge = 0.0;
 
 	auto& resources = GetResourceManager();
 	auto show = [&](const std::string& car, int parts) {
@@ -1850,14 +1691,14 @@ void Game::updateCarDamageLook(double dt)
 		}
 	};
 	// The car left behind is mended, to the eye.
-	if (!_damageLookModel.empty() && _damageLookModel != model)
-		show(_damageLookModel, 0);
+	if (!_carDamage.lookModel.empty() && _carDamage.lookModel != model)
+		show(_carDamage.lookModel, 0);
 	if (!model.empty())
 		show(model, stage);
-	if (model != _damageLookModel || stage != _damageLookStage)
+	if (model != _carDamage.lookModel || stage != _carDamage.lookStage)
 		Log::Debug("Game: '{}' shows {} damaged part(s), health {:.0f}", model, stage, _health);
-	_damageLookModel = model;
-	_damageLookStage = stage;
+	_carDamage.lookModel = model;
+	_carDamage.lookStage = stage;
 }
 
 void Game::updateCarDamage()
@@ -1873,16 +1714,16 @@ void Game::updateCarDamage()
 
 	if (!_inVehicle || !_activeVehicle)
 	{
-		_damageVehicle = nullptr;
+		_carDamage.vehicle = nullptr;
 		return;
 	}
 	const Vector3 velocity = _activeVehicle->GetVelocity();
 	const Vector3 position = _activeVehicle->GetPosition();
-	if (_damageVehicle == _activeVehicle)
+	if (_carDamage.vehicle == _activeVehicle)
 	{
 		// A car moved further than its speed explains was teleported, not hit.
-		const float moved = (position - _damagePosition).Length();
-		const float flat = Vector3(velocity.X - _damageVelocity.X, 0.0f, velocity.Z - _damageVelocity.Z).Length();
+		const float moved = (position - _carDamage.position).Length();
+		const float flat = Vector3(velocity.X - _carDamage.velocity.X, 0.0f, velocity.Z - _carDamage.velocity.Z).Length();
 		if (moved < 5.0f && flat > kImpactThreshold)
 		{
 			// As tough as the car's script makes it (SetHitPoints).
@@ -1916,9 +1757,9 @@ void Game::updateCarDamage()
 					}
 		}
 	}
-	_damageVehicle = _activeVehicle;
-	_damageVelocity = velocity;
-	_damagePosition = position;
+	_carDamage.vehicle = _activeVehicle;
+	_carDamage.velocity = velocity;
+	_carDamage.position = position;
 }
 
 void Game::SayLine(const std::string& kind)
@@ -1937,9 +1778,9 @@ void Game::SayLine(const std::string& kind)
 void Game::alert(const std::string& term, const char* fallback)
 {
 	const std::string& text = _textBible.Get(term);
-	_alertMessage = text.empty() ? fallback : text;
-	_alertUntil = _elapsedSeconds + 3.0;
-	_alertTerm = term;
+	_messages.alert = text.empty() ? fallback : text;
+	_messages.alertUntil = _elapsedSeconds + 3.0;
+	_messages.alertTerm = term;
 }
 
 void Game::updateHitAndRun(double dt)
@@ -2392,656 +2233,6 @@ void Game::saveCoins() const
 	save.Save();
 }
 
-void Game::runAutopilot(double dt)
-{
-	if (!_scriptEngine->IsMissionActive() || !_states.Is(GameState::InGame))
-		return;
-
-	// Every two seconds, not every frame: each step should be seen to land, and
-	// a race's checkpoints are taken one at a time.
-	_autopilotTimer += dt;
-	if (_autopilotTimer < 2.0)
-		return;
-	_autopilotTimer = 0.0;
-
-	// Chasing, ramming or racing is done at the wheel: a player left on foot by
-	// the stage before (a talkto) has their car brought round. Level 4 m1's
-	// dump was "rammed" on foot and timed out.
-	if (!_inVehicle && _character)
-	{
-		const std::string& wanted = _scriptEngine->GetObjectiveType();
-		Vehicle* car = _scriptEngine->GetPlayerCar();
-		if (car && (wanted == "follow" || wanted == "destroy" || wanted == "dump" || wanted == "race"))
-		{
-			Log::Info("Game: autopilot takes the wheel of '{}'", car->GetName());
-			car->Teleport(_character->GetPosition() + Vector3(2.5f, 0.0f, 0.0f), car->GetRotation());
-			PutPlayerInVehicle(car);
-			return;
-		}
-	}
-
-	if (_scriptEngine->ObjectiveWantsCar() && !_inVehicle && !_scriptEngine->GetMissionVehicles().empty())
-	{
-		Log::Info("Game: autopilot gets in '{}'", _scriptEngine->GetMissionVehicles().front()->GetName());
-		PutPlayerInVehicle(_scriptEngine->GetMissionVehicles().front().get());
-		return;
-	}
-
-	// Tailing a car is done from behind it, and only when it is getting away:
-	// dropping the player's car onto the target every two seconds rammed it
-	// off its route.
-	// A car to destroy is met head on: the player's car is parked across its
-	// path, 15m ahead, and it drives into it.
-	// A dump's truck likewise, until something has dropped out of it to pick up.
-	const std::string& objective = _scriptEngine->GetObjectiveType();
-	const bool ramming = objective == "destroy" || (objective == "dump" && !_scriptEngine->HasPickupsLying());
-	if (const Vehicle* quarry = _scriptEngine->GetFollowTarget(); quarry && ramming && _inVehicle && _activeVehicle)
-	{
-		const Vector3 ahead = clearSpotNear(quarry->GetPosition() + quarry->GetRotation() * Vector3::Forward * 15.0f);
-		Log::Info("Game: autopilot blocks '{}'", quarry->GetName());
-		_activeVehicle->Teleport(ahead, quarry->GetRotation() * Quaternion(Vector3(0.0f, 1.0f, 0.0f), 1.5708f));
-		return;
-	}
-
-	if (const Vehicle* followed = objective == "follow" ? _scriptEngine->GetFollowTarget() : nullptr)
-	{
-		const Vector3 me = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : _character->GetPosition();
-		// Well inside the tightest follow distance the scripts set (level 4 m1's
-		// 120m): the autopilot moves every 2s, and at 75 km/h the car gains 40m
-		// between two looks. At 100m it was lost before the next one, and at
-		// 60m it still was, now and then, over a long chase.
-		if ((followed->GetPosition() - me).Length() < 45.0f)
-			return;
-		// 25m behind, or closer when there is no road there: m5's van, put back
-		// on its route in a sunken lane, had nothing but a drop 25m behind it,
-		// and the player's car fell off the map.
-		Vector3 behind;
-		bool grounded = false;
-		for (const float back : {18.0f, 12.0f, 8.0f})
-		{
-			behind = followed->GetPosition() - followed->GetRotation() * Vector3::Forward * back;
-			// Not on top of the traffic: put down inside a traffic car's box, the
-			// player's car was thrown out at 55 m/s and off the map, and the
-			// car being followed was lost.
-			float ground = 0.0f;
-			if (clearOfTraffic(behind) && _worldPhysics->FindGroundHeight(behind, 5.0f, 5.0f, ground, true))
-			{
-				grounded = true;
-				break;
-			}
-		}
-		if (!grounded)
-			return;
-		Log::Info("Game: autopilot catches up with '{}'", followed->GetName());
-		if (_inVehicle && _activeVehicle)
-			_activeVehicle->Teleport(behind, followed->GetRotation());
-		else
-			SetPlayerPosition(behind + Vector3(0.0f, 1.0f, 0.0f));
-		return;
-	}
-
-	// Doors are walked through, not driven into, and people walked up to.
-	if ((objective == "interior" || objective == "talkto") && _inVehicle && _activeVehicle)
-	{
-		Log::Info("Game: autopilot gets out of '{}'", _activeVehicle->GetName());
-		_inVehicle = false;
-		SetPlayerPosition(_activeVehicle->GetPosition() + Vector3(3.0f, 0.0f, 0.0f));
-		_activeVehicle = nullptr;
-		return;
-	}
-
-	Vector3 target;
-	if (!_scriptEngine->GetObjectiveTarget(target))
-		return;
-	if (_inVehicle && _activeVehicle)
-		target = clearSpotNear(target);
-	Log::Info("Game: autopilot to ({:.1f}, {:.1f}, {:.1f})", target.X, target.Y, target.Z);
-	// Something to pick up high above the ground is taken where it is, at its
-	// height: level 4 m3's ketchup hangs 11m above the road, for a jump the
-	// autopilot cannot make. One near the ground -- what a truck rammed drops,
-	// at the height of its middle -- is driven to on the ground: put down at
-	// that height, the car was half in the road, thrown off it, and never
-	// came within reach (level 4 m1, the stage timed out).
-	bool high = false;
-	if (objective == "delivery" || objective == "dump")
-	{
-		float ground = 0.0f;
-		high = !_worldPhysics->FindGroundHeight(target, 1.0f, 30.0f, ground, true) || target.Y - ground > kHighPickup;
-	}
-	// Someone to talk to is walked up to, not stood on: from the spot itself
-	// the conversation's shots framed the two people as one.
-	if (objective == "talkto" && !(_inVehicle && _activeVehicle) && _character)
-	{
-		Vector3 away = _character->GetPosition() - target;
-		away.Y = 0.0f;
-		target = target + (away.LengthSquared() > 0.01f ? away.Normalized() : Vector3(0.0f, 0.0f, 1.0f)) * 1.5f;
-	}
-	if (_inVehicle && _activeVehicle)
-		_activeVehicle->Teleport(target, _activeVehicle->GetRotation(), !high);
-	else
-		SetPlayerPosition(target + Vector3(0.0f, 1.0f, 0.0f));
-}
-
-bool Game::clearOfTraffic(const Vector3& at) const
-{
-	// The mission's cars too, but the player's own: a truck rammed to a stop
-	// stood where what it dropped lay, and the car put down on it was thrown
-	// off, every time, until the stage ran out (level 4 m1).
-	for (const auto& vehicle : _scriptEngine->GetMissionVehicles())
-		if (vehicle.get() != _activeVehicle && (vehicle->GetPosition() - at).Length() < kVehicleClearance)
-			return false;
-	if (!_trafficManager || _scriptEngine->IsTrafficSuppressed())
-		return true;
-	for (const auto& car : _trafficManager->GetCars())
-		if ((car.position - at).Length() < kTrafficClearance)
-			return false;
-	return true;
-}
-
-Vector3 Game::clearSpotNear(const Vector3& at) const
-{
-	// The autopilot's car is put down where no traffic car is: dropped inside
-	// one's box, it was thrown out at 100 m/s and more, wrecked and off the
-	// map (level 6 m1, level 3 m3). Beside it, then, a little further each
-	// time.
-	if (clearOfTraffic(at))
-		return at;
-	for (const float away : {3.0f, 5.0f, 8.0f, 12.0f})
-		for (const Vector3& side : {Vector3(1.0f, 0.0f, 0.0f), Vector3(-1.0f, 0.0f, 0.0f), Vector3(0.0f, 0.0f, 1.0f),
-		                            Vector3(0.0f, 0.0f, -1.0f)})
-		{
-			const Vector3 spot = at + side * away;
-			float ground = 0.0f;
-			if (clearOfTraffic(spot) && _worldPhysics->FindGroundHeight(spot, 5.0f, 5.0f, ground, true))
-				return Vector3(spot.X, std::max(spot.Y, ground), spot.Z);
-		}
-	return at;
-}
-
-void Game::loadLevel()
-{
-	_level = std::make_unique<Level>();
-	// The level's world: its terrain, every zone and road file, and its
-	// interiors, which live under the map and are reached through doors. The
-	// game streams these in and out as the player moves; they are all loaded
-	// here. This was level 1's list, written out.
-	for (const std::string& file : levelWorldFiles())
-		_level->LoadP3D(file);
-	// The radar's map of the level.
-	if (_gameHud)
-		_gameHud->LoadMap(_levelNumber);
-	// The mission art shared by the whole level: the coin, among others.
-	_level->LoadP3D(fmt::format("missions/{}/level.p3d", levelDirectory()));
-	// The level's effects file (art/l01_fx.p3d) holds the textures its particle
-	// effects draw with -- the tire fire's smoke3.bmp -- and was never read: the
-	// smoke showed as squares of whatever texture a shader falls back on. Its
-	// textures only; its shaders could take the names of the world's.
-	if (const std::string fx = fmt::format("art/l{:02}_fx.p3d", _levelNumber); FileSystem::exists(fx))
-	{
-		const P3D::P3DFile effects(fx);
-		for (const auto& chunk : effects.GetRoot().GetChildren())
-			if (chunk->GetType() == P3D::ChunkType::Texture)
-				_resourceManager->LoadTexture(*P3D::Texture::Load(*chunk));
-		// And the shaders the world does not have already (spark3_m, smoke2_m).
-		for (const auto& chunk : effects.GetRoot().GetChildren())
-			if (chunk->GetType() == P3D::ChunkType::Shader)
-				if (auto shader = P3D::Shader::Load(*chunk); !_resourceManager->HasShader(shader->GetName()))
-					_resourceManager->LoadShader(*shader);
-		_level->LoadHitParticles(effects.GetRoot());
-	}
-	_sparkFactory = ParticleFactory::Burst("spark3_m", 0.5f, 6.0f, 1.2f, 0.4f, 9.8f, Vector4(1.0f, 0.8f, 0.4f, 1.0f));
-	_dustFactory = ParticleFactory::Burst("smoke2_m", 1.2f, 1.0f, 1.4f, 1.2f, 0.0f, Vector4(0.85f, 0.8f, 0.7f, 0.8f));
-	_sparks = std::make_unique<ParticleSystem>(*_sparkFactory);
-	_dust = std::make_unique<ParticleSystem>(*_dustFactory);
-	_skidMarks = std::make_unique<SkidMarks>();
-	_pathGraph = std::make_unique<PathGraph>(*_level, *_worldPhysics);
-	// Fallen off the map: well below the lowest road. A fixed -50 suited level
-	// 1, but level 3's lower town lies at -68, and the player standing there
-	// was "respawned" over and over.
-	{
-		float lowest = 0.0f;
-		for (const auto& node : _pathGraph->GetNodes())
-			lowest = std::min(lowest, node.position.Y);
-		_fallOffY = std::min(-50.0f, lowest - 40.0f);
-		Log::Info("Game: level {} falls off below y = {:.0f}", _levelNumber, _fallOffY);
-	}
-	_trafficManager = std::make_unique<TrafficManager>(*_level, *_lineRenderer, *_pathGraph);
-	_trafficManager->LoadModels(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
-	_pedestrianManager = std::make_unique<PedestrianManager>(*_worldPhysics);
-	_pedestrianManager->LoadModels(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
-	_collectibleManager = std::make_unique<CollectibleManager>(*_level, *_lineRenderer);
-	// The wasp cameras, at the spawn points the level script lists, their
-	// locators in the mission art.
-	_level->LoadP3D(fmt::format("missions/{}/wasps.p3d", levelDirectory()));
-	_waspManager = std::make_unique<WaspManager>(_levelNumber, fmt::format("scripts/{}/leveli.mfk", levelDirectory()),
-	                                             *_level);
-	_ufo = UfoBoss::FromLevelScript(fmt::format("scripts/{}/leveli.mfk", levelDirectory()), *_level, *_worldPhysics);
-	_collectibleManager->SpawnOnPath();
-
-	bindWorkedObjects();
-
-	// The tutorial: EnableTutorialMode(1) in the level's script (level 1).
-	_tutorialMode = false;
-	_tutorialWaiting.clear();
-	_tutorialSeen = {};
-	{
-		std::ifstream script(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
-		for (std::string line; std::getline(script, line);)
-		{
-			const std::size_t at = line.find("EnableTutorialMode(");
-			const std::size_t comment = line.find("//");
-			if (at == std::string::npos || (comment != std::string::npos && comment < at))
-				continue;
-			const std::string argument = line.substr(at + 19, line.find(')', at) - at - 19);
-			_tutorialMode = argument.find('1') != std::string::npos || argument.find("true") != std::string::npos;
-		}
-	}
-
-	// The level's ambient people: AddAmbientCharacter("ralph", "ambient_ralph", 1.3).
-	{
-		std::ifstream script(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
-		for (std::string line; std::getline(script, line);)
-		{
-			const std::size_t at = line.find("AddAmbientCharacter(");
-			const std::size_t comment = line.find("//");
-			if (at == std::string::npos || (comment != std::string::npos && comment < at))
-				continue;
-			std::vector<std::string> args;
-			for (std::size_t q = line.find('"', at); q != std::string::npos && args.size() < 2; q = line.find('"', q + 1))
-			{
-				const std::size_t end = line.find('"', q + 1);
-				if (end == std::string::npos)
-					break;
-				args.push_back(line.substr(q + 1, end - q - 1));
-				q = end;
-			}
-			if (args.size() < 2 || _ambientNpcs.count(args[0]))
-				continue;
-			const Vector3 spot = _level->GetLocatorPosition(args[1]);
-			if (spot == Vector3::Zero)
-				continue;
-			if (auto npc = makeNpc(args[0]))
-			{
-				npc->SetPosition(spot);
-				_ambientNpcs.emplace(args[0], std::move(npc));
-			}
-		}
-		Log::Info("Game: {} people about level {}", _ambientNpcs.size(), _levelNumber);
-	}
-
-	// The car sellers: AddPurchaseCarReward("gil", "gil", "npd", "gil_loc",
-	// 1.3, "gil_car"): the shop, who keeps it, where they stand, where the car
-	// bought is left. Stood among the level's people.
-	_carSellers.clear();
-	{
-		std::ifstream script(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
-		for (std::string line; std::getline(script, line);)
-		{
-			const std::size_t at = line.find("AddPurchaseCarReward(");
-			const std::size_t comment = line.find("//");
-			if (at == std::string::npos || (comment != std::string::npos && comment < at))
-				continue;
-			std::vector<std::string> args;
-			for (std::size_t q = line.find('"', at); q != std::string::npos; q = line.find('"', q + 1))
-			{
-				const std::size_t end = line.find('"', q + 1);
-				if (end == std::string::npos)
-					break;
-				args.push_back(line.substr(q + 1, end - q - 1));
-				q = end;
-			}
-			if (args.size() < 5)
-				continue;
-			const Vector3 spot = _level->GetLocatorPosition(args[3]);
-			const Vector3 carSpot = _level->GetLocatorPosition(args[4]);
-			if (spot == Vector3::Zero || carSpot == Vector3::Zero)
-				continue;
-			_carSellers.push_back({args[0], spot, carSpot});
-			if (!_ambientNpcs.count(args[1]))
-				if (auto npc = makeNpc(args[1]))
-				{
-					npc->SetPosition(spot);
-					_ambientNpcs.emplace(args[1], std::move(npc));
-				}
-		}
-		Log::Info("Game: {} car seller(s)", _carSellers.size());
-	}
-
-	// Who offers the street races and the bonus mission:
-	// AddNPCCharacterBonusMission("milhouse", "npd", "sr1_mhouse_sd", "sr1", ...).
-	_bonusGivers.clear();
-	_bonusReturn = -1;
-	{
-		std::ifstream script(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
-		for (std::string line; std::getline(script, line);)
-		{
-			const std::size_t at = line.find("AddNPCCharacterBonusMission(");
-			const std::size_t comment = line.find("//");
-			if (at == std::string::npos || (comment != std::string::npos && comment < at))
-				continue;
-			std::vector<std::string> args;
-			for (std::size_t q = line.find('"', at); q != std::string::npos && args.size() < 4; q = line.find('"', q + 1))
-			{
-				const std::size_t end = line.find('"', q + 1);
-				if (end == std::string::npos)
-					break;
-				args.push_back(line.substr(q + 1, end - q - 1));
-				q = end;
-			}
-			if (args.size() < 4)
-				continue;
-			const Vector3 spot = _level->GetLocatorPosition(args[2]);
-			if (spot == Vector3::Zero ||
-			    !FileSystem::exists(fmt::format("scripts/{}/{}i.mfk", levelDirectory(), args[3])))
-				continue;
-			BonusGiver giver {args[3], spot, makeNpc(args[0])};
-			if (giver.npc)
-				giver.npc->SetPosition(spot);
-			_bonusGivers.push_back(std::move(giver));
-		}
-		Log::Info("Game: {} street races and bonus missions on offer", _bonusGivers.size());
-	}
-
-	// The level's music: what its music script (l<n>_music.rms) plays while
-	// exploring. Without one, or with none of it in the archives, the
-	// segments of the level's own set play in order instead: Homer's tubas on
-	// level 1, Lisa's on 3, Marge's lounge on 4, Halloween on 7, the main
-	// themes on the others.
-	_audioManager->LoadMusicScript(_levelNumber);
-	if (!_audioManager->PlayMusicEvent("OF_explore_mission"))
-	{
-		static const std::map<int, std::string> kSets {
-		    {1, "\\homer\\"}, {3, "\\lisa\\"}, {4, "\\marge\\"}, {7, "\\halloween\\"}};
-		const auto set = kSets.find(_levelNumber);
-		std::vector<std::string> tracks;
-		for (const std::string& track : _audioManager->FindSounds(set != kSets.end() ? set->second : "_main.rsd"))
-			if (track.find("\\music\\") != std::string::npos && track.size() > 4 &&
-			    track.compare(track.size() - 4, 4, ".rsd") == 0 &&
-			    track.find("_end_") == std::string::npos && track.find("reward") == std::string::npos)
-				tracks.push_back(track);
-		_audioManager->PlayMusicPlaylist(std::move(tracks));
-	}
-
-	// Hit & Run: the level's police car (CreateChaseManager) and how fast the
-	// meter drains (SetHitAndRunDecay), both from leveli.mfk.
-	{
-		const auto cops = levelScriptCalls("CreateChaseManager", "leveli.mfk");
-		float decay = 1.0f;
-		int cars = 1;
-		std::ifstream script(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
-		for (std::string line; std::getline(script, line);)
-		{
-			const std::size_t comment = line.find("//");
-			if (const std::size_t at = line.find("SetHitAndRunDecay(");
-			    at != std::string::npos && (comment == std::string::npos || comment > at))
-				decay = static_cast<float>(std::atof(line.c_str() + at + 18));
-			// SetNumChaseCars("2"): how many police cars come.
-			if (const std::size_t at = line.find("SetNumChaseCars(");
-			    at != std::string::npos && (comment == std::string::npos || comment > at))
-			{
-				const std::size_t digit = line.find_first_of("0123456789", at);
-				if (digit != std::string::npos)
-					cars = std::atoi(line.c_str() + digit);
-			}
-		}
-		_hitAndRun = std::make_unique<HitAndRun>(cops.empty() ? "cPolice" : cops.front(), decay, cars);
-	}
-
-	// The story is the level script's AddMission list, in order, when the
-	// scripts have been copied off the CD. Without them "New Game" plays the
-	// test mission, as it always has.
-	_story.clear();
-	_teleports.clear();
-	_playerCharacter = "homer";
-	_playerCarModel = "famil_v";
-	// A new level, its own cars and clothes: what was bought on the last one
-	// stays there, and comes back with it.
-	_currentCar.clear();
-	_ownedCars.clear();
-	_ownedSkins.clear();
-	_wornSkin.clear();
-	restorePurchases();
-	for (const std::string& id : levelScriptCalls("AddMission"))
-	{
-		// Each mission is reached through its "Sunday drive", <id>sdi.mfk: go
-		// home, talk to Marge, buy the car the mission needs... It is played
-		// first, as a mission of its own. The story used to jump from one
-		// mission straight into the next.
-		for (const char* part : {"sd", ""})
-		{
-			const std::string path = fmt::format("scripts/{}/{}{}i.mfk", levelDirectory(), id, part);
-			if (FileSystem::exists(path))
-				_story.push_back(path);
-		}
-	}
-	loadGags();
-	// The Warp menu's places, AddTeleportDest("name", x, y, z, "zones").
-	{
-		std::ifstream script(fmt::format("scripts/{}/level.mfk", levelDirectory()));
-		for (std::string line; std::getline(script, line);)
-		{
-			const std::size_t at = line.find("AddTeleportDest(");
-			const std::size_t comment = line.find("//");
-			if (at == std::string::npos || (comment != std::string::npos && comment < at))
-				continue;
-			const std::size_t open = line.find('"', at);
-			const std::size_t close = open == std::string::npos ? open : line.find('"', open + 1);
-			Vector3 place;
-			if (close != std::string::npos &&
-			    std::sscanf(line.c_str() + close + 1, " , %f , %f , %f", &place.X, &place.Y, &place.Z) == 3)
-				_teleports.emplace_back(line.substr(open + 1, close - open - 1), place);
-		}
-	}
-	if (const auto characters = levelScriptCalls("AddCharacter", "leveli.mfk"); !characters.empty())
-		_playerCharacter = characters.front();
-	// Not every character came off the CD (Lisa, level 3's, did not): Homer
-	// stands in rather than nobody.
-	if (!FileSystem::exists(fmt::format("art/chars/{}_m.p3d", _playerCharacter)))
-	{
-		Log::Warn("Game: no model for '{}', Homer plays level {}", _playerCharacter, _levelNumber);
-		_playerCharacter = "homer";
-	}
-	if (const auto cars = levelScriptCalls("InitLevelPlayerVehicle", "leveli.mfk"); !cars.empty())
-		_playerCarModel = cars.front();
-	Log::Info("Game: level {} is played by '{}' in '{}'", _levelNumber, _playerCharacter, _playerCarModel);
-	// Away from level 1 there is no test mission: the level opens on its story.
-	if (_levelNumber != 1 && !_missionScriptGiven && !_story.empty())
-		_missionScript = _story.front();
-}
-
-std::string Game::levelDirectory() const
-{
-	return fmt::format("level{:02}", _levelNumber);
-}
-
-bool Game::levelScriptsName(const std::string& file) const
-{
-	// Any of the level's scripts loading it (SetDynaLoadData's lists).
-	for (const auto& entry : FileSystem::directory_iterator(fmt::format("./scripts/{}", levelDirectory())))
-	{
-		std::ifstream script(entry.path());
-		std::string text((std::istreambuf_iterator<char>(script)), std::istreambuf_iterator<char>());
-		std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) { return std::tolower(c); });
-		if (text.find(file) != std::string::npos)
-			return true;
-	}
-	return false;
-}
-
-std::vector<std::string> Game::levelWorldFiles() const
-{
-	// l<n>_TERRA.p3d, then l<n>z*.p3d and l<n>r*.p3d (zones and the roads
-	// between them), then the interiors l<n>i*.p3d. Where a road comes in two
-	// versions (level 1's l1r4a and l1r4b, the same stretch before and after
-	// it changes) only the first is taken: both together overlap -- unless
-	// the level's scripts load the second (level 4's street races load l4r4a
-	// and l4r4b together: Burns' estate is l4r4b's, and its wasps hung over
-	// nothing without it).
-	const std::string prefix = fmt::format("l{}", _levelNumber);
-	std::string terrain;
-	std::vector<std::string> world, interiors;
-	for (const auto& entry : FileSystem::directory_iterator("./art"))
-	{
-		const std::string name = entry.path().filename().string();
-		std::string lower = name;
-		std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) { return std::tolower(c); });
-		if (lower.size() < prefix.size() + 5 || lower.compare(0, prefix.size(), prefix) != 0 ||
-		    lower.compare(lower.size() - 4, 4, ".p3d") != 0)
-			continue;
-		const std::string rest = lower.substr(prefix.size(), lower.size() - prefix.size() - 4);
-		if (rest == "_terra")
-			terrain = name;
-		else if ((rest[0] == 'z' || rest[0] == 'r') && rest.size() > 1 && std::isdigit(static_cast<unsigned char>(rest[1])))
-		{
-			if (rest.back() == 'b' &&
-			    FileSystem::exists(fmt::format("./art/{}a.p3d", name.substr(0, name.size() - 5))) &&
-			    !levelScriptsName(lower))
-				continue;
-			world.push_back(name);
-		}
-		else if (rest[0] == 'i' && rest.size() == 3 && std::isdigit(static_cast<unsigned char>(rest[1])))
-			interiors.push_back(name);
-	}
-	std::sort(world.begin(), world.end());
-	std::sort(interiors.begin(), interiors.end());
-
-	std::vector<std::string> files;
-	if (!terrain.empty())
-		files.push_back(terrain);
-	files.insert(files.end(), world.begin(), world.end());
-	files.insert(files.end(), interiors.begin(), interiors.end());
-	Log::Info("Game: level {} is {} files", _levelNumber, files.size());
-	return files;
-}
-
-std::vector<std::string> Game::levelScriptCalls(const std::string& command, const std::string& file) const
-{
-	std::vector<std::string> arguments;
-	std::ifstream script(fmt::format("scripts/{}/{}", levelDirectory(), file));
-	for (std::string line; std::getline(script, line);)
-	{
-		const std::size_t at = line.find(command + "(");
-		const std::size_t comment = line.find("//");
-		if (at == std::string::npos || (comment != std::string::npos && comment < at))
-			continue;
-		const std::size_t open = line.find('"', at);
-		const std::size_t close = open == std::string::npos ? open : line.find('"', open + 1);
-		if (close != std::string::npos)
-			arguments.push_back(line.substr(open + 1, close - open - 1));
-	}
-	return arguments;
-}
-
-bool Game::CanEnterInterior(const std::string& name) const
-{
-	// Which file holds which interior is not in the data as such: the files
-	// name their locators after it (int_ele_*, int_kwik_*), and the door's
-	// name contains that tag (see Level::FindInteriorFile). This was a table
-	// of level 1's three.
-	Level::Interior layout;
-	const std::string file = _level->FindInteriorFile(name);
-	return !file.empty() && _level->GetInterior(file, layout);
-}
-
-void Game::enterInterior(const Level::Trigger& door)
-{
-	// On foot only, as in the game: a car does not go through a front door.
-	if (_inVehicle || !_interior.empty() || !_character)
-		return;
-
-	// A zone trigger names the interior's file itself, before its '@'; a door
-	// names the place, which FindInteriorFile matches to a file. The interior
-	// is then known by the trigger's locator ("moe1", which level 2's scripts
-	// name as the destination) or by the place ("KwikEMart", level 1's).
-	const bool zone = door.type == Level::LocatorType::DynamicZone;
-	std::string file;
-	if (zone)
-	{
-		// The file just before the '@', after any others the trigger unloads:
-		// "l1z7.p3d:l1z2.p3d:l1i02.p3d@" is l1i02.p3d.
-		const std::size_t at = door.data.find('@');
-		const std::size_t start = door.data.find_last_of(";:", at);
-		file = door.data.substr(start == std::string::npos ? 0 : start + 1, at - (start == std::string::npos ? 0 : start + 1));
-	}
-	else
-		file = _level->FindInteriorFile(door.data);
-	if (file.empty() || !_level->GetInterior(file, _interiorLayout))
-	{
-		Log::Warn("Game: no interior loaded for door '{}' ({})", door.locator, door.data);
-		return;
-	}
-
-	// Come back out a few metres in front of the door, clear of its trigger, or
-	// stepping out would walk straight back in.
-	Vector3 away = _character->GetPosition() - door.position;
-	away.Y = 0.0f;
-	if (away.LengthSquared() < 0.01f)
-		away = Vector3(0.0f, 0.0f, 1.0f);
-	away.Normalize();
-	_interiorReturn = door.position + away * 4.0f;
-
-	_interior = zone ? door.locator : door.data;
-	_interiorExitArmed = false;
-	// Going indoors loses the police, as the game's hint says.
-	if (_hitAndRun)
-		_hitAndRun->Reset();
-	Log::Info("Game: player goes into '{}'", _interior);
-	// The Kwik-E-Mart has its muzak; the other buildings keep the music.
-	std::string place = _interior;
-	std::transform(place.begin(), place.end(), place.begin(), [](unsigned char c) { return std::tolower(c); });
-	_interiorMusic = place.find("kwik") != std::string::npos && _audioManager->PlayMusicEvent("OF_KiwkEMart", true);
-	SetPlayerPosition(_interiorLayout.entry);
-	// Facing into the room: the camera kept the heading from outside, which
-	// for the school looked back out through the door at nothing.
-	const Vector3 inward = _interiorLayout.origin - _interiorLayout.entry;
-	if (inward.X * inward.X + inward.Z * inward.Z > 0.01f)
-		_gameCamera->SetYaw(std::atan2(inward.X, inward.Z));
-	_level->SetDrawOnly(file);
-	_scriptEngine->OnInteriorChanged(_interior);
-}
-
-// How far from an interior's way out the player is no longer in it: farther
-// than any room reaches.
-constexpr float kInteriorLeftBehind = 80.0f;
-
-void Game::updateInterior()
-{
-	if (_interior.empty() || !_character)
-		return;
-
-	const float toExit = (_character->GetPosition() - _interiorLayout.exit).Length();
-	// Taken out some other way than its door -- put in a car outside, moved on
-	// by the mission: the room's drawing only, kept on, left the town around
-	// the player a void of sky.
-	if (_inVehicle || toExit > kInteriorLeftBehind)
-	{
-		Log::Info("Game: player taken out of '{}'", _interior);
-		if (_interiorMusic)
-			_audioManager->ResumeMusicBase();
-		_interiorMusic = false;
-		_interior.clear();
-		_level->SetDrawOnly({});
-		_scriptEngine->OnInteriorChanged(_interior);
-		return;
-	}
-	if (!_interiorExitArmed)
-	{
-		_interiorExitArmed = toExit > 2.5f;
-		return;
-	}
-	if (toExit > 1.5f)
-		return;
-
-	Log::Info("Game: player comes out of '{}'", _interior);
-	if (_interiorMusic)
-		_audioManager->ResumeMusicBase();
-	_interiorMusic = false;
-	_interior.clear();
-	_level->SetDrawOnly({});
-	SetPlayerPosition(_interiorReturn);
-	_scriptEngine->OnInteriorChanged(_interior);
-}
-
 std::unique_ptr<Character> Game::makeNpc(const std::string& name) const
 {
 	// The game's character files are named in six letters at most: Milhouse is
@@ -3282,140 +2473,17 @@ bool Game::ringDoorbell()
 	return false;
 }
 
-void Game::loadGags()
-{
-	_gags.clear();
-	_movieGags.clear();
-	_gagsPrimed = false;
-	std::ifstream script(fmt::format("scripts/{}/level.mfk", levelDirectory()));
-	if (!script)
-		return;
-	// Found in an earlier session (the save's, every level's).
-	const std::set<std::string>& found = _save.Entries("gag");
-	std::optional<Gag> gag;
-	std::string checkMovie, refusal;
-	int unplaced = 0;
-	for (std::string line; std::getline(script, line);)
-	{
-		if (const std::size_t comment = line.find("//"); comment != std::string::npos)
-			line.erase(comment);
-		const std::size_t open = line.find('(');
-		const std::size_t close = line.rfind(')');
-		if (open == std::string::npos || close == std::string::npos || close < open)
-			continue;
-		std::string command = line.substr(0, open);
-		command.erase(0, command.find_first_not_of(" \t"));
-		command.erase(command.find_last_not_of(" \t") + 1);
-		// The arguments, unquoted and trimmed.
-		std::vector<std::string> args;
-		std::stringstream list(line.substr(open + 1, close - open - 1));
-		for (std::string arg; std::getline(list, arg, ',');)
-		{
-			arg.erase(std::remove(arg.begin(), arg.end(), '"'), arg.end());
-			arg.erase(0, arg.find_first_not_of(" \t"));
-			arg.erase(arg.find_last_not_of(" \t") + 1);
-			args.push_back(arg);
-		}
-
-		if (command == "GagBegin")
-		{
-			gag.emplace();
-			gag->model = args.empty() ? "" : args[0];
-		}
-		else if (!gag)
-			continue;
-		else if (command == "GagSetPosition" && args.size() == 1)
-			gag->placed = _level->GetLocatorPosition(args[0]);
-		else if (command == "GagSetPosition" && args.size() == 3)
-			gag->placed = Vector3(static_cast<float>(std::atof(args[0].c_str())),
-			                      static_cast<float>(std::atof(args[1].c_str())),
-			                      static_cast<float>(std::atof(args[2].c_str())));
-		else if (command == "GagSetSound" && !args.empty())
-			gag->sound = args[0];
-		else if (command == "GagSetRandom" && !args.empty())
-			gag->random = std::atoi(args[0].c_str()) != 0;
-		else if (command == "GagSetCycle" && !args.empty())
-			gag->cycle = args[0];
-		else if (command == "GagSetCameraShake")
-			gag->shakes = true;
-		else if (command == "GagPlayFMV" && !args.empty())
-			gag->movie = args[0];
-		else if (command == "GagCheckMovie" && args.size() >= 4)
-		{
-			// (char1, char2, fmv, reject).
-			checkMovie = args[2];
-			refusal = args[3];
-		}
-		else if (command == "GagSetCoins" && !args.empty())
-			gag->coins = std::atoi(args[0].c_str());
-		else if (command == "GagSetInterior" && !args.empty())
-			gag->interior = args[0];
-		else if (command == "GagSetPersist" && !args.empty())
-			gag->persists = std::atoi(args[0].c_str()) != 0;
-		else if (command == "GagSetTrigger" && args.size() == 3)
-		{
-			// ("action", PickleTrig, 1.5): a locator of the level's.
-			gag->byHand = args[0] == "action";
-			gag->position = _level->GetLocatorPosition(args[1]);
-			gag->radius = static_cast<float>(std::atof(args[2].c_str()));
-			if (gag->position == Vector3::Zero)
-				gag->sound.clear(), ++unplaced;
-		}
-		else if (command == "GagSetTrigger" && args.size() == 5)
-		{
-			// ("touch", x, y, z, radius).
-			gag->byHand = args[0] == "action";
-			gag->position = Vector3(static_cast<float>(std::atof(args[1].c_str())),
-			                        static_cast<float>(std::atof(args[2].c_str())),
-			                        static_cast<float>(std::atof(args[3].c_str())));
-			gag->radius = static_cast<float>(std::atof(args[4].c_str()));
-		}
-		else if (command == "GagEnd")
-		{
-			if (gag->sound.empty() && !checkMovie.empty() && gag->position != Vector3::Zero)
-				_movieGags.push_back({gag->position, gag->radius, checkMovie, refusal});
-			checkMovie.clear();
-			refusal.clear();
-			if (!gag->sound.empty())
-			{
-				// A model of its own: an animated one is posed gag by gag.
-				const std::string file = "art/nis/gags/" + gag->model;
-				if (gag->placed != Vector3::Zero && FileSystem::exists(file))
-				{
-					gag->drawable = CompositeModel::LoadP3D(file);
-					gag->skins = SceneSkins::Load(file);
-					gag->morph = VertexAnimation::FromFile(file);
-				}
-				gag->played = found.count(gagId(*gag)) > 0;
-				// GagSetPersist: one played once and left as it ended stands so
-				// when the level is loaded again.
-				gag->ended = gag->persists && gag->played && gag->cycle == "single";
-				_gags.push_back(*gag);
-			}
-			gag.reset();
-		}
-	}
-	Log::Info("Game: {} gag(s) in the level, {} found before, {} whose trigger locator is not loaded", _gags.size(),
-	          std::count_if(_gags.begin(), _gags.end(), [](const Gag& g) { return g.played; }), unplaced);
-}
-
-std::string Game::gagId(const Gag& gag) const
-{
-	return fmt::format("{} {} {:.0f} {:.0f}", levelDirectory(), gag.model, gag.position.X, gag.position.Z);
-}
-
 void Game::saveGags() const
 {
 	if (_autopilot)
 		return;
 	auto& save = const_cast<SaveGame&>(_save);
-	for (const auto& gag : _gags)
-		if (gag.played)
-			save.Add("gag", gagId(gag));
+	for (const std::string& id : _gags.GetFoundIds())
+		save.Add("gag", id);
 	save.Save();
 }
 
-void Game::playGag(Gag& gag)
+void Game::playGag(GagManager::Gag& gag)
 {
 	// "gag_jasp" is interactive_props\gag_jasp_01.rsd to _03, "gag_s1"
 	// nis\gag_s1.rsd: one of them, from the English set (the other languages
@@ -3453,71 +2521,16 @@ void Game::playGag(Gag& gag)
 		// Found: the count, as the card's title is shown, with the game's own
 		// word for them.
 		gag.played = true;
-		const auto found = std::count_if(_gags.begin(), _gags.end(), [](const Gag& g) { return g.played; });
+		const int found = _gags.GetFound(), total = _gags.GetTotal();
 		const std::string& word = _textBible.Get("GAGS");
-		_cardMessage = fmt::format("{} {}/{}", word.empty() ? "Gags" : word, found, _gags.size());
-		_cardFound = -1;
-		_itemsCount = fmt::format("{}/{}", found, _gags.size());
-		_itemsDone = static_cast<std::size_t>(found) == _gags.size() ? "GAGS_COMPLETE" : "";
-		if (static_cast<std::size_t>(found) == _gags.size())
-			_cardMessage += " - " + _textBible.Get("GAGS_COMPLETE");
-		_cardMessageUntil = _elapsedSeconds + 3.0;
+		_messages.card = fmt::format("{} {}/{}", word.empty() ? "Gags" : word, found, total);
+		_messages.cardFound = -1;
+		_messages.itemsCount = fmt::format("{}/{}", found, total);
+		_messages.itemsDone = found == total ? "GAGS_COMPLETE" : "";
+		if (found == total)
+			_messages.card += " - " + _textBible.Get("GAGS_COMPLETE");
+		_messages.cardUntil = _elapsedSeconds + 3.0;
 		saveGags();
-	}
-}
-
-void Game::drawGags(const Matrix4x4& viewProjection)
-{
-	GL::ShaderProgram& worldShader = _level->GetWorldShader();
-	for (auto& gag : _gags)
-	{
-		if (!gag.drawable || (gag.placed - _gameCamera->View().GetPosition()).Length() > 150.0f || !gagHere(gag))
-			continue;
-		// A scene with characters in it is seen only while it plays: Grandpa
-		// walks in, says his piece and is gone.
-		if (gag.skins && gag.drawable->IsAnimated())
-		{
-			const double played = (_elapsedSeconds - gag.animStartedAt) * gag.drawable->GetAnimationFrameRate();
-			if (gag.animStartedAt < 0.0 || (gag.cycle != "cycle" && played >= gag.drawable->GetAnimationFrames()))
-				continue;
-		}
-		if (gag.drawable->IsAnimated())
-		{
-			const float rate = gag.drawable->GetAnimationFrameRate();
-			const float frames = gag.drawable->GetAnimationFrames();
-			float frame = 0.0f;
-			if (gag.cycle == "cycle")
-				frame = static_cast<float>(_elapsedSeconds) * rate;
-			else if (gag.ended && gag.animStartedAt < 0.0)
-				frame = frames;
-			else if (gag.animStartedAt >= 0.0)
-			{
-				frame = static_cast<float>(_elapsedSeconds - gag.animStartedAt) * rate;
-				// Played through: "reset" goes back to its rest, the others
-				// stay as they end.
-				if (frame >= frames && gag.cycle == "reset")
-				{
-					gag.animStartedAt = -1.0;
-					frame = 0.0f;
-				}
-			}
-			gag.drawable->Pose(frame, gag.cycle == "cycle");
-			if (gag.morph)
-				if (Mesh* mesh = gag.drawable->FindMesh(gag.morph->mesh))
-					for (std::size_t group = 0; group < gag.morph->groups.size(); ++group)
-						if (const auto* offsets = gag.morph->KeyAt(group, frame))
-							mesh->OffsetGroup(group, *offsets);
-			if (gag.skins)
-				gag.skins->Pose(frame, gag.cycle == "cycle");
-		}
-		const Matrix4x4 model = Matrix4x4::MakeTranslate(gag.placed);
-		for (const bool opaque : {true, false})
-			gag.drawable->Draw(worldShader, viewProjection, model, opaque);
-		if (gag.skins)
-		{
-			glDisable(GL_CULL_FACE); // skinned characters, as for the player
-			gag.skins->Draw(viewProjection, model, *_skinShaderProgram);
-		}
 	}
 }
 
@@ -3526,22 +2539,20 @@ bool Game::useGag()
 	if (!_character || _inVehicle)
 		return false;
 	const Vector3 me = _character->GetPosition();
-	for (auto& gag : _gags)
-		if (gag.byHand && gagHere(gag) && (gag.position - me).Length() < gag.radius + 1.0f)
-		{
-			playGag(gag);
-			return true;
-		}
-	for (const auto& gag : _movieGags)
-		if ((gag.position - me).Length() < gag.radius + 1.0f)
-		{
-			useMovieGag(gag);
-			return true;
-		}
+	if (GagManager::Gag* gag = _gags.FindByHand(me, _interior))
+	{
+		playGag(*gag);
+		return true;
+	}
+	if (const GagManager::MovieGag* gag = _gags.FindMovieGag(me))
+	{
+		useMovieGag(*gag);
+		return true;
+	}
 	return false;
 }
 
-void Game::useMovieGag(const MovieGag& gag)
+void Game::useMovieGag(const GagManager::MovieGag& gag)
 {
 	if (_save.Entries("card").size() >= 49 && PlayStoryMovie(gag.movie, false))
 		return;
@@ -3684,53 +2695,12 @@ void Game::updateWheelSprays(double dt)
 	}
 }
 
-bool Game::gagHere(const Gag& gag) const
-{
-	// GagSetInterior: in that building only (the observatory's, Professor
-	// Frink's), outdoors none of them.
-	if (gag.interior.empty())
-		return _interior.empty();
-	if (gag.interior.size() != _interior.size())
-		return false;
-	for (std::size_t i = 0; i < _interior.size(); ++i)
-		if (std::tolower(static_cast<unsigned char>(gag.interior[i])) !=
-		    std::tolower(static_cast<unsigned char>(_interior[i])))
-			return false;
-	return true;
-}
-
 void Game::updateGags()
 {
 	if (!_character)
 		return;
 	const Vector3 me = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : _character->GetPosition();
-	for (auto& gag : _gags)
-	{
-		if (gag.byHand || !gagHere(gag))
-			continue;
-		const bool inside = (gag.position - me).Length() < gag.radius;
-		// Once on the way in, and not again for a few seconds.
-		if (_gagsPrimed && inside && !gag.inside && _elapsedSeconds - gag.lastPlayed > 5.0)
-		{
-			// Of the random gags on this trigger, one plays; the others are
-			// counted as walked into, so that they wait for the next time.
-			std::vector<Gag*> shared;
-			if (gag.random)
-				for (auto& other : _gags)
-					if (other.random && !other.byHand && (other.position - gag.position).Length() < 0.1f &&
-					    std::abs(other.radius - gag.radius) < 0.01f)
-					{
-						shared.push_back(&other);
-						other.inside = true;
-					}
-			Gag& picked = shared.empty() ? gag : *shared[static_cast<std::size_t>(rand()) % shared.size()];
-			playGag(picked);
-			for (Gag* other : shared)
-				other->lastPlayed = _elapsedSeconds;
-		}
-		gag.inside = inside;
-	}
-	_gagsPrimed = true;
+	_gags.Update(me, _interior, _elapsedSeconds, [this](GagManager::Gag& gag) { playGag(gag); });
 }
 
 std::vector<Game::Reward> Game::rewards(const std::string& kind) const
@@ -4029,7 +2999,6 @@ void Game::Run()
 	FpsTimer timer;
 
 	SpriteBatch sprites(1024);
-	GL::ShaderProgram& spriteShader = sprites.GetShader();
 
 	bool running = true;
 	while (running)
@@ -4052,9 +3021,9 @@ void Game::Run()
 			Log::Warn("Game: frame took {:.1f}s at t={:.0f}s", deltaTime, _elapsedSeconds);
 
 		_elapsedSeconds += deltaTime;
-		if (_quitAfterSeconds > 0.0 && _elapsedSeconds >= _quitAfterSeconds)
+		if (_launch.quitAfterSeconds > 0.0 && _elapsedSeconds >= _launch.quitAfterSeconds)
 		{
-			Log::Info("Game: --quit-after {:.0f}s reached, closing", _quitAfterSeconds);
+			Log::Info("Game: --quit-after {:.0f}s reached, closing", _launch.quitAfterSeconds);
 			running = false;
 		}
 
@@ -4066,233 +3035,10 @@ void Game::Run()
 			continue;
 		}
 
-		// Third-person camera: capture the mouse during on-foot gameplay so its
-		// motion orbits the camera around the character. The camera no longer
-		// follows the character's facing — only the mouse turns it.
-		// The game settings' mouse: whether it looks round, how much (a half
-		// is 0.005 a pixel), either way inverted.
-		const OptionsMenu::Mouse mouse = _optionsMenu ? _optionsMenu->GetMouse() : OptionsMenu::Mouse();
-		const bool onFoot = (_states.Is(GameState::InGame)) && _character && !_inVehicle;
-		LockMouse(onFoot && mouse.look);
-		if (onFoot && mouse.look && _gameInput->IsMouseLocked())
-		{
-			const float across = 0.0005f + 0.009f * mouse.sensitivityX, upDown = 0.0005f + 0.009f * mouse.sensitivityY;
-			// Mouse up looks up.
-			_gameCamera->Orbit(intent.mouseDX * across * (mouse.invertX ? -1.0f : 1.0f),
-			                   -intent.mouseDY * upDown * (mouse.invertY ? -1.0f : 1.0f));
-		}
-
-		if (onFoot && _boarding.car)
-		{
-			intent.moveForward = intent.moveBackward = intent.moveLeft = intent.moveRight = 0.0f;
-			intent.interact = false;
-			updateBoarding();
-		}
-		if (onFoot)
-		{
-			auto& ctrl = _character->GetCharacterController();
-			auto charMove = Vector3::Zero;
-			charMove += Vector3::Forward * intent.moveForward;
-			charMove += Vector3::Backward * intent.moveBackward;
-			charMove += Vector3::Left * intent.moveLeft;
-			charMove += Vector3::Right * intent.moveRight;
-
-			// A phone booth answers the action button before anything else.
-			if (intent.interact &&
-			    (usePhoneBooth() || openShop() || ringDoorbell() || useSwitch() || useGag() || startBonusMission()))
-				intent.interact = false;
-
-			if (intent.interact)
-			{
-				if (_scriptEngine->IsMissionActive())
-				{
-					for (auto& v : _scriptEngine->GetMissionVehicles())
-					{
-						if ((v->GetPosition() - _character->GetPosition()).Length() < 5.0f)
-						{
-							// By the driver's door, the door first (updateBoarding
-							// seats the player when done). Consume the press, or it
-							// would jump as well.
-							startBoarding(v.get(), true);
-							intent.interact = false;
-							// getting in the car starts the race; finishing it is the
-							// checkpoint loop's job (this used to complete the stage here)
-							break;
-						}
-					}
-				}
-				// Something to hit within reach (a crate, a wasp come low): the
-				// character's strike, not a jump. It counts as an attack for the
-				// wasps, as a jump does.
-				const Vector3 me = _character->GetPosition();
-				const bool target = _level->HasBreakableNear(me, 2.2f) || _level->HasKickablePropNear(me, 1.8f) ||
-				                    (_waspManager && _waspManager->AnyNear(me, 2.5f));
-				if (!_inVehicle && !_boarding.car && ctrl.onGround() && target && playPlayerAnimation("break", false))
-				{
-					_lastJumpAt = _elapsedSeconds;
-					if (_level->BreakObjectsNear(me, 2.2f) > 0)
-						AddShake(0.2f);
-					// A mailbox, a bin kicked over.
-					_level->KickPropsNear(me, 1.8f);
-				}
-				else if (!_inVehicle && !_boarding.car && ctrl.canJump())
-				{
-					ctrl.jump(btVector3(0, 0, 0));
-					playPlayerAnimation("jump_idle_take_off", false);
-					_lastJumpAt = _elapsedSeconds;
-					_kickedThisJump = false;
-					_doubleJumped = false;
-				}
-				// In the air, again: up once more, as high again ("quand tu es
-				// dans les airs, réappuie sur la touche A pour sauter plus loin",
-				// the tutorial says) -- the wasps on a roof's edge in reach.
-				else if (!_inVehicle && !_boarding.car && !ctrl.onGround() && !_doubleJumped && !_kickedThisJump)
-				{
-					ctrl.jumpAgain();
-					playPlayerAnimation("jump_idle_take_off", false);
-					_lastJumpAt = _elapsedSeconds;
-					_doubleJumped = true;
-				}
-				// Then a kick: once a jump. It hits a wasp in reach (the attack
-				// lasts a second more) and breaks what it lands on.
-				else if (!_inVehicle && !_boarding.car && !ctrl.onGround() && !_kickedThisJump &&
-				         playPlayerAnimation("jump_kick", false))
-				{
-					_kickedThisJump = true;
-					_lastJumpAt = _elapsedSeconds;
-					if (_level->BreakObjectsNear(_character->GetPosition(), 2.0f, true, "STOMP") > 0)
-						AddShake(0.2f);
-					_level->KickPropsNear(_character->GetPosition(), 1.8f);
-				}
-			}
-
-			if (intent.debugTeleportToVehicle && _scriptEngine->IsMissionActive())
-			{
-				for (auto& v : _scriptEngine->GetMissionVehicles())
-				{
-					// Land beside the car, inside the boarding radius below. The old
-					// offset (0, 2, 5) put the player 5.39 units away -- just outside
-					// the < 5 check -- so the debug teleport could never be followed
-					// by "interact" to actually get in.
-					SetPlayerPosition(v->GetPosition() + Vector3(2.5f, 1.0f, 0.0f));
-					break;
-				}
-			}
-
-			const bool moving = charMove.LengthSquared() > 0.0f;
-			if (moving)
-			{
-				// Camera-relative movement: "forward" is where the camera looks.
-				// worldMove depends on the (mouse-driven) camera yaw, not on the
-				// character's own rotation, so there's no feedback loop. The
-				// character then pivots to face its movement direction.
-				charMove.Normalize();
-				Vector3 worldMove = Quaternion::MakeFromEuler(Vector3(0.0f, _gameCamera->GetYaw(), 0.0f)) * charMove;
-				// A dash with the boost held: faster, and in Homer's dash.
-				_playerDashing = intent.boostHeld;
-				ctrl.setWalkDirection(BulletCast<btVector3>(worldMove * (_playerDashing ? 8.0f : 5.0f)));
-
-				// A character model faces -Z: unturned, Homer walked +Z backwards,
-				// showing the camera behind him his face.
-				float targetYaw = atan2f(worldMove.X, worldMove.Z) + 3.14159265f;
-				float curYaw = _character->GetRotation().Yaw();
-				float delta = targetYaw - curYaw;
-				while (delta > 3.14159265f) delta -= 6.28318531f;
-				while (delta < -3.14159265f) delta += 6.28318531f;
-				float t = 1.0f - static_cast<float>(exp(-12.0 * deltaTime));
-				_character->SetRotation(Quaternion::MakeFromEuler(Vector3(0.0f, curYaw + delta * t, 0.0f)));
-			}
-			else
-			{
-				ctrl.setWalkDirection(btVector3(0, 0, 0));
-			}
-
-			updatePlayerAnimation(deltaTime, moving, ctrl.onGround());
-			_dashKicksUpDust = moving && _playerDashing && ctrl.onGround();
-		}
-
-		// Checkpoints are reached on foot as well as at the wheel: a mission's
-		// "goto" is often a walk to a door.
-		if (_scriptEngine->IsMissionActive() && _character)
-		{
-			const Vector3 playerPos = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()
-			                                                       : _character->GetPosition();
-			const auto& checkpoints = _scriptEngine->GetCheckpoints();
-			const int current = _scriptEngine->GetCurrentCheckpoint();
-			if (current >= 0 && current < static_cast<int>(checkpoints.size()) &&
-			    (playerPos - checkpoints[current]).Length() < 5.0f)
-				_scriptEngine->AdvanceCheckpoint();
-		}
-
-		if (_inVehicle && _activeVehicle)
-		{
-			if (intent.interact)
-			{
-				// Out by the driver's door, and the door shut behind.
-				Vehicle* car = _activeVehicle;
-				_inVehicle = false;
-				_activeVehicle = nullptr;
-				SetPlayerPosition(driverDoor(*car));
-				startBoarding(car, false);
-				Log::Info("Game: exited vehicle");
-			}
-		else if (intent.honk)
-		{
-			if (_hornCooldown <= 0.0f)
-			{
-				// The car's own horn when its sound script names one.
-				if (const std::string horn = _audioManager->CarSoundFile(_activeVehicle->GetName(), "_horn"); !horn.empty())
-					_audioManager->PlayAudio(horn);
-				else
-					_audioManager->PlayRaw(SoundGenerator::Horn(0.4f), 22050, 1, 16);
-				_hornCooldown = 0.4f;
-			}
-		}
-			else if (intent.vehicleJump)
-			{
-				_activeVehicle->Jump();
-				_gameCamera->AddShake(1.0f);
-			}
-			else
-			{
-				// throttle/brake are 0..1, steer is -1..1 (right minus left);
-				// keyboard gives full deflection, sticks/triggers scale analogically
-				float throttle = intent.moveForward;
-				float brake = intent.moveBackward;
-				const float steer = intent.moveRight - intent.moveLeft;
-				const float boost = intent.boostHeld ? 3.0f : 1.0f;
-				// The turbo's first moment gets a word.
-				static bool boosting = false;
-				if (intent.boostHeld && !boosting)
-					SayLine("w_turbo");
-				boosting = intent.boostHeld;
-
-				// Back brakes while the car is still rolling forwards and reverses
-				// once it has stopped. Previously it only ever braked, so a car
-				// nosed into a wall stayed there.
-				if (brake > 0.0f && _activeVehicle->GetSpeedKmh() < kReverseThresholdKmh)
-				{
-					throttle = -brake;
-					brake = 0.0f;
-				}
-
-				// Held on the line, like the opponents, until the countdown says go.
-				if (_scriptEngine->IsMissionActive() && _scriptEngine->IsRaceHeld())
-					_activeVehicle->ApplyInput(0.0f, 0.0f, 1.0f, 1.0f);
-				else
-					_activeVehicle->ApplyInput(throttle, steer, brake, boost);
-			}
-		}
-
-		_gameCamera->SetPhysics(_worldPhysics.get());
-		if (_inVehicle && _activeVehicle && !_gameInput->IsMouseLocked())
-			_gameCamera->FollowVehicle(*_activeVehicle, deltaTime);
-		else if (_character)
-			_gameCamera->OrbitCharacter(_character->GetPosition(), deltaTime);
-		// The script's cameras over the player's: a mission's camera move as it
-		// starts, then the conversation's shots, line by line.
-		if (_states.Is(GameState::InGame))
-			scriptedCamera(deltaTime);
+		updateOnFoot(deltaTime, intent);
+		updateCheckpoints();
+		updateDriving(intent);
+		updateCamera(deltaTime);
 
 		// Pause has to stop the world, not just hide it: this used to keep running
 		// every frame while paused, so physics and scripts ticked behind the overlay.
@@ -4307,1263 +3053,1602 @@ void Game::Run()
 				_level->UpdateCollisions();
 		}
 
-		// The listener is the camera; it was never placed, and every sound given
-		// a position was heard from the world's origin, if at all. OpenAL takes
-		// right as forward x up; in this world +X is on the right looking down
-		// +Z, which takes "up" as -Y to come out the same way round.
-		{
-			const Vector3 forward = _gameCamera->View().GetOrientation().Inverse() * Vector3::Forward;
-			_audioManager->SetListenerPosition(_gameCamera->View().GetPosition(), forward, Vector3(0.0f, -1.0f, 0.0f));
-		}
-		_audioManager->Update();
-		// The place's background: the level's outdoors, or a small room indoors.
-		// The game picks it by zone with a script (ambience.rms) not read here.
-		{
-			static const char* const kOutdoors[] = {"suburb_day_loop",    "city_busy_loop",       "squidport_amb_loop_02",
-			                                       "suburb_night_loop",  "city_night_loop",      "squidport_night_loop",
-			                                       "halloween_amb_loop"};
-			const int level = std::clamp(_levelNumber, 1, 7);
-			std::string indoors = _interior;
-			std::transform(indoors.begin(), indoors.end(), indoors.begin(), [](unsigned char c) { return std::tolower(c); });
-			_audioManager->PlayAmbience(_interior.empty()                         ? kOutdoors[level - 1]
-			                            : indoors.find("dmv") != std::string::npos ? "\\dmv.rsd"
-			                                                                       : "room_small_01");
-		}
-
-		// The engine of the car the player drives: its own recorded loop (its
-		// sound script's), pitched up with the speed.
-		{
-			const std::string driving = _inVehicle && _activeVehicle ? _activeVehicle->GetName() : std::string();
-			if (driving != _engineCar)
-			{
-				_engineCar = driving;
-				const std::string file = driving.empty() ? std::string() : _audioManager->CarSoundFile(driving);
-				if (file.empty())
-					_audioManager->StopEngine();
-				else
-					_audioManager->PlayEngine(file);
-			}
-			if (!_engineCar.empty() && _activeVehicle)
-				_audioManager->SetEnginePitch(0.7f + std::abs(_activeVehicle->GetSpeedKmh()) / 110.0f);
-			// A good jump gets a word from the driver.
-			static double airborne = 0.0;
-			airborne = _inVehicle && _activeVehicle && _activeVehicle->IsAirborne() ? airborne + deltaTime : 0.0;
-			if (airborne > 0.8 && airborne - deltaTime <= 0.8)
-				SayLine("d_air");
-		}
-
-		if (simulate)
-		{
-			// The car smashes what it runs into: crates, vending machines, gas
-			// pumps play their breaking and stay broken. Those with a body break
-			// as the car hits it (Level::updateBreakingBodies); the others, as
-			// it comes by.
-			if (_inVehicle && _activeVehicle && std::abs(_activeVehicle->GetSpeedKmh()) > 15.0f)
-				if (const int broke = _level->BreakObjectsNear(_activeVehicle->GetPosition(), 2.5f, false, "VEHICLE_HIT");
-				    broke > 0)
-				{
-					AddShake(0.3f);
-					_audioManager->PlayRaw(SoundGenerator::Chirp(220.0f, 80.0f, 0.2f, 44100), 44100, 1, 16);
-					Log::Info("Game: {} object(s) smashed", broke);
-				}
-			updateCarDamage();
-			updateCarDamageLook(deltaTime);
-			if (_states.Is(GameState::InGame))
-				updateHitAndRun(deltaTime);
-		}
-
+		updateAudio(deltaTime);
+		updateCarImpacts(deltaTime, simulate);
 		_gameCamera->ApplyShake(deltaTime);
+		updateMissionResult(deltaTime);
 
-		if (_states.Is(GameState::MissionComplete) || _states.Is(GameState::MissionFailed))
-		{
-			// Won on foot, the player celebrates: the big one for the level's last
-			// story mission.
-			if (_states.GetResultTime() == 0.0 && _states.Is(GameState::MissionComplete) && !_inVehicle)
-			{
-				const bool levelWon = _storyIndex >= 0 && _storyIndex + 1 == static_cast<int>(_story.size());
-				if (!levelWon || !playPlayerAnimation("victory_large", false))
-					playPlayerAnimation("victory_small", false);
-			}
-			const bool failed = _states.Is(GameState::MissionFailed);
-			if (_states.UpdateResult(deltaTime) && _states.Fire(GameEvent::ResultOver))
-			{
-				if (_inVehicle)
-				{
-					_inVehicle = false;
-					_activeVehicle = nullptr;
-				}
-				// A failure is retried from the last RESET_TO_HERE, not from the
-				// top: losing m2's twelfth stage used to mean driving the first
-				// eleven again.
-				// A story mission won leads on to the next one.
-				_interior.clear();
-				_level->SetDrawOnly({});
-				// A bonus mission over, won or lost: back to the story where it was.
-				const bool bonusOver = _bonusReturn >= 0 && (!failed || !_scriptEngine->RetryFromCheckpoint());
-				if (bonusOver)
-				{
-					const int resume = _bonusReturn;
-					_bonusReturn = -1;
-					startStoryMission(resume);
-				}
-				else if (_bonusReturn >= 0)
-					_health = 100.0f; // retried from its checkpoint, just above
-				else
-				{
-					// The level's last won leads on to the next level.
-					const bool levelWon = !failed && _storyIndex >= 0 && _storyIndex + 1 >= static_cast<int>(_story.size());
-					if (levelWon && levelAvailable(_levelNumber + 1))
-					{
-						saveStoryProgress(_levelNumber + 1, 0);
-						const auto nextLevel = [this]() {
-							switchLevel(_levelNumber + 1);
-							if (!_story.empty())
-								startStoryMission(0);
-							_states.Fire(GameEvent::Play);
-						};
-						// The level's end: its counts, all its story won, then on.
-						if (_pauseSunday && _pauseSunday->IsLoaded() && !_autopilot)
-						{
-							int missions = 0;
-							for (const std::string& entry : _story)
-								missions += entry.size() > 7 && entry.compare(entry.size() - 7, 7, "sdi.mfk") != 0;
-							_pauseSunday->OpenLevelEnd(_levelNumber, levelStats(missions, missions), nextLevel);
-							_states.Fire(GameEvent::LevelOver);
-						}
-						else
-							nextLevel();
-					}
-					else if (levelWon)
-					{
-						// The last level's last mission: the story is over. It used to
-						// replay that mission, for ever.
-						Log::Info("Game: the story is over, level {} won", _levelNumber);
-						_scriptEngine->CleanupMission();
-						// The credits roll, then the main menu.
-						_states.Fire(_creditsPage ? GameEvent::ShowCredits : GameEvent::ToMainMenu);
-						_creditsTime = 0.0;
-						if (_creditsPage)
-							_audioManager->PlayMusicEvent("Credits");
-					}
-					else if (!failed && _storyIndex >= 0 && _storyIndex + 1 < static_cast<int>(_story.size()))
-					{
-						saveStoryProgress(_levelNumber, _storyIndex + 1);
-						startStoryMission(_storyIndex + 1);
-					}
-					else if (failed && _scriptEngine->RetryFromCheckpoint())
-						_health = 100.0f;
-					else
-					{
-						_scriptEngine->CleanupMission();
-						if (_collectibleManager) _collectibleManager->SpawnOnPath();
-						runMissionScript();
-					}
-				}
-			}
-		}
+		if (_states.Is(GameState::Splash) && (intent.uiConfirm || intent.pauseToggle))
+			_states.Fire(GameEvent::ToMainMenu);
 
-		if (_states.Is(GameState::Splash))
-		{
-			if (intent.uiConfirm || intent.pauseToggle)
-			{
-				_states.Fire(GameEvent::ToMainMenu);
-			}
-		}
+		updateFallOff();
+		drawGuides();
+		updateWorld(deltaTime, simulate);
+		updateGameplay(deltaTime, simulate);
 
-		if (_character && _character->GetPosition().Y < _fallOffY)
-		{
-			Log::Warn("Game: player fell off the map, respawning...");
-			_health -= 20.0f;
-			if (_health <= 0.0f) _health = 100.0f;
-			SetPlayerPosition(_lastSafePos);
-		}
-
-		if (_activeVehicle && _inVehicle && _activeVehicle->GetPosition().Y < _fallOffY && _safeCar == _activeVehicle)
-		{
-			const int node = _pathGraph ? _pathGraph->FindNearestRoadNode(_safeCarPos) : -1;
-			const Vector3 road = node >= 0 ? _pathGraph->GetNodes()[node].position : _safeCarPos;
-			Log::Warn("Game: vehicle fell off the map, put back on the road at ({:.1f}, {:.1f}, {:.1f})", road.X, road.Y,
-			          road.Z);
-			_activeVehicle->Teleport(road, Quaternion::MakeFromEuler(Vector3(0.0f, _safeCarYaw, 0.0f)));
-			// Known safe again only once it is back on its wheels.
-			_safeCar = nullptr;
-		}
-		else if (_activeVehicle && _inVehicle && !_activeVehicle->IsAirborne() &&
-		         _activeVehicle->GetPosition().Y > _fallOffY)
-		{
-			_safeCar = _activeVehicle;
-			_safeCarPos = _activeVehicle->GetPosition();
-			_safeCarYaw = _activeVehicle->GetRotation().Yaw();
-		}
-
-		if (_activeVehicle && _inVehicle && _activeVehicle->GetPosition().Y < _fallOffY)
-		{
-			Log::Warn("Game: vehicle fell off the map, exiting...");
-			_inVehicle = false;
-			_activeVehicle = nullptr;
-			SetPlayerPosition(_lastSafePos);
-		}
-
-		if (_character && _character->GetCharacterController().onGround())
-			_lastSafePos = _character->GetPosition();
-
-		if (_showDebug)
-		{
-			if (_scriptEngine->IsMissionActive() && _character)
-			{
-				for (auto& v : _scriptEngine->GetMissionVehicles())
-				{
-					Vector3 dir = v->GetPosition() - _character->GetPosition();
-					if (dir.LengthSquared() > 0.0f)
-					{
-						dir.Normalize();
-						Vector3 arrowStart = _character->GetPosition() + Vector3(0, 1.5f, 0);
-						Vector3 arrowEnd = arrowStart + dir * 3.0f;
-						_lineRenderer->DrawLine(arrowStart, arrowEnd, Vector4(0.0f, 1.0f, 1.0f, 1.0f));
-					}
-					break;
-				}
-			}
-
-			// The character's debug frame, where it is drawn: not over the car
-			// it is sitting in.
-			if (!_inVehicle)
-			{
-				_lineRenderer->DrawSkeleton(_character->GetPosition(), _character->GetSkeleton());
-				_lineRenderer->DrawBox(_character->GetPosition(), _character->GetRotation(),
-					Vector3(-0.3f, 0.0f, -0.2f), Vector3(0.3f, 1.8f, 0.3f), Vector4(0.2f, 1.0f, 0.2f, 1.0f));
-			}
-		}
-
-		// Race guidance, not debug: without a marker in the world the player has no
-		// way to find the next checkpoint, so a race can never be completed.
-		if (_scriptEngine->IsMissionActive())
-		{
-			const auto& checkpoints = _scriptEngine->GetCheckpoints();
-			int currentCp = _scriptEngine->GetCurrentCheckpoint();
-			for (int i = 0; i < static_cast<int>(checkpoints.size()); ++i)
-			{
-				Vector4 cpCol = i == currentCp ? Vector4(1.0f, 1.0f, 0.0f, 1.0f) :
-				                i < currentCp  ? Vector4(0.0f, 1.0f, 0.0f, 1.0f) :
-				                                 Vector4(1.0f, 0.0f, 0.0f, 1.0f);
-				Vector3 cpBase = checkpoints[i] + Vector3(0, 0.5f, 0);
-				_lineRenderer->DrawLine(cpBase, cpBase + Vector3(0, 15.0f, 0), cpCol);
-
-				int next = (i + 1) % checkpoints.size();
-				Vector3 from = checkpoints[i] + Vector3(0, 0.1f, 0);
-				Vector3 to = checkpoints[next] + Vector3(0, 0.1f, 0);
-				Vector3 mid = (from + to) * 0.5f;
-				int segments = 8;
-				for (int s = 0; s < segments; s += 2)
-				{
-					float t1 = s / (float)segments;
-					float t2 = (s + 1) / (float)segments;
-					_lineRenderer->DrawLine(from + (to - from) * t1, from + (to - from) * t2,
-						Vector4(1.0f, 1.0f, 1.0f, 0.3f));
-				}
-			}
-		}
-		_level->Update(deltaTime);
-		// A mailbox, a lamp post knocked over: its crash, and the sparks off a
-		// metal one.
-		// What a broken crate, a vending machine gives: coins, spilled about it.
-		for (const auto& drop : _level->TakeCoinDrops())
-			if (_collectibleManager)
-				_collectibleManager->DropCoins(drop.position, drop.coins);
-		for (const auto& [sound, effect, where] : _level->TakeKnockedProps())
-		{
-			// The stars off a gravestone have no sprite of their own in the
-			// effects files: a few of the sparks stand in for them.
-			if (effect == "eSpark" && _sparks)
-				_sparks->Burst(20, where);
-			else if (effect == "eStars" && _sparks)
-				_sparks->Burst(8, where);
-			const auto clip = _audioManager->FindScriptSound("collide", sound);
-			const std::string& file = clip.file;
-			Log::Debug("Game: a prop knocked over at ({:.1f}, {:.1f}, {:.1f}), '{}' ({}), '{}'", where.X, where.Y, where.Z, sound,
-			           file.empty() ? "no sound" : file, effect);
-			if (!file.empty())
-				_audioManager->PlayAudio(file, where, clip.trim, clip.pitch);
-		}
-		// A stage that asks for no traffic gets empty streets: neither moved,
-		// drawn nor run into.
-		const bool traffic = !_scriptEngine->IsTrafficSuppressed();
-		_trafficManager->SetPresent(traffic);
-		// As many cars as the script allows (SetMaxTraffic), and the district's
-		// people on the pavements (UsePedGroup).
-		_trafficManager->SetMaxCars(_scriptEngine->GetMaxTraffic());
-		if (_pedestrianManager)
-			_pedestrianManager->UseGroup(_scriptEngine->GetPedGroup());
-		if (traffic)
-		{
-			std::vector<Vector3> obstacles;
-			// The player on foot too: the traffic waits for them to cross.
-			if (_inVehicle && _activeVehicle)
-				obstacles.push_back(_activeVehicle->GetPosition());
-			else if (_character)
-				obstacles.push_back(_character->GetPosition());
-			if (const Vehicle* parked = _scriptEngine->GetPlayerCar(); parked && parked != _activeVehicle)
-				obstacles.push_back(parked->GetPosition());
-			for (const auto& vehicle : _scriptEngine->GetMissionVehicles())
-				obstacles.push_back(vehicle->GetPosition());
-			if (_hitAndRun)
-				for (const Vehicle* cop : _hitAndRun->GetCops())
-					obstacles.push_back(cop->GetPosition());
-			_trafficManager->SetObstacles(std::move(obstacles));
-			_trafficManager->Update(deltaTime);
-			for (const auto& [model, position] : _trafficManager->TakeHonks())
-				if (const std::string horn = _audioManager->CarSoundFile(model, "_horn"); !horn.empty())
-					_audioManager->PlayAudio(horn, position);
-		}
-		if (traffic && _showDebug)
-			_trafficManager->Draw();
-		if (simulate)
-		{
-			_scriptEngine->Update(deltaTime);
-			if (_autopilot)
-				runAutopilot(deltaTime);
-		}
-
-		// Re-enabled (REGR-001): db9c8db commented this out to isolate a crash on "press
-		// up"; 9860a4f fixed that same day (uninitialised Character::_rotation feeding the
-		// follow camera, plus stepUp/stepDown/onGround bugs) but the block was never restored.
-		if (_character != nullptr && _states.Is(GameState::InGame))
-		{
-			// Triggers fire on the transition, once, from wherever the player
-			// actually is -- the car, when driving. This used to log "entered
-			// trigger zone" every two seconds for as long as the player stood in
-			// one, without saying which.
-			const Vector3 playerPos = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()
-			                                                       : _character->GetPosition();
-			// A player who came to the door at the wheel is already inside its
-			// volume when they get out, and its entry has gone by: a door is
-			// gone through by a player on foot standing in it, not only on
-			// stepping in. Level 4 m5 waited at the Kwik-E-Mart for ever.
-			if (!_inVehicle && _interior.empty() && _character)
-				for (const auto& door : _level->GetTriggers())
-					if ((door.type == Level::LocatorType::InteriorEntrance ||
-					     (door.type == Level::LocatorType::DynamicZone && door.data.find('@') != std::string::npos)) &&
-					    door.Contains(_character->GetPosition()))
-					{
-						enterInterior(door);
-						break;
-					}
-			for (const auto& event : _level->UpdateTriggers(playerPos))
-			{
-				_scriptEngine->OnTrigger(*event.trigger, event.entered);
-				// A door is an interior entrance (level 1), or a zone trigger that
-				// loads an interior, "l2i04.p3d@..." (level 2 onwards).
-				if (event.entered && (event.trigger->type == Level::LocatorType::InteriorEntrance ||
-				                      (event.trigger->type == Level::LocatorType::DynamicZone &&
-				                       event.trigger->data.find('@') != std::string::npos)))
-					enterInterior(*event.trigger);
-			}
-			updateInterior();
-			// Pedestrians walk every frame; only their arrivals are spaced out.
-			// Update used to run once every half second with one frame's time,
-			// so they moved, and walked, about thirty times too slowly. Nobody
-			// walks about inside an interior.
-			static double pedSpawnTimer = 0.0;
-			pedSpawnTimer += deltaTime;
-			if (_pedestrianManager && _interior.empty())
-				_pedestrianManager->Update(deltaTime, _character->GetPosition());
-			if (pedSpawnTimer > 0.5)
-			{
-				pedSpawnTimer = 0.0;
-				if (_pedestrianManager && _interior.empty())
-					_pedestrianManager->Spawn(_character->GetPosition(), 40.0f);
-			}
-			// A card found: its title, from the phrase table, which numbers each
-			// level's cards from (level - 1) * 8, the eighth being a bonus card.
-			if (_collectibleManager)
-				if (const std::string card = _collectibleManager->TakeFoundCard(); card.size() == 6)
-				{
-					const int index = (card[4] - '1') * 8 + (card[5] - '1');
-					_cardMessage = _textBible.Get(fmt::format("CARD_TITLE_{:02}", index));
-					_cardFound = index;
-					_itemsCount.clear();
-					_itemsDone = _collectibleManager->GetCardsFound() == _collectibleManager->GetCardsTotal()
-					                 ? "CARD_LEVEL_COMPLETE"
-					                 : "";
-					if (_collectibleManager->GetCardsFound() == _collectibleManager->GetCardsTotal())
-					{
-						const std::string& all = _textBible.Get("CARD_LEVEL_COMPLETE");
-						_cardMessage += _cardMessage.empty() ? all : " - " + all;
-					}
-					_cardMessageUntil = _elapsedSeconds + 4.0;
-					SayLine("w_card");
-				}
-			// Coins every frame: a car at 30 m/s is past one in a tenth of a second.
-			if (_collectibleManager && _inVehicle && _activeVehicle &&
-			    _collectibleManager->TakeWrench(_activeVehicle->GetPosition()))
-			{
-				Log::Info("Game: a wrench, the car is repaired ({:.0f} -> 100)", _health);
-				_health = 100.0f;
-			}
-			updateGags();
-			updateTutorial();
-			updateWorkedObjects();
-			if (_ufo)
-			{
-				_ufo->Update(deltaTime);
-				Vector3 blast;
-				bool lastBarrel = false;
-				while (_ufo->TakeBlast(blast, lastBarrel))
-					bossBlast(blast, lastBarrel);
-			}
-			// The wasp cameras: a jump at one, or a car driven into it,
-			// destroys it, for coins.
-			if (_waspManager && _character && _interior.empty())
-			{
-				const bool driving = _inVehicle && _activeVehicle;
-				const Vector3 at = driving ? _activeVehicle->GetPosition() : _character->GetPosition();
-				// A jump, not merely being off the ground: a teleport sets the
-				// player down from a little above, and destroyed a wasp nearby.
-				const bool attacking = driving ? std::abs(_activeVehicle->GetSpeedKmh()) > 10.0f
-				                               : _elapsedSeconds - _lastJumpAt < 1.0;
-				const auto wasps = _waspManager->Update(deltaTime, at, attacking, driving ? 3.5f : 2.5f);
-				for (const auto& [sound, where] : wasps.sounds)
-					_audioManager->PlayAudio(sound, where);
-				// Shot: a zap, a jolt and the damage, on foot or at the wheel.
-				if (wasps.damage > 0.0f)
-				{
-					_health = std::max(0.0f, _health - wasps.damage);
-					AddShake(0.25f);
-				}
-				if (wasps.destroyed > 0)
-				{
-					_coins += wasps.coins;
-					saveCoins();
-					AddShake(0.4f);
-					_cardMessage = fmt::format("Wasp cameras {}/{}", _waspManager->GetDestroyed(), _waspManager->GetTotal());
-					_cardFound = -1;
-					_itemsCount = fmt::format("{}/{}", _waspManager->GetDestroyed(), _waspManager->GetTotal());
-					_itemsDone = _waspManager->GetDestroyed() == _waspManager->GetTotal() ? "WASPS_COMPLETE" : "";
-					_cardMessageUntil = _elapsedSeconds + 3.0;
-				}
-			}
-			if (_collectibleManager)
-			{
-				const Vector3 collector = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()
-				                                                      : _character->GetPosition();
-				_collectibleManager->Update(collector, 3.0f);
-				if (const int fresh = _collectibleManager->TakeNewlyCollected(); fresh > 0)
-				{
-					_coins += fresh;
-					saveCoins();
-					Log::Debug("Game: {} coin(s) picked up, {} in the purse", fresh, _coins);
-				}
-			}
-		}
-		if (simulate)
-			_scriptEngine->UpdateAI(deltaTime);
-
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplSDL2_NewFrame(static_cast<SDL_Window*>(*_window));
-		ImGui::NewFrame();
-
-		imguiMenuBar();
-
-		//if (_character != nullptr)
-		//	guiModelMenu(*_character);
-
-		// ImGui::ShowDemoWindow();
-
-		if (_debugResourceManagerWindowOpen)
-			_resourceManager->ImGuiDebugWindow(&_debugResourceManagerWindowOpen);
-
-		if (_debugLevelWindowOpen)
-			_level->ImGuiDebugWindow(&_debugLevelWindowOpen);
-
-		if (_debugAudioWindowOpen)
-			_audioManager->DebugGUI(&_debugAudioWindowOpen);
-
-		debugAboutMenu();
-		drawControlsWindow();
-
-		// Escape in the options goes back a page, not out of the pause; nor
-		// in the pause between missions, which has pages of its own.
-		if (intent.pauseToggle && !(_optionsMenu && _optionsMenu->IsOpen()) &&
-		    !(_pauseSunday && _pauseSunday->IsOpen()))
-		{
-			if (_states.Is(GameState::InGame))
-			{
-				_states.Fire(GameEvent::Pause);
-				// Driving about between missions (the story at a drive, no
-				// bonus mission on): the pause of the Sunday drive.
-				const bool drive = _bonusReturn < 0 && _storyIndex >= 0 && _storyIndex < static_cast<int>(_story.size()) &&
-				                   _story[_storyIndex].size() > 7 &&
-				                   _story[_storyIndex].compare(_story[_storyIndex].size() - 7, 7, "sdi.mfk") == 0;
-				if (drive)
-					openSundayPause();
-			}
-			else if (_states.Is(GameState::Paused))
-				_states.Fire(GameEvent::Play);
-		}
-
-		if (intent.resetBest && _states.Is(GameState::InGame))
-		{
-			_scriptEngine->ResetBestTime();
-			Log::Info("Game: best time reset!");
-		}
-
-		if (_states.Is(GameState::Paused) && intent.quit)
-		{
+		drawDebugWindows();
+		if (!handleIntents(intent))
 			running = false;
-			Log::Info("Game: quit from pause menu");
-		}
+		drawDebugOverlays();
 
-		if (intent.restart && _states.Is(GameState::InGame))
-		{
-			Log::Info("Game: restarting mission...");
-			_scriptEngine->CleanupMission();
-			if (_collectibleManager) _collectibleManager->SpawnOnPath();
-			if (_inVehicle) { _inVehicle = false; _activeVehicle = nullptr; }
-			runMissionScript();
-		}
-
-		if (intent.toggleDebug)
-		{
-			_showDebug = !_showDebug;
-			Log::Info("Debug draw: {}", _showDebug ? "ON" : "OFF");
-		}
-
-		if (intent.toggleHelp)
-		{
-			_showHelp = !_showHelp;
-		}
-
-		ImGuiIO& io = ImGui::GetIO();
-		ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - 8.0f, io.DisplaySize.y - 8.0f), ImGuiCond_Always, ImVec2(1.0f, 1.0f));
-		ImGui::SetNextWindowBgAlpha(0.35f);
-		if (ImGui::Begin("Camera position overlay", NULL,
-		                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
-		                     ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
-		{
-			auto const& camPos = _gameCamera->View().GetPosition();
-			auto const& camRot = _gameCamera->View().GetOrientation();
-			ImGui::Text("Camera Position: %s", camPos.ToString().c_str());
-			ImGui::Text("Camera Orientation: %s", camRot.ToString().c_str());
-			ImGui::Text("Meshes drawn: %d, culled: %d", CullStats::drawn, CullStats::culled);
-
-			float fov = _gameCamera->View().GetFOV();
-			if (ImGui::SliderFloat("FOV", &fov, 0.0f, 120.0f))
-				_gameCamera->View().SetFOV(fov);
-		}
-		ImGui::End();
-
-		// Post-FX debug controls (FX-002 vignette, etc.).
-		ImGui::SetNextWindowBgAlpha(0.35f);
-		ImGui::SetNextWindowSize(ImVec2(220, 0), ImGuiCond_Once);
-		// Under the minimap: ImGui's default corner sat on the HUD's coin count.
-		ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x - 240.0f, 175.0f), ImGuiCond_Once);
-		if (ImGui::Begin("Post-FX", NULL,
-		                 ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize))
-		{
-			ImGui::SliderFloat("Vignette", &_vignetteIntensity, 0.0f, 1.0f);
-		}
-		ImGui::End();
-
-		if (_character != nullptr)
-			_character->Update(deltaTime);
-		if (_character && !_inVehicle && !_boarding.car)
-			updateFootsteps(_character->GetCharacterController().onGround());
-		// The level's people say something to a player who walks up to them,
-		// now and then: one of their recorded idle replies.
-		if (_character && !_inVehicle)
-			for (auto& [name, npc] : _ambientNpcs)
-			{
-				static std::map<std::string, double> spokeAt;
-				const Vector3 gap = _character->GetPosition() - npc->GetPosition();
-				if (gap.X * gap.X + gap.Z * gap.Z > 16.0f || std::abs(gap.Y) > 3.0f)
-					continue;
-				double& last = spokeAt.try_emplace(name, -100.0).first->second;
-				if (_elapsedSeconds - last < 20.0 || _audioManager->IsDialoguePlaying())
-					continue;
-				last = _elapsedSeconds;
-				const auto lines = _audioManager->FindSounds(name + "\\w_idlereply_");
-				if (!lines.empty())
-					_audioManager->QueueDialogue(lines[static_cast<std::size_t>(rand()) % lines.size()],
-					                             AudioManager::DialoguePriority::Gameplay);
-			}
-		// Someone near the player while a line is being spoken is in the
-		// conversation, and gestures.
-		const bool speaking = _audioManager->IsDialoguePlaying() && _character && !_inVehicle;
-		const auto talkingNear = [&](const Vector3& position) {
-			return speaking && (position - _character->GetPosition()).Length() < 8.0f;
-		};
-		for (auto& [car, driver] : _carDrivers)
-			if (driver)
-				driver->Update(deltaTime);
-		for (auto& giver : _bonusGivers)
-			if (giver.npc)
-			{
-				if (_character)
-				{
-					const Vector3 toPlayer = _character->GetPosition() - giver.position;
-					if (toPlayer.X * toPlayer.X + toPlayer.Z * toPlayer.Z < 100.0f)
-						giver.npc->SetRotation(Quaternion::MakeFromEuler(
-						    Vector3(0.0f, std::atan2(toPlayer.X, toPlayer.Z) + 3.14159265f, 0.0f)));
-				}
-				animateNpc(*giver.npc, talkingNear(giver.npc->GetPosition()));
-				giver.npc->Update(deltaTime);
-			}
-		for (auto* people : {&_npcs, &_ambientNpcs})
-		for (auto& [name, npc] : *people)
-		{
-			animateNpc(*npc, talkingNear(npc->GetPosition()));
-			// Someone the player walks up to turns to face them. The model faces
-			// -Z, hence the half turn.
-			if (_character && !_inVehicle)
-			{
-				const Vector3 toPlayer = _character->GetPosition() - npc->GetPosition();
-				if (toPlayer.X * toPlayer.X + toPlayer.Z * toPlayer.Z < 100.0f)
-					npc->SetRotation(Quaternion::MakeFromEuler(
-					    Vector3(0.0f, std::atan2(toPlayer.X, toPlayer.Z) + 3.14159265f, 0.0f)));
-			}
-			npc->Update(deltaTime);
-		}
+		updateCharacters(deltaTime);
 
 		ImGui::Render();
 
-		int viewportWidth = (int)io.DisplaySize.x;
-		int viewportHeight = (int)io.DisplaySize.y;
+		const int viewportWidth = static_cast<int>(ImGui::GetIO().DisplaySize.x);
+		const int viewportHeight = static_cast<int>(ImGui::GetIO().DisplaySize.y);
 
-		// Render the 3D scene into an offscreen FBO so a post-process pass can
-		// sample it (FX-000). The HUD/ImGui are drawn afterwards on the
-		// backbuffer so they are not filtered.
-		ensureFullscreenQuad();
-		ensureSceneFBO(viewportWidth, viewportHeight);
-		_sceneFBO->Bind();
+		renderScene(deltaTime, viewportWidth, viewportHeight);
 
-		glViewport(0, 0, viewportWidth, viewportHeight);
+		Matrix4x4 proj = Matrix4x4::MakeOrtho(0.0f, viewportWidth, viewportHeight, 0.0f);
 
-		glEnable(GL_DEPTH_TEST);
-		glEnable(GL_BLEND);
-		// SH&R geometry uses Direct3D winding (clockwise front faces); OpenGL
-		// defaults to CCW, which back-face-culled the ground/road away. Match
-		// the source winding so single-sided world geometry renders.
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
-		glFrontFace(GL_CW);
-		glClearColor(0.62f, 0.78f, 1.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		if (drawHud(sprites, intent, proj, deltaTime, static_cast<int>(timer.GetFps()), viewportWidth, viewportHeight))
+			continue;
 
-		_gameCamera->View().SetAspectRatio(static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight));
+		drawScreens(sprites, intent, proj, deltaTime, viewportWidth, viewportHeight);
 
-		Matrix4x4 viewMatrix = _gameCamera->View().GetViewMatrix();
-		Matrix4x4 projMatrix = _gameCamera->View().GetProjectionMatrix();
-		Matrix4x4 viewProjection = projMatrix * viewMatrix;
+		if (!_launch.clean)
+			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		_window->Swap();
+	}
+}
 
-		// Counted afresh each frame, shown the next (the overlay is built first).
-		CullStats::drawn = CullStats::culled = 0;
-		// The one saying a line moves their jaw with it; the others keep it shut.
+void Game::updateOnFoot(double deltaTime, GameIntent& intent)
+{
+	// Third-person camera: capture the mouse during on-foot gameplay so its
+	// motion orbits the camera around the character. The camera no longer
+	// follows the character's facing — only the mouse turns it.
+	// The game settings' mouse: whether it looks round, how much (a half
+	// is 0.005 a pixel), either way inverted.
+	const OptionsMenu::Mouse mouse = _optionsMenu ? _optionsMenu->GetMouse() : OptionsMenu::Mouse();
+	const bool onFoot = (_states.Is(GameState::InGame)) && _character && !_inVehicle;
+	LockMouse(onFoot && mouse.look);
+	if (onFoot && mouse.look && _gameInput->IsMouseLocked())
+	{
+		const float across = 0.0005f + 0.009f * mouse.sensitivityX, upDown = 0.0005f + 0.009f * mouse.sensitivityY;
+		// Mouse up looks up.
+		_gameCamera->Orbit(intent.mouseDX * across * (mouse.invertX ? -1.0f : 1.0f),
+		                   -intent.mouseDY * upDown * (mouse.invertY ? -1.0f : 1.0f));
+	}
+
+	if (onFoot && _boarding.car)
+	{
+		intent.moveForward = intent.moveBackward = intent.moveLeft = intent.moveRight = 0.0f;
+		intent.interact = false;
+		updateBoarding();
+	}
+	if (onFoot)
+	{
+		auto& ctrl = _character->GetCharacterController();
+		auto charMove = Vector3::Zero;
+		charMove += Vector3::Forward * intent.moveForward;
+		charMove += Vector3::Backward * intent.moveBackward;
+		charMove += Vector3::Left * intent.moveLeft;
+		charMove += Vector3::Right * intent.moveRight;
+
+		// A phone booth answers the action button before anything else.
+		if (intent.interact &&
+		    (usePhoneBooth() || openShop() || ringDoorbell() || useSwitch() || useGag() || startBonusMission()))
+			intent.interact = false;
+
+		if (intent.interact)
 		{
-			std::string speaker;
-			const float open = _audioManager->GetMouthOpen(speaker);
-			const auto mouth = [&](Character* character) {
-				if (!character)
-					return;
-				std::string name = character->GetName();
-				std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return std::tolower(c); });
-				character->SetMouthOpen(!speaker.empty() && name == speaker ? open : 0.0f);
-			};
-			mouth(_character.get());
-			for (auto& [name, npc] : _npcs)
-				mouth(npc.get());
-			for (auto& [name, npc] : _ambientNpcs)
-				mouth(npc.get());
-			for (auto& giver : _bonusGivers)
-				mouth(giver.npc.get());
-			for (auto& [car, driver] : _carDrivers)
-				mouth(driver.get());
-		}
-		if (_level != nullptr)
-		{
-			_level->Draw(viewProjection);
-			// The characters lit by the level's lights, as the cars are.
-			_level->ApplyLights(*_skinShaderProgram);
-			// The blending the level's glows and particles left (added, one
-			// on one) is not the characters': Homer was drawn added onto the
-			// street behind him, pale and see-through.
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		}
-
-		// At the wheel, the player sits in the driver's seat, idling as drivers
-		// do (in_car_idle); the controller keeps him where he got in, and
-		// takes him back as he gets out.
-		if (_character != nullptr && _inVehicle && _activeVehicle)
-		{
-			playPlayerAnimation("in_car_idle", true);
-			if (seatDriver(*_character, *_activeVehicle))
+			if (_scriptEngine->IsMissionActive())
 			{
-				glDisable(GL_CULL_FACE);
-				_character->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
-				glEnable(GL_CULL_FACE);
+				for (auto& v : _scriptEngine->GetMissionVehicles())
+				{
+					if ((v->GetPosition() - _character->GetPosition()).Length() < 5.0f)
+					{
+						// By the driver's door, the door first (updateBoarding
+						// seats the player when done). Consume the press, or it
+						// would jump as well.
+						startBoarding(v.get(), true);
+						intent.interact = false;
+						// getting in the car starts the race; finishing it is the
+						// checkpoint loop's job (this used to complete the stage here)
+						break;
+					}
+				}
+			}
+			// Something to hit within reach (a crate, a wasp come low): the
+			// character's strike, not a jump. It counts as an attack for the
+			// wasps, as a jump does.
+			const Vector3 me = _character->GetPosition();
+			const bool target = _level->HasBreakableNear(me, 2.2f) || _level->HasKickablePropNear(me, 1.8f) ||
+			                    (_waspManager && _waspManager->AnyNear(me, 2.5f));
+			if (!_inVehicle && !_boarding.car && ctrl.onGround() && target && playPlayerAnimation("break", false))
+			{
+				_moves.lastJumpAt = _elapsedSeconds;
+				if (_level->BreakObjectsNear(me, 2.2f) > 0)
+					AddShake(0.2f);
+				// A mailbox, a bin kicked over.
+				_level->KickPropsNear(me, 1.8f);
+			}
+			else if (!_inVehicle && !_boarding.car && ctrl.canJump())
+			{
+				ctrl.jump(btVector3(0, 0, 0));
+				playPlayerAnimation("jump_idle_take_off", false);
+				_moves.lastJumpAt = _elapsedSeconds;
+				_moves.kickedThisJump = false;
+				_moves.doubleJumped = false;
+			}
+			// In the air, again: up once more, as high again ("quand tu es
+			// dans les airs, réappuie sur la touche A pour sauter plus loin",
+			// the tutorial says) -- the wasps on a roof's edge in reach.
+			else if (!_inVehicle && !_boarding.car && !ctrl.onGround() && !_moves.doubleJumped && !_moves.kickedThisJump)
+			{
+				ctrl.jumpAgain();
+				playPlayerAnimation("jump_idle_take_off", false);
+				_moves.lastJumpAt = _elapsedSeconds;
+				_moves.doubleJumped = true;
+			}
+			// Then a kick: once a jump. It hits a wasp in reach (the attack
+			// lasts a second more) and breaks what it lands on.
+			else if (!_inVehicle && !_boarding.car && !ctrl.onGround() && !_moves.kickedThisJump &&
+			         playPlayerAnimation("jump_kick", false))
+			{
+				_moves.kickedThisJump = true;
+				_moves.lastJumpAt = _elapsedSeconds;
+				if (_level->BreakObjectsNear(_character->GetPosition(), 2.0f, true, "STOMP") > 0)
+					AddShake(0.2f);
+				_level->KickPropsNear(_character->GetPosition(), 1.8f);
 			}
 		}
-		drawCarDrivers(viewProjection);
-		if (_character != nullptr && !_inVehicle)
+
+		if (intent.debugTeleportToVehicle && _scriptEngine->IsMissionActive())
 		{
-			// the skinned character mesh has inconsistent winding; with the
-			// world's clockwise back-face culling, parts (e.g. an arm) get
-			// culled away. Render the character double-sided.
+			for (auto& v : _scriptEngine->GetMissionVehicles())
+			{
+				// Land beside the car, inside the boarding radius below. The old
+				// offset (0, 2, 5) put the player 5.39 units away -- just outside
+				// the < 5 check -- so the debug teleport could never be followed
+				// by "interact" to actually get in.
+				SetPlayerPosition(v->GetPosition() + Vector3(2.5f, 1.0f, 0.0f));
+				break;
+			}
+		}
+
+		const bool moving = charMove.LengthSquared() > 0.0f;
+		if (moving)
+		{
+			// Camera-relative movement: "forward" is where the camera looks.
+			// worldMove depends on the (mouse-driven) camera yaw, not on the
+			// character's own rotation, so there's no feedback loop. The
+			// character then pivots to face its movement direction.
+			charMove.Normalize();
+			Vector3 worldMove = Quaternion::MakeFromEuler(Vector3(0.0f, _gameCamera->GetYaw(), 0.0f)) * charMove;
+			// A dash with the boost held: faster, and in Homer's dash.
+			_moves.dashing = intent.boostHeld;
+			ctrl.setWalkDirection(BulletCast<btVector3>(worldMove * (_moves.dashing ? 8.0f : 5.0f)));
+
+			// A character model faces -Z: unturned, Homer walked +Z backwards,
+			// showing the camera behind him his face.
+			float targetYaw = atan2f(worldMove.X, worldMove.Z) + 3.14159265f;
+			float curYaw = _character->GetRotation().Yaw();
+			float delta = targetYaw - curYaw;
+			while (delta > 3.14159265f) delta -= 6.28318531f;
+			while (delta < -3.14159265f) delta += 6.28318531f;
+			float t = 1.0f - static_cast<float>(exp(-12.0 * deltaTime));
+			_character->SetRotation(Quaternion::MakeFromEuler(Vector3(0.0f, curYaw + delta * t, 0.0f)));
+		}
+		else
+		{
+			ctrl.setWalkDirection(btVector3(0, 0, 0));
+		}
+
+		updatePlayerAnimation(deltaTime, moving, ctrl.onGround());
+		_moves.dashKicksUpDust = moving && _moves.dashing && ctrl.onGround();
+	}
+}
+
+void Game::updateCheckpoints()
+{
+	// Checkpoints are reached on foot as well as at the wheel: a mission's
+	// "goto" is often a walk to a door.
+	if (_scriptEngine->IsMissionActive() && _character)
+	{
+		const Vector3 playerPos = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()
+		                                                       : _character->GetPosition();
+		const auto& checkpoints = _scriptEngine->GetCheckpoints();
+		const int current = _scriptEngine->GetCurrentCheckpoint();
+		if (current >= 0 && current < static_cast<int>(checkpoints.size()) &&
+		    (playerPos - checkpoints[current]).Length() < 5.0f)
+			_scriptEngine->AdvanceCheckpoint();
+	}
+}
+
+void Game::updateDriving(const GameIntent& intent)
+{
+	if (_inVehicle && _activeVehicle)
+	{
+		if (intent.interact)
+		{
+			// Out by the driver's door, and the door shut behind.
+			Vehicle* car = _activeVehicle;
+			_inVehicle = false;
+			_activeVehicle = nullptr;
+			SetPlayerPosition(driverDoor(*car));
+			startBoarding(car, false);
+			Log::Info("Game: exited vehicle");
+		}
+	else if (intent.honk)
+	{
+		if (_hornCooldown <= 0.0f)
+		{
+			// The car's own horn when its sound script names one.
+			if (const std::string horn = _audioManager->CarSoundFile(_activeVehicle->GetName(), "_horn"); !horn.empty())
+				_audioManager->PlayAudio(horn);
+			else
+				_audioManager->PlayRaw(SoundGenerator::Horn(0.4f), 22050, 1, 16);
+			_hornCooldown = 0.4f;
+		}
+	}
+		else if (intent.vehicleJump)
+		{
+			_activeVehicle->Jump();
+			_gameCamera->AddShake(1.0f);
+		}
+		else
+		{
+			// throttle/brake are 0..1, steer is -1..1 (right minus left);
+			// keyboard gives full deflection, sticks/triggers scale analogically
+			float throttle = intent.moveForward;
+			float brake = intent.moveBackward;
+			const float steer = intent.moveRight - intent.moveLeft;
+			const float boost = intent.boostHeld ? 3.0f : 1.0f;
+			// The turbo's first moment gets a word.
+			static bool boosting = false;
+			if (intent.boostHeld && !boosting)
+				SayLine("w_turbo");
+			boosting = intent.boostHeld;
+
+			// Back brakes while the car is still rolling forwards and reverses
+			// once it has stopped. Previously it only ever braked, so a car
+			// nosed into a wall stayed there.
+			if (brake > 0.0f && _activeVehicle->GetSpeedKmh() < kReverseThresholdKmh)
+			{
+				throttle = -brake;
+				brake = 0.0f;
+			}
+
+			// Held on the line, like the opponents, until the countdown says go.
+			if (_scriptEngine->IsMissionActive() && _scriptEngine->IsRaceHeld())
+				_activeVehicle->ApplyInput(0.0f, 0.0f, 1.0f, 1.0f);
+			else
+				_activeVehicle->ApplyInput(throttle, steer, brake, boost);
+		}
+	}
+}
+
+void Game::updateCamera(double deltaTime)
+{
+	_gameCamera->SetPhysics(_worldPhysics.get());
+	if (_inVehicle && _activeVehicle && !_gameInput->IsMouseLocked())
+		_gameCamera->FollowVehicle(*_activeVehicle, deltaTime);
+	else if (_character)
+		_gameCamera->OrbitCharacter(_character->GetPosition(), deltaTime);
+	// The script's cameras over the player's: a mission's camera move as it
+	// starts, then the conversation's shots, line by line.
+	if (_states.Is(GameState::InGame))
+		scriptedCamera(deltaTime);
+}
+
+void Game::updateAudio(double deltaTime)
+{
+	// The listener is the camera; it was never placed, and every sound given
+	// a position was heard from the world's origin, if at all. OpenAL takes
+	// right as forward x up; in this world +X is on the right looking down
+	// +Z, which takes "up" as -Y to come out the same way round.
+	{
+		const Vector3 forward = _gameCamera->View().GetOrientation().Inverse() * Vector3::Forward;
+		_audioManager->SetListenerPosition(_gameCamera->View().GetPosition(), forward, Vector3(0.0f, -1.0f, 0.0f));
+	}
+	_audioManager->Update();
+	// The place's background: the level's outdoors, or a small room indoors.
+	// The game picks it by zone with a script (ambience.rms) not read here.
+	{
+		static const char* const kOutdoors[] = {"suburb_day_loop",    "city_busy_loop",       "squidport_amb_loop_02",
+		                                       "suburb_night_loop",  "city_night_loop",      "squidport_night_loop",
+		                                       "halloween_amb_loop"};
+		const int level = std::clamp(_levelNumber, 1, 7);
+		std::string indoors = _interior;
+		std::transform(indoors.begin(), indoors.end(), indoors.begin(), [](unsigned char c) { return std::tolower(c); });
+		_audioManager->PlayAmbience(_interior.empty()                         ? kOutdoors[level - 1]
+		                            : indoors.find("dmv") != std::string::npos ? "\\dmv.rsd"
+		                                                                       : "room_small_01");
+	}
+
+	// The engine of the car the player drives: its own recorded loop (its
+	// sound script's), pitched up with the speed.
+	{
+		const std::string driving = _inVehicle && _activeVehicle ? _activeVehicle->GetName() : std::string();
+		if (driving != _engineCar)
+		{
+			_engineCar = driving;
+			const std::string file = driving.empty() ? std::string() : _audioManager->CarSoundFile(driving);
+			if (file.empty())
+				_audioManager->StopEngine();
+			else
+				_audioManager->PlayEngine(file);
+		}
+		if (!_engineCar.empty() && _activeVehicle)
+			_audioManager->SetEnginePitch(0.7f + std::abs(_activeVehicle->GetSpeedKmh()) / 110.0f);
+		// A good jump gets a word from the driver.
+		static double airborne = 0.0;
+		airborne = _inVehicle && _activeVehicle && _activeVehicle->IsAirborne() ? airborne + deltaTime : 0.0;
+		if (airborne > 0.8 && airborne - deltaTime <= 0.8)
+			SayLine("d_air");
+	}
+}
+
+void Game::updateCarImpacts(double deltaTime, bool simulate)
+{
+	if (simulate)
+	{
+		// The car smashes what it runs into: crates, vending machines, gas
+		// pumps play their breaking and stay broken. Those with a body break
+		// as the car hits it (Level::updateBreakingBodies); the others, as
+		// it comes by.
+		if (_inVehicle && _activeVehicle && std::abs(_activeVehicle->GetSpeedKmh()) > 15.0f)
+			if (const int broke = _level->BreakObjectsNear(_activeVehicle->GetPosition(), 2.5f, false, "VEHICLE_HIT");
+			    broke > 0)
+			{
+				AddShake(0.3f);
+				_audioManager->PlayRaw(SoundGenerator::Chirp(220.0f, 80.0f, 0.2f, 44100), 44100, 1, 16);
+				Log::Info("Game: {} object(s) smashed", broke);
+			}
+		updateCarDamage();
+		updateCarDamageLook(deltaTime);
+		if (_states.Is(GameState::InGame))
+			updateHitAndRun(deltaTime);
+	}
+}
+
+void Game::updateMissionResult(double deltaTime)
+{
+	if (_states.Is(GameState::MissionComplete) || _states.Is(GameState::MissionFailed))
+	{
+		// Won on foot, the player celebrates: the big one for the level's last
+		// story mission.
+		if (_states.GetResultTime() == 0.0 && _states.Is(GameState::MissionComplete) && !_inVehicle)
+		{
+			const bool levelWon = _storyIndex >= 0 && _storyIndex + 1 == static_cast<int>(_story.size());
+			if (!levelWon || !playPlayerAnimation("victory_large", false))
+				playPlayerAnimation("victory_small", false);
+		}
+		const bool failed = _states.Is(GameState::MissionFailed);
+		if (_states.UpdateResult(deltaTime) && _states.Fire(GameEvent::ResultOver))
+		{
+			if (_inVehicle)
+			{
+				_inVehicle = false;
+				_activeVehicle = nullptr;
+			}
+			// A failure is retried from the last RESET_TO_HERE, not from the
+			// top: losing m2's twelfth stage used to mean driving the first
+			// eleven again.
+			// A story mission won leads on to the next one.
+			_interior.clear();
+			_level->SetDrawOnly({});
+			// A bonus mission over, won or lost: back to the story where it was.
+			const bool bonusOver = _bonusReturn >= 0 && (!failed || !_scriptEngine->RetryFromCheckpoint());
+			if (bonusOver)
+			{
+				const int resume = _bonusReturn;
+				_bonusReturn = -1;
+				startStoryMission(resume);
+			}
+			else if (_bonusReturn >= 0)
+				_health = 100.0f; // retried from its checkpoint, just above
+			else
+			{
+				// The level's last won leads on to the next level.
+				const bool levelWon = !failed && _storyIndex >= 0 && _storyIndex + 1 >= static_cast<int>(_story.size());
+				if (levelWon && levelAvailable(_levelNumber + 1))
+				{
+					saveStoryProgress(_levelNumber + 1, 0);
+					const auto nextLevel = [this]() {
+						switchLevel(_levelNumber + 1);
+						if (!_story.empty())
+							startStoryMission(0);
+						_states.Fire(GameEvent::Play);
+					};
+					// The level's end: its counts, all its story won, then on.
+					if (_pauseSunday && _pauseSunday->IsLoaded() && !_autopilot)
+					{
+						int missions = 0;
+						for (const std::string& entry : _story)
+							missions += entry.size() > 7 && entry.compare(entry.size() - 7, 7, "sdi.mfk") != 0;
+						_pauseSunday->OpenLevelEnd(_levelNumber, levelStats(missions, missions), nextLevel);
+						_states.Fire(GameEvent::LevelOver);
+					}
+					else
+						nextLevel();
+				}
+				else if (levelWon)
+				{
+					// The last level's last mission: the story is over. It used to
+					// replay that mission, for ever.
+					Log::Info("Game: the story is over, level {} won", _levelNumber);
+					_scriptEngine->CleanupMission();
+					// The credits roll, then the main menu.
+					_states.Fire(_creditsPage ? GameEvent::ShowCredits : GameEvent::ToMainMenu);
+					_creditsTime = 0.0;
+					if (_creditsPage)
+						_audioManager->PlayMusicEvent("Credits");
+				}
+				else if (!failed && _storyIndex >= 0 && _storyIndex + 1 < static_cast<int>(_story.size()))
+				{
+					saveStoryProgress(_levelNumber, _storyIndex + 1);
+					startStoryMission(_storyIndex + 1);
+				}
+				else if (failed && _scriptEngine->RetryFromCheckpoint())
+					_health = 100.0f;
+				else
+				{
+					_scriptEngine->CleanupMission();
+					if (_collectibleManager) _collectibleManager->SpawnOnPath();
+					runMissionScript();
+				}
+			}
+		}
+	}
+}
+
+void Game::updateFallOff()
+{
+	if (_character && _character->GetPosition().Y < _fallOffY)
+	{
+		Log::Warn("Game: player fell off the map, respawning...");
+		_health -= 20.0f;
+		if (_health <= 0.0f) _health = 100.0f;
+		SetPlayerPosition(_safe.onFoot);
+	}
+
+	if (_activeVehicle && _inVehicle && _activeVehicle->GetPosition().Y < _fallOffY && _safe.car == _activeVehicle)
+	{
+		const int node = _pathGraph ? _pathGraph->FindNearestRoadNode(_safe.carPos) : -1;
+		const Vector3 road = node >= 0 ? _pathGraph->GetNodes()[node].position : _safe.carPos;
+		Log::Warn("Game: vehicle fell off the map, put back on the road at ({:.1f}, {:.1f}, {:.1f})", road.X, road.Y,
+		          road.Z);
+		_activeVehicle->Teleport(road, Quaternion::MakeFromEuler(Vector3(0.0f, _safe.carYaw, 0.0f)));
+		// Known safe again only once it is back on its wheels.
+		_safe.car = nullptr;
+	}
+	else if (_activeVehicle && _inVehicle && !_activeVehicle->IsAirborne() &&
+	         _activeVehicle->GetPosition().Y > _fallOffY)
+	{
+		_safe.car = _activeVehicle;
+		_safe.carPos = _activeVehicle->GetPosition();
+		_safe.carYaw = _activeVehicle->GetRotation().Yaw();
+	}
+
+	if (_activeVehicle && _inVehicle && _activeVehicle->GetPosition().Y < _fallOffY)
+	{
+		Log::Warn("Game: vehicle fell off the map, exiting...");
+		_inVehicle = false;
+		_activeVehicle = nullptr;
+		SetPlayerPosition(_safe.onFoot);
+	}
+
+	if (_character && _character->GetCharacterController().onGround())
+		_safe.onFoot = _character->GetPosition();
+}
+
+void Game::drawGuides()
+{
+	if (_showDebug)
+	{
+		if (_scriptEngine->IsMissionActive() && _character)
+		{
+			for (auto& v : _scriptEngine->GetMissionVehicles())
+			{
+				Vector3 dir = v->GetPosition() - _character->GetPosition();
+				if (dir.LengthSquared() > 0.0f)
+				{
+					dir.Normalize();
+					Vector3 arrowStart = _character->GetPosition() + Vector3(0, 1.5f, 0);
+					Vector3 arrowEnd = arrowStart + dir * 3.0f;
+					_lineRenderer->DrawLine(arrowStart, arrowEnd, Vector4(0.0f, 1.0f, 1.0f, 1.0f));
+				}
+				break;
+			}
+		}
+
+		// The character's debug frame, where it is drawn: not over the car
+		// it is sitting in.
+		if (!_inVehicle)
+		{
+			_lineRenderer->DrawSkeleton(_character->GetPosition(), _character->GetSkeleton());
+			_lineRenderer->DrawBox(_character->GetPosition(), _character->GetRotation(),
+				Vector3(-0.3f, 0.0f, -0.2f), Vector3(0.3f, 1.8f, 0.3f), Vector4(0.2f, 1.0f, 0.2f, 1.0f));
+		}
+	}
+
+	// Race guidance, not debug: without a marker in the world the player has no
+	// way to find the next checkpoint, so a race can never be completed.
+	if (_scriptEngine->IsMissionActive())
+	{
+		const auto& checkpoints = _scriptEngine->GetCheckpoints();
+		int currentCp = _scriptEngine->GetCurrentCheckpoint();
+		for (int i = 0; i < static_cast<int>(checkpoints.size()); ++i)
+		{
+			Vector4 cpCol = i == currentCp ? Vector4(1.0f, 1.0f, 0.0f, 1.0f) :
+			                i < currentCp  ? Vector4(0.0f, 1.0f, 0.0f, 1.0f) :
+			                                 Vector4(1.0f, 0.0f, 0.0f, 1.0f);
+			Vector3 cpBase = checkpoints[i] + Vector3(0, 0.5f, 0);
+			_lineRenderer->DrawLine(cpBase, cpBase + Vector3(0, 15.0f, 0), cpCol);
+
+			int next = (i + 1) % checkpoints.size();
+			Vector3 from = checkpoints[i] + Vector3(0, 0.1f, 0);
+			Vector3 to = checkpoints[next] + Vector3(0, 0.1f, 0);
+			Vector3 mid = (from + to) * 0.5f;
+			int segments = 8;
+			for (int s = 0; s < segments; s += 2)
+			{
+				float t1 = s / (float)segments;
+				float t2 = (s + 1) / (float)segments;
+				_lineRenderer->DrawLine(from + (to - from) * t1, from + (to - from) * t2,
+					Vector4(1.0f, 1.0f, 1.0f, 0.3f));
+			}
+		}
+	}
+}
+
+void Game::updateWorld(double deltaTime, bool simulate)
+{
+	_level->Update(deltaTime);
+	// A mailbox, a lamp post knocked over: its crash, and the sparks off a
+	// metal one.
+	// What a broken crate, a vending machine gives: coins, spilled about it.
+	for (const auto& drop : _level->TakeCoinDrops())
+		if (_collectibleManager)
+			_collectibleManager->DropCoins(drop.position, drop.coins);
+	for (const auto& [sound, effect, where] : _level->TakeKnockedProps())
+	{
+		// The stars off a gravestone have no sprite of their own in the
+		// effects files: a few of the sparks stand in for them.
+		if (effect == "eSpark" && _sparks)
+			_sparks->Burst(20, where);
+		else if (effect == "eStars" && _sparks)
+			_sparks->Burst(8, where);
+		const auto clip = _audioManager->FindScriptSound("collide", sound);
+		const std::string& file = clip.file;
+		Log::Debug("Game: a prop knocked over at ({:.1f}, {:.1f}, {:.1f}), '{}' ({}), '{}'", where.X, where.Y, where.Z, sound,
+		           file.empty() ? "no sound" : file, effect);
+		if (!file.empty())
+			_audioManager->PlayAudio(file, where, clip.trim, clip.pitch);
+	}
+	// A stage that asks for no traffic gets empty streets: neither moved,
+	// drawn nor run into.
+	const bool traffic = !_scriptEngine->IsTrafficSuppressed();
+	_trafficManager->SetPresent(traffic);
+	// As many cars as the script allows (SetMaxTraffic), and the district's
+	// people on the pavements (UsePedGroup).
+	_trafficManager->SetMaxCars(_scriptEngine->GetMaxTraffic());
+	if (_pedestrianManager)
+		_pedestrianManager->UseGroup(_scriptEngine->GetPedGroup());
+	if (traffic)
+	{
+		std::vector<Vector3> obstacles;
+		// The player on foot too: the traffic waits for them to cross.
+		if (_inVehicle && _activeVehicle)
+			obstacles.push_back(_activeVehicle->GetPosition());
+		else if (_character)
+			obstacles.push_back(_character->GetPosition());
+		if (const Vehicle* parked = _scriptEngine->GetPlayerCar(); parked && parked != _activeVehicle)
+			obstacles.push_back(parked->GetPosition());
+		for (const auto& vehicle : _scriptEngine->GetMissionVehicles())
+			obstacles.push_back(vehicle->GetPosition());
+		if (_hitAndRun)
+			for (const Vehicle* cop : _hitAndRun->GetCops())
+				obstacles.push_back(cop->GetPosition());
+		_trafficManager->SetObstacles(std::move(obstacles));
+		_trafficManager->Update(deltaTime);
+		for (const auto& [model, position] : _trafficManager->TakeHonks())
+			if (const std::string horn = _audioManager->CarSoundFile(model, "_horn"); !horn.empty())
+				_audioManager->PlayAudio(horn, position);
+	}
+	if (traffic && _showDebug)
+		_trafficManager->Draw();
+	if (simulate)
+	{
+		_scriptEngine->Update(deltaTime);
+		if (_autopilot)
+			runAutopilot(deltaTime);
+	}
+}
+
+void Game::updateGameplay(double deltaTime, bool simulate)
+{
+	// Re-enabled (REGR-001): db9c8db commented this out to isolate a crash on "press
+	// up"; 9860a4f fixed that same day (uninitialised Character::_rotation feeding the
+	// follow camera, plus stepUp/stepDown/onGround bugs) but the block was never restored.
+	if (_character != nullptr && _states.Is(GameState::InGame))
+	{
+		// Triggers fire on the transition, once, from wherever the player
+		// actually is -- the car, when driving. This used to log "entered
+		// trigger zone" every two seconds for as long as the player stood in
+		// one, without saying which.
+		const Vector3 playerPos = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()
+		                                                       : _character->GetPosition();
+		// A player who came to the door at the wheel is already inside its
+		// volume when they get out, and its entry has gone by: a door is
+		// gone through by a player on foot standing in it, not only on
+		// stepping in. Level 4 m5 waited at the Kwik-E-Mart for ever.
+		if (!_inVehicle && _interior.empty() && _character)
+			for (const auto& door : _level->GetTriggers())
+				if ((door.type == Level::LocatorType::InteriorEntrance ||
+				     (door.type == Level::LocatorType::DynamicZone && door.data.find('@') != std::string::npos)) &&
+				    door.Contains(_character->GetPosition()))
+				{
+					enterInterior(door);
+					break;
+				}
+		for (const auto& event : _level->UpdateTriggers(playerPos))
+		{
+			_scriptEngine->OnTrigger(*event.trigger, event.entered);
+			// A door is an interior entrance (level 1), or a zone trigger that
+			// loads an interior, "l2i04.p3d@..." (level 2 onwards).
+			if (event.entered && (event.trigger->type == Level::LocatorType::InteriorEntrance ||
+			                      (event.trigger->type == Level::LocatorType::DynamicZone &&
+			                       event.trigger->data.find('@') != std::string::npos)))
+				enterInterior(*event.trigger);
+		}
+		updateInterior();
+		// Pedestrians walk every frame; only their arrivals are spaced out.
+		// Update used to run once every half second with one frame's time,
+		// so they moved, and walked, about thirty times too slowly. Nobody
+		// walks about inside an interior.
+		static double pedSpawnTimer = 0.0;
+		pedSpawnTimer += deltaTime;
+		if (_pedestrianManager && _interior.empty())
+			_pedestrianManager->Update(deltaTime, _character->GetPosition());
+		if (pedSpawnTimer > 0.5)
+		{
+			pedSpawnTimer = 0.0;
+			if (_pedestrianManager && _interior.empty())
+				_pedestrianManager->Spawn(_character->GetPosition(), 40.0f);
+		}
+		// A card found: its title, from the phrase table, which numbers each
+		// level's cards from (level - 1) * 8, the eighth being a bonus card.
+		if (_collectibleManager)
+			if (const std::string card = _collectibleManager->TakeFoundCard(); card.size() == 6)
+			{
+				const int index = (card[4] - '1') * 8 + (card[5] - '1');
+				_messages.card = _textBible.Get(fmt::format("CARD_TITLE_{:02}", index));
+				_messages.cardFound = index;
+				_messages.itemsCount.clear();
+				_messages.itemsDone = _collectibleManager->GetCardsFound() == _collectibleManager->GetCardsTotal()
+				                 ? "CARD_LEVEL_COMPLETE"
+				                 : "";
+				if (_collectibleManager->GetCardsFound() == _collectibleManager->GetCardsTotal())
+				{
+					const std::string& all = _textBible.Get("CARD_LEVEL_COMPLETE");
+					_messages.card += _messages.card.empty() ? all : " - " + all;
+				}
+				_messages.cardUntil = _elapsedSeconds + 4.0;
+				SayLine("w_card");
+			}
+		// Coins every frame: a car at 30 m/s is past one in a tenth of a second.
+		if (_collectibleManager && _inVehicle && _activeVehicle &&
+		    _collectibleManager->TakeWrench(_activeVehicle->GetPosition()))
+		{
+			Log::Info("Game: a wrench, the car is repaired ({:.0f} -> 100)", _health);
+			_health = 100.0f;
+		}
+		updateGags();
+		updateTutorial();
+		updateWorkedObjects();
+		if (_ufo)
+		{
+			_ufo->Update(deltaTime);
+			Vector3 blast;
+			bool lastBarrel = false;
+			while (_ufo->TakeBlast(blast, lastBarrel))
+				bossBlast(blast, lastBarrel);
+		}
+		// The wasp cameras: a jump at one, or a car driven into it,
+		// destroys it, for coins.
+		if (_waspManager && _character && _interior.empty())
+		{
+			const bool driving = _inVehicle && _activeVehicle;
+			const Vector3 at = driving ? _activeVehicle->GetPosition() : _character->GetPosition();
+			// A jump, not merely being off the ground: a teleport sets the
+			// player down from a little above, and destroyed a wasp nearby.
+			const bool attacking = driving ? std::abs(_activeVehicle->GetSpeedKmh()) > 10.0f
+			                               : _elapsedSeconds - _moves.lastJumpAt < 1.0;
+			const auto wasps = _waspManager->Update(deltaTime, at, attacking, driving ? 3.5f : 2.5f);
+			for (const auto& [sound, where] : wasps.sounds)
+				_audioManager->PlayAudio(sound, where);
+			// Shot: a zap, a jolt and the damage, on foot or at the wheel.
+			if (wasps.damage > 0.0f)
+			{
+				_health = std::max(0.0f, _health - wasps.damage);
+				AddShake(0.25f);
+			}
+			if (wasps.destroyed > 0)
+			{
+				_coins += wasps.coins;
+				saveCoins();
+				AddShake(0.4f);
+				_messages.card = fmt::format("Wasp cameras {}/{}", _waspManager->GetDestroyed(), _waspManager->GetTotal());
+				_messages.cardFound = -1;
+				_messages.itemsCount = fmt::format("{}/{}", _waspManager->GetDestroyed(), _waspManager->GetTotal());
+				_messages.itemsDone = _waspManager->GetDestroyed() == _waspManager->GetTotal() ? "WASPS_COMPLETE" : "";
+				_messages.cardUntil = _elapsedSeconds + 3.0;
+			}
+		}
+		if (_collectibleManager)
+		{
+			const Vector3 collector = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition()
+			                                                      : _character->GetPosition();
+			_collectibleManager->Update(collector, 3.0f);
+			if (const int fresh = _collectibleManager->TakeNewlyCollected(); fresh > 0)
+			{
+				_coins += fresh;
+				saveCoins();
+				Log::Debug("Game: {} coin(s) picked up, {} in the purse", fresh, _coins);
+			}
+		}
+	}
+	if (simulate)
+		_scriptEngine->UpdateAI(deltaTime);
+}
+
+void Game::drawDebugWindows()
+{
+	ImGui_ImplOpenGL3_NewFrame();
+	ImGui_ImplSDL2_NewFrame(static_cast<SDL_Window*>(*_window));
+	ImGui::NewFrame();
+
+	imguiMenuBar();
+
+	//if (_character != nullptr)
+	//	guiModelMenu(*_character);
+
+	// ImGui::ShowDemoWindow();
+
+	if (_debugWindows.resourceManager)
+		_resourceManager->ImGuiDebugWindow(&_debugWindows.resourceManager);
+
+	if (_debugWindows.level)
+		_level->ImGuiDebugWindow(&_debugWindows.level);
+
+	if (_debugWindows.audio)
+		_audioManager->DebugGUI(&_debugWindows.audio);
+
+	debugAboutMenu();
+	drawControlsWindow();
+}
+
+bool Game::handleIntents(const GameIntent& intent)
+{
+	bool keepRunning = true;
+	// Escape in the options goes back a page, not out of the pause; nor
+	// in the pause between missions, which has pages of its own.
+	if (intent.pauseToggle && !(_optionsMenu && _optionsMenu->IsOpen()) &&
+	    !(_pauseSunday && _pauseSunday->IsOpen()))
+	{
+		if (_states.Is(GameState::InGame))
+		{
+			_states.Fire(GameEvent::Pause);
+			// Driving about between missions (the story at a drive, no
+			// bonus mission on): the pause of the Sunday drive.
+			const bool drive = _bonusReturn < 0 && _storyIndex >= 0 && _storyIndex < static_cast<int>(_story.size()) &&
+			                   _story[_storyIndex].size() > 7 &&
+			                   _story[_storyIndex].compare(_story[_storyIndex].size() - 7, 7, "sdi.mfk") == 0;
+			if (drive)
+				openSundayPause();
+		}
+		else if (_states.Is(GameState::Paused))
+			_states.Fire(GameEvent::Play);
+	}
+
+	if (intent.resetBest && _states.Is(GameState::InGame))
+	{
+		_scriptEngine->ResetBestTime();
+		Log::Info("Game: best time reset!");
+	}
+
+	if (_states.Is(GameState::Paused) && intent.quit)
+	{
+		keepRunning = false;
+		Log::Info("Game: quit from pause menu");
+	}
+
+	if (intent.restart && _states.Is(GameState::InGame))
+	{
+		Log::Info("Game: restarting mission...");
+		_scriptEngine->CleanupMission();
+		if (_collectibleManager) _collectibleManager->SpawnOnPath();
+		if (_inVehicle) { _inVehicle = false; _activeVehicle = nullptr; }
+		runMissionScript();
+	}
+
+	if (intent.toggleDebug)
+	{
+		_showDebug = !_showDebug;
+		Log::Info("Debug draw: {}", _showDebug ? "ON" : "OFF");
+	}
+
+	if (intent.toggleHelp)
+	{
+		_showHelp = !_showHelp;
+	}
+	return keepRunning;
+}
+
+void Game::drawDebugOverlays()
+{
+	ImGuiIO& io = ImGui::GetIO();
+	ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - 8.0f, io.DisplaySize.y - 8.0f), ImGuiCond_Always, ImVec2(1.0f, 1.0f));
+	ImGui::SetNextWindowBgAlpha(0.35f);
+	if (ImGui::Begin("Camera position overlay", NULL,
+	                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
+	                     ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
+	{
+		auto const& camPos = _gameCamera->View().GetPosition();
+		auto const& camRot = _gameCamera->View().GetOrientation();
+		ImGui::Text("Camera Position: %s", camPos.ToString().c_str());
+		ImGui::Text("Camera Orientation: %s", camRot.ToString().c_str());
+		ImGui::Text("Meshes drawn: %d, culled: %d", CullStats::drawn, CullStats::culled);
+
+		float fov = _gameCamera->View().GetFOV();
+		if (ImGui::SliderFloat("FOV", &fov, 0.0f, 120.0f))
+			_gameCamera->View().SetFOV(fov);
+	}
+	ImGui::End();
+
+	// Post-FX debug controls (FX-002 vignette, etc.).
+	ImGui::SetNextWindowBgAlpha(0.35f);
+	ImGui::SetNextWindowSize(ImVec2(220, 0), ImGuiCond_Once);
+	// Under the minimap: ImGui's default corner sat on the HUD's coin count.
+	ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x - 240.0f, 175.0f), ImGuiCond_Once);
+	if (ImGui::Begin("Post-FX", NULL,
+	                 ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::SliderFloat("Vignette", &_vignetteIntensity, 0.0f, 1.0f);
+	}
+	ImGui::End();
+}
+
+void Game::updateCharacters(double deltaTime)
+{
+	if (_character != nullptr)
+		_character->Update(deltaTime);
+	if (_character && !_inVehicle && !_boarding.car)
+		updateFootsteps(_character->GetCharacterController().onGround());
+	// The level's people say something to a player who walks up to them,
+	// now and then: one of their recorded idle replies.
+	if (_character && !_inVehicle)
+		for (auto& [name, npc] : _ambientNpcs)
+		{
+			static std::map<std::string, double> spokeAt;
+			const Vector3 gap = _character->GetPosition() - npc->GetPosition();
+			if (gap.X * gap.X + gap.Z * gap.Z > 16.0f || std::abs(gap.Y) > 3.0f)
+				continue;
+			double& last = spokeAt.try_emplace(name, -100.0).first->second;
+			if (_elapsedSeconds - last < 20.0 || _audioManager->IsDialoguePlaying())
+				continue;
+			last = _elapsedSeconds;
+			const auto lines = _audioManager->FindSounds(name + "\\w_idlereply_");
+			if (!lines.empty())
+				_audioManager->QueueDialogue(lines[static_cast<std::size_t>(rand()) % lines.size()],
+				                             AudioManager::DialoguePriority::Gameplay);
+		}
+	// Someone near the player while a line is being spoken is in the
+	// conversation, and gestures.
+	const bool speaking = _audioManager->IsDialoguePlaying() && _character && !_inVehicle;
+	const auto talkingNear = [&](const Vector3& position) {
+		return speaking && (position - _character->GetPosition()).Length() < 8.0f;
+	};
+	for (auto& [car, driver] : _carDrivers)
+		if (driver)
+			driver->Update(deltaTime);
+	for (auto& giver : _bonusGivers)
+		if (giver.npc)
+		{
+			if (_character)
+			{
+				const Vector3 toPlayer = _character->GetPosition() - giver.position;
+				if (toPlayer.X * toPlayer.X + toPlayer.Z * toPlayer.Z < 100.0f)
+					giver.npc->SetRotation(Quaternion::MakeFromEuler(
+					    Vector3(0.0f, std::atan2(toPlayer.X, toPlayer.Z) + 3.14159265f, 0.0f)));
+			}
+			animateNpc(*giver.npc, talkingNear(giver.npc->GetPosition()));
+			giver.npc->Update(deltaTime);
+		}
+	for (auto* people : {&_npcs, &_ambientNpcs})
+	for (auto& [name, npc] : *people)
+	{
+		animateNpc(*npc, talkingNear(npc->GetPosition()));
+		// Someone the player walks up to turns to face them. The model faces
+		// -Z, hence the half turn.
+		if (_character && !_inVehicle)
+		{
+			const Vector3 toPlayer = _character->GetPosition() - npc->GetPosition();
+			if (toPlayer.X * toPlayer.X + toPlayer.Z * toPlayer.Z < 100.0f)
+				npc->SetRotation(Quaternion::MakeFromEuler(
+				    Vector3(0.0f, std::atan2(toPlayer.X, toPlayer.Z) + 3.14159265f, 0.0f)));
+		}
+		npc->Update(deltaTime);
+	}
+}
+
+void Game::renderScene(double deltaTime, int viewportWidth, int viewportHeight)
+{
+	// Render the 3D scene into an offscreen FBO so a post-process pass can
+	// sample it (FX-000). The HUD/ImGui are drawn afterwards on the
+	// backbuffer so they are not filtered.
+	ensureFullscreenQuad();
+	ensureSceneFBO(viewportWidth, viewportHeight);
+	_sceneFBO->Bind();
+
+	glViewport(0, 0, viewportWidth, viewportHeight);
+
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	// SH&R geometry uses Direct3D winding (clockwise front faces); OpenGL
+	// defaults to CCW, which back-face-culled the ground/road away. Match
+	// the source winding so single-sided world geometry renders.
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glFrontFace(GL_CW);
+	glClearColor(0.62f, 0.78f, 1.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	_gameCamera->View().SetAspectRatio(static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight));
+
+	Matrix4x4 viewMatrix = _gameCamera->View().GetViewMatrix();
+	Matrix4x4 projMatrix = _gameCamera->View().GetProjectionMatrix();
+	Matrix4x4 viewProjection = projMatrix * viewMatrix;
+
+	// Counted afresh each frame, shown the next (the overlay is built first).
+	CullStats::drawn = CullStats::culled = 0;
+	drawPeople(viewProjection);
+
+	drawVehicles(viewProjection, deltaTime);
+
+	drawEffects(viewProjection, deltaTime);
+
+	glDisable(GL_DEPTH_TEST);
+	if (_launch.clean)
+		_lineRenderer->Discard();
+	else
+		_lineRenderer->Flush(viewProjection);
+	glEnable(GL_DEPTH_TEST);
+
+	// Scene complete: blit the FBO to the backbuffer through the
+	// post-process shader (passthrough when all effects are neutralised).
+	blitSceneToBackbuffer(viewportWidth, viewportHeight);
+}
+
+bool Game::drawHud(SpriteBatch& sprites, const GameIntent& intent, const Matrix4x4& proj, double deltaTime, int fps,
+                   int viewportWidth, int viewportHeight)
+{
+	// Not under the game's own main menu page: its entry stands where the
+	// mission's objective is.
+	if (_textureFontP3D != nullptr && !(_states.Is(GameState::MainMenu) && _mainMenuPage) &&
+	    !(_states.Is(GameState::Credits) && _creditsPage) && !_states.Is(GameState::Movie) &&
+	    !_states.Is(GameState::LevelEnd) && _scriptEngine->IsHudShown())
+	{
+		auto font = _resourceManager->GetFont("boulder_16");
+
+		HudState hud;
+		hud.viewportWidth = static_cast<float>(viewportWidth);
+		hud.viewportHeight = static_cast<float>(viewportHeight);
+		hud.fps = _launch.clean ? 0 : fps;
+		hud.health = _health;
+		hud.inVehicle = _inVehicle;
+		hud.boost = intent.boostHeld ? 0.0f : 1.0f; // placeholder, see UI-HUD
+
+		if (_inVehicle && _activeVehicle)
+			hud.speedKmh = _activeVehicle->GetSpeedKmh();
+
+		// The game's HUD has its own call-outs for alerts, cards, counts
+		// and a stage complete; the old one shows them as banners.
+		const bool gameHud = _gameHud && _gameHud->IsLoaded();
+		if (_scriptEngine->GetStagesAnnounced() != _messages.stagesAnnounced)
+		{
+			_messages.stagesAnnounced = _scriptEngine->GetStagesAnnounced();
+			_messages.stageCompleteUntil = _elapsedSeconds + 2.0;
+		}
+		if (gameHud)
+		{
+			hud.stageComplete = _elapsedSeconds < _messages.stageCompleteUntil;
+			hud.walkieTalkie = _walkieTalkie;
+			if (_elapsedSeconds < _messages.alertUntil)
+				hud.alertTerm = _messages.alertTerm;
+			if (_elapsedSeconds < _messages.cardUntil)
+			{
+				hud.cardFound = _messages.cardFound;
+				hud.itemsCount = _messages.itemsCount;
+				hud.itemsDone = _messages.itemsDone;
+			}
+		}
+		if (_collectibleManager)
+		{
+			hud.coins = _coins;
+			if (!gameHud && !_messages.alert.empty() && _elapsedSeconds < _messages.alertUntil && hud.banner.empty())
+			{
+				hud.banner = _messages.alert;
+				hud.bannerColour = Vector4(1.0f, 0.25f, 0.2f, 1.0f);
+			}
+			if (!gameHud && !_messages.card.empty() && _elapsedSeconds < _messages.cardUntil && hud.banner.empty())
+			{
+				hud.banner = _messages.card;
+				hud.bannerColour = Vector4(0.4f, 0.7f, 1.0f, 1.0f);
+			}
+			hud.coinsTotal = 0;
+		}
+		// A race or bonus mission on offer, at hand.
+		if (const BonusGiver* giver = bonusGiverNear())
+		{
+			const std::string& title = _textBible.Get(fmt::format("MISSION_TITLE_L{}_M{}", _levelNumber,
+			    giver->mission == "sr1" ? 8 : giver->mission == "sr2" ? 9 : giver->mission == "sr3" ? 10 : giver->mission == "gr1" ? 11 : 12));
+			hud.hints.push_back(fmt::format("E: {}", title.empty() ? giver->mission : title));
+		}
+		hud.cardsTotal = 7;
+		if (_collectibleManager)
+			hud.cards = _collectibleManager->GetCardsFound();
+
+		fillMissionHud(hud);
+
+		fillRadarHud(hud, gameHud);
+
+		fillHintHud(hud, intent.gamepadConnected, gameHud);
+
+		if (_states.Is(GameState::Splash))
+			hud.banner = "PRESS ENTER TO START";
+
+		// Not under the game's pause screen, whose title stands where the
+		// objective does.
+		if (!(_states.Is(GameState::Paused) && _pausePage))
+		{
+			if (gameHud)
+			{
+				_gameHud->Draw(hud, proj, deltaTime);
+				_hud->DrawCallouts(sprites, font, hud);
+				DrawHints(sprites, font, hud.hints, hud.hintColour, hud.fps, viewportWidth, viewportHeight);
+			}
+			else
+				_hud->Draw(sprites, font, hud);
+		}
+
+		if (_states.Is(GameState::Paused) && _pausePage)
+		{
+			sprites.Flush(proj);
+			if (_optionsMenu && _optionsMenu->IsOpen())
+				_optionsMenu->Draw(intent, proj);
+			else if (_pauseSunday && _pauseSunday->IsOpen())
+				_pauseSunday->Draw(intent, proj);
+			else
+				drawPausePage(intent, proj);
+			_window->Swap();
+			return true;
+		}
+		if (_states.Is(GameState::Paused))
+		{
+			DrawTextMenu(sprites, font, *_pauseMenu, GameText("pause", _language), Vector4(1.0f, 1.0f, 0.0f, 1.0f),
+			             Vector4(0.5f, 0.5f, 0.5f, 1.0f), Vector4(1.0f, 0.3f, 0.3f, 1.0f), viewportWidth,
+			             viewportHeight, intent.mouseX, intent.mouseY);
+			if (intent.uiClick)
+				_pauseMenu->CheckClick(intent.mouseX, intent.mouseY);
+			sprites.Flush(proj);
+			_window->Swap();
+			return true;
+		}
+
+		drawResultScreen(sprites, font, viewportWidth, viewportHeight);
+	}
+	return false;
+}
+
+void Game::drawScreens(SpriteBatch& sprites, const GameIntent& intent, const Matrix4x4& proj, double deltaTime,
+                       int viewportWidth, int viewportHeight)
+{
+	// The main menu has the show's theme (music02.rcf), the level's music
+	// back after it.
+	if ((_states.Is(GameState::MainMenu) || (_states.Is(GameState::Movie) && _movies.after == GameState::MainMenu)) !=
+	    _menuMusic)
+	{
+		_menuMusic = !_menuMusic;
+		static const std::string kTheme = "sound\\music\\simpsons_theme.rsd";
+		if (!_menuMusic)
+			_audioManager->ResumeMusicBase();
+		else if (!_audioManager->FindSounds(kTheme).empty())
+			_audioManager->PlayMusic(kTheme);
+	}
+	if (_states.Is(GameState::Credits) && _creditsPage)
+		drawCredits(intent, proj, deltaTime, viewportWidth, viewportHeight);
+	if (_states.Is(GameState::Movie))
+		drawMovie(intent, proj, deltaTime, viewportWidth, viewportHeight);
+	if (_states.Is(GameState::MainMenu) && _mainMenuPage && !_mainMenu->GetButtons().empty())
+	{
+		// The menu stands over the Simpsons' living room, not the level.
+		updateLivingRoomCamera();
+		if (_livingRoom && _livingRoom->IsLoaded() && _level)
+			_livingRoom->Draw(_level->GetWorldShader(), *_skinShaderProgram, _level->GetBillboardShader(),
+			                  static_cast<float>(viewportWidth) / std::max(1, viewportHeight),
+			                  deltaTime);
+		if (_optionsMenu && _optionsMenu->IsOpen())
+			_optionsMenu->Draw(intent, proj);
+		else if (_scrapBook && _scrapBook->IsOpen())
+			_scrapBook->Draw(intent, proj);
+		else
+			drawMainMenuPage(intent, proj);
+	}
+	else if (_states.Is(GameState::MainMenu))
+	{
+		auto font = _resourceManager->GetFont("boulder_16");
+		SpriteBatch menuSprites;
+		DrawTextMenu(menuSprites, font, *_mainMenu, "donut", Vector4(1.0f, 0.84f, 0.0f, 1.0f),
+		             Vector4(0.8f, 0.8f, 0.8f, 1.0f), Vector4(1.0f, 0.84f, 0.0f, 1.0f), viewportWidth, viewportHeight,
+		             intent.mouseX, intent.mouseY);
+		if (intent.mouseLeftClick)
+			_mainMenu->CheckClick(intent.mouseX, intent.mouseY);
+		menuSprites.Flush(proj);
+	}
+
+	if (_states.Is(GameState::InGame) || _states.Is(GameState::Paused) ||
+	    _states.Is(GameState::MissionComplete) || _states.Is(GameState::MissionFailed))
+		drawSubtitle(proj, viewportWidth, viewportHeight);
+	sprites.Flush(proj);
+	if (_states.Is(GameState::InGame) || _states.Is(GameState::Paused))
+		drawTransition(proj, viewportWidth, viewportHeight);
+	if (_states.Is(GameState::PhoneBooth))
+	{
+		_phoneBooth->Draw(intent, proj);
+		if (!_phoneBooth->IsOpen() && _states.Is(GameState::PhoneBooth))
+			_states.Fire(GameEvent::Play);
+	}
+	if (_states.Is(GameState::LevelEnd))
+		_pauseSunday->Draw(intent, proj);
+	if (_states.Is(GameState::Shop))
+	{
+		_shop->Draw(intent, proj);
+		if (!_shop->IsOpen())
+			_states.Fire(GameEvent::Play);
+	}
+	if (_states.Is(GameState::Splash))
+		_frontend->Draw(proj);
+}
+
+void Game::drawPeople(Matrix4x4& viewProjection)
+{
+	// The one saying a line moves their jaw with it; the others keep it shut.
+	{
+		std::string speaker;
+		const float open = _audioManager->GetMouthOpen(speaker);
+		const auto mouth = [&](Character* character) {
+			if (!character)
+				return;
+			std::string name = character->GetName();
+			std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return std::tolower(c); });
+			character->SetMouthOpen(!speaker.empty() && name == speaker ? open : 0.0f);
+		};
+		mouth(_character.get());
+		for (auto& [name, npc] : _npcs)
+			mouth(npc.get());
+		for (auto& [name, npc] : _ambientNpcs)
+			mouth(npc.get());
+		for (auto& giver : _bonusGivers)
+			mouth(giver.npc.get());
+		for (auto& [car, driver] : _carDrivers)
+			mouth(driver.get());
+	}
+	if (_level != nullptr)
+	{
+		_level->Draw(viewProjection);
+		// The characters lit by the level's lights, as the cars are.
+		_level->ApplyLights(*_skinShaderProgram);
+		// The blending the level's glows and particles left (added, one
+		// on one) is not the characters': Homer was drawn added onto the
+		// street behind him, pale and see-through.
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
+
+	// At the wheel, the player sits in the driver's seat, idling as drivers
+	// do (in_car_idle); the controller keeps him where he got in, and
+	// takes him back as he gets out.
+	if (_character != nullptr && _inVehicle && _activeVehicle)
+	{
+		playPlayerAnimation("in_car_idle", true);
+		if (seatDriver(*_character, *_activeVehicle))
+		{
 			glDisable(GL_CULL_FACE);
 			_character->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
 			glEnable(GL_CULL_FACE);
 		}
-
-		// The mission's NPCs and the level's people, double-sided for the same
-		// reason as the player; someone the mission has placed is not also
-		// standing in their usual spot.
+	}
+	drawCarDrivers(viewProjection);
+	if (_character != nullptr && !_inVehicle)
+	{
+		// the skinned character mesh has inconsistent winding; with the
+		// world's clockwise back-face culling, parts (e.g. an arm) get
+		// culled away. Render the character double-sided.
 		glDisable(GL_CULL_FACE);
-		for (auto& [name, npc] : _npcs)
-			npc->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
-		for (auto& [name, npc] : _ambientNpcs)
-			if (_npcs.find(name) == _npcs.end())
-				npc->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
-		if (_bonusReturn < 0)
-			for (auto& giver : _bonusGivers)
-				if (giver.npc)
-					giver.npc->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
+		_character->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
 		glEnable(GL_CULL_FACE);
+	}
 
-		if (_scriptEngine->IsMissionActive())
+	// The mission's NPCs and the level's people, double-sided for the same
+	// reason as the player; someone the mission has placed is not also
+	// standing in their usual spot.
+	glDisable(GL_CULL_FACE);
+	for (auto& [name, npc] : _npcs)
+		npc->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
+	for (auto& [name, npc] : _ambientNpcs)
+		if (_npcs.find(name) == _npcs.end())
+			npc->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
+	if (_bonusReturn < 0)
+		for (auto& giver : _bonusGivers)
+			if (giver.npc)
+				giver.npc->Draw(viewProjection, *_skinShaderProgram, *_resourceManager);
+	glEnable(GL_CULL_FACE);
+}
+
+void Game::drawVehicles(Matrix4x4& viewProjection, double deltaTime)
+{
+	if (_scriptEngine->IsMissionActive())
+	{
+		for (auto& v : _scriptEngine->GetMissionVehicles())
 		{
-			for (auto& v : _scriptEngine->GetMissionVehicles())
+			v->Update(deltaTime);
+			if (v->HasModel())
 			{
-				v->Update(deltaTime);
-				if (v->HasModel())
-				{
-					// A car is a CompositeModel of plain P3D Meshes -- position,
-					// uv, lightmap uv, colour -- so it takes the world shader, as
-					// the level's own composite props do. It was drawn with the
-					// skinning shader, which reads normals and bone weights the
-					// mesh never supplies: the vertices came out degenerate and
-					// smeared triangles out from the middle of the screen. And only
-					// the translucent pass was drawn, so the car itself never
-					// appeared.
-					GL::ShaderProgram& worldShader = _level->GetWorldShader();
-					v->Draw(viewProjection, worldShader, true);
-					v->Draw(viewProjection, worldShader, false);
-					v->DrawLights(viewProjection, _level->GetBillboardShader());
-				}
-				else
-				{
-					_carMesh->Draw(*_meshShader,
-						Matrix4x4::MakeTranslate(v->GetPosition()) * Matrix4x4(v->GetRotation()),
-						viewProjection, Vector4(0.2f, 0.5f, 1.0f, 1.0f));
-					Vector3 beaconBase = v->GetPosition() + Vector3(0, 1.0f, 0);
-					_lineRenderer->DrawLine(beaconBase, beaconBase + Vector3(0, 20.0f, 0),
-						Vector4(0.0f, 1.0f, 1.0f, 1.0f));
+				// A car is a CompositeModel of plain P3D Meshes -- position,
+				// uv, lightmap uv, colour -- so it takes the world shader, as
+				// the level's own composite props do. It was drawn with the
+				// skinning shader, which reads normals and bone weights the
+				// mesh never supplies: the vertices came out degenerate and
+				// smeared triangles out from the middle of the screen. And only
+				// the translucent pass was drawn, so the car itself never
+				// appeared.
+				GL::ShaderProgram& worldShader = _level->GetWorldShader();
+				v->Draw(viewProjection, worldShader, true);
+				v->Draw(viewProjection, worldShader, false);
+				v->DrawLights(viewProjection, _level->GetBillboardShader());
+			}
+			else
+			{
+				_carMesh->Draw(*_meshShader,
+					Matrix4x4::MakeTranslate(v->GetPosition()) * Matrix4x4(v->GetRotation()),
+					viewProjection, Vector4(0.2f, 0.5f, 1.0f, 1.0f));
+				Vector3 beaconBase = v->GetPosition() + Vector3(0, 1.0f, 0);
+				_lineRenderer->DrawLine(beaconBase, beaconBase + Vector3(0, 20.0f, 0),
+					Vector4(0.0f, 1.0f, 1.0f, 1.0f));
 
-					if (_inVehicle && v.get() == _activeVehicle)
+				if (_inVehicle && v.get() == _activeVehicle)
+				{
+					float speed = v->GetSpeedKmh();
+					Vector3 exhaustPos = v->GetPosition() + v->GetRotation() * Vector3(-0.5f, -0.2f, -2.2f);
+					Vector3 exhaustDir = v->GetRotation() * Vector3(0, 0.1f, -0.5f);
+					for (int e = 0; e < 3; ++e)
 					{
-						float speed = v->GetSpeedKmh();
-						Vector3 exhaustPos = v->GetPosition() + v->GetRotation() * Vector3(-0.5f, -0.2f, -2.2f);
-						Vector3 exhaustDir = v->GetRotation() * Vector3(0, 0.1f, -0.5f);
-						for (int e = 0; e < 3; ++e)
-						{
-							Vector3 offset(rand() % 10 * 0.02f - 0.1f, rand() % 10 * 0.02f, rand() % 10 * 0.02f);
-							_lineRenderer->DrawLine(exhaustPos + offset,
-								exhaustPos + exhaustDir * (0.5f + speed * 0.02f) + offset,
-								Vector4(0.5f, 0.5f, 0.5f, 1.0f));
-						}
+						Vector3 offset(rand() % 10 * 0.02f - 0.1f, rand() % 10 * 0.02f, rand() % 10 * 0.02f);
+						_lineRenderer->DrawLine(exhaustPos + offset,
+							exhaustPos + exhaustDir * (0.5f + speed * 0.02f) + offset,
+							Vector4(0.5f, 0.5f, 0.5f, 1.0f));
 					}
 				}
 			}
 		}
+	}
 
-		// Traffic with a model is drawn as itself in either view; the debug view
-		// (on by default) otherwise shows the traffic only as wire boxes.
-		if (!_scriptEngine->IsTrafficSuppressed() && _interior.empty())
+	// Traffic with a model is drawn as itself in either view; the debug view
+	// (on by default) otherwise shows the traffic only as wire boxes.
+	if (!_scriptEngine->IsTrafficSuppressed() && _interior.empty())
+	{
+		_trafficManager->DrawModels(_level->GetWorldShader(), viewProjection);
+		// Blending on for the glows, then as it was.
 		{
-			_trafficManager->DrawModels(_level->GetWorldShader(), viewProjection);
-			// Blending on for the glows, then as it was.
-			{
-				const GLboolean blending = glIsEnabled(GL_BLEND);
-				GLint source = GL_SRC_ALPHA, destination = GL_ONE_MINUS_SRC_ALPHA;
-				glGetIntegerv(GL_BLEND_SRC_RGB, &source);
-				glGetIntegerv(GL_BLEND_DST_RGB, &destination);
-				glEnable(GL_BLEND);
-				_trafficManager->DrawBrakeLights(_level->GetBillboardShader(), viewProjection);
-				glBlendFunc(source, destination);
-				if (!blending)
-					glDisable(GL_BLEND);
-				glEnable(GL_DEPTH_TEST);
-				glDepthMask(GL_TRUE);
-			}
-			if (!_showDebug)
-				_trafficManager->DrawSolid(*_carMesh, *_meshShader, viewProjection);
-		}
-
-		// Pedestrians with a body are drawn as people in either view, like the
-		// traffic; the rest are capsules outside the debug view.
-		if (_pedestrianManager && _interior.empty())
-		{
-			if (!_showDebug)
-				_pedestrianManager->Draw(*_meshShader, *_playerMesh, viewProjection);
-			glDisable(GL_CULL_FACE); // skinned characters, as for the player
-			_pedestrianManager->DrawBodies(viewProjection, *_skinShaderProgram, *_resourceManager);
-			glEnable(GL_CULL_FACE);
-		}
-
-		if (_collectibleManager)
-			_collectibleManager->Draw(_level->GetWorldShader(), viewProjection, static_cast<float>(_elapsedSeconds));
-
-		drawGags(viewProjection);
-		if (_waspManager && _interior.empty())
-			_waspManager->Draw(_level->GetWorldShader(), _level->GetBillboardShader(), viewProjection);
-		if (_ufo && _interior.empty())
-			_ufo->Draw(_level->GetWorldShader(), _level->GetBillboardShader(), viewProjection);
-		if (_skidMarks)
-		{
-			GL::ShaderProgram& world = _level->GetWorldShader();
-			world.Bind();
-			world.SetUniformValue("viewProj", viewProjection);
-			_skidMarks->Draw(world);
-		}
-		if (_sparks && _dust)
-		{
-			_sparks->Update(deltaTime, Matrix4x4::Identity);
-			_dust->Update(deltaTime, Matrix4x4::Identity);
-			updateWheelSprays(deltaTime);
-			updateCarSmoke(deltaTime);
-			// The dust a dash kicks up, the level's own (its effects file's type 9).
-			if (_dashKicksUpDust && !_dashDust && _level)
-				if (const ParticleFactory* dash = _level->GetHitParticleFactory(kDashDust))
-					_dashDust = std::make_unique<ParticleSystem>(*dash);
-			if (_dashDust && _character)
-				_dashDust->Update(deltaTime,
-				                  Matrix4x4::MakeTranslate(_character->GetPosition() -
-				                                           Vector3(0.0f, kFeetBelowCentre, 0.0f)) *
-				                      Matrix4x4(_character->GetRotation()),
-				                  -1.0f, _dashKicksUpDust && !_inVehicle);
-			GL::ShaderProgram& billboards = _level->GetBillboardShader();
-			billboards.Bind();
-			billboards.SetUniformValue("viewProj", viewProjection);
 			const GLboolean blending = glIsEnabled(GL_BLEND);
-			_sparks->Draw(billboards);
-			_dust->Draw(billboards);
-			for (auto& [vehicle, sprays] : _wheelSprays)
-				for (auto& spray : sprays)
-					for (auto* system : {spray.grass.get(), spray.dirt.get()})
-						if (system)
-							system->Draw(billboards);
-			if (_dashDust)
-				_dashDust->Draw(billboards);
-			if (_carSmoke)
-				_carSmoke->Draw(billboards);
+			GLint source = GL_SRC_ALPHA, destination = GL_ONE_MINUS_SRC_ALPHA;
+			glGetIntegerv(GL_BLEND_SRC_RGB, &source);
+			glGetIntegerv(GL_BLEND_DST_RGB, &destination);
+			glEnable(GL_BLEND);
+			_trafficManager->DrawBrakeLights(_level->GetBillboardShader(), viewProjection);
+			glBlendFunc(source, destination);
 			if (!blending)
 				glDisable(GL_BLEND);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			glEnable(GL_DEPTH_TEST);
+			glDepthMask(GL_TRUE);
 		}
+		if (!_showDebug)
+			_trafficManager->DrawSolid(*_carMesh, *_meshShader, viewProjection);
+	}
 
-		if (_scriptEngine->IsMissionActive() && !_scriptEngine->GetCheckpoints().empty())
+	// Pedestrians with a body are drawn as people in either view, like the
+	// traffic; the rest are capsules outside the debug view.
+	if (_pedestrianManager && _interior.empty())
+	{
+		if (!_showDebug)
+			_pedestrianManager->Draw(*_meshShader, *_playerMesh, viewProjection);
+		glDisable(GL_CULL_FACE); // skinned characters, as for the player
+		_pedestrianManager->DrawBodies(viewProjection, *_skinShaderProgram, *_resourceManager);
+		glEnable(GL_CULL_FACE);
+	}
+}
+
+void Game::drawEffects(Matrix4x4& viewProjection, double deltaTime)
+{
+	if (_collectibleManager)
+		_collectibleManager->Draw(_level->GetWorldShader(), viewProjection, static_cast<float>(_elapsedSeconds));
+
+	_gags.Draw(_level->GetWorldShader(), *_skinShaderProgram, viewProjection, _gameCamera->View().GetPosition(), _interior,
+	           _elapsedSeconds);
+	if (_waspManager && _interior.empty())
+		_waspManager->Draw(_level->GetWorldShader(), _level->GetBillboardShader(), viewProjection);
+	if (_ufo && _interior.empty())
+		_ufo->Draw(_level->GetWorldShader(), _level->GetBillboardShader(), viewProjection);
+	if (_skidMarks)
+	{
+		GL::ShaderProgram& world = _level->GetWorldShader();
+		world.Bind();
+		world.SetUniformValue("viewProj", viewProjection);
+		_skidMarks->Draw(world);
+	}
+	if (_sparks && _dust)
+	{
+		_sparks->Update(deltaTime, Matrix4x4::Identity);
+		_dust->Update(deltaTime, Matrix4x4::Identity);
+		updateWheelSprays(deltaTime);
+		updateCarSmoke(deltaTime);
+		// The dust a dash kicks up, the level's own (its effects file's type 9).
+		if (_moves.dashKicksUpDust && !_dashDust && _level)
+			if (const ParticleFactory* dash = _level->GetHitParticleFactory(kDashDust))
+				_dashDust = std::make_unique<ParticleSystem>(*dash);
+		if (_dashDust && _character)
+			_dashDust->Update(deltaTime,
+			                  Matrix4x4::MakeTranslate(_character->GetPosition() -
+			                                           Vector3(0.0f, kFeetBelowCentre, 0.0f)) *
+			                      Matrix4x4(_character->GetRotation()),
+			                  -1.0f, _moves.dashKicksUpDust && !_inVehicle);
+		GL::ShaderProgram& billboards = _level->GetBillboardShader();
+		billboards.Bind();
+		billboards.SetUniformValue("viewProj", viewProjection);
+		const GLboolean blending = glIsEnabled(GL_BLEND);
+		_sparks->Draw(billboards);
+		_dust->Draw(billboards);
+		for (auto& [vehicle, sprays] : _wheelSprays)
+			for (auto& spray : sprays)
+				for (auto* system : {spray.grass.get(), spray.dirt.get()})
+					if (system)
+						system->Draw(billboards);
+		if (_dashDust)
+			_dashDust->Draw(billboards);
+		if (_carSmoke)
+			_carSmoke->Draw(billboards);
+		if (!blending)
+			glDisable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
+
+	if (_scriptEngine->IsMissionActive() && !_scriptEngine->GetCheckpoints().empty())
+	{
+		_carMesh->Draw(*_meshShader,
+			Matrix4x4::MakeTranslate(_scriptEngine->GetAIPosition()) *
+				Matrix4x4(_scriptEngine->GetAIRotation()),
+			viewProjection, Vector4(1.0f, 0.2f, 0.2f, 1.0f));
+	}
+
+	if (_hitAndRun && _interior.empty())
+	{
+		GL::ShaderProgram& worldShader = _level->GetWorldShader();
+		for (Vehicle* cop : _hitAndRun->GetCops())
 		{
-			_carMesh->Draw(*_meshShader,
-				Matrix4x4::MakeTranslate(_scriptEngine->GetAIPosition()) *
-					Matrix4x4(_scriptEngine->GetAIRotation()),
-				viewProjection, Vector4(1.0f, 0.2f, 0.2f, 1.0f));
+			cop->Draw(viewProjection, worldShader, true);
+			cop->Draw(viewProjection, worldShader, false);
+			cop->DrawLights(viewProjection, _level->GetBillboardShader());
 		}
+	}
 
-		if (_hitAndRun && _interior.empty())
+	if (_scriptEngine->IsMissionActive())
+	{
+		auto* chase = _scriptEngine->GetChaseManager();
+		if (chase)
 		{
-			GL::ShaderProgram& worldShader = _level->GetWorldShader();
-			for (Vehicle* cop : _hitAndRun->GetCops())
+			for (auto& cop : chase->GetCopCars())
 			{
-				cop->Draw(viewProjection, worldShader, true);
-				cop->Draw(viewProjection, worldShader, false);
-				cop->DrawLights(viewProjection, _level->GetBillboardShader());
+				_carMesh->Draw(*_meshShader,
+					Matrix4x4::MakeTranslate(cop->GetPosition()) *
+						Matrix4x4(cop->GetRotation()),
+					viewProjection, Vector4(0.1f, 0.1f, 0.1f, 1.0f));
 			}
 		}
+	}
+}
 
-		if (_scriptEngine->IsMissionActive())
+void Game::fillMissionHud(HudState& hud)
+{
+	if (_scriptEngine->IsMissionActive())
+	{
+		hud.missionActive = true;
+		// The mission's title card, for its first few seconds.
+		constexpr double kTitleCardSeconds = 4.0;
+		if (_states.Is(GameState::InGame) && _elapsedSeconds - _missionLoadedAt < kTitleCardSeconds)
 		{
-			auto* chase = _scriptEngine->GetChaseManager();
-			if (chase)
-			{
-				for (auto& cop : chase->GetCopCars())
-				{
-					_carMesh->Draw(*_meshShader,
-						Matrix4x4::MakeTranslate(cop->GetPosition()) *
-							Matrix4x4(cop->GetRotation()),
-						viewProjection, Vector4(0.1f, 0.1f, 0.1f, 1.0f));
-				}
-			}
+			hud.banner = _scriptEngine->GetMissionTitle();
+			hud.bannerColour = Vector4(1.0f, 0.84f, 0.0f, 1.0f);
+			hud.bannerDetail = _scriptEngine->GetMissionTitle(true);
+			hud.bannerPicture = presentationPicture(_scriptEngine->GetPresentationBitmap());
+			// A level's first story mission also says which level this is.
+			if (_storyIndex == 0)
+				if (const std::string& level = _textBible.Get(fmt::format("LEVEL_{}", _levelNumber)); !level.empty())
+					hud.banner = hud.banner.empty() ? level : level + " - " + hud.banner;
 		}
+		hud.countdown = _scriptEngine->GetCountdownText();
+		hud.objective = _scriptEngine->GetObjectiveText();
+		hud.timeRemaining = _scriptEngine->GetStageTimeRemaining();
+		hud.lap = _scriptEngine->GetCurrentLap();
+		hud.totalLaps = _scriptEngine->GetTotalLaps();
+		if (!_scriptEngine->GetRacePosition(hud.racePosition, hud.raceField))
+			hud.racePosition = hud.raceField = 0;
+		hud.checkpoint = _scriptEngine->GetCurrentCheckpoint();
+		hud.totalCheckpoints = static_cast<int>(_scriptEngine->GetCheckpoints().size());
 
-		glDisable(GL_DEPTH_TEST);
-		if (_clean)
-			_lineRenderer->Discard();
-		else
-			_lineRenderer->Flush(viewProjection);
-		glEnable(GL_DEPTH_TEST);
+		// The other cars of the mission: the player's own has its own icon.
+		for (const auto& v : _scriptEngine->GetMissionVehicles())
+			if (v.get() != _scriptEngine->GetPlayerCar() && v.get() != _activeVehicle)
+				hud.missionBlips.emplace_back(v->GetPosition().X, v->GetPosition().Z);
 
-		// Scene complete: blit the FBO to the backbuffer through the
-		// post-process shader (passthrough when all effects are neutralised).
-		blitSceneToBackbuffer(viewportWidth, viewportHeight);
+		const auto& cps = _scriptEngine->GetCheckpoints();
+		for (const auto& cp : cps)
+			hud.checkpointBlips.emplace_back(cp.X, cp.Z);
 
-		Matrix4x4 proj = Matrix4x4::MakeOrtho(0.0f, viewportWidth, viewportHeight, 0.0f);
-
-		// Not under the game's own main menu page: its entry stands where the
-		// mission's objective is.
-		if (_textureFontP3D != nullptr && !(_states.Is(GameState::MainMenu) && _mainMenuPage) &&
-		    !(_states.Is(GameState::Credits) && _creditsPage) && !_states.Is(GameState::Movie) &&
-		    !_states.Is(GameState::LevelEnd) && _scriptEngine->IsHudShown())
+		// Wherever the objective wants the player -- a checkpoint, a
+		// destination, an item to pick up, someone to talk to -- not only
+		// a race's next checkpoint, which left every other objective
+		// without a marker.
+		Vector3 target;
+		if (_scriptEngine->GetObjectiveTarget(target))
 		{
-			auto font = _resourceManager->GetFont("boulder_16");
-			const bool pad = intent.gamepadConnected;
-
-			HudState hud;
-			hud.viewportWidth = static_cast<float>(viewportWidth);
-			hud.viewportHeight = static_cast<float>(viewportHeight);
-			hud.fps = _clean ? 0 : static_cast<int>(timer.GetFps());
-			hud.health = _health;
-			hud.inVehicle = _inVehicle;
-			hud.boost = intent.boostHeld ? 0.0f : 1.0f; // placeholder, see UI-HUD
-
-			if (_inVehicle && _activeVehicle)
-				hud.speedKmh = _activeVehicle->GetSpeedKmh();
-
-			// The game's HUD has its own call-outs for alerts, cards, counts
-			// and a stage complete; the old one shows them as banners.
-			const bool gameHud = _gameHud && _gameHud->IsLoaded();
-			if (_scriptEngine->GetStagesAnnounced() != _stagesAnnounced)
-			{
-				_stagesAnnounced = _scriptEngine->GetStagesAnnounced();
-				_stageCompleteUntil = _elapsedSeconds + 2.0;
-			}
-			if (gameHud)
-			{
-				hud.stageComplete = _elapsedSeconds < _stageCompleteUntil;
-				hud.walkieTalkie = _walkieTalkie;
-				if (_elapsedSeconds < _alertUntil)
-					hud.alertTerm = _alertTerm;
-				if (_elapsedSeconds < _cardMessageUntil)
-				{
-					hud.cardFound = _cardFound;
-					hud.itemsCount = _itemsCount;
-					hud.itemsDone = _itemsDone;
-				}
-			}
-			if (_collectibleManager)
-			{
-				hud.coins = _coins;
-				if (!gameHud && !_alertMessage.empty() && _elapsedSeconds < _alertUntil && hud.banner.empty())
-				{
-					hud.banner = _alertMessage;
-					hud.bannerColour = Vector4(1.0f, 0.25f, 0.2f, 1.0f);
-				}
-				if (!gameHud && !_cardMessage.empty() && _elapsedSeconds < _cardMessageUntil && hud.banner.empty())
-				{
-					hud.banner = _cardMessage;
-					hud.bannerColour = Vector4(0.4f, 0.7f, 1.0f, 1.0f);
-				}
-				hud.coinsTotal = 0;
-			}
-			// A race or bonus mission on offer, at hand.
-			if (const BonusGiver* giver = bonusGiverNear())
-			{
-				const std::string& title = _textBible.Get(fmt::format("MISSION_TITLE_L{}_M{}", _levelNumber,
-				    giver->mission == "sr1" ? 8 : giver->mission == "sr2" ? 9 : giver->mission == "sr3" ? 10 : giver->mission == "gr1" ? 11 : 12));
-				hud.hints.push_back(fmt::format("E: {}", title.empty() ? giver->mission : title));
-			}
-			hud.cardsTotal = 7;
-			if (_collectibleManager)
-				hud.cards = _collectibleManager->GetCardsFound();
-
-			if (_scriptEngine->IsMissionActive())
-			{
-				hud.missionActive = true;
-				// The mission's title card, for its first few seconds.
-				constexpr double kTitleCardSeconds = 4.0;
-				if (_states.Is(GameState::InGame) && _elapsedSeconds - _missionLoadedAt < kTitleCardSeconds)
-				{
-					hud.banner = _scriptEngine->GetMissionTitle();
-					hud.bannerColour = Vector4(1.0f, 0.84f, 0.0f, 1.0f);
-					hud.bannerDetail = _scriptEngine->GetMissionTitle(true);
-					hud.bannerPicture = presentationPicture(_scriptEngine->GetPresentationBitmap());
-					// A level's first story mission also says which level this is.
-					if (_storyIndex == 0)
-						if (const std::string& level = _textBible.Get(fmt::format("LEVEL_{}", _levelNumber)); !level.empty())
-							hud.banner = hud.banner.empty() ? level : level + " - " + hud.banner;
-				}
-				hud.countdown = _scriptEngine->GetCountdownText();
-				hud.objective = _scriptEngine->GetObjectiveText();
-				hud.timeRemaining = _scriptEngine->GetStageTimeRemaining();
-				hud.lap = _scriptEngine->GetCurrentLap();
-				hud.totalLaps = _scriptEngine->GetTotalLaps();
-				if (!_scriptEngine->GetRacePosition(hud.racePosition, hud.raceField))
-					hud.racePosition = hud.raceField = 0;
-				hud.checkpoint = _scriptEngine->GetCurrentCheckpoint();
-				hud.totalCheckpoints = static_cast<int>(_scriptEngine->GetCheckpoints().size());
-
-				// The other cars of the mission: the player's own has its own icon.
-				for (const auto& v : _scriptEngine->GetMissionVehicles())
-					if (v.get() != _scriptEngine->GetPlayerCar() && v.get() != _activeVehicle)
-						hud.missionBlips.emplace_back(v->GetPosition().X, v->GetPosition().Z);
-
-				const auto& cps = _scriptEngine->GetCheckpoints();
-				for (const auto& cp : cps)
-					hud.checkpointBlips.emplace_back(cp.X, cp.Z);
-
-				// Wherever the objective wants the player -- a checkpoint, a
-				// destination, an item to pick up, someone to talk to -- not only
-				// a race's next checkpoint, which left every other objective
-				// without a marker.
-				Vector3 target;
-				if (_scriptEngine->GetObjectiveTarget(target))
-				{
-					const Vector3 from = _inVehicle && _activeVehicle
-					                         ? _activeVehicle->GetPosition()
-					                         : (_character ? _character->GetPosition() : Vector3::Zero);
-					hud.hasNextCheckpoint = true;
-					hud.nextCheckpointXZ = Vector2(target.X, target.Z);
-					hud.nextCheckpointDistance = (target - from).Length();
-					hud.nextCheckpointLabel = _scriptEngine->GetObjectiveTargetLabel();
-				}
-			}
-
-			if (_hitAndRun && (_hitAndRun->GetMeter() > 0.0f || _hitAndRun->IsChasing()))
-			{
-				hud.chaseActive = true;
-				hud.heat = _hitAndRun->GetMeter() / 10.0f;
-				for (const Vehicle* cop : _hitAndRun->GetCops())
-					hud.policeBlips.emplace_back(cop->GetPosition().X, cop->GetPosition().Z);
-			}
-			auto* chase = _scriptEngine->GetChaseManager();
-			if (chase != nullptr && chase->IsActive())
-			{
-				hud.chaseActive = true;
-				hud.heat = chase->GetHeat();
-				hud.busted = chase->IsBusted();
-				if (hud.busted && gameHud)
-					hud.alertTerm = "BUSTED";
-				else if (hud.busted)
-					hud.banner = "BUSTED!";
-				for (const auto& cop : chase->GetCopCars())
-					hud.policeBlips.emplace_back(cop->GetPosition().X, cop->GetPosition().Z);
-			}
-
-			const Vector3 playerPos = _inVehicle && _activeVehicle
-			                              ? _activeVehicle->GetPosition()
-			                              : (_character ? _character->GetPosition() : Vector3::Zero);
-			hud.playerXZ = Vector2(playerPos.X, playerPos.Z);
-			// For the game's radar: the stage's icon, the player's car while
-			// on foot, the phone booths, shops, bonus missions and races.
-			hud.objectiveIcon = _scriptEngine->GetHUDIcon();
-			if (const Vehicle* car = _scriptEngine->GetPlayerCar(); car && !_inVehicle)
-			{
-				hud.showPlayerCar = true;
-				hud.playerCarXZ = Vector2(car->GetPosition().X, car->GetPosition().Z);
-			}
-			if (_level)
-				for (const auto& trigger : _level->GetTriggers())
-				{
-					if (trigger.action == "SummonVehiclePhone")
-						hud.phoneBooths.emplace_back(trigger.position.X, trigger.position.Z);
-					else if (trigger.action == "PurchaseSkin")
-						hud.shops.emplace_back(trigger.position.X, trigger.position.Z);
-				}
-			for (const CarSeller& seller : _carSellers)
-				hud.shops.emplace_back(seller.position.X, seller.position.Z);
-			for (const BonusGiver& giver : _bonusGivers)
-				(giver.mission.rfind("bm", 0) == 0 ? hud.bonusMissions : hud.streetRaces)
-				    .emplace_back(giver.position.X, giver.position.Z);
-			// The way the player faces: the car's heading at the wheel (it used
-			// to be the on-foot camera's, whatever the car did).
-			hud.playerHeading = _inVehicle && _activeVehicle ? _activeVehicle->GetRotation().Yaw() : _gameCamera->GetYaw();
-			if (_pathGraph)
-				for (const auto& node : _pathGraph->GetNodes())
-				{
-					const float dx = node.position.X - playerPos.X, dz = node.position.Z - playerPos.Z;
-					if (!node.shortcut && dx * dx + dz * dz < hud.radarRange * hud.radarRange * 2.0f)
-						hud.roadPoints.emplace_back(node.position.X, node.position.Z);
-				}
-
-			// The game's HUD has no control hints of its own: only the help
-			// overlay's and those that say what is at hand.
-			if (_inVehicle)
-			{
-				hud.hintColour = Vector4(0.5f, 0.8f, 1.0f, 1.0f);
-				if (!gameHud)
-					hud.hints.push_back(fmt::format("{}: Drive | {}: Boost | {}: Horn | {}: Exit",
-						ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Boost, pad),
-						ControlLabel(GameAction::Honk, pad), ControlLabel(GameAction::Interact, pad)));
-			}
-			else if (_states.Is(GameState::InGame))
-			{
-				if (!gameHud)
-					hud.hints.push_back(fmt::format("{}: Move | {}: Action | {}: Restart | {}: Pause",
-						ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Interact, pad),
-						ControlLabel(GameAction::RestartMission, pad), ControlLabel(GameAction::PauseToggle, pad)));
-
-				if (_showHelp)
-				{
-					hud.hints.push_back("=== CONTROLS ===");
-					hud.hints.push_back(fmt::format("{}: Move/Drive", ControlLabel(GameAction::MoveForward, pad)));
-					hud.hints.push_back(fmt::format("{}: Action | {}: Boost",
-						ControlLabel(GameAction::Interact, pad), ControlLabel(GameAction::Boost, pad)));
-					hud.hints.push_back(fmt::format("{}: Horn | {}: Restart | {}: Reset",
-						ControlLabel(GameAction::Honk, pad), ControlLabel(GameAction::RestartMission, pad),
-						ControlLabel(GameAction::ResetBestTime, pad)));
-					hud.hints.push_back(fmt::format("{}: Jump | {}: Debug | {}: Help",
-						ControlLabel(GameAction::VehicleJump, pad), ControlLabel(GameAction::ToggleDebugDraw, pad),
-						ControlLabel(GameAction::ToggleHelp, pad)));
-					hud.hints.push_back(fmt::format("{}: Pause | {}: Fly",
-						ControlLabel(GameAction::PauseToggle, pad), ControlLabel(GameAction::CameraLook, pad)));
-				}
-
-				if (_character && _scriptEngine->IsMissionActive())
-				{
-					for (const auto& v : _scriptEngine->GetMissionVehicles())
-					{
-						const float dist = (v->GetPosition() - _character->GetPosition()).Length();
-						if (dist < 5.0f)
-							hud.hints.push_back(fmt::format(fmt::runtime(GameText("hint.getin", _language)),
-							                                ControlLabel(GameAction::Interact, pad)));
-						else if (!gameHud)
-							hud.hints.push_back(fmt::format(fmt::runtime(GameText("hint.vehicle", _language)), dist));
-						break;
-					}
-				}
-			}
-
-			if (_states.Is(GameState::Splash))
-				hud.banner = "PRESS ENTER TO START";
-
-			// Not under the game's pause screen, whose title stands where the
-			// objective does.
-			if (!(_states.Is(GameState::Paused) && _pausePage))
-			{
-				if (gameHud)
-				{
-					_gameHud->Draw(hud, proj, deltaTime);
-					_hud->DrawCallouts(sprites, font, hud);
-					DrawHints(sprites, font, hud.hints, hud.hintColour, hud.fps, viewportWidth, viewportHeight);
-				}
-				else
-					_hud->Draw(sprites, font, hud);
-			}
-
-
-			if (_states.Is(GameState::Paused) && _pausePage)
-			{
-				sprites.Flush(proj);
-				if (_optionsMenu && _optionsMenu->IsOpen())
-					_optionsMenu->Draw(intent, proj);
-				else if (_pauseSunday && _pauseSunday->IsOpen())
-					_pauseSunday->Draw(intent, proj);
-				else
-					drawPausePage(intent, proj);
-				_window->Swap();
-				continue;
-			}
-			if (_states.Is(GameState::Paused))
-			{
-				DrawTextMenu(sprites, font, *_pauseMenu, GameText("pause", _language), Vector4(1.0f, 1.0f, 0.0f, 1.0f),
-				             Vector4(0.5f, 0.5f, 0.5f, 1.0f), Vector4(1.0f, 0.3f, 0.3f, 1.0f), viewportWidth,
-				             viewportHeight, intent.mouseX, intent.mouseY);
-				if (intent.uiClick)
-					_pauseMenu->CheckClick(intent.mouseX, intent.mouseY);
-				sprites.Flush(proj);
-				_window->Swap();
-				continue;
-			}
-
-			if (_states.Is(GameState::MissionComplete) || _states.Is(GameState::MissionFailed))
-			{
-				MissionResult result;
-				result.complete = _states.Is(GameState::MissionComplete);
-				result.language = _language;
-				// In the game's words, when the phrase table is there.
-				const std::string& term = _textBible.Get(result.complete ? "MISSION_COMPLETE" : "MISSION_FAILED");
-				result.title = !term.empty() ? term : GameText(result.complete ? "result.complete" : "result.failed", _language);
-				result.newRecord = _scriptEngine->IsNewRecord();
-				if (result.complete && _storyIndex >= 0 && _storyIndex + 1 == static_cast<int>(_story.size()))
-				{
-					const std::string& level = _textBible.Get("LEVEL_COMPLETE");
-					result.levelComplete = level.empty() ? GameText("result.level", _language) : level;
-				}
-				result.elapsed = _scriptEngine->GetMissionTime();
-				result.best = _scriptEngine->GetBestTime();
-				result.reason = _scriptEngine->GetFailureReason();
-				result.hint = _scriptEngine->GetFailureHint();
-				result.nextIn = static_cast<int>(GameStateMachine::kResultSeconds) - static_cast<int>(_states.GetResultTime());
-				DrawMissionResult(sprites, font, result, viewportWidth, viewportHeight);
-			}
+			const Vector3 from = _inVehicle && _activeVehicle
+			                         ? _activeVehicle->GetPosition()
+			                         : (_character ? _character->GetPosition() : Vector3::Zero);
+			hud.hasNextCheckpoint = true;
+			hud.nextCheckpointXZ = Vector2(target.X, target.Z);
+			hud.nextCheckpointDistance = (target - from).Length();
+			hud.nextCheckpointLabel = _scriptEngine->GetObjectiveTargetLabel();
 		}
+	}
+}
 
-		// The main menu has the show's theme (music02.rcf), the level's music
-		// back after it.
-		if ((_states.Is(GameState::MainMenu) || (_states.Is(GameState::Movie) && _afterMovies == GameState::MainMenu)) !=
-		    _menuMusic)
+void Game::fillRadarHud(HudState& hud, bool gameHud)
+{
+	if (_hitAndRun && (_hitAndRun->GetMeter() > 0.0f || _hitAndRun->IsChasing()))
+	{
+		hud.chaseActive = true;
+		hud.heat = _hitAndRun->GetMeter() / 10.0f;
+		for (const Vehicle* cop : _hitAndRun->GetCops())
+			hud.policeBlips.emplace_back(cop->GetPosition().X, cop->GetPosition().Z);
+	}
+	auto* chase = _scriptEngine->GetChaseManager();
+	if (chase != nullptr && chase->IsActive())
+	{
+		hud.chaseActive = true;
+		hud.heat = chase->GetHeat();
+		hud.busted = chase->IsBusted();
+		if (hud.busted && gameHud)
+			hud.alertTerm = "BUSTED";
+		else if (hud.busted)
+			hud.banner = "BUSTED!";
+		for (const auto& cop : chase->GetCopCars())
+			hud.policeBlips.emplace_back(cop->GetPosition().X, cop->GetPosition().Z);
+	}
+
+	const Vector3 playerPos = _inVehicle && _activeVehicle
+	                              ? _activeVehicle->GetPosition()
+	                              : (_character ? _character->GetPosition() : Vector3::Zero);
+	hud.playerXZ = Vector2(playerPos.X, playerPos.Z);
+	// For the game's radar: the stage's icon, the player's car while
+	// on foot, the phone booths, shops, bonus missions and races.
+	hud.objectiveIcon = _scriptEngine->GetHUDIcon();
+	if (const Vehicle* car = _scriptEngine->GetPlayerCar(); car && !_inVehicle)
+	{
+		hud.showPlayerCar = true;
+		hud.playerCarXZ = Vector2(car->GetPosition().X, car->GetPosition().Z);
+	}
+	if (_level)
+		for (const auto& trigger : _level->GetTriggers())
 		{
-			_menuMusic = !_menuMusic;
-			static const std::string kTheme = "sound\\music\\simpsons_theme.rsd";
-			if (!_menuMusic)
-				_audioManager->ResumeMusicBase();
-			else if (!_audioManager->FindSounds(kTheme).empty())
-				_audioManager->PlayMusic(kTheme);
+			if (trigger.action == "SummonVehiclePhone")
+				hud.phoneBooths.emplace_back(trigger.position.X, trigger.position.Z);
+			else if (trigger.action == "PurchaseSkin")
+				hud.shops.emplace_back(trigger.position.X, trigger.position.Z);
 		}
-		if (_states.Is(GameState::Credits) && _creditsPage)
-			drawCredits(intent, proj, deltaTime, viewportWidth, viewportHeight);
-		if (_states.Is(GameState::Movie))
-			drawMovie(intent, proj, deltaTime, viewportWidth, viewportHeight);
-		if (_states.Is(GameState::MainMenu) && _mainMenuPage && !_mainMenu->GetButtons().empty())
+	for (const CarSeller& seller : _carSellers)
+		hud.shops.emplace_back(seller.position.X, seller.position.Z);
+	for (const BonusGiver& giver : _bonusGivers)
+		(giver.mission.rfind("bm", 0) == 0 ? hud.bonusMissions : hud.streetRaces)
+		    .emplace_back(giver.position.X, giver.position.Z);
+	// The way the player faces: the car's heading at the wheel (it used
+	// to be the on-foot camera's, whatever the car did).
+	hud.playerHeading = _inVehicle && _activeVehicle ? _activeVehicle->GetRotation().Yaw() : _gameCamera->GetYaw();
+	if (_pathGraph)
+		for (const auto& node : _pathGraph->GetNodes())
 		{
-			// The menu stands over the Simpsons' living room, not the level.
-			updateLivingRoomCamera();
-			if (_livingRoom && _livingRoom->IsLoaded() && _level)
-				_livingRoom->Draw(_level->GetWorldShader(), *_skinShaderProgram, _level->GetBillboardShader(),
-				                  static_cast<float>(viewportWidth) / std::max(1, viewportHeight),
-				                  deltaTime);
-			if (_optionsMenu && _optionsMenu->IsOpen())
-				_optionsMenu->Draw(intent, proj);
-			else if (_scrapBook && _scrapBook->IsOpen())
-				_scrapBook->Draw(intent, proj);
-			else
-				drawMainMenuPage(intent, proj);
+			const float dx = node.position.X - playerPos.X, dz = node.position.Z - playerPos.Z;
+			if (!node.shortcut && dx * dx + dz * dz < hud.radarRange * hud.radarRange * 2.0f)
+				hud.roadPoints.emplace_back(node.position.X, node.position.Z);
 		}
-		else if (_states.Is(GameState::MainMenu))
+}
+
+void Game::fillHintHud(HudState& hud, bool pad, bool gameHud)
+{
+	// The game's HUD has no control hints of its own: only the help
+	// overlay's and those that say what is at hand.
+	if (_inVehicle)
+	{
+		hud.hintColour = Vector4(0.5f, 0.8f, 1.0f, 1.0f);
+		if (!gameHud)
+			hud.hints.push_back(fmt::format("{}: Drive | {}: Boost | {}: Horn | {}: Exit",
+				ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Boost, pad),
+				ControlLabel(GameAction::Honk, pad), ControlLabel(GameAction::Interact, pad)));
+	}
+	else if (_states.Is(GameState::InGame))
+	{
+		if (!gameHud)
+			hud.hints.push_back(fmt::format("{}: Move | {}: Action | {}: Restart | {}: Pause",
+				ControlLabel(GameAction::MoveForward, pad), ControlLabel(GameAction::Interact, pad),
+				ControlLabel(GameAction::RestartMission, pad), ControlLabel(GameAction::PauseToggle, pad)));
+
+		if (_showHelp)
 		{
-			auto font = _resourceManager->GetFont("boulder_16");
-			SpriteBatch menuSprites;
-			DrawTextMenu(menuSprites, font, *_mainMenu, "donut", Vector4(1.0f, 0.84f, 0.0f, 1.0f),
-			             Vector4(0.8f, 0.8f, 0.8f, 1.0f), Vector4(1.0f, 0.84f, 0.0f, 1.0f), viewportWidth, viewportHeight,
-			             intent.mouseX, intent.mouseY);
-			if (intent.mouseLeftClick)
-				_mainMenu->CheckClick(intent.mouseX, intent.mouseY);
-			menuSprites.Flush(proj);
+			hud.hints.push_back("=== CONTROLS ===");
+			hud.hints.push_back(fmt::format("{}: Move/Drive", ControlLabel(GameAction::MoveForward, pad)));
+			hud.hints.push_back(fmt::format("{}: Action | {}: Boost",
+				ControlLabel(GameAction::Interact, pad), ControlLabel(GameAction::Boost, pad)));
+			hud.hints.push_back(fmt::format("{}: Horn | {}: Restart | {}: Reset",
+				ControlLabel(GameAction::Honk, pad), ControlLabel(GameAction::RestartMission, pad),
+				ControlLabel(GameAction::ResetBestTime, pad)));
+			hud.hints.push_back(fmt::format("{}: Jump | {}: Debug | {}: Help",
+				ControlLabel(GameAction::VehicleJump, pad), ControlLabel(GameAction::ToggleDebugDraw, pad),
+				ControlLabel(GameAction::ToggleHelp, pad)));
+			hud.hints.push_back(fmt::format("{}: Pause | {}: Fly",
+				ControlLabel(GameAction::PauseToggle, pad), ControlLabel(GameAction::CameraLook, pad)));
 		}
 
-		if (_states.Is(GameState::InGame) || _states.Is(GameState::Paused) ||
-		    _states.Is(GameState::MissionComplete) || _states.Is(GameState::MissionFailed))
-			drawSubtitle(proj, viewportWidth, viewportHeight);
-		sprites.Flush(proj);
-		if (_states.Is(GameState::InGame) || _states.Is(GameState::Paused))
-			drawTransition(proj, viewportWidth, viewportHeight);
-		if (_states.Is(GameState::PhoneBooth))
+		if (_character && _scriptEngine->IsMissionActive())
 		{
-			_phoneBooth->Draw(intent, proj);
-			if (!_phoneBooth->IsOpen() && _states.Is(GameState::PhoneBooth))
-				_states.Fire(GameEvent::Play);
+			for (const auto& v : _scriptEngine->GetMissionVehicles())
+			{
+				const float dist = (v->GetPosition() - _character->GetPosition()).Length();
+				if (dist < 5.0f)
+					hud.hints.push_back(fmt::format(fmt::runtime(GameText("hint.getin", _language)),
+					                                ControlLabel(GameAction::Interact, pad)));
+				else if (!gameHud)
+					hud.hints.push_back(fmt::format(fmt::runtime(GameText("hint.vehicle", _language)), dist));
+				break;
+			}
 		}
-		if (_states.Is(GameState::LevelEnd))
-			_pauseSunday->Draw(intent, proj);
-		if (_states.Is(GameState::Shop))
-		{
-			_shop->Draw(intent, proj);
-			if (!_shop->IsOpen())
-				_states.Fire(GameEvent::Play);
-		}
-		if (_states.Is(GameState::Splash))
-			_frontend->Draw(proj);
+	}
+}
 
-		if (!_clean)
-			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-		_window->Swap();
+void Game::drawResultScreen(SpriteBatch& sprites, Font* font, int viewportWidth, int viewportHeight)
+{
+	if (_states.Is(GameState::MissionComplete) || _states.Is(GameState::MissionFailed))
+	{
+		MissionResult result;
+		result.complete = _states.Is(GameState::MissionComplete);
+		result.language = _language;
+		// In the game's words, when the phrase table is there.
+		const std::string& term = _textBible.Get(result.complete ? "MISSION_COMPLETE" : "MISSION_FAILED");
+		result.title = !term.empty() ? term : GameText(result.complete ? "result.complete" : "result.failed", _language);
+		result.newRecord = _scriptEngine->IsNewRecord();
+		if (result.complete && _storyIndex >= 0 && _storyIndex + 1 == static_cast<int>(_story.size()))
+		{
+			const std::string& level = _textBible.Get("LEVEL_COMPLETE");
+			result.levelComplete = level.empty() ? GameText("result.level", _language) : level;
+		}
+		result.elapsed = _scriptEngine->GetMissionTime();
+		result.best = _scriptEngine->GetBestTime();
+		result.reason = _scriptEngine->GetFailureReason();
+		result.hint = _scriptEngine->GetFailureHint();
+		result.nextIn = static_cast<int>(GameStateMachine::kResultSeconds) - static_cast<int>(_states.GetResultTime());
+		DrawMissionResult(sprites, font, result, viewportWidth, viewportHeight);
 	}
 }
 
@@ -5667,19 +4752,19 @@ void Game::imguiMenuBar()
 	}
 
 	if (ImGui::MenuItem("Audio"))
-		_debugAudioWindowOpen = true;
+		_debugWindows.audio = true;
 
 	if (ImGui::MenuItem("Resource Manager"))
-		_debugResourceManagerWindowOpen = true;
+		_debugWindows.resourceManager = true;
 
 	if (ImGui::MenuItem("Level Entities"))
-		_debugLevelWindowOpen = true;
+		_debugWindows.level = true;
 
 	if (ImGui::MenuItem("Controls"))
-		_showControls = true;
+		_debugWindows.controls = true;
 
 	if (ImGui::MenuItem("About"))
-		_debugAboutWindowOpen = true;
+		_debugWindows.about = true;
 
 	ImGui::EndMainMenuBar();
 }
@@ -5765,7 +4850,7 @@ static ImGui::MarkdownConfig mdConfig { LinkCallback };
 
 void Game::debugAboutMenu()
 {
-	if (!_debugAboutWindowOpen)
+	if (!_debugWindows.about)
 		return;
 
 	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
@@ -5774,7 +4859,7 @@ void Game::debugAboutMenu()
 
 	ImGui::SetNextWindowSize(windowSize, ImGuiCond_Once);
 	ImGui::SetNextWindowPos(center, ImGuiCond_Once, ImVec2(0.5f, 0.5f));
-	if (ImGui::Begin("About", &_debugAboutWindowOpen, ImGuiWindowFlags_NoResize))
+	if (ImGui::Begin("About", &_debugWindows.about, ImGuiWindowFlags_NoResize))
 	{
 		ImGui::Markdown(aboutText.c_str(), aboutText.length(), mdConfig);
 	}
@@ -5783,7 +4868,7 @@ void Game::debugAboutMenu()
 
 void Game::drawControlsWindow()
 {
-	if (!_showControls)
+	if (!_debugWindows.controls)
 		return;
 
 	// which action (if any) is waiting for a captured input this session
@@ -5811,7 +4896,7 @@ void Game::drawControlsWindow()
 	const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
 	ImGui::SetNextWindowSize(ImVec2(440.0f, 540.0f), ImGuiCond_Once);
 	ImGui::SetNextWindowPos(ImVec2(displaySize.x * 0.5f, displaySize.y * 0.5f), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
-	if (ImGui::Begin("Controls", &_showControls))
+	if (ImGui::Begin("Controls", &_debugWindows.controls))
 	{
 		ImGui::TextWrapped("Click a binding, then press a key, mouse button or gamepad input. Esc cancels. Changes are saved to keymap.conf.");
 		if (ImGui::Button("Reset to defaults"))

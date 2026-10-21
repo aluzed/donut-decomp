@@ -17,6 +17,7 @@
 
 #include "Core/Math/Fwd.h"
 #include "Core/Math/Vector3.h"
+#include "Game/GagManager.h"
 #include "Game/GameStateMachine.h"
 
 #include <memory>
@@ -35,6 +36,7 @@ class Level;
 class WorldPhysics;
 class FreeCamera;
 class GameCamera;
+class SpriteBatch;
 class Character;
 class ScriptEngine;
 class Vehicle;
@@ -170,6 +172,45 @@ public:
 	static Game& GetInstance() { return *instance; }
 
 private:
+	// The constructor's steps.
+	void parseArguments(int argc, char** argv);
+	void openWindow();
+	void loadSystems();
+	void loadShaders();
+	void spawnPlayer();
+	void buildMenus();
+	void buildInGameScreens();
+	// One frame of Run, phase by phase, in the order they run.
+	void updateOnFoot(double deltaTime, struct GameIntent& intent);
+	void updateCheckpoints();
+	void updateDriving(const struct GameIntent& intent);
+	void updateCamera(double deltaTime);
+	void updateAudio(double deltaTime);
+	void updateCarImpacts(double deltaTime, bool simulate);
+	void updateMissionResult(double deltaTime);
+	void updateFallOff();
+	void drawGuides();
+	void updateWorld(double deltaTime, bool simulate);
+	void updateGameplay(double deltaTime, bool simulate);
+	void drawDebugWindows();
+	// False when the player quit from the pause.
+	bool handleIntents(const struct GameIntent& intent);
+	void drawDebugOverlays();
+	void updateCharacters(double deltaTime);
+	void renderScene(double deltaTime, int viewportWidth, int viewportHeight);
+	void drawPeople(Matrix4x4& viewProjection);
+	void drawVehicles(Matrix4x4& viewProjection, double deltaTime);
+	void drawEffects(Matrix4x4& viewProjection, double deltaTime);
+	// True when the frame is done (the pause screens swap themselves).
+	bool drawHud(SpriteBatch& sprites, const struct GameIntent& intent, const Matrix4x4& proj, double deltaTime, int fps,
+	             int viewportWidth, int viewportHeight);
+	void fillMissionHud(struct HudState& hud);
+	void fillRadarHud(struct HudState& hud, bool gameHud);
+	void fillHintHud(struct HudState& hud, bool pad, bool gameHud);
+	void drawResultScreen(SpriteBatch& sprites, class Font* font, int viewportWidth, int viewportHeight);
+	void drawScreens(SpriteBatch& sprites, const struct GameIntent& intent, const Matrix4x4& proj, double deltaTime,
+	                 int viewportWidth, int viewportHeight);
+
 	void imguiMenuBar();
 	void guiModelMenu(Character&);
 	void loadGlobal();
@@ -257,17 +298,22 @@ private:
 	// Movie1 to Movie8), as worked out for the story's progress and the cards
 	// found it was worked out for.
 	std::unique_ptr<class MoviePlayer> _moviePlayer;
-	std::vector<std::string> _moviesNext;
-	bool _moviesSkipTogether = false;
-	GameState _afterMovies = GameState::MainMenu;
+	// The movies queued after the one playing, and what comes after them.
+	struct MovieQueue
+	{
+		std::vector<std::string> next;
+		bool skipTogether = false;
+		GameState after = GameState::MainMenu;
+		bool stopMusic = false;
+		// The one playing and its soundtrack, for its lines.
+		std::pair<std::string, int> playing;
+	};
+	MovieQueue _movies;
 	// The event that goes to `state` (a movie's way back).
 	static GameEvent eventTo(GameState state);
-	bool _moviesStopMusic = false;
 	// Plays `files` (movies/, as named in the scripts or on the CDs), one
 	// after another; false if the first cannot be.
 	bool playMovies(std::vector<std::string> files, GameState after, bool skipTogether = false);
-	// --no-movies: none at start-up, nor in the story.
-	bool _noMovies = false;
 	std::vector<bool> _moviesUnlocked;
 	std::string _moviesUnlockedFor;
 	bool movieUnlocked(int movie);
@@ -281,7 +327,6 @@ private:
 		std::string text;
 	};
 	std::map<std::pair<std::string, int>, std::vector<MovieLine>> _movieLines;
-	std::pair<std::string, int> _moviePlaying;
 	void loadMovieLines(const std::string& path);
 	// A caption low on the screen, in the middle: the speaker's name, if any,
 	// in yellow before it; as many lines as it takes.
@@ -424,10 +469,28 @@ private:
 
 	GameStateMachine _states;
 
-	// Unattended-run switches (--autostart / --quit-after), for measuring the AI
-	// over a whole mission without a human holding ENTER down for two minutes.
-	bool _autoStart = false;
-	double _quitAfterSeconds = 0.0; // 0 = run until the window is closed
+	// The command line's switches (see parseArguments).
+	struct LaunchOptions
+	{
+		// --autostart / --quit-after: unattended runs, for measuring the AI over
+		// a whole mission without a human holding ENTER down for two minutes.
+		bool autoStart = false;
+		double quitAfterSeconds = 0.0; // 0 = run until the window is closed
+		// --story: start on the first story mission rather than the test
+		// mission; --from: on which.
+		bool startStory = false;
+		int storyFrom = 0;
+		// --clean: the game as it is played, without the developer's overlays.
+		bool clean = false;
+		// --mission: its script, given.
+		bool missionScriptGiven = false;
+		// --no-movies: none at start-up, nor in the story.
+		bool noMovies = false;
+		// --minigame: the track of a race run by the computer alone, 0 for none.
+		int miniGameDemo = 0;
+		bool miniGameDemoReverse = false;
+	};
+	LaunchOptions _launch;
 	// The mission script started and restarted; --mission overrides it.
 	std::string _missionScript = "scripts/Missions/level01/M1race.con";
 	// --autopilot: the player is moved onto each objective in turn, so a whole
@@ -442,14 +505,8 @@ private:
 	std::vector<std::string> _story;
 	// Which of them is being played, or -1 outside the story.
 	int _storyIndex = -1;
-	// --story: start on the first story mission rather than the test mission.
-	bool _startStory = false;
-	// --clean: the game as it is played, without the developer's overlays.
-	bool _clean = false;
-	int _storyFrom = 0;
 	// --level: which level to play, and where its files are.
 	int _levelNumber = 1;
-	bool _missionScriptGiven = false;
 	// "level01" for level 1: the folder of its scripts and mission art.
 	std::string levelDirectory() const;
 	// The level's world files in art/: terrain, zones, roads and interiors.
@@ -479,18 +536,26 @@ private:
 	std::map<std::string, std::string> _playerAnimations;
 	// Played once, and what to go back to after; the idle ones are picked after
 	// a while standing still.
-	bool _playerOneShot = false;
-	double _playerIdleFor = 0.0;
-	double _playerAirborneFor = 0.0;
-	double _playerGestureAt = 0.0;
-	double _lastJumpAt = -100.0;
-	bool _playerDashing = false;
-	// Dashing along the ground this frame, and the dust it kicks up.
-	bool _dashKicksUpDust = false;
+	// How the player on foot is moving: the animation's timings, the jumps.
+	struct PlayerMoves
+	{
+		bool oneShot = false;
+		double idleFor = 0.0;
+		double airborneFor = 0.0;
+		double gestureAt = 0.0;
+		double lastJumpAt = -100.0;
+		bool dashing = false;
+		// Dashing along the ground this frame (the dust it kicks up).
+		bool dashKicksUpDust = false;
+		bool kickedThisJump = false;
+		// Up again once in the air, this jump.
+		bool doubleJumped = false;
+		// The last stride heard, and whether the player was on the ground.
+		Vector3 lastFootstepAt;
+		bool footstepWasOnGround = true;
+	};
+	PlayerMoves _moves;
 	std::unique_ptr<ParticleSystem> _dashDust;
-	bool _kickedThisJump = false;
-	// Up again once in the air, this jump.
-	bool _doubleJumped = false;
 	// Plays the player's animation `what` ("loco_run"), if the character has it.
 	bool playPlayerAnimation(const std::string& what, bool loop);
 	// Picks the player's animation each frame: run, jump, land, idle.
@@ -499,8 +564,6 @@ private:
 	// (concrete, metal, wood, dirt), in the character's own shoes; and its
 	// landing.
 	void updateFootsteps(bool onGround);
-	Vector3 _lastFootstepAt;
-	bool _footstepWasOnGround = true;
 	// The character's sound script ("homer"), found once.
 	std::string _footstepScript;
 	// Getting into or out of a car, by its driver's door: the door opens, the
@@ -518,72 +581,13 @@ private:
 	Vector3 driverDoor(const Vehicle& car) const;
 	// The debug Warp menu: the level script's AddTeleportDest places.
 	std::vector<std::pair<std::string, Vector3>> _teleports;
-	// The level's interactive gags (level.mfk's GagBegin ... GagEnd): Moe's
-	// pickle jar, the Simpsons' couch. Each plays its sound when walked into
-	// ("touch") or worked by hand ("action"), and pays its coins the first time.
-	struct Gag
-	{
-		std::string model;
-		// Its model, as it stands before it plays (art/nis/gags/), where
-		// GagSetPosition puts it. Not animated.
-		std::shared_ptr<CompositeModel> drawable;
-		// The characters it holds, if any (Homer on the couch).
-		std::shared_ptr<SceneSkins> skins;
-		// A mesh of it that changes shape (the blow-up doll inflating).
-		std::shared_ptr<VertexAnimation> morph;
-		Vector3 placed;
-		// GagSetCycle: "cycle" plays round and round; "single" plays once when
-		// triggered and stays as it ends; "reset" plays once and goes back.
-		std::string cycle;
-		// When it was last triggered, < 0 when it stands at rest.
-		double animStartedAt = -1.0;
-		// GagSetRandom: one of the gags sharing its trigger is picked each time
-		// (the Simpsons' couch has six, from Grandpa walking in to Lisa).
-		bool random = false;
-		std::string sound;
-		bool byHand = false;
-		Vector3 position;
-		float radius = 1.0f;
-		int coins = 0;
-		// GagSetCameraShake: the power plant's meltdown shakes the view.
-		bool shakes = false;
-		// GagPlayFMV: the observatory's telescope shows a movie ("tele.rmv").
-		std::string movie;
-		bool played = false;
-		bool inside = false;
-		double lastPlayed = -100.0;
-		// GagSetInterior: the building it is in, empty outdoors.
-		std::string interior;
-		// GagSetPersist: played once ("single"), it stays as it ended, on
-		// the level's next load too; and it does so now.
-		bool persists = false;
-		bool ended = false;
-	};
-	// Whether it is where the player is: its building, or outdoors.
-	bool gagHere(const Gag& gag) const;
-	std::vector<Gag> _gags;
-	// GagCheckMovie: the Aztec's box office (level 3), worked by hand, shows
-	// the Itchy & Scratchy Movie to who holds its ticket (all the cards
-	// found); to the others, the clerk's refusal (a conversation, "aztec").
-	// Not a gag found.
-	struct MovieGag
-	{
-		Vector3 position;
-		float radius = 1.0f;
-		std::string movie, refusal;
-	};
-	std::vector<MovieGag> _movieGags;
-	void useMovieGag(const MovieGag& gag);
-	// False until the first look after loading: a gag the player starts the
-	// level standing in is not walked into.
-	bool _gagsPrimed = false;
-	// Gags found are kept in donut_gags.dat, keyed by level, model and place.
-	void loadGags();
-	std::string gagId(const Gag& gag) const;
-	void saveGags() const;
-	void playGag(Gag& gag);
+	// The level's interactive gags; what playing one does is the game's: its
+	// sound or movie, its coins, the count of those found, saved.
+	GagManager _gags;
+	void playGag(GagManager::Gag& gag);
 	void updateGags();
-	void drawGags(const Matrix4x4& viewProjection);
+	void saveGags() const;
+	void useMovieGag(const GagManager::MovieGag& gag);
 	// When the running mission was loaded, for its title card.
 	double _missionLoadedAt = 0.0;
 	// The game's phrase table, in the language --language picks (E by default).
@@ -675,30 +679,32 @@ private:
 		Paused,
 		Summary,
 	};
-	MiniStage _miniStage = MiniStage::Menu;
-	bool _trackLoaded = false;
-	int _loadedTrack = 0;
 	struct MiniTally
 	{
 		int wins = 0;
 		int points = 0;
 	};
-	std::array<MiniTally, 4> _miniTally {};
-	// Since the race was over, before its standings.
-	double _miniFinishedFor = 0.0;
+	struct MiniGameState
+	{
+		MiniStage stage = MiniStage::Menu;
+		bool trackLoaded = false;
+		int loadedTrack = 0;
+		std::array<MiniTally, 4> tally {};
+		// Since the race was over, before its standings.
+		double finishedFor = 0.0;
+		// What was held, for what is pressed (see miniPads).
+		std::array<std::array<bool, 5>, 4> held {};
+		bool nitroHeld = false;
+	};
+	MiniGameState _mini;
 	// The keys of player 1 (and the first pad), the others' pads, as the
-	// menus and the cars take them; what was held, for what is pressed.
+	// menus and the cars take them.
 	std::array<MiniGameMenu::Pad, 4> miniPads(const struct GameIntent& intent);
-	std::array<std::array<bool, 5>, 4> _miniHeld {};
-	bool _miniNitroHeld = false;
 	// The racers' drivers, at their wheels, racer by racer (none without a model).
 	std::vector<std::unique_ptr<Character>> _sprintDrivers;
 	void openMiniGame();
 	void leaveMiniGame();
 	void startSprint(const SuperSprint::Setup& setup);
-	// --minigame: the track of a race run by the computer alone, 0 for none.
-	int _miniGameDemo = 0;
-	bool _miniGameDemoReverse = false;
 	void miniGameFrame(double dt, const struct GameIntent& intent);
 	void drawSprint(int width, int height);
 	void drawSprintHud(const Matrix4x4& proj, const Matrix4x4& viewProj, int width, int height);
@@ -717,23 +723,28 @@ private:
 	double _lastLineAt = -10.0;
 	// The car whose engine is heard ("famil_v"), empty on foot.
 	std::string _engineCar;
-	// A found card's title, shown for a while ("CRAB JUICE").
-	std::string _cardMessage;
-	double _cardMessageUntil = 0.0;
-	// "Hit & Run!", "BUSTED!": shown for a while, in red.
-	std::string _alertMessage;
-	double _alertUntil = 0.0;
+	// What the HUD has to say, each for a while.
+	struct HudMessages
+	{
+		// A found card's title ("CRAB JUICE").
+		std::string card;
+		double cardUntil = 0.0;
+		// "Hit & Run!", "BUSTED!", in red.
+		std::string alert;
+		double alertUntil = 0.0;
+		// What the message stands for, for the game's HUD: the alert's term
+		// ("HIT_AND_RUN", "BUSTED"); a card found (its place in the deck), or a
+		// count of wasp cameras or gags ("3/20"); the set done ("WASPS_COMPLETE",
+		// "GAGS_COMPLETE", "CARD_LEVEL_COMPLETE"); and when a stage was announced
+		// complete.
+		std::string alertTerm;
+		int cardFound = -1;
+		std::string itemsCount, itemsDone;
+		int stagesAnnounced = 0;
+		double stageCompleteUntil = 0.0;
+	};
+	HudMessages _messages;
 	void alert(const std::string& term, const char* fallback);
-	// What the message stands for, for the game's HUD: the alert's term
-	// ("HIT_AND_RUN", "BUSTED"); a card found (its place in the deck), or a
-	// count of wasp cameras or gags ("3/20"); the set done ("WASPS_COMPLETE",
-	// "GAGS_COMPLETE", "CARD_LEVEL_COMPLETE"); and when a stage was announced
-	// complete.
-	std::string _alertTerm;
-	int _cardFound = -1;
-	std::string _itemsCount, _itemsDone;
-	int _stagesAnnounced = 0;
-	double _stageCompleteUntil = 0.0;
 	// The script's cameras, over the player's (see the call).
 	void scriptedCamera(double deltaTime);
 	std::string _conversationShot;
@@ -742,31 +753,48 @@ private:
 	// The player's car shows its dents: its hood, doors and back swap to their
 	// damaged textures as its health runs down.
 	void updateCarDamageLook(double dt);
-	std::string _damageLookModel;
-	int _damageLookStage = 0;
-	double _damageLookAge = 0.0;
-	const Vehicle* _damageVehicle = nullptr;
-	Vector3 _damageVelocity;
-	Vector3 _damagePosition;
+	struct CarDamage
+	{
+		// The car judged, where it was and how fast, a frame ago.
+		const Vehicle* vehicle = nullptr;
+		Vector3 velocity;
+		Vector3 position;
+		// The model whose textures show the dents, how dented, since when.
+		std::string lookModel;
+		int lookStage = 0;
+		double lookAge = 0.0;
+	};
+	CarDamage _carDamage;
 	void saveCoins() const;
 	double _elapsedSeconds = 0.0;
 
 	bool _inVehicle = false;
 	Vehicle* _activeVehicle = nullptr;
-	Vector3 _lastSafePos = Vector3(220, 4.5f, -172);
-	// Where the car the player drives last had a wheel on the ground: a car
-	// that falls off the map is put back on the road nearest to it, rather
-	// than the player being set down on foot where they last walked -- level 6
-	// m2's follow lost its truck that way, 200m off at the mission's start.
-	const Vehicle* _safeCar = nullptr;
-	Vector3 _safeCarPos;
-	float _safeCarYaw = 0.0f;
+	// Where a player who falls off the map is put back.
+	struct SafePlace
+	{
+		// Where the player last stood on the ground.
+		Vector3 onFoot = Vector3(220, 4.5f, -172);
+		// Where the car the player drives last had a wheel on the ground: a car
+		// that falls off the map is put back on the road nearest to it, rather
+		// than the player being set down on foot where they last walked -- level 6
+		// m2's follow lost its truck that way, 200m off at the mission's start.
+		const Vehicle* car = nullptr;
+		Vector3 carPos;
+		float carYaw = 0.0f;
+	};
+	SafePlace _safe;
 
-	bool _debugResourceManagerWindowOpen = false;
-	bool _debugLevelWindowOpen = false;
-	bool _debugAudioWindowOpen = false;
-	bool _debugAboutWindowOpen = false;
-	bool _showControls = false;
+	// The developer's windows open.
+	struct DebugWindows
+	{
+		bool resourceManager = false;
+		bool level = false;
+		bool audio = false;
+		bool about = false;
+		bool controls = false;
+	};
+	DebugWindows _debugWindows;
 	
 	static Game* instance;
 };
