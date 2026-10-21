@@ -339,6 +339,7 @@ void AudioManager::processDialogueQueue()
 
 	const std::string name = _dialogueQueue.front().name;
 	_dialogueQueue.pop_front();
+	++_dialogueLinesStarted;
 	PlayAudio(name);
 	if (src->inUse)
 	{

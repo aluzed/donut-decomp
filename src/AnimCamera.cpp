@@ -4,88 +4,86 @@
 
 #include "Core/FileSystem.h"
 #include "Core/Log.h"
-#include "Render/SkinAnimation.h"
 
 #include <P3D/P3D.generated.h>
 #include <P3D/P3DFile.h>
 
-#include <cstdint>
+#include <algorithm>
 
 namespace Donut
 {
-AnimCamera::AnimCamera(const P3D::P3DChunk& chunk): _time(0.0)
-{
-	for (const auto& child : chunk.GetChildren())
-	{
-		switch (child->GetType())
-		{
-		case P3D::ChunkType::Animation:
-		{
-			auto animation = P3D::Animation::Load(*child);
-			_trans =
-			    std::make_unique<SkinAnimation>(animation->GetName(), animation->GetNumFrames() / animation->GetFrameRate(),
-			                                    static_cast<int32_t>(animation->GetNumFrames()), animation->GetFrameRate());
 
-			_forward =
-			    std::make_unique<SkinAnimation>(animation->GetName(), animation->GetNumFrames() / animation->GetFrameRate(),
-			                                    static_cast<int32_t>(animation->GetNumFrames()), animation->GetFrameRate());
-
-			_up = std::make_unique<SkinAnimation>(animation->GetName(), animation->GetNumFrames() / animation->GetFrameRate(),
-			                                      static_cast<int32_t>(animation->GetNumFrames()), animation->GetFrameRate());
-
-			for (auto const& group : animation->GetGroupList()->GetGroups())
-			{
-				auto transTrack = std::make_unique<SkinAnimation::Track>(group->GetName());
-				auto forwardTrack = std::make_unique<SkinAnimation::Track>(group->GetName());
-				auto upTrack = std::make_unique<SkinAnimation::Track>(group->GetName());
-
-				if (const auto& vector3Channel = group->GetVector3ChannelsValue("TRAN"))
-				{
-					const auto& frames = vector3Channel->GetFrames();
-					const auto& values = vector3Channel->GetValues();
-
-					for (std::size_t i = 0; i < vector3Channel->GetNumFrames(); ++i)
-					{ transTrack->AddTranslationKey(frames[i], values[i]); }
-				}
-
-				_trans->AddTrack(transTrack);
-				_forward->AddTrack(forwardTrack);
-				_up->AddTrack(upTrack);
-			}
-
-			break;
-		}
-		case P3D::ChunkType::Camera:
-		{
-			auto camera = P3D::Camera::Load(*child);
-			break;
-		}
-		case P3D::ChunkType::MultiController:
-		{
-			auto multiController = P3D::MultiController::Load(*child);
-			break;
-		}
-		default: break;
-		}
-	}
-}
-
-std::unique_ptr<AnimCamera> AnimCamera::LoadP3D(const std::string& filename)
+std::unique_ptr<AnimCamera> AnimCamera::LoadP3D(const std::string& filename, const std::string& camera)
 {
 	if (!FileSystem::exists(filename))
 	{
-		Log::Info("AnimCamera not found: {}", filename);
+		Log::Info("AnimCamera: no {}", filename);
 		return nullptr;
 	}
-
-	Log::Info("Loading AnimCamera: {}", filename);
-
-	const auto p3d = P3D::P3DFile(filename);
-	return std::make_unique<AnimCamera>(p3d.GetRoot());
+	const P3D::P3DFile p3d(filename);
+	const P3D::P3DChunk* chosen = nullptr;
+	for (const auto& chunk : p3d.GetRoot().GetChildren())
+	{
+		if (!chunk->IsType(P3D::ChunkType::Animation))
+			continue;
+		const auto animation = P3D::Animation::Load(*chunk);
+		std::string name = animation->GetName();
+		name = name.substr(0, name.find('\0'));
+		if (animation->GetType().rfind("CAM", 0) != 0)
+			continue;
+		if (chosen == nullptr || name == "CAM_" + camera)
+			chosen = chunk.get();
+		if (name == "CAM_" + camera)
+			break;
+	}
+	auto move = std::make_unique<AnimCamera>();
+	if (chosen == nullptr || !move->load(*chosen))
+	{
+		Log::Info("AnimCamera: no camera move '{}' in {}", camera, filename);
+		return nullptr;
+	}
+	Log::Info("AnimCamera: '{}' from {}, {:.1f}s", camera, filename, move->GetDuration());
+	return move;
 }
 
-Matrix4x4 AnimCamera::Update(double dt)
+bool AnimCamera::load(const P3D::P3DChunk& chunk)
 {
-	return Matrix4x4::Identity;
+	const auto animation = P3D::Animation::Load(chunk);
+	_frames = animation->GetNumFrames();
+	_frameRate = animation->GetFrameRate() > 0.0f ? animation->GetFrameRate() : 30.0f;
+	if (!animation->GetGroupList())
+		return false;
+	for (const auto& group : animation->GetGroupList()->GetGroups())
+		for (auto [param, track] : {std::pair {"TRAN", &_position}, {"LOOK", &_look}, {"UP", &_up}})
+			if (const auto* channel = group->GetVector3ChannelsValue(param))
+			{
+				track->frames.assign(channel->GetFrames().begin(), channel->GetFrames().end());
+				track->values = channel->GetValues();
+			}
+	return !_position.values.empty() && !_look.values.empty();
 }
+
+Vector3 AnimCamera::Track::At(float frame) const
+{
+	if (values.empty())
+		return Vector3(0.0f, 1.0f, 0.0f);
+	const auto next = std::upper_bound(frames.begin(), frames.end(), frame);
+	if (next == frames.begin())
+		return values.front();
+	if (next == frames.end())
+		return values.back();
+	const std::size_t i = static_cast<std::size_t>(next - frames.begin());
+	const float t = (frame - frames[i - 1]) / std::max(1.0f, frames[i] - frames[i - 1]);
+	return values[i - 1] + (values[i] - values[i - 1]) * t;
+}
+
+AnimCamera::Pose AnimCamera::At(double seconds) const
+{
+	const float frame = std::clamp(static_cast<float>(seconds) * _frameRate, 0.0f, _frames);
+	Pose pose {_position.At(frame), _look.At(frame), _up.At(frame)};
+	if (pose.look.LengthSquared() > 0.0001f)
+		pose.look = pose.look.Normalized();
+	return pose;
+}
+
 } // namespace Donut

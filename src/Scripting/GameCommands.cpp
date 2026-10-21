@@ -139,8 +139,12 @@ void GameCommands::SetDialogueInfo(const std::string& param0, const std::string&
                                    int32_t param3)
 {
 	Game::GetInstance().GetScriptEngine().SetConversation(param2);
+	Game::GetInstance().GetScriptEngine().SetDialogueCharacters(param0, param1);
 }
-void GameCommands::SetCamBestSide(const std::string& param0, const std::string& param1 /*= ""*/) {}
+void GameCommands::SetCamBestSide(const std::string& param0, const std::string& param1 /*= ""*/)
+{
+	Game::GetInstance().GetScriptEngine().SetCamBestSide(param0, param1);
+}
 void GameCommands::CloseMission(int32_t param0 /*= 0*/)
 {
 	Game::GetInstance().GetScriptEngine().CloseMission();
@@ -239,8 +243,14 @@ void GameCommands::AddBehaviour(const std::string& param0, const std::string& pa
 {
 }
 void GameCommands::SetActorRotationSpeed(const std::string& param0, const std::string& param1) {}
-void GameCommands::SetAnimatedCameraName(const std::string& param0) {}
-void GameCommands::SetAnimCamMulticontName(const std::string& param0) {}
+void GameCommands::SetAnimatedCameraName(const std::string& param0)
+{
+	Game::GetInstance().GetScriptEngine().SetAnimatedCamera(param0);
+}
+void GameCommands::SetAnimCamMulticontName(const std::string& param0)
+{
+	Game::GetInstance().GetScriptEngine().SetAnimatedCameraFile(param0);
+}
 void GameCommands::SetCoinFee(int32_t param0)
 {
 	Game::GetInstance().GetScriptEngine().SetCoinFee(param0);
@@ -286,7 +296,10 @@ void GameCommands::SetBonusMissionDialoguePos(const std::string& param0, const s
                                               const std::string& param3)
 {
 }
-void GameCommands::SetConversationCam(int32_t param0, const std::string& param1, const std::string& param2 /*= ""*/) {}
+void GameCommands::SetConversationCam(int32_t param0, const std::string& param1, const std::string& param2 /*= ""*/)
+{
+	Game::GetInstance().GetScriptEngine().SetConversationCam(param0, param1, param2);
+}
 void GameCommands::ClearAmbientAnimations(const std::string& param0) {}
 void GameCommands::AddAmbientNpcAnimation(const std::string& param0, const std::string& param1 /*= ""*/) {}
 void GameCommands::AddAmbientPcAnimation(const std::string& param0, const std::string& param1 /*= ""*/) {}
@@ -298,8 +311,14 @@ void GameCommands::SetMissionResetPlayerOutCar(const std::string& param0, const 
 {
 	Game::GetInstance().GetScriptEngine().SetMissionResetPlayerOutCar(param0, param1);
 }
-void GameCommands::SetMissionStartCameraName(const std::string& param0) {}
-void GameCommands::SetMissionStartMulticontName(const std::string& param0) {}
+void GameCommands::SetMissionStartCameraName(const std::string& param0)
+{
+	Game::GetInstance().GetScriptEngine().SetMissionStartCamera(param0);
+}
+void GameCommands::SetMissionStartMulticontName(const std::string& param0)
+{
+	Game::GetInstance().GetScriptEngine().SetMissionStartCameraFile(param0);
+}
 void GameCommands::SetInitialWalk(const std::string& param0) {}
 void GameCommands::SetDialoguePositions(const std::string& param0, const std::string& param1, const std::string& param2,
                                         int32_t param3 /*= 0*/)

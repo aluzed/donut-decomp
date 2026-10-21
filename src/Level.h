@@ -193,6 +193,7 @@ public:
 	};
 
 	Vector3 GetLocatorPosition(const std::string& name) const;
+	bool HasLocator(const std::string& name) const { return _locators.count(name) != 0; }
 	// The heading a car-start locator faces, in radians about +Y (0 faces +Z,
 	// pi/2 faces +X). False for a locator that carries none.
 	bool GetLocatorHeading(const std::string& name, float& heading) const;

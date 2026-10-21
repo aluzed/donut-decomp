@@ -100,6 +100,8 @@ public:
 	void LoadModel(const std::string&, const std::string&);
 
 	AudioManager& GetAudioManager() { return *_audioManager; }
+	// Who the player plays ("homer", "bart"...).
+	const std::string& GetPlayerCharacterName() const { return _playerCharacter; }
 	ResourceManager& GetResourceManager() { return *_resourceManager; }
 	WorldPhysics& GetWorldPhysics() { return *_worldPhysics; }
 	LineRenderer& GetLineRenderer() { return *_lineRenderer; }
@@ -744,6 +746,11 @@ private:
 	// The view rotation for a camera looking along heading `yaw` (radians about
 	// +Y, 0 is +Z), tipped `pitchDown` radians below the horizon.
 	static Quaternion cameraLooking(float pitchDown, float yaw);
+	// The script's cameras, over the player's (see the call).
+	void scriptedCamera(double deltaTime);
+	std::unique_ptr<class AnimCamera> _cameraMove;
+	double _cameraMoveTime = 0.0;
+	std::string _conversationShot;
 	// Health lost to impacts, judged from the car's velocity a frame apart.
 	void updateCarDamage();
 	// The player's car shows its dents: its hood, doors and back swap to their

@@ -1787,6 +1787,74 @@ void Game::unloadLevel()
 	_worldPhysics = std::make_unique<WorldPhysics>(_lineRenderer.get());
 }
 
+void Game::scriptedCamera(double deltaTime)
+{
+	ScriptEngine::CameraMove move;
+	if (_scriptEngine->TakeCameraMove(move))
+	{
+		_cameraMove = AnimCamera::LoadP3D(fmt::format("art/missions/{}/{}.p3d", levelDirectory(), move.file), move.camera);
+		_cameraMoveTime = 0.0;
+	}
+	const auto look = [this](const Vector3& from, const Vector3& direction) {
+		const float flat = std::sqrt(direction.X * direction.X + direction.Z * direction.Z);
+		_camera->SetPosition(from);
+		_camera->SetQuaternion(cameraLooking(std::atan2(-direction.Y, std::max(flat, 0.001f)),
+		                                     std::atan2(direction.X, direction.Z)));
+	};
+	if (_cameraMove)
+	{
+		const AnimCamera::Pose pose = _cameraMove->At(_cameraMoveTime);
+		look(pose.position, pose.look);
+		_cameraMoveTime += deltaTime;
+		if (_cameraMoveTime > _cameraMove->GetDuration())
+			_cameraMove.reset();
+		// Back to the player's camera from where it is, not swung in from afar.
+		_smoothCamPos = Vector3::Zero;
+		return;
+	}
+
+	ScriptEngine::ConversationShot shot;
+	if (!_character || _inVehicle || !_scriptEngine->GetConversationShot(shot))
+		return;
+	// The one talked to: a mission's character, or one standing about (a race's
+	// or a bonus mission's giver).
+	const Character* other = nullptr;
+	for (const auto* people : {&_npcs, &_ambientNpcs})
+		if (const auto found = people->find(shot.other); found != people->end() && !other)
+			other = found->second.get();
+	if (!other)
+		return;
+	// Over the shoulder of the one facing the subject: "pc" frames the player's
+	// character, "npc" the other; "far" takes in both, "near" the subject alone.
+	const bool player = shot.shot.rfind("pc", 0) == 0;
+	const bool near = shot.shot.find("near") != std::string::npos;
+	const Vector3 head(0.0f, 1.5f, 0.0f);
+	const Vector3 subject = (player ? _character->GetPosition() : other->GetPosition()) + head;
+	const Vector3 facing = (player ? other->GetPosition() : _character->GetPosition()) + head;
+	Vector3 across = facing - subject;
+	across.Y = 0.0f;
+	// Standing on the same spot (the autopilot puts the player there): along
+	// the way the camera was looking.
+	if (across.LengthSquared() < 0.25f)
+		across = Vector3(std::sin(_camYaw), 0.0f, std::cos(_camYaw)) * (player ? 1.0f : -1.0f);
+	across = across.Normalized();
+	// To one side of the line between them: the best side's, when the script
+	// names one.
+	Vector3 side(across.Z, 0.0f, -across.X);
+	if (shot.hasBestSide && (shot.bestSide - subject).Dot(side) < 0.0f)
+		side = side * -1.0f;
+	const Vector3 wanted = near ? subject + across * 1.8f + side * 0.5f
+	                            : facing + across * 1.6f + side * 0.9f + Vector3(0.0f, 0.3f, 0.0f);
+	const Vector3 from = unoccludedCameraPosition(subject, wanted);
+	look(from, subject - from);
+	_smoothCamPos = Vector3::Zero;
+	if (const std::string now = shot.shot + "/" + shot.other; now != _conversationShot)
+	{
+		_conversationShot = now;
+		Log::Info("Game: conversation shot '{}' with '{}'", shot.shot, shot.other);
+	}
+}
+
 Quaternion Game::cameraLooking(float pitchDown, float yaw)
 {
 	// FreeCamera's orientation is the view's rotation, world to camera: the
@@ -2487,6 +2555,14 @@ void Game::runAutopilot(double dt)
 		float ground = 0.0f;
 		high = !_worldPhysics->FindGroundHeight(target, 1.0f, 30.0f, ground, true) || target.Y - ground > kHighPickup;
 	}
+	// Someone to talk to is walked up to, not stood on: from the spot itself
+	// the conversation's shots framed the two people as one.
+	if (objective == "talkto" && !(_inVehicle && _activeVehicle) && _character)
+	{
+		Vector3 away = _character->GetPosition() - target;
+		away.Y = 0.0f;
+		target = target + (away.LengthSquared() > 0.01f ? away.Normalized() : Vector3(0.0f, 0.0f, 1.0f)) * 1.5f;
+	}
 	if (_inVehicle && _activeVehicle)
 		_activeVehicle->Teleport(target, _activeVehicle->GetRotation(), !high);
 	else
@@ -3015,12 +3091,18 @@ void Game::updateInterior()
 
 std::unique_ptr<Character> Game::makeNpc(const std::string& name) const
 {
+	// The game's character files are named in six letters at most: Milhouse is
+	// milhou_m.p3d, Kearney kearne_m.p3d, Skinner skinne_m.p3d. Looked up by
+	// the full name only, every one of them was left out of its mission.
+	std::string file = name;
+	if (!FileSystem::exists(fmt::format("art/chars/{}_m.p3d", file)) && name.size() > 6)
+		file = name.substr(0, 6);
 	// Without a model they stay positions for "talkto" only.
-	if (!FileSystem::exists(fmt::format("art/chars/{}_m.p3d", name)))
+	if (!FileSystem::exists(fmt::format("art/chars/{}_m.p3d", file)))
 		return nullptr;
 
 	auto npc = std::make_unique<Character>(name);
-	npc->LoadModel(name);
+	npc->LoadModel(file);
 	// npd_m.p3d and the like are a skeleton without a body: drawing one
 	// crashed level 1 m5 the moment its "npd" joined the scene.
 	if (!npc->HasMesh())
@@ -3028,7 +3110,7 @@ std::unique_ptr<Character> Game::makeNpc(const std::string& name) const
 		Log::Warn("Game: '{}' has no body to show, not placed", name);
 		return nullptr;
 	}
-	npc->LoadAnimations(name);
+	npc->LoadAnimations(file);
 	// Like the pedestrians, a character extracted without animations borrows
 	// Apu's, whose skeleton the adult models share; Barney stood in his bind
 	// pose, arms out.
@@ -3992,8 +4074,6 @@ void Game::Run()
 	SpriteBatch sprites(1024);
 	GL::ShaderProgram& spriteShader = sprites.GetShader();
 
-	auto animCamera = AnimCamera::LoadP3D("art/missions/level01/mission0cam.p3d");
-
 	bool running = true;
 	while (running)
 	{
@@ -4248,8 +4328,6 @@ void Game::Run()
 			}
 		}
 
-		auto cameraTransform = animCamera->Update(deltaTime * 35.0);
-
 		if (_inVehicle && _activeVehicle && !_gameInput->IsMouseLocked())
 		{
 			auto vehPos = _activeVehicle->GetPosition();
@@ -4302,7 +4380,10 @@ void Game::Run()
 			_camera->SetPosition(unoccludedCameraPosition(lookAt, _smoothCamPos));
 			_camera->SetQuaternion(cameraLooking(-_camPitch, _camYaw));
 		}
-		//_camera->SetPosition(cameraTransform.Translation());
+		// The script's cameras over the player's: a mission's camera move as it
+		// starts, then the conversation's shots, line by line.
+		if (_gameState == GameState::InGame)
+			scriptedCamera(deltaTime);
 
 		// Pause has to stop the world, not just hide it: this used to keep running
 		// every frame while paused, so physics and scripts ticked behind the overlay.

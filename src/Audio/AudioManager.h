@@ -68,6 +68,10 @@ public:
 	void QueueDialogue(const std::string& name, DialoguePriority priority);
 	// A line queued or still being spoken.
 	bool IsDialoguePlaying() const;
+	// How many queued lines have been started since the game began: a
+	// conversation's line number is this, less its count when it was queued,
+	// less one.
+	int GetDialogueLinesStarted() const { return _dialogueLinesStarted; }
 	// How open the speaker's mouth is now, 0 to 1, from the loudness of the
 	// line being said (its envelope, a 30th of a second at a time, against
 	// its loudest); `speaker` who says it ("homer", "marge"), empty when no
@@ -187,6 +191,7 @@ private:
 	// The speakers' names by the codes their files carry ("lis": "lisa").
 	std::unordered_map<std::string, std::string> _speakerCodes;
 	Subtitle _subtitle;
+	int _dialogueLinesStarted = 0;
 	std::chrono::steady_clock::time_point _subtitleUntil;
 	void showSubtitle(const std::string& name, const RCL::RSDFile& rsdFile);
 	// The source speaking the current line, or -1.

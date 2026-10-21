@@ -99,6 +99,45 @@ public:
 	// How far a "losetail" objective wants the chasing car left behind, in metres.
 	void SetObjDistance(float metres) { _objectiveDistance = metres; }
 	void SetConversation(const std::string& name) { _conversation = name; }
+	// SetDialogueInfo's two characters ("homer", "lisa").
+	void SetDialogueCharacters(const std::string& first, const std::string& second)
+	{
+		_dialogueCharacters = {first, second};
+	}
+
+	// The conversation's shots: SetConversationCam(line, "pc_far") in a stage,
+	// or in the level script for a mission's (a third argument, "sr1"), and the
+	// side of the two speakers the camera keeps to (SetCamBestSide, a locator).
+	void SetConversationCam(int line, const std::string& shot, const std::string& mission);
+	void SetCamBestSide(const std::string& locator, const std::string& mission);
+	struct ConversationShot
+	{
+		// "pc_far", "pc_near", "npc_far", "npc_near": the player's character or
+		// the other, from behind the one facing them, far or near.
+		std::string shot;
+		std::string other; // the character the player talks to
+		bool hasBestSide = false;
+		Vector3 bestSide;
+	};
+	// The shot for the line being said, in a dialogue stage; false when the
+	// script gives none for it.
+	bool GetConversationShot(ConversationShot& shot) const;
+
+	// A mission's camera move as it starts: SetMissionStartCameraName and
+	// SetMissionStartMulticontName (the "sd" missions), or SetAnimatedCameraName
+	// and SetAnimCamMulticontName (the races) -- a camera file ("mission2cam")
+	// and the camera in it ("mission2camShape").
+	void SetMissionStartCamera(const std::string& camera) { _startCamera.camera = camera; }
+	void SetMissionStartCameraFile(const std::string& file) { _startCamera.file = file; }
+	void SetAnimatedCamera(const std::string& camera) { _animatedCamera.camera = camera; }
+	void SetAnimatedCameraFile(const std::string& file) { _animatedCamera.file = file; }
+	struct CameraMove
+	{
+		std::string file;
+		std::string camera;
+	};
+	// The camera move to play now, once: true when there is one.
+	bool TakeCameraMove(CameraMove& move) { return !(move = std::exchange(_cameraMove, {})).file.empty(); }
 	// The street races switch the police off for their stage.
 	void DisableHitAndRun() { _hitAndRunOff = true; }
 	bool IsHitAndRunOff() const { return _missionActive && _hitAndRunOff; }
@@ -285,6 +324,14 @@ private:
 	Game& _game;
 	bool _missionActive = false;
 	std::string _missionId;
+	std::pair<std::string, std::string> _dialogueCharacters;
+	// By line, the stage's own conversation shots, and the level script's by mission.
+	std::map<int, std::string> _conversationCams;
+	std::map<std::string, std::map<int, std::string>> _missionConversationCams;
+	std::string _bestSide;
+	std::map<std::string, std::string> _missionBestSides;
+	int _conversationLineBase = 0;
+	CameraMove _startCamera, _animatedCamera, _cameraMove;
 	std::string _playerLocator;
 	std::vector<std::string> _zones;
 	int _currentStage = -1;

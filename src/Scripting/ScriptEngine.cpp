@@ -34,6 +34,7 @@ void ScriptEngine::SelectMission(const std::string& id)
 
 	_missionActive = true;
 	_missionId = id;
+	_startCamera = _animatedCamera = {};
 	_hudShown = true;
 
 	// Mission locators (spawn points, car starts, AI path nodes, race_finish...)
@@ -166,6 +167,8 @@ void ScriptEngine::CloseMission()
 	_missionElapsed = 0.0f;
 	// A transition left from the mission before does not carry over.
 	_transition = Transition::None;
+	// Its camera move, as its title shows.
+	_cameraMove = !_startCamera.file.empty() ? _startCamera : _animatedCamera;
 	if (!_stageScripts.empty())
 		beginStage(0);
 }
@@ -189,6 +192,9 @@ void ScriptEngine::beginStage(std::size_t index)
 	_followInRange = false;
 	_conversation.clear();
 	_conversationQueued = false;
+	_conversationCams.clear();
+	_bestSide.clear();
+	_dialogueCharacters = {};
 	_hitAndRunOff = false;
 	_racePath.clear();
 	_checkpoints.clear();
@@ -318,6 +324,7 @@ void ScriptEngine::updateObjective(double dt)
 		if (!_conversationQueued)
 		{
 			_conversationQueued = true;
+			_conversationLineBase = audio.GetDialogueLinesStarted();
 			const auto lines = conversationLines();
 			for (const auto& line : lines)
 				audio.QueueDialogue(line, AudioManager::DialoguePriority::Gameplay);
@@ -1751,6 +1758,56 @@ void ScriptEngine::SetRaceLaps(int laps)
 	}
 	_totalLaps = laps;
 	Log::Info("ScriptEngine: race is {} lap(s)", laps);
+}
+
+void ScriptEngine::SetConversationCam(int line, const std::string& shot, const std::string& mission)
+{
+	if (mission.empty())
+		_conversationCams[line] = shot;
+	else
+		_missionConversationCams[mission][line] = shot;
+}
+
+void ScriptEngine::SetCamBestSide(const std::string& locator, const std::string& mission)
+{
+	if (mission.empty())
+		_bestSide = locator;
+	else
+		_missionBestSides[mission] = locator;
+}
+
+bool ScriptEngine::GetConversationShot(ConversationShot& shot) const
+{
+	if (!_missionActive || _objectiveType != "dialogue" || !_conversationQueued || _conversation.empty())
+		return false;
+	auto& audio = _game.GetAudioManager();
+	const int line = audio.GetDialogueLinesStarted() - _conversationLineBase - 1;
+	if (line < 0 || !audio.IsDialoguePlaying())
+		return false;
+	// The stage's own, or the level script's for this mission.
+	const std::map<int, std::string>* cams = &_conversationCams;
+	if (cams->empty())
+	{
+		const auto mission = _missionConversationCams.find(_missionId);
+		if (mission == _missionConversationCams.end())
+			return false;
+		cams = &mission->second;
+	}
+	const auto found = cams->find(line);
+	if (found == cams->end())
+		return false;
+	shot.shot = found->second;
+	// The player's character is one of the two; the other is the one to frame.
+	const std::string& player = _game.GetPlayerCharacterName();
+	shot.other = _dialogueCharacters.first == player ? _dialogueCharacters.second : _dialogueCharacters.first;
+	std::string side = _bestSide;
+	if (side.empty())
+		if (const auto mission = _missionBestSides.find(_missionId); mission != _missionBestSides.end())
+			side = mission->second;
+	shot.hasBestSide = !side.empty() && _game.GetLevel().HasLocator(side);
+	if (shot.hasBestSide)
+		shot.bestSide = _game.GetLevel().GetLocatorPosition(side);
+	return true;
 }
 
 void ScriptEngine::SetConditionPosition(int position)

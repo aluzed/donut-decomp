@@ -209,7 +209,7 @@ car, rewards), not through the commands.
 |---|---|---|
 | SCRIPT-A | ✅ | The base race commands: every level's races run |
 | SCRIPT-B | 🟡 | Car tuning: `SetMass`, `SetGasScale`, `SetTopSpeedKmh`, `SetTireGrip` applied; suspension and the rest are stubs |
-| SCRIPT-C | 🟡 | Cameras: `SetConversationCam` only; `SetCarStartCamera`, conversation camera names are stubs |
+| SCRIPT-C | ✅ | Cameras: conversation shots line by line (`SetConversationCam`, `SetCamBestSide`), the missions' and races' camera moves as they start (2026-10-21) |
 | SCRIPT-D | ✅ | Race tuning: laps, catch-up, the opponent's win, `SetConditionPosition`, the chased car's catch-up; `SetVehicleAIParams` kept, its meaning unknown (2026-10-21) |
 | SCRIPT-E | ✅ | Gags and collectibles: read from `level.mfk` (GAME-010); state props for `pickupitem` |
 | SCRIPT-F | ✅ | Hit & Run: decay and chase cars read from `leveli.mfk`, `DisableHitAndRun`, `SetHitNRun`; the rest in no script (2026-10-21) |
