@@ -4872,6 +4872,10 @@ void Game::Run()
 			_level->Draw(viewProjection);
 			// The characters lit by the level's lights, as the cars are.
 			_level->ApplyLights(*_skinShaderProgram);
+			// The blending the level's glows and particles left (added, one
+			// on one) is not the characters': Homer was drawn added onto the
+			// street behind him, pale and see-through.
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		}
 
 		// At the wheel, the player sits in the driver's seat, idling as drivers
