@@ -2280,12 +2280,36 @@ PhysicsInertiaMatrix::PhysicsInertiaMatrix(const P3DChunk& chunk)
 	_up = stream.Read<Vector3>();
 }
 
+CompositeDrawableSkin::CompositeDrawableSkin(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::CompositeDrawableSkin));
+
+	MemoryStream stream(chunk.GetData());
+	_name = stream.ReadLPString();
+	_name = _name.substr(0, _name.find('\0'));
+	_isTrans = stream.Read<uint32_t>();
+}
+
+CompositeDrawableEffect::CompositeDrawableEffect(const P3DChunk& chunk)
+{
+	assert(chunk.IsType(ChunkType::CompositeDrawableEffect));
+
+	MemoryStream stream(chunk.GetData());
+	_name = stream.ReadLPString();
+	_name = _name.substr(0, _name.find('\0'));
+	_isTrans = stream.Read<uint32_t>();
+	_skeletonJoint = stream.Read<uint32_t>();
+}
+
 CompositeDrawableSkinList::CompositeDrawableSkinList(const P3DChunk& chunk)
 {
 	assert(chunk.IsType(ChunkType::CompositeDrawableSkinList));
 
 	MemoryStream stream(chunk.GetData());
 	_numSkins = stream.Read<uint32_t>();
+	for (auto const& child : chunk.GetChildren())
+		if (child->IsType(ChunkType::CompositeDrawableSkin))
+			_skins.push_back(std::make_unique<CompositeDrawableSkin>(*child));
 }
 
 CompositeDrawableEffectList::CompositeDrawableEffectList(const P3DChunk& chunk)
@@ -2294,6 +2318,9 @@ CompositeDrawableEffectList::CompositeDrawableEffectList(const P3DChunk& chunk)
 
 	MemoryStream stream(chunk.GetData());
 	_numEffects = stream.Read<uint32_t>();
+	for (auto const& child : chunk.GetChildren())
+		if (child->IsType(ChunkType::CompositeDrawableEffect))
+			_effects.push_back(std::make_unique<CompositeDrawableEffect>(*child));
 }
 
 Spline::Spline(const P3DChunk& chunk)

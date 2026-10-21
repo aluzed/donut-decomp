@@ -137,6 +137,8 @@ class PhysicsObject;
 class PhysicsJoint;
 class PhysicsVector;
 class PhysicsInertiaMatrix;
+class CompositeDrawableSkin;
+class CompositeDrawableEffect;
 class CompositeDrawableSkinList;
 class CompositeDrawableEffectList;
 class Spline;
@@ -2464,6 +2466,48 @@ private:
 	Vector3 _up;
 };
 
+// A composite drawable's skin (0x4515): a skinned mesh of its, by name, and
+// whether it is drawn in the translucent pass. Written by hand (P3D-014).
+class CompositeDrawableSkin
+{
+public:
+	CompositeDrawableSkin(const P3DChunk&);
+
+	static std::unique_ptr<CompositeDrawableSkin> Load(const P3DChunk& chunk)
+	{
+		return std::make_unique<CompositeDrawableSkin>(chunk);
+	}
+
+	const std::string& GetName() const { return _name; }
+	const uint32_t& GetIsTrans() const { return _isTrans; }
+
+private:
+	std::string _name;
+	uint32_t _isTrans;
+};
+
+// A composite drawable's effect (0x4518): a particle system of its, by name,
+// whether translucent, and the joint it hangs from. Written by hand (P3D-014).
+class CompositeDrawableEffect
+{
+public:
+	CompositeDrawableEffect(const P3DChunk&);
+
+	static std::unique_ptr<CompositeDrawableEffect> Load(const P3DChunk& chunk)
+	{
+		return std::make_unique<CompositeDrawableEffect>(chunk);
+	}
+
+	const std::string& GetName() const { return _name; }
+	const uint32_t& GetIsTrans() const { return _isTrans; }
+	const uint32_t& GetSkeletonJoint() const { return _skeletonJoint; }
+
+private:
+	std::string _name;
+	uint32_t _isTrans;
+	uint32_t _skeletonJoint;
+};
+
 class CompositeDrawableSkinList
 {
 public:
@@ -2475,9 +2519,11 @@ public:
 	}
 
 	const uint32_t& GetNumSkins() const { return _numSkins; }
+	const std::vector<std::unique_ptr<CompositeDrawableSkin>>& GetSkins() const { return _skins; }
 
 private:
 	uint32_t _numSkins;
+	std::vector<std::unique_ptr<CompositeDrawableSkin>> _skins;
 };
 
 class CompositeDrawableEffectList
@@ -2491,9 +2537,11 @@ public:
 	}
 
 	const uint32_t& GetNumEffects() const { return _numEffects; }
+	const std::vector<std::unique_ptr<CompositeDrawableEffect>>& GetEffects() const { return _effects; }
 
 private:
 	uint32_t _numEffects;
+	std::vector<std::unique_ptr<CompositeDrawableEffect>> _effects;
 };
 
 class Spline

@@ -572,19 +572,17 @@ void Level::LoadP3D(const std::string& filename)
 						{
 							if (child->IsType(P3D::ChunkType::CompositeDrawableEffect))
 							{
-								MemoryStream stream(child->GetData());
-								const std::string system = stream.ReadLPString();
-								stream.Read<uint32_t>();
-								const int joint = static_cast<int>(stream.Read<uint32_t>());
-								const auto named = particleSystems.find(system.substr(0, system.find('\0')));
+								const auto effect = P3D::CompositeDrawableEffect::Load(*child);
+								const std::string& system = effect->GetName();
+								const int joint = static_cast<int>(effect->GetSkeletonJoint());
+								const auto named = particleSystems.find(system);
 								const auto factory = named != particleSystems.end()
 								                         ? _particleFactories.find(named->second)
 								                         : _particleFactories.end();
 								if (factory != _particleFactories.end())
 									_particles.push_back({std::make_unique<ParticleSystem>(*factory->second),
 									                      _compositeModels.size(), joint, filename,
-									                      static_cast<int>(_animatedObjects.size()),
-									                      system.substr(0, system.find('\0'))});
+									                      static_cast<int>(_animatedObjects.size()), system});
 							}
 							effects(*child);
 						}

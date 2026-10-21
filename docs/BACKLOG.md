@@ -100,7 +100,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | P3D-007 | ✅ | P2 | Tree/TreeNode (spatial, needed for culling) | Read by `P3D::SpatialTree` (2026-10-21): the terrains' kd-tree (level 1: 3103 nodes, 1552 leaves, 15 deep), each node's split, box and counts of the world's objects by kind; the level keeps it. Culling by it is RENDER-008b's |
 | P3D-010 | ✅ | P2 | StaticProp (6 chunks) | Read by `P3D::StateProp` (2026-10-21): the levels' 263 breakables go state to state on a strike, a kick, a car (a crate takes three strikes, ten coins spilled each), their visibility, pose and particles as each state says, their callbacks called (coins, collision, gone); the wasps read theirs through it |
 | P3D-011 | ✅ | P2 | Geometry extras (PackedNormalList, DrawShadow...) | Closed on the data (2026-10-21): no `Mesh`; `PackedNormalList` always beside a full `NormalList` (read, for the lights); `VertexShader` and `DrawShadow` are markers; offsets are the living room's morphs |
-| P3D-014 | ⬜ | P2 | CompositeDrawableSkin/Effect parsing |
+| P3D-014 | ✅ | P2 | CompositeDrawableSkin/Effect parsing | Read (2026-10-21): the skins (name, translucent) and effects (name, translucent, joint) of a composite drawable's lists; the breakables' and the wasp's effects go through them. Skins are only the characters', the scenes' and the frontend's, drawn by their own readers |
 | P3D-003 | ⬜ | P3 | Facial expression animation |
 | P3D-012 | ⬜ | P3 | ExportInfo (3ds Max metadata) |
 | P3D-017 | 🟡 | P3 | Non-PNG images | DDS (DXT1, DXT3, DXT5) decoded: the frontend's level and mission pictures (2026-10-20). Other palettised formats not |

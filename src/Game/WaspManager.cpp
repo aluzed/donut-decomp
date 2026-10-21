@@ -185,17 +185,15 @@ WaspManager::WaspManager(int level, const std::string& levelScript, const Level&
 		MemoryStream header(chunk->GetData());
 		if (readLPString(header) != "beecamera")
 			continue;
-		for (const auto& list : chunk->GetChildren())
-			if (list->IsType(P3D::ChunkType::CompositeDrawableEffectList))
-				for (const auto& effect : list->GetChildren())
-				{
-					MemoryStream stream(effect->GetData());
-					const std::string name = readLPString(stream);
-					stream.Read<uint32_t>();
-					const int joint = static_cast<int>(stream.Read<uint32_t>());
-					if (const auto system = systems.find(name); system != systems.end() && _factories.count(system->second))
-						_effectSlots.push_back({name, joint, system->second});
-				}
+		const auto drawable = P3D::CompositeDrawable::Load(*chunk);
+		if (const auto& effects = drawable->GetEffects())
+			for (const auto& effect : effects->GetEffects())
+			{
+				const std::string& name = effect->GetName();
+				const int joint = static_cast<int>(effect->GetSkeletonJoint());
+				if (const auto system = systems.find(name); system != systems.end() && _factories.count(system->second))
+					_effectSlots.push_back({name, joint, system->second});
+			}
 	}
 
 	if (_states.size() <= kDestroyed)
