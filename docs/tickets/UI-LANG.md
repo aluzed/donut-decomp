@@ -1,6 +1,6 @@
 # UI-LANG — Texte localisé via les language bibles
 
-- **Status:** TODO
+- **Status:** DONE — per the backlog: `--language E/F/G/I/S` for the game's own text; the language defaults to the dialogue's (2026-10-21)
 - **Priority:** P2
 - **Module:** UI
 - **Depends on:** P3D-005, UI-TEXT

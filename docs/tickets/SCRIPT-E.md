@@ -1,6 +1,6 @@
 # SCRIPT-E — Commandes gags / collectibles
 
-- **Status:** TODO
+- **Status:** DONE — per the backlog: gags and collectibles read from `level.mfk` (GAME-010), state props for `pickupitem`
 - **Priority:** P2
 - **Module:** Scripting
 - **Depends on:** GAME-010, REGR-001
