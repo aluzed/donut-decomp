@@ -231,12 +231,12 @@ car, rewards), not through the commands.
 
 | Sub-ticket | Status | Subject |
 |---|---|---|
-| FX-000 | ✅ | FBO pipeline (scene to `_sceneFBO` to a full-screen quad) |
+| FX-000 | ✅ | FBO pipeline (the scene to a frame buffer to a full-screen quad; `PostProcess` since FX-001) |
 | FX-002 | ✅ | Vignette |
-| FX-005 | ⬜ | LUT colour grading |
-| FX-001 | ⬜ | Bloom |
+| FX-005 | ✅ | LUT colour grading: a 16³ table, six looks made by the game, off by default (2026-10-21) |
+| FX-001 | ✅ | Bloom: bright pass and blur passes at half size; `PostProcess` holds the post-process work (2026-10-21) |
 | FX-004 | ⬜ | Shadow mapping (ex RENDER-012) |
-| FX-003 | ⬜ | Motion blur |
+| FX-003 | ✅ | Motion blur: the depth reprojected with the last frame's view (2026-10-21) |
 
 ---
 

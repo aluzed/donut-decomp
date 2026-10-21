@@ -40,6 +40,7 @@
 #include "Render/OpenGL/VertexBuffer.h"
 #include "Render/OpenGL/glad/glad.h"
 #include "Render/ParticleSystem.h"
+#include "Render/PostProcess.h"
 #include "Render/SceneSkins.h"
 #include "Render/Shader.h"
 #include "Render/SimpleMesh.h"
@@ -342,9 +343,7 @@ void Game::loadShaders()
 	const auto meshFragSrc = File::ReadAll("shaders/mesh.frag");
 	_meshShader = std::make_unique<GL::ShaderProgram>(meshVertSrc, meshFragSrc);
 
-	const auto ppVertSrc = File::ReadAll("shaders/postprocess.vert");
-	const auto ppFragSrc = File::ReadAll("shaders/postprocess.frag");
-	_postProcessShader = std::make_unique<GL::ShaderProgram>(ppVertSrc, ppFragSrc);
+	_postProcess = std::make_unique<PostProcess>();
 
 	_playerMesh = SimpleMesh::CreateCapsule(0.3f, 1.8f, Vector4(0.2f, 1.0f, 0.2f, 1.0f), 12);
 	_carMesh = SimpleMesh::CreateBox(Vector3(0.9f, 0.5f, 2.2f), Vector4(0.2f, 0.5f, 1.0f, 1.0f));
@@ -2985,86 +2984,6 @@ std::vector<std::pair<std::string, std::string>> models {
 
 void Game::OnInputTextEntry(const std::string& text) {}
 
-void Game::ensureFullscreenQuad()
-{
-	if (_fullscreenQuadVB)
-		return;
-
-	// Two triangles in NDC (xyz), covering the whole screen. The postprocess
-	// vertex shader derives texCoord from position.xy so we only need positions.
-	const float quad[] = {
-		-1.0f, -1.0f, 0.0f,
-		1.0f, -1.0f, 0.0f,
-		1.0f, 1.0f, 0.0f,
-		-1.0f, -1.0f, 0.0f,
-		1.0f, 1.0f, 0.0f,
-		-1.0f, 1.0f, 0.0f,
-	};
-
-	_fullscreenQuadVB = std::make_shared<GL::VertexBuffer>(quad, 6, sizeof(float) * 3);
-	_fullscreenQuadBinding = std::make_shared<GL::VertexBinding>();
-	GL::ArrayElement element(_fullscreenQuadVB.get(), 0, 3, GL::AE_FLOAT, sizeof(float) * 3, 0);
-	_fullscreenQuadBinding->Create(&element, 1, *_fullscreenQuadVB);
-}
-
-void Game::ensureSceneFBO(int width, int height)
-{
-	if (width <= 0 || height <= 0)
-		return;
-
-	if (!_sceneFBO)
-	{
-		GL::FrameBuffer::Format format;
-		format.EnableColourBuffer(true, 1);
-		format.EnableDepthBuffer(true, true);
-		_sceneFBO = std::make_unique<GL::FrameBuffer>(width, height, format);
-		_sceneFboW = width;
-		_sceneFboH = height;
-	}
-	else if (width != _sceneFboW || height != _sceneFboH)
-	{
-		_sceneFBO->SetSize(width, height);
-		_sceneFboW = width;
-		_sceneFboH = height;
-	}
-}
-
-void Game::blitSceneToBackbuffer(int width, int height)
-{
-	if (!_sceneFBO || !_postProcessShader || !_fullscreenQuadBinding)
-		return;
-
-	GL::FrameBuffer::Unbind();
-	glViewport(0, 0, width, height);
-
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
-
-	_postProcessShader->Bind();
-
-	// Passthrough by default: neutralise every effect so the image is identical
-	// to a direct render. Individual FX tickets raise the relevant uniforms.
-	glActiveTexture(GL_TEXTURE0);
-	// The world renderer leaves a sampler object bound to unit 0; it requests
-	// mipmapped filtering, which makes our single-level FBO colour texture
-	// sampler-incomplete (every fetch returns black). Detach it so the
-	// texture's own GL_LINEAR parameters apply for the post-process pass.
-	glBindSampler(0, 0);
-	_sceneFBO->BindColorTexture(0);
-	_postProcessShader->SetUniformValue("sceneTex", 0);
-	_postProcessShader->SetUniformValue("screenSize", Vector2(static_cast<float>(width), static_cast<float>(height)));
-	_postProcessShader->SetUniformValue("bloomIntensity", 0.0f);
-	_postProcessShader->SetUniformValue("vignetteIntensity", _vignetteIntensity);
-	_postProcessShader->SetUniformValue("contrast", 1.0f);
-	_postProcessShader->SetUniformValue("saturation", 1.0f);
-
-	_fullscreenQuadBinding->Bind();
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	_fullscreenQuadBinding->Unbind();
-
-	glEnable(GL_DEPTH_TEST);
-}
-
 void Game::Run()
 {
 	// measure our delta time
@@ -3981,7 +3900,7 @@ void Game::drawDebugOverlays()
 	ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x - 240.0f, 175.0f), ImGuiCond_Once);
 	if (ImGui::Begin("Post-FX", NULL, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		ImGui::SliderFloat("Vignette", &_vignetteIntensity, 0.0f, 1.0f);
+		_postProcess->DebugControls();
 	}
 	ImGui::End();
 }
@@ -4050,14 +3969,9 @@ void Game::updateCharacters(double deltaTime)
 
 void Game::renderScene(double deltaTime, int viewportWidth, int viewportHeight)
 {
-	// Render the 3D scene into an offscreen FBO so a post-process pass can
-	// sample it (FX-000). The HUD/ImGui are drawn afterwards on the
-	// backbuffer so they are not filtered.
-	ensureFullscreenQuad();
-	ensureSceneFBO(viewportWidth, viewportHeight);
-	_sceneFBO->Bind();
-
-	glViewport(0, 0, viewportWidth, viewportHeight);
+	// The 3D scene into the post-process frame buffer (FX-000); the HUD and
+	// ImGui are drawn afterwards on the screen, not filtered.
+	_postProcess->BeginScene(viewportWidth, viewportHeight);
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
@@ -4091,9 +4005,8 @@ void Game::renderScene(double deltaTime, int viewportWidth, int viewportHeight)
 		_lineRenderer->Flush(viewProjection);
 	glEnable(GL_DEPTH_TEST);
 
-	// Scene complete: blit the FBO to the backbuffer through the
-	// post-process shader (passthrough when all effects are neutralised).
-	blitSceneToBackbuffer(viewportWidth, viewportHeight);
+	// Onto the screen through the effects (the scene as drawn when they are off).
+	_postProcess->EndScene(viewportWidth, viewportHeight, viewProjection);
 }
 
 bool Game::drawHud(SpriteBatch& sprites, const GameIntent& intent, const Matrix4x4& proj, double deltaTime, int fps,

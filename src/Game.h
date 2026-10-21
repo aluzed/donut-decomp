@@ -222,9 +222,6 @@ private:
 	void debugAboutMenu();
 	void drawControlsWindow();
 	void OnInputTextEntry(const std::string& text);
-	void ensureSceneFBO(int width, int height);
-	void ensureFullscreenQuad();
-	void blitSceneToBackbuffer(int width, int height);
 
 	std::unique_ptr<Window> _window;
 	std::unique_ptr<AudioManager> _audioManager;
@@ -448,13 +445,9 @@ private:
 	// The game's own HUD page, in place of the old one's bars and radar when
 	// it loads; the old one still draws the call-outs.
 	std::unique_ptr<class GameHud> _gameHud;
-	std::unique_ptr<GL::ShaderProgram> _postProcessShader;
-	std::unique_ptr<GL::FrameBuffer> _sceneFBO;
-	std::shared_ptr<GL::VertexBuffer> _fullscreenQuadVB;
-	std::shared_ptr<GL::VertexBinding> _fullscreenQuadBinding;
-	int _sceneFboW = 0;
-	int _sceneFboH = 0;
-	float _vignetteIntensity = 0.0f;
+	// The scene's frame buffer and its effects (bloom, motion blur, grading,
+	// vignette), all off unless the Post-FX window turns them on.
+	std::unique_ptr<class PostProcess> _postProcess;
 	std::unique_ptr<P3D::P3DFile> _animP3D;
 	std::unique_ptr<P3D::P3DFile> _globalP3D;
 	std::unique_ptr<P3D::TextureFont> _textureFontP3D;
