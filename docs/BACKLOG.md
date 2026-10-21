@@ -132,6 +132,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | PHYS-008 | ✅ | — | Grip per surface | Each wheel's friction from the ground's terrain type (`SurfaceTypeList`): grass, dirt, sand slip; the rear wheels throw up grass or earth; skid marks per ground (2026-10-20) |
 | PHYS-005 | ✅ | — | `BulletFenceShape` for fences | |
 | VEH-SINK | ✅ | — | The car drives, and the camera stays above ground | |
+| VEH-WHEELS | ✅ | — | Cars stand on their own wheels | Physics wheels at each model's hubs and radii, drawn with their suspension travel; traffic rides at each model's height (2026-10-21) |
 | — | ✅ | — | Traffic stops short of cars and of the player on foot (kinematic bodies pushed through them) | |
 | — | ✅ | — | A car that falls off the map is put back on the nearest road | |
 

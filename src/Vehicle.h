@@ -147,6 +147,18 @@ private:
 	// The model's wheel joints ("w0".."w3"), by physics wheel, and the driver's
 	// door's hinge ("DoorDRot"): -1 when it has none.
 	int _wheelJoints[4] = {-1, -1, -1, -1};
+	// Its wheels as its model has them, physics wheel by physics wheel: the
+	// hub at rest (the model's space) and the radius; and how far a wheel's
+	// suspension is out at rest.
+	Vector3 _wheelHubs[4];
+	float _wheelRadii[4] = {0.4f, 0.4f, 0.4f, 0.4f};
+	bool _wheelsFromModel = false;
+	// Its own collision object's boxes (its chassis), when its file has them.
+	std::unique_ptr<P3D::CollisionObject> _collision;
+	// The chassis' shapes, owned while its body lives.
+	std::vector<std::unique_ptr<btCollisionShape>> _chassisShapes;
+	// How high its middle rides over the road, its wheels at rest on it.
+	float rideHeight() const;
 	int _doorJoint = -1;
 	float _driverSide = -1.0f;
 	int _seatJoint = -1;

@@ -264,8 +264,22 @@ void TrafficManager::LoadModels(const std::string& levelScript)
 			}
 		_brakeLights.push_back(std::move(lights));
 		std::vector<int> wheels;
+		// How high its middle rides: its wheels' bottoms on the road (their
+		// hubs less their radii), or its lowest point without wheels.
+		float bottom = 0.0f;
+		bool wheeled = false;
 		for (int w = 0; w < 4; ++w)
-			wheels.push_back(model->FindJoint(fmt::format("w{}", w)));
+		{
+			const int joint = model->FindJoint(fmt::format("w{}", w));
+			wheels.push_back(joint);
+			if (joint < 0)
+				continue;
+			const float radius = model->GetJointPropRadius(joint);
+			const float low = model->GetJointRestPosition(joint).Y - (radius > 0.1f ? radius : 0.4f);
+			bottom = wheeled ? std::min(bottom, low) : low;
+			wheeled = true;
+		}
+		_rideHeights.push_back(wheeled ? -bottom : -model->GetRestBottom());
 		_wheelJoints.push_back(std::move(wheels));
 		_models.push_back(std::move(model));
 		_modelNames.push_back(name);
@@ -334,10 +348,11 @@ void TrafficManager::SetPresent(bool present)
 
 void TrafficManager::updateBodies()
 {
-	// A car model's origin is the middle of its chassis, which rides about this
-	// high on its suspension. The traffic drives along the level's path loops,
-	// whose points lie on the ground or under it: drawn there, a pickup was half
-	// buried in the verge.
+	// A car model's origin is the middle of its chassis, which rides as high as
+	// its wheels reach below it (each model's own; one 0.7 m for all sank the
+	// big ones' wheels into the road). The traffic drives along the level's
+	// path loops, whose points lie on the ground or under it: drawn there, a
+	// pickup was half buried in the verge.
 	constexpr float kRideHeight = 0.7f;
 	WorldPhysics& physics = Game::GetInstance().GetWorldPhysics();
 	if (_physics != &physics)
@@ -352,7 +367,9 @@ void TrafficManager::updateBodies()
 		car.grounded = car.position;
 		float groundY = 0.0f;
 		if (physics.FindGroundHeight(car.position, 3.0f, 6.0f, groundY, true))
-			car.grounded.Y = groundY + kRideHeight;
+			car.grounded.Y = groundY + (car.model >= 0 && car.model < static_cast<int>(_rideHeights.size())
+			                                ? _rideHeights[car.model]
+			                                : kRideHeight);
 
 		if (i >= _bodies.size())
 		{

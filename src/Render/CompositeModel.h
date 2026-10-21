@@ -105,6 +105,14 @@ public:
 	int FindJoint(const std::string& name) const;
 	Vector3 GetJointRestPosition(int joint) const;
 	void SetJointRotation(int joint, const Quaternion& rotation);
+	// The same, moved too, by `offset` in the joint's own frame (a wheel riding
+	// up on its suspension).
+	void SetJointRotation(int joint, const Quaternion& rotation, const Vector3& offset);
+	// How far its props on that joint reach from it, half their height: a
+	// wheel's radius. 0 when none hangs from it.
+	float GetJointPropRadius(int joint) const;
+	// The lowest point of its props at rest, in the model's space.
+	float GetRestBottom() const;
 	// The joint a prop hangs from, by the prop's name (a mesh's), or -1; the
 	// first posable prop's; and a joint's transform as posed now, in the model's
 	// space.

@@ -9,10 +9,13 @@
 #include <Physics/BulletDebugDraw.h>
 
 #include <cstdint>
+#include <memory>
+#include <vector>
 #include <unordered_map>
 
 class btRigidBody;
 class btMotionState;
+class btCompoundShape;
 
 namespace Donut
 {
@@ -27,6 +30,7 @@ class CollisionOBBoxVolume;
 class CollisionSphere;
 class CollisionCylinder;
 class CollisionVolume;
+class CollisionObject;
 class Fence;
 }; // namespace P3D
 
@@ -107,6 +111,13 @@ public:
 	// of the world, the hitter given back its speed as above.
 	void RemoveProp(btRigidBody* body, float mass, const btCollisionObject* hitter);
 	static Matrix4x4 GetBodyTransform(const btRigidBody* body);
+	// The boxes of a volume tree on one joint (its volumes' object reference)
+	// as one shape, in that joint's space, each child shape added to `owned`;
+	// null when it has none. A car's own collision object is its chassis in
+	// boxes on its root joint, its wheels in spheres and its doors in boxes on
+	// their own joints, in their space.
+	static btCompoundShape* CreateBoxesShape(const P3D::CollisionVolume& volume, uint32_t joint,
+	                                         std::vector<std::unique_ptr<btCollisionShape>>& owned);
 	// Every pair of bodies in touch now, and how hard they push on each other
 	// (the impulse their contacts took this step, N·s).
 	struct Contact

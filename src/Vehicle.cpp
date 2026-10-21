@@ -15,6 +15,8 @@
 #include <BulletDynamics/Vehicle/btRaycastVehicle.h>
 #include <LinearMath/btDefaultMotionState.h>
 
+#include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <filesystem>
 
@@ -88,16 +90,44 @@ void Vehicle::LoadModel(const std::string& modelPath)
 			if (found >= 0)
 			{
 				const Vector3 at = _model->GetJointRestPosition(found);
-				_wheelJoints[(at.Z > 0.0f ? 0 : 2) + (at.X > 0.0f ? 1 : 0)] = found;
+				const int slot = (at.Z > 0.0f ? 0 : 2) + (at.X > 0.0f ? 1 : 0);
+				_wheelJoints[slot] = found;
+				_wheelHubs[slot] = at;
+				if (const float radius = _model->GetJointPropRadius(found); radius > 0.1f)
+					_wheelRadii[slot] = radius;
 			}
 		}
+		// The physics' wheels where the model's are, as large: on one set of
+		// wheels for every car (0.8 m out, 1.8 m along, 0.4 m across), a
+		// truck's and a buggy's sank into the road or stood off it.
+		_wheelsFromModel = std::all_of(std::begin(_wheelJoints), std::end(_wheelJoints), [](int j) { return j >= 0; });
+		if (_wheelsFromModel)
+			Log::Info("Vehicle: '{}' wheels at y {:.2f} to {:.2f}, {:.2f} to {:.2f} m across", _modelName,
+			          std::min({_wheelHubs[0].Y, _wheelHubs[1].Y, _wheelHubs[2].Y, _wheelHubs[3].Y}),
+			          std::max({_wheelHubs[0].Y, _wheelHubs[1].Y, _wheelHubs[2].Y, _wheelHubs[3].Y}),
+			          2.0f * std::min({_wheelRadii[0], _wheelRadii[1], _wheelRadii[2], _wheelRadii[3]}),
+			          2.0f * std::max({_wheelRadii[0], _wheelRadii[1], _wheelRadii[2], _wheelRadii[3]}));
+		// Its chassis as the game has it: the boxes on the root joint of its own
+		// collision object (named as the car), rather than one box for every car, 4.4 m long and
+		// 0.4 m below its middle: the cars run from a 1.5 m dune buggy to a
+		// 10 m fire truck, and most of their bodies stand higher off the road.
+		const P3D::P3DFile file(modelPath);
+		for (const auto& chunk : file.GetRoot().GetChildren())
+			if (chunk->IsType(P3D::ChunkType::CollisionObject))
+			{
+				auto collision = std::make_unique<P3D::CollisionObject>(*chunk);
+				std::string name = collision->GetName().substr(0, collision->GetName().find('\0'));
+				if (collision->GetVolume() && name.size() == _modelName.size() &&
+				    std::equal(name.begin(), name.end(), _modelName.begin(),
+				               [](char a, char b) { return std::tolower(a) == std::tolower(b); }))
+					_collision = std::move(collision);
+			}
 		_doorJoint = _model->FindJoint("DoorDRot");
 		_seatJoint = _model->FindJoint("dl");
 		_hoodJoint = _model->FindJoint("HoodTrans");
 		if (const int hub = _model->FindJoint("w0"); hub >= 0 && _seatJoint >= 0)
 			_high = _model->GetJointRestPosition(_seatJoint).Y - _model->GetJointRestPosition(hub).Y > 0.5f;
 		// Its lights: brake1Shape..brake4Shape, rev1Shape..rev4Shape.
-		const P3D::P3DFile file(modelPath);
 		for (const auto& chunk : file.GetRoot().GetChildren())
 			if (chunk->IsType(P3D::ChunkType::BillboardQuadGroup))
 			{
@@ -146,11 +176,11 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 	// through the suspension rays, so the opponent sat at 0 km/h being pushed out
 	// of the geometry a centimetre at a time. Find the ground and sit the wheels
 	// on it instead.
-	float spawnY = position.Y + kSpawnRideHeight;
+	float spawnY = position.Y + rideHeight();
 	float groundY = 0.0f;
 	if (findSpawnGround(physics, position, groundY))
 	{
-		spawnY = groundY + kSpawnRideHeight;
+		spawnY = groundY + rideHeight();
 	}
 	else
 	{
@@ -160,7 +190,33 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 
 	btVector3 pos(position.X, spawnY, position.Z);
 
-	btCollisionShape* chassisShape = new btBoxShape(btVector3(0.9f, 0.4f, 2.2f));
+	_chassisShapes.clear();
+	btCollisionShape* chassisShape =
+	    _collision ? WorldPhysics::CreateBoxesShape(*_collision->GetVolume(), 0, _chassisShapes) : nullptr;
+	if (chassisShape && _wheelsFromModel)
+	{
+		// Not one that reaches below its wheels: dragged along the road, it
+		// would hold the car still.
+		btVector3 low, high;
+		btTransform identity;
+		identity.setIdentity();
+		chassisShape->getAabb(identity, low, high);
+		float wheelsBottom = 0.0f;
+		for (int i = 0; i < 4; ++i)
+			wheelsBottom = std::min(wheelsBottom, _wheelHubs[i].Y - _wheelRadii[i]);
+		if (low.y() < wheelsBottom + 0.05f)
+		{
+			Log::Info("Vehicle: '{}' chassis reaches {:.2f} m, its wheels {:.2f} m: one box instead", _modelName,
+			          low.y(), wheelsBottom);
+			_chassisShapes.clear();
+			chassisShape = nullptr;
+		}
+	}
+	if (!chassisShape)
+	{
+		chassisShape = new btBoxShape(btVector3(0.9f, 0.4f, 2.2f));
+		_chassisShapes.emplace_back(chassisShape);
+	}
 	btDefaultMotionState* motionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), pos));
 
 	// The car script's mass, not one figure for every car: they run from 250kg to
@@ -189,10 +245,24 @@ void Vehicle::CreatePhysicsBody(WorldPhysics& physics, const Vector3& position)
 	btScalar wheelRadius = 0.4f;
 	btScalar suspensionRestLength = 0.2f;
 
-	_rayVehicle->addWheel(btVector3(-0.8f, 0.0f,  1.8f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, true);
-	_rayVehicle->addWheel(btVector3( 0.8f, 0.0f,  1.8f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, true);
-	_rayVehicle->addWheel(btVector3(-0.8f, 0.0f, -1.8f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, false);
-	_rayVehicle->addWheel(btVector3( 0.8f, 0.0f, -1.8f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, false);
+	if (_wheelsFromModel)
+	{
+		// Each from just above its hub, the suspension at rest bringing it to
+		// the hub: the model's wheel on the road where the physics' is.
+		for (int i = 0; i < 4; ++i)
+		{
+			const Vector3& hub = _wheelHubs[i];
+			_rayVehicle->addWheel(btVector3(hub.X, hub.Y + suspensionRestLength, hub.Z), wheelDirection, wheelAxle,
+			                      suspensionRestLength, _wheelRadii[i], tuning, i < 2);
+		}
+	}
+	else
+	{
+		_rayVehicle->addWheel(btVector3(-0.8f, 0.0f, 1.8f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, true);
+		_rayVehicle->addWheel(btVector3(0.8f, 0.0f, 1.8f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, true);
+		_rayVehicle->addWheel(btVector3(-0.8f, 0.0f, -1.8f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, false);
+		_rayVehicle->addWheel(btVector3(0.8f, 0.0f, -1.8f), wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, tuning, false);
+	}
 
 	// A btRaycastVehicle drives its chassis through applyEngineForce/setBrake,
 	// which do NOT activate the body. Once Bullet puts the chassis to sleep the
@@ -217,14 +287,14 @@ void Vehicle::Teleport(const Vector3& position, const Quaternion& rotation, bool
 	if (!_rayVehicle)
 		return;
 
-	float spawnY = position.Y + kSpawnRideHeight;
+	float spawnY = position.Y + rideHeight();
 	float groundY = 0.0f;
 	// The level's ground, not whatever is in the way: a car moved to where it
 	// already stands found its own roof and was dropped from 1.3m up.
 	if (!onGround)
 		spawnY = position.Y;
 	else if (_physicsWorld && findSpawnGround(*_physicsWorld, position, groundY))
-		spawnY = groundY + kSpawnRideHeight;
+		spawnY = groundY + rideHeight();
 
 	btTransform transform;
 	transform.setIdentity();
@@ -243,6 +313,19 @@ void Vehicle::Teleport(const Vector3& position, const Quaternion& rotation, bool
 	Log::Info("Vehicle: '{}' teleported to ({:.1f}, {:.1f}, {:.1f})", _name, position.X, spawnY, position.Z);
 }
 
+float Vehicle::rideHeight() const
+{
+	// Its wheels' bottoms on the road, its suspension at rest, and a little
+	// over to settle onto it; never less than the old figure for one wheel
+	// set.
+	if (!_wheelsFromModel)
+		return kSpawnRideHeight;
+	float bottom = 0.0f;
+	for (int i = 0; i < 4; ++i)
+		bottom = std::min(bottom, _wheelHubs[i].Y - _wheelRadii[i]);
+	return std::max(kSpawnRideHeight, -bottom + 0.3f);
+}
+
 void Vehicle::SetPosition(const Vector3& pos)
 {
 	_position = pos;
@@ -255,8 +338,14 @@ void Vehicle::SetPosition(const Vector3& pos)
 			if (_wheelJoints[i] >= 0)
 			{
 				const btWheelInfo& wheel = _rayVehicle->getWheelInfo(i);
-				_model->SetJointRotation(_wheelJoints[i], Quaternion(Vector3(0.0f, 1.0f, 0.0f), wheel.m_steering) *
-				                                              Quaternion(Vector3(-1.0f, 0.0f, 0.0f), wheel.m_rotation));
+				// Up or down with its suspension, from where it rests.
+				const float travel = _wheelsFromModel
+				                         ? wheel.m_suspensionRestLength1 - wheel.m_raycastInfo.m_suspensionLength
+				                         : 0.0f;
+				_model->SetJointRotation(_wheelJoints[i],
+				                         Quaternion(Vector3(0.0f, 1.0f, 0.0f), wheel.m_steering) *
+				                             Quaternion(Vector3(-1.0f, 0.0f, 0.0f), wheel.m_rotation),
+				                         Vector3(0.0f, std::clamp(travel, -0.3f, 0.3f), 0.0f));
 			}
 }
 
@@ -486,6 +575,7 @@ void Vehicle::DestroyPhysics(WorldPhysics& physics)
 		physics.GetDynamicsWorld()->removeAction(_rayVehicle.get());
 		delete chassis;
 		_rayVehicle.reset();
+		_chassisShapes.clear();
 		Log::Info("Vehicle: physics destroyed for '{}'", _name);
 	}
 }

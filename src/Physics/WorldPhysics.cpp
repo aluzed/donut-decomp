@@ -381,6 +381,33 @@ void WorldPhysics::AddP3DCylinder(const P3D::CollisionCylinder& cylinder)
 	addStaticBody(shape, worldTransform);
 }
 
+btCompoundShape* WorldPhysics::CreateBoxesShape(const P3D::CollisionVolume& volume, uint32_t joint,
+                                               std::vector<std::unique_ptr<btCollisionShape>>& owned)
+{
+	std::vector<std::pair<btCollisionShape*, btTransform>> boxes;
+	std::function<void(const P3D::CollisionVolume&)> collect = [&](const P3D::CollisionVolume& v) {
+		for (const auto& sub : v.GetSubVolumes())
+			collect(*sub);
+		if (v.GetObBox() && v.GetObjectRefIndex() == joint)
+		{
+			btTransform local;
+			btCollisionShape* shape = obboxShape(*v.GetObBox(), local);
+			boxes.emplace_back(shape, local);
+		}
+	};
+	collect(volume);
+	if (boxes.empty())
+		return nullptr;
+	auto* compound = new btCompoundShape();
+	for (auto& [shape, local] : boxes)
+	{
+		compound->addChildShape(local, shape);
+		owned.emplace_back(shape);
+	}
+	owned.emplace_back(compound);
+	return compound;
+}
+
 WorldPhysics::PropBody WorldPhysics::AddPropBody(const P3D::CollisionVolume& volume, const Matrix4x4& placement,
                                                  float mass, bool fixed)
 {

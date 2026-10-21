@@ -2969,12 +2969,30 @@ void Game::enterInterior(const Level::Trigger& door)
 	_scriptEngine->OnInteriorChanged(_interior);
 }
 
+// How far from an interior's way out the player is no longer in it: farther
+// than any room reaches.
+constexpr float kInteriorLeftBehind = 80.0f;
+
 void Game::updateInterior()
 {
 	if (_interior.empty() || !_character)
 		return;
 
 	const float toExit = (_character->GetPosition() - _interiorLayout.exit).Length();
+	// Taken out some other way than its door -- put in a car outside, moved on
+	// by the mission: the room's drawing only, kept on, left the town around
+	// the player a void of sky.
+	if (_inVehicle || toExit > kInteriorLeftBehind)
+	{
+		Log::Info("Game: player taken out of '{}'", _interior);
+		if (_interiorMusic)
+			_audioManager->ResumeMusicBase();
+		_interiorMusic = false;
+		_interior.clear();
+		_level->SetDrawOnly({});
+		_scriptEngine->OnInteriorChanged(_interior);
+		return;
+	}
 	if (!_interiorExitArmed)
 	{
 		_interiorExitArmed = toExit > 2.5f;

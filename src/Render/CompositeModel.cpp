@@ -210,11 +210,41 @@ Matrix4x4 CompositeModel::_restGlobal(int joint) const
 
 void CompositeModel::SetJointRotation(int joint, const Quaternion& rotation)
 {
+	SetJointRotation(joint, rotation, Vector3::Zero);
+}
+
+void CompositeModel::SetJointRotation(int joint, const Quaternion& rotation, const Vector3& offset)
+{
 	if (joint < 0 || joint >= static_cast<int>(_jointRotations.size()))
 		return;
-	_jointRotations[joint] = Matrix4x4(rotation);
+	_jointRotations[joint] = Matrix4x4::MakeTranslate(offset) * Matrix4x4(rotation);
 	if (!_animation)
 		updateJoints(-1.0f, false);
+}
+
+float CompositeModel::GetJointPropRadius(int joint) const
+{
+	float radius = 0.0f;
+	for (const auto& prop : _props)
+		if (prop.posable && static_cast<int>(prop.joint) == joint)
+		{
+			const BoundingBox& bounds = _meshes[prop.meshIndex]->GetBounds();
+			radius = std::max(radius, (bounds.GetMax().Y - bounds.GetMin().Y) * 0.5f);
+		}
+	return radius;
+}
+
+float CompositeModel::GetRestBottom() const
+{
+	float bottom = 0.0f;
+	bool any = false;
+	for (const auto& prop : _props)
+	{
+		const BoundingBox placed = _meshes[prop.meshIndex]->GetBounds().Transform(prop.transform);
+		bottom = any ? std::min(bottom, placed.GetMin().Y) : placed.GetMin().Y;
+		any = true;
+	}
+	return bottom;
 }
 
 float CompositeModel::GetAnimationFrames() const
