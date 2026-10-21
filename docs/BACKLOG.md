@@ -102,7 +102,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | P3D-011 | ✅ | P2 | Geometry extras (PackedNormalList, DrawShadow...) | Closed on the data (2026-10-21): no `Mesh`; `PackedNormalList` always beside a full `NormalList` (read, for the lights); `VertexShader` and `DrawShadow` are markers; offsets are the living room's morphs |
 | P3D-014 | ✅ | P2 | CompositeDrawableSkin/Effect parsing | Read (2026-10-21): the skins (name, translucent) and effects (name, translucent, joint) of a composite drawable's lists; the breakables' and the wasp's effects go through them. Skins are only the characters', the scenes' and the frontend's, drawn by their own readers |
 | P3D-003 | ⬜ | P3 | Facial expression animation |
-| P3D-012 | ✅ | P3 | ExportInfo (the Maya exporter's settings): described in `p3d.json`, generated, shown in the P3D debug viewer (2026-10-21) |
+| P3D-012 | ✅ | P3 | ExportInfo | The Maya exporter's settings: described in `p3d.json`, generated, shown in the P3D debug viewer (2026-10-21) |
 | P3D-017 | 🟡 | P3 | Non-PNG images | DDS (DXT1, DXT3, DXT5) decoded: the frontend's level and mission pictures (2026-10-20). Other palettised formats not |
 | P3D-005 | ✅ | — | The text bible: read from `srr2.txt` (`UI/TextBible`), in five languages |
 | P3D-013 | ✅ | — | `GetShaderTexture()`: a false bug, no such call |
@@ -162,7 +162,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
 | UI-TEXT | ✅ | — | Frontend MultiText | The frontend pages' texts drawn: the text bible's phrase, the page's font, aligned and fitted to their box; the pages' images loaded from `resource/` (2026-10-20) |
-| UI-LOADING | ⬜ | P3 | Loading screen and hints | |
+| UI-LOADING | ✅ | P3 | Loading screen | The fuse burns down as the level loads (`LoadingScreen`); the game has no hints, its newspapers are shown (2026-10-21) |
 | UI-FMV | ✅ | P3 | The game's movies | Bink, decoded with FFmpeg (optional): the logos and the introduction at start-up, level 1's on a new game, the story's `fmv` stages, the gags' (telescope, Larry the Looter, the Aztec's ticket), View Movies. Not the credits' movie |
 | UI-MENU | ✅ | — | Main and pause menus, hit-testing, pause freezes the game | |
 | UI-HUD | ✅ | — | Health, Hit & Run, nitro, speedometer, coins, cards, objective, laps, timer, radar with roads | `src/UI/Hud.*` |
@@ -177,7 +177,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | ASSET-001..006 | ✅ | — | Extraction pipeline to the game tree | `tools/extract_assets.sh <dir of the CD images>`: the cabinets off the three ISOs (or their .7z), unshield, then `art/`, `scripts/`, DIALOGF.RCF in place; unshield and 7z fetched without root if missing (2026-10-20) |
 | TOOL-002 | ✅ | P2 | Reverse `SIMPSONS.EXE` (Ghidra) | `tools/ghidra/analyze.sh`: functions, strings, classes, decompiled C, 1605 vtables from the RTTI; anchors in `docs/GHIDRA.md` (2026-10-21) |
 | TOOL-004 | ✅ | P2 | Run `donut-codegen`, enrich `p3d.json` | `dev/codegen/generate.sh` regenerates `P3D.generated.*` and `Commands.generated.cpp` exactly as committed (.NET 8, type remap, clang-format, `hand-edits.patch`; `--check`); `p3d.json` holds the 113 generated classes, the 25 unused ones in `p3d.unused.json` (2026-10-21) |
-| TOOL-007 | ✅ | P3 | P3D unit tests (parse, reserialise, compare): `tests/`, `ctest`; the game's 1964 files byte for byte, P3DZ and RZ covered; two parser bugs fixed (2026-10-21) |
+| TOOL-007 | ✅ | P3 | P3D unit tests (parse, reserialise, compare) | `tests/`, `ctest`; the game's 1964 files byte for byte, P3DZ and RZ covered; two parser bugs fixed (2026-10-21) |
 | TOOL-010 | ⬜ | P3 | CI (Linux, Windows) and clang-format |
 | TOOL-008 | ✅ | — | `.con` format documented (`SCRIPT_FORMAT.md`) |
 | CORE-014/015 | ✅ | — | Logging to stderr by level; stray includes removed |

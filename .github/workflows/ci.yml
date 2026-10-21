@@ -16,7 +16,7 @@ jobs:
       - name: Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsdl2-dev libbullet-dev libopenal-dev libfmt-dev zlib1g-dev
+          sudo apt-get install -y libsdl2-dev libbullet-dev libopenal-dev libfmt-dev libglm-dev zlib1g-dev
       - name: Build
         run: |
           cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
@@ -32,7 +32,7 @@ jobs:
         shell: pwsh
         run: |
           echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
-          & "$env:VCPKG_INSTALLATION_ROOT/vcpkg" install --triplet x64-windows sdl2 bullet3 openal-soft fmt zlib
+          & "$env:VCPKG_INSTALLATION_ROOT/vcpkg" install --triplet x64-windows sdl2 bullet3 openal-soft fmt glm zlib
       - name: Build
         run: |
           cmake -S . -B build -A x64

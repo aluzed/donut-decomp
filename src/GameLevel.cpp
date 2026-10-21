@@ -4,6 +4,7 @@
 // going into a building and out.
 
 #include "Game.h"
+#include "UI/LoadingScreen.h"
 
 #include "AI/PathGraph.h"
 #include "AI/PedestrianManager.h"
@@ -116,44 +117,10 @@ bool Game::levelAvailable(int level) const
 	return FileSystem::exists(fmt::format("scripts/level{:02}/level.mfk", level));
 }
 
-void Game::showLoadingScreen(int level)
-{
-	if (!_loadingPage || !_window)
-		return;
-	// The level's picture, in the place the page leaves blank for it
-	// (dynaload/images/loading<n>.p3d: a sprite in tiles).
-	const std::string picture = fmt::format("./art/frontend/dynaload/images/loading{}.p3d", level);
-	const std::string pictureName = fmt::format("loading{}.png", level);
-	if (!_resourceManager->GetTexture(pictureName) && FileSystem::exists(picture))
-	{
-		const P3D::P3DFile file(picture);
-		for (const auto& chunk : file.GetRoot().GetChildren())
-			if (chunk->IsType(P3D::ChunkType::Sprite))
-				_resourceManager->LoadTexture(*P3D::Sprite::Load(*chunk));
-	}
-	if (Texture* texture = _resourceManager->GetTexture(pictureName))
-		_loadingPage->SetSpriteTexture("Loading", texture);
-	else
-		_loadingPage->SetSpriteVisible("Loading", false);
-	// One frame of it, drawn before the load holds everything up.
-	int width = 0, height = 0;
-	SDL_GL_GetDrawableSize(*_window, &width, &height);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glViewport(0, 0, width, height);
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glDisable(GL_DEPTH_TEST);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	_loadingPage->Draw(Matrix4x4::MakeOrtho(0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f));
-	_window->Swap();
-	glEnable(GL_DEPTH_TEST);
-}
-
 void Game::switchLevel(int level)
 {
 	Log::Info("Game: leaving level {} for level {}", _levelNumber, level);
-	showLoadingScreen(level);
+	_loading->Show(level);
 	unloadLevel();
 	_levelNumber = level;
 	_storyIndex = -1;
@@ -210,7 +177,13 @@ void Game::loadLevel()
 	// interiors, which live under the map and are reached through doors. The
 	// game streams these in and out as the player moves; they are all loaded
 	// here. This was level 1's list, written out.
-	for (const std::string& file : levelWorldFiles()) _level->LoadP3D(file);
+	// The fuse burns as the load goes: most of it is the world's files.
+	const std::vector<std::string> worldFiles = levelWorldFiles();
+	for (std::size_t i = 0; i < worldFiles.size(); ++i)
+	{
+		_level->LoadP3D(worldFiles[i]);
+		_loading->SetProgress(0.7f * static_cast<float>(i + 1) / static_cast<float>(worldFiles.size()));
+	}
 	// The radar's map of the level.
 	if (_gameHud)
 		_gameHud->LoadMap(_levelNumber);
@@ -238,6 +211,7 @@ void Game::loadLevel()
 	_sparks = std::make_unique<ParticleSystem>(*_sparkFactory);
 	_dust = std::make_unique<ParticleSystem>(*_dustFactory);
 	_skidMarks = std::make_unique<SkidMarks>();
+	_loading->SetProgress(0.75f);
 	_pathGraph = std::make_unique<PathGraph>(*_level, *_worldPhysics);
 	// Fallen off the map: well below the lowest road. A fixed -50 suited level
 	// 1, but level 3's lower town lies at -68, and the player standing there
@@ -252,6 +226,7 @@ void Game::loadLevel()
 	_trafficManager->LoadModels(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
 	_pedestrianManager = std::make_unique<PedestrianManager>(*_worldPhysics);
 	_pedestrianManager->LoadModels(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
+	_loading->SetProgress(0.85f);
 	_collectibleManager = std::make_unique<CollectibleManager>(*_level, *_lineRenderer);
 	// The wasp cameras, at the spawn points the level script lists, their
 	// locators in the mission art.
@@ -455,6 +430,7 @@ void Game::loadLevel()
 				_story.push_back(path);
 		}
 	}
+	_loading->SetProgress(0.95f);
 	_gags.Load(levelDirectory(), *_level, _save.Entries("gag"));
 	// The Warp menu's places, AddTeleportDest("name", x, y, z, "zones").
 	{
@@ -488,6 +464,7 @@ void Game::loadLevel()
 	// Away from level 1 there is no test mission: the level opens on its story.
 	if (_levelNumber != 1 && !_launch.missionScriptGiven && !_story.empty())
 		_missionScript = _story.front();
+	_loading->SetProgress(1.0f);
 }
 
 std::string Game::levelDirectory() const

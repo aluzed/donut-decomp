@@ -2,38 +2,28 @@
 
 #include "Game.h"
 
-#include "AnimCamera.h"
-#include "Audio/SoundGenerator.h"
-#include "Audio/AudioManager.h"
-#include "Character.h"
-#include "Core/Math/Frustum.h"
-#include "Render/SkidMarks.h"
-#include "UI/LivingRoom.h"
-#include "UI/MoviePlayer.h"
-#include "UI/OptionsMenu.h"
-#include "UI/GameHud.h"
-#include "UI/PauseSundayMenu.h"
-#include "UI/PhoneBoothMenu.h"
-#include "UI/ShopMenu.h"
-#include "Game/SuperSprint.h"
-#include "Input/ExtraPads.h"
-#include "Core/FpsTimer.h"
-#include "Core/Math/Math.h"
-#include "FreeCamera.h"
-#include "Game/GameCamera.h"
-#include "UI/GameText.h"
-#include "UI/ScreenText.h"
-#include <cctype>
-#include <fstream>
-#include "FrontendProject.h"
-#include "Game/CollectibleManager.h"
-#include "Game/GameInput.h"
-#include "Input/Input.h"
-#include "Input/Keymap.h"
 #include "AI/PathGraph.h"
-#include "Game/HitAndRun.h"
 #include "AI/PedestrianManager.h"
 #include "AI/TrafficManager.h"
+#include "AnimCamera.h"
+#include "Audio/AudioManager.h"
+#include "Audio/SoundGenerator.h"
+#include "Character.h"
+#include "Core/FpsTimer.h"
+#include "Core/Math/Frustum.h"
+#include "Core/Math/Math.h"
+#include "FreeCamera.h"
+#include "FrontendProject.h"
+#include "Game/CollectibleManager.h"
+#include "Game/GameCamera.h"
+#include "Game/GameInput.h"
+#include "Game/HitAndRun.h"
+#include "Game/SuperSprint.h"
+#include "Game/UfoBoss.h"
+#include "Game/WaspManager.h"
+#include "Input/ExtraPads.h"
+#include "Input/Input.h"
+#include "Input/Keymap.h"
 #include "Level.h"
 #include "P3D/P3D.generated.h"
 #include "P3D/P3DFile.h"
@@ -42,24 +32,21 @@
 #include "RCL/RCFFile.h"
 #include "RCL/RSDFile.h"
 #include "Render/CompositeModel.h"
-#include "Render/SceneSkins.h"
-#include "Render/VertexAnimation.h"
-#include "Game/UfoBoss.h"
-#include "Game/WaspManager.h"
-#include "Render/ParticleSystem.h"
 #include "Render/Font.h"
 #include "Render/LineRenderer.h"
 #include "Render/OpenGL/FrameBuffer.h"
 #include "Render/OpenGL/ShaderProgram.h"
-#include "Render/OpenGL/VertexBuffer.h"
 #include "Render/OpenGL/VertexBinding.h"
+#include "Render/OpenGL/VertexBuffer.h"
 #include "Render/OpenGL/glad/glad.h"
+#include "Render/ParticleSystem.h"
+#include "Render/SceneSkins.h"
 #include "Render/Shader.h"
 #include "Render/SimpleMesh.h"
+#include "Render/SkidMarks.h"
 #include "Render/SkinModel.h"
 #include "Render/SpriteBatch.h"
-#include "UI/GameMenu.h"
-#include "UI/Hud.h"
+#include "Render/VertexAnimation.h"
 #include "Render/imgui/imgui.h"
 #include "Render/imgui/imgui_impl_opengl3.h"
 #include "Render/imgui/imgui_impl_sdl.h"
@@ -67,7 +54,21 @@
 #include "ResourceManager.h"
 #include "Scripting/Commands.h"
 #include "Scripting/ScriptEngine.h"
+#include "UI/GameHud.h"
+#include "UI/GameMenu.h"
+#include "UI/GameText.h"
+#include "UI/Hud.h"
+#include "UI/LivingRoom.h"
+#include "UI/LoadingScreen.h"
+#include "UI/MoviePlayer.h"
+#include "UI/OptionsMenu.h"
+#include "UI/PauseSundayMenu.h"
+#include "UI/PhoneBoothMenu.h"
+#include "UI/ScreenText.h"
+#include "UI/ShopMenu.h"
 #include "Window.h"
+#include <cctype>
+#include <fstream>
 
 #include <SDL.h>
 #include "Core/Log.h"
@@ -323,16 +324,9 @@ void Game::loadSystems()
 
 	// The game's loading screen, shown while a level loads: the fuse burning
 	// down to the dynamite, "LOADING".
-	if (FileSystem::exists("./art/frontend/scrooby2/backend.p3d"))
-	{
-		_loadingPage = std::make_unique<FrontendProject>();
-		_loadingPage->LoadP3D("./art/frontend/scrooby2/backend.p3d", "Loading.pag");
-		// The level's picture, which the game puts in at run time: the page
-		// holds a blank in its place.
-		_loadingPage->SetSpriteVisible("Loading", false);
-	}
+	_loading = std::make_unique<LoadingScreen>(*_window, *_resourceManager);
 	// The first level too, from the start.
-	showLoadingScreen(_levelNumber);
+	_loading->Show(_levelNumber);
 	loadLevel();
 	_gameInput = std::make_unique<GameInput>();
 	Input::CaptureTextEntry(this, &Game::OnInputTextEntry);

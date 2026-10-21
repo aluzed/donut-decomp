@@ -170,10 +170,20 @@ void FrontendProject::AddPolygon(const P3D::FrontendPolygon& polygon, int32_t re
 	}
 	const Vector4 color = polygon.GetColors().empty() ? Vector4(1.0f, 1.0f, 1.0f, 1.0f)
 	                                                  : P3D::P3DUtil::ConvertColor(polygon.GetColors()[0]);
-	// Points y up, as the sprites'.
-	_sprites.push_back(Sprite {_white.get(), static_cast<int32_t>(left), static_cast<int32_t>(resY - top),
-	                           static_cast<int32_t>(right - left), static_cast<int32_t>(top - bottom), color,
-	                           polygon.GetName()});
+	// Points y up, as the sprites'; its box where it is drawn (the loading
+	// screen's wick burns down by it).
+	Sprite sprite {_white.get(),
+	               static_cast<int32_t>(left),
+	               static_cast<int32_t>(resY - top),
+	               static_cast<int32_t>(right - left),
+	               static_cast<int32_t>(top - bottom),
+	               color,
+	               polygon.GetName()};
+	sprite.boxX = sprite.positionX;
+	sprite.boxY = sprite.positionY;
+	sprite.boxWidth = sprite.width;
+	sprite.boxHeight = sprite.height;
+	_sprites.push_back(std::move(sprite));
 }
 
 void FrontendProject::loadImages(const P3D::FrontendPage& page)
@@ -267,6 +277,19 @@ void FrontendProject::SetSpriteBox(const std::string& name, float x, float y, fl
 			sprite.positionY = sprite.boxY = static_cast<int32_t>(std::lround(y));
 			sprite.width = sprite.boxWidth = static_cast<int32_t>(std::lround(width));
 			sprite.height = sprite.boxHeight = static_cast<int32_t>(std::lround(height));
+		}
+}
+
+void FrontendProject::MoveSprite(const std::string& name, float dx, float dy)
+{
+	const auto x = static_cast<int32_t>(std::lround(dx)), y = static_cast<int32_t>(std::lround(dy));
+	for (auto& sprite : _sprites)
+		if (sprite.name == name)
+		{
+			sprite.positionX += x;
+			sprite.boxX += x;
+			sprite.positionY += y;
+			sprite.boxY += y;
 		}
 }
 

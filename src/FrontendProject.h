@@ -63,6 +63,9 @@ public:
 	// size, rather than at its image's.
 	bool GetSpriteBox(const std::string& name, float& x, float& y, float& width, float& height) const;
 	void SetSpriteBox(const std::string& name, float x, float y, float width, float height);
+	// Moved by (`dx`, `dy`), its size kept: the loading screen's flame along
+	// its wick.
+	void MoveSprite(const std::string& name, float dx, float dy);
 	// Drawn last, over the others: a slider's knob over its bar.
 	void BringSpriteToFront(const std::string& name);
 	// A text's box moved, its top left to (`x`, `y`) in the page (y down);

@@ -331,7 +331,7 @@ private:
 	// A caption low on the screen, in the middle: the speaker's name, if any,
 	// in yellow before it; as many lines as it takes.
 	void drawCaption(const std::string& speaker, const std::string& text, const Matrix4x4& proj, int width, int height);
-	std::unique_ptr<FrontendProject> _loadingPage;
+	std::unique_ptr<class LoadingScreen> _loading;
 	// The game's pause screen (ingame.p3d's Pause.pag and PauseMission.pag):
 	// its entry picked, and up and down and the mouse as they were.
 	std::unique_ptr<FrontendProject> _pausePage;
@@ -382,8 +382,6 @@ private:
 	// The level's counts for its progress page, its story missions won of all
 	// given.
 	PauseSundayMenu::Stats levelStats(int storyWon, int storyTotal) const;
-	// For `level`, with its picture.
-	void showLoadingScreen(int level);
 	// A mission's briefing picture, loaded once (nothing when there is none).
 	class Texture* presentationPicture(const std::string& path);
 	std::set<std::string> _missingPictures;
