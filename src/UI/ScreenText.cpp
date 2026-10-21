@@ -8,6 +8,9 @@
 
 #include <fmt/format.h>
 
+#include <utility>
+#include <vector>
+
 // windows.h maps DrawText to DrawTextA, which collides with SpriteBatch::DrawText
 #undef DrawText
 
@@ -67,33 +70,42 @@ void DrawMissionResult(SpriteBatch& sprites, const Font* font, const MissionResu
 {
 	const float w = static_cast<float>(viewportWidth), h = static_cast<float>(viewportHeight);
 	const Vector4 gold(1.0f, 0.84f, 0.0f, 1.0f), grey(0.6f, 0.6f, 0.6f, 1.0f), white(1.0f, 1.0f, 1.0f, 1.0f);
-	// Each line centred: they stood at fixed offsets from the middle, the
-	// longer ones off to the right.
-	const auto line = [&](const std::string& text, float y, const Vector4& colour) {
-		sprites.DrawText(font, text, Vector2(CentredTextX(font, text, w), h / 2.0f + y), colour);
-	};
+	// The lines one under the other, as high as the font is, each centred and
+	// the whole in the middle of the screen. They stood at fixed offsets 20
+	// pixels apart, in a font taller than that: the time and the record
+	// overlapped.
+	std::vector<std::pair<std::string, Vector4>> lines;
 	if (result.complete)
 	{
 		// The level's last story mission: the level is won too.
 		if (!result.levelComplete.empty())
-			line(result.levelComplete, -90.0f, Vector4(1.0f, 0.5f, 0.1f, 1.0f));
+			lines.emplace_back(result.levelComplete, Vector4(1.0f, 0.5f, 0.1f, 1.0f));
 		if (result.newRecord)
-			line(GameText("result.record", result.language), -70.0f, gold);
-		line(result.title, -50.0f, gold);
-		line(fmt::format(fmt::runtime(GameText("result.time", result.language)), result.elapsed), -10.0f, white);
+			lines.emplace_back(GameText("result.record", result.language), gold);
+		lines.emplace_back(result.title, gold);
+		lines.emplace_back(fmt::format(fmt::runtime(GameText("result.time", result.language)), result.elapsed), white);
 		if (result.best < 999.0f)
-			line(fmt::format(fmt::runtime(GameText("result.best", result.language)), result.best), 10.0f,
-			     result.elapsed <= result.best ? gold : Vector4(0.5f, 0.5f, 0.5f, 1.0f));
-		line(fmt::format(fmt::runtime(GameText("result.next", result.language)), result.nextIn), 40.0f, grey);
-		return;
+			lines.emplace_back(fmt::format(fmt::runtime(GameText("result.best", result.language)), result.best),
+			                   result.elapsed <= result.best ? gold : Vector4(0.5f, 0.5f, 0.5f, 1.0f));
+		lines.emplace_back(fmt::format(fmt::runtime(GameText("result.next", result.language)), result.nextIn), grey);
 	}
-	line(result.title, -20.0f, Vector4(1.0f, 0.2f, 0.2f, 1.0f));
-	// Why, and the game's advice for it.
-	if (!result.reason.empty())
-		line(result.reason, 10.0f, Vector4(1.0f, 0.6f, 0.6f, 1.0f));
-	if (!result.hint.empty())
-		line(result.hint, 40.0f, white);
-	line(fmt::format(fmt::runtime(GameText("result.retry", result.language)), result.nextIn), 70.0f, grey);
+	else
+	{
+		lines.emplace_back(result.title, Vector4(1.0f, 0.2f, 0.2f, 1.0f));
+		// Why, and the game's advice for it.
+		if (!result.reason.empty())
+			lines.emplace_back(result.reason, Vector4(1.0f, 0.6f, 0.6f, 1.0f));
+		if (!result.hint.empty())
+			lines.emplace_back(result.hint, white);
+		lines.emplace_back(fmt::format(fmt::runtime(GameText("result.retry", result.language)), result.nextIn), grey);
+	}
+	const float step = (font != nullptr ? static_cast<float>(font->GetHeight()) : 16.0f) + 6.0f;
+	float y = h / 2.0f - step * static_cast<float>(lines.size()) / 2.0f;
+	for (const auto& [text, colour] : lines)
+	{
+		sprites.DrawText(font, text, Vector2(CentredTextX(font, text, w), y), colour);
+		y += step;
+	}
 }
 
 void DrawHints(SpriteBatch& sprites, const Font* font, const std::vector<std::string>& hints, const Vector4& colour,
