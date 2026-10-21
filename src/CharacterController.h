@@ -41,6 +41,8 @@ public:
 	void playerStep(btCollisionWorld* collisionWorld, btScalar dt) override;
 	bool canJump() const override;
 	void jump(const btVector3& dir) override;
+	// Up again in mid-air, as from the ground: the game's double jump.
+	void jumpAgain();
 	bool onGround() const override;
 	void setUpInterpolate(bool) override;
 

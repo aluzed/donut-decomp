@@ -2823,12 +2823,29 @@ std::string Game::levelDirectory() const
 	return fmt::format("level{:02}", _levelNumber);
 }
 
+bool Game::levelScriptsName(const std::string& file) const
+{
+	// Any of the level's scripts loading it (SetDynaLoadData's lists).
+	for (const auto& entry : FileSystem::directory_iterator(fmt::format("./scripts/{}", levelDirectory())))
+	{
+		std::ifstream script(entry.path());
+		std::string text((std::istreambuf_iterator<char>(script)), std::istreambuf_iterator<char>());
+		std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) { return std::tolower(c); });
+		if (text.find(file) != std::string::npos)
+			return true;
+	}
+	return false;
+}
+
 std::vector<std::string> Game::levelWorldFiles() const
 {
 	// l<n>_TERRA.p3d, then l<n>z*.p3d and l<n>r*.p3d (zones and the roads
 	// between them), then the interiors l<n>i*.p3d. Where a road comes in two
 	// versions (level 1's l1r4a and l1r4b, the same stretch before and after
-	// it changes) only the first is taken: both together overlap.
+	// it changes) only the first is taken: both together overlap -- unless
+	// the level's scripts load the second (level 4's street races load l4r4a
+	// and l4r4b together: Burns' estate is l4r4b's, and its wasps hung over
+	// nothing without it).
 	const std::string prefix = fmt::format("l{}", _levelNumber);
 	std::string terrain;
 	std::vector<std::string> world, interiors;
@@ -2846,7 +2863,8 @@ std::vector<std::string> Game::levelWorldFiles() const
 		else if ((rest[0] == 'z' || rest[0] == 'r') && rest.size() > 1 && std::isdigit(static_cast<unsigned char>(rest[1])))
 		{
 			if (rest.back() == 'b' &&
-			    FileSystem::exists(fmt::format("./art/{}a.p3d", name.substr(0, name.size() - 5))))
+			    FileSystem::exists(fmt::format("./art/{}a.p3d", name.substr(0, name.size() - 5))) &&
+			    !levelScriptsName(lower))
 				continue;
 			world.push_back(name);
 		}
@@ -4067,9 +4085,20 @@ void Game::Run()
 					playPlayerAnimation("jump_idle_take_off", false);
 					_lastJumpAt = _elapsedSeconds;
 					_kickedThisJump = false;
+					_doubleJumped = false;
 				}
-				// In the air, a kick: once a jump. It hits a wasp in reach (the
-				// attack lasts a second more) and breaks what it lands on.
+				// In the air, again: up once more, as high again ("quand tu es
+				// dans les airs, réappuie sur la touche A pour sauter plus loin",
+				// the tutorial says) -- the wasps on a roof's edge in reach.
+				else if (!_inVehicle && !_boarding.car && !ctrl.onGround() && !_doubleJumped && !_kickedThisJump)
+				{
+					ctrl.jumpAgain();
+					playPlayerAnimation("jump_idle_take_off", false);
+					_lastJumpAt = _elapsedSeconds;
+					_doubleJumped = true;
+				}
+				// Then a kick: once a jump. It hits a wasp in reach (the attack
+				// lasts a second more) and breaks what it lands on.
 				else if (!_inVehicle && !_boarding.car && !ctrl.onGround() && !_kickedThisJump &&
 				         playPlayerAnimation("jump_kick", false))
 				{

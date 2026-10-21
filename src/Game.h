@@ -464,6 +464,8 @@ private:
 	std::string levelDirectory() const;
 	// The level's world files in art/: terrain, zones, roads and interiors.
 	std::vector<std::string> levelWorldFiles() const;
+	// Whether any of the level's scripts names `file` (lower case).
+	bool levelScriptsName(const std::string& file) const;
 	// The first argument of every `command` call in the level's level.mfk,
 	// in order: levelScriptCalls("AddMission") is the story.
 	std::vector<std::string> levelScriptCalls(const std::string& command, const std::string& script = "level.mfk") const;
@@ -497,6 +499,8 @@ private:
 	bool _dashKicksUpDust = false;
 	std::unique_ptr<ParticleSystem> _dashDust;
 	bool _kickedThisJump = false;
+	// Up again once in the air, this jump.
+	bool _doubleJumped = false;
 	// Plays the player's animation `what` ("loco_run"), if the character has it.
 	bool playPlayerAnimation(const std::string& what, bool loop);
 	// Picks the player's animation each frame: run, jump, land, idle.

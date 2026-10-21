@@ -1,6 +1,6 @@
 # GAME-WASP — The wasp cameras
 
-- **Status:** PARTIAL (2026-10-19)
+- **Status:** DONE (2026-10-21: 137 of 140 in reach)
 - **Priority:** P2
 - **Module:** Game
 - **Files:** `src/Game/WaspManager.*`, `src/Game.cpp` (`loadLevel`, the update, the draw),
@@ -77,4 +77,25 @@ ball, and the health bar down as it lands.
 
 ## Not done
 
-- Wasps high up are out of a jump's reach: the game expects them reached by climbing.
+- Wasps high up were out of a jump's reach: see below.
+
+## Within reach (2026-10-21)
+
+Each wasp's height over the ground under it was measured, on the seven levels: 129 of
+140 float within a jump's reach (a jump rises 1.2 m, the strike reaches 2.5 m from the
+player's middle: up to some 4.8 m). Of the eleven over it:
+- four of level 4's (Burns' estate, the chessboard) floated over nothing: the estate is
+  `l4r4b.p3d`, left out as the "after" version of `l4r4a` (level 1's pair is before
+  and after a change), when level 4's street races load both. A road's second version
+  is now loaded when the level's scripts load it: the estate is there, ground 1.4 to
+  2 m under its wasps;
+- the game's double jump was missing (the tutorial says it: "quand tu es dans les airs,
+  réappuie sur la touche A pour sauter plus loin"): in the air, the jump pressed again
+  goes up as high again (2.4 m in all), then a kick. Four more in reach from the roof
+  or ledge under them (the gas station's, level 4's barn, level 6's bowl, level 7's
+  plant lot): 0.8 to 1.8 m from a double jump's top.
+
+Three are still out of reach, measured from every surface within 15 m (a running
+jump's 2 m allowed): level 4's `w_powerplant2` (3.6 m short), level 5's `w_rail2`
+(6.6 m), level 7's `w_barn` (4.7 m). Their behaviours keep them up (EVADE_PLAYER moves
+them 1 to 2 m above their spot, ATTRACTION at its height).

@@ -189,6 +189,12 @@ void CharacterController::jump(const btVector3& dir)
 	_jumpCooldown = 0.5f;
 }
 
+void CharacterController::jumpAgain()
+{
+	_verticalVelocity = 5.0f;
+	_jumpCooldown = 0.5f;
+}
+
 bool CharacterController::onGround() const
 {
 	btVector3 pos = BulletCast<btVector3>(_position);
