@@ -57,6 +57,9 @@ void ScriptEngine::SelectMission(const std::string& id)
 	_chasers.clear();
 	_raceVehicles.clear();
 	_raceCatchups.clear();
+	_targetCatchups.clear();
+	_finishedAhead.clear();
+	_racePosition = 1;
 	_playerCar = nullptr;
 	_stageScripts.clear();
 	_recordingStage = false;
@@ -178,6 +181,9 @@ void ScriptEngine::beginStage(std::size_t index)
 	_chasers.clear();
 	_raceVehicles.clear();
 	_raceCatchups.clear();
+	_targetCatchups.clear();
+	_finishedAhead.clear();
+	_racePosition = 1;
 	_stageWaypoints.clear();
 	_objectiveDistance = 0.0f;
 	_followInRange = false;
@@ -943,6 +949,9 @@ void ScriptEngine::CleanupMission()
 	_chasers.clear();
 	_raceVehicles.clear();
 	_raceCatchups.clear();
+	_targetCatchups.clear();
+	_finishedAhead.clear();
+	_racePosition = 1;
 	_playerCar = nullptr;
 	_racePath.clear();
 	_stageWaypoints.clear();
@@ -1458,6 +1467,10 @@ void ScriptEngine::buildRaceCircuit()
 		const auto catchup = _raceCatchups.find(vehicle->GetName());
 		if (catchup != _raceCatchups.end())
 			opponent->SetCatchup(catchup->second);
+		// A car to be chased, not raced, waits for the player.
+		const auto target = _targetCatchups.find(vehicle->GetName());
+		if (target != _targetCatchups.end() && _objectiveType != "race")
+			opponent->SetTargetCatchup(target->second.first, target->second.second);
 		_raceOpponents.push_back(std::move(opponent));
 	}
 }
@@ -1618,6 +1631,13 @@ void ScriptEngine::placeRaceCarOnCircuit()
 void ScriptEngine::UsePedGroup(int group)
 {
 	Log::Info("ScriptEngine: using ped group {}", group);
+	_pedGroup = group;
+}
+
+void ScriptEngine::SetMaxTraffic(int cars)
+{
+	Log::Info("ScriptEngine: at most {} traffic cars", cars);
+	_maxTraffic = std::max(0, cars);
 }
 
 void ScriptEngine::SetHUDIcon(const std::string& icon)
@@ -1731,6 +1751,17 @@ void ScriptEngine::SetRaceLaps(int laps)
 	}
 	_totalLaps = laps;
 	Log::Info("ScriptEngine: race is {} lap(s)", laps);
+}
+
+void ScriptEngine::SetConditionPosition(int position)
+{
+	_racePosition = std::max(1, position);
+	Log::Info("ScriptEngine: the race is won in the first {} place(s)", _racePosition);
+}
+
+void ScriptEngine::SetVehicleAIParams(const std::string& vehicle, int a, int b)
+{
+	Log::Info("ScriptEngine: AI params for '{}': {}, {} (not used)", vehicle, a, b);
 }
 
 void ScriptEngine::SetStageAIRaceCatchupParams(const std::string& vehicle, float distance, float ahead, float level,
@@ -1922,9 +1953,12 @@ void ScriptEngine::UpdateAI(double dt)
 	}
 
 	const float playerLaps = playerRaceLaps();
+	const Vector3 player =
+	    _game.GetPlayerVehicle() ? _game.GetPlayerVehicle()->GetPosition() : _game.GetPlayerPosition();
 
 	for (auto& opponent : _raceOpponents)
 	{
+		opponent->SetPlayerPosition(player);
 		// If the player has taken this opponent's car, stop driving it: two
 		// inputs on one vehicle in the same frame just fight each other.
 		if (_game.GetPlayerVehicle() == &opponent->GetVehicle())
@@ -1962,9 +1996,13 @@ void ScriptEngine::UpdateAI(double dt)
 			return;
 		}
 
-		if (!_raceDecided && opponent->Laps() >= _totalLaps)
+		// Lost when as many opponents have finished as the place the race asks
+		// for (SetConditionPosition): the first to, for first place.
+		if (!_raceDecided && opponent->Laps() >= _totalLaps && _finishedAhead.insert(opponent.get()).second &&
+		    static_cast<int>(_finishedAhead.size()) >= _racePosition)
 		{
-			missionFailed(fmt::format("'{}' finished all {} laps first", opponent->GetVehicle().GetName(), _totalLaps),
+			missionFailed(fmt::format("'{}' finished all {} laps, {} ahead of the player", opponent->GetVehicle().GetName(),
+			                          _totalLaps, _finishedAhead.size()),
 			              "MISSION_FAILED_POSITION_HINT1");
 		}
 	}

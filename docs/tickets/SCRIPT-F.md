@@ -1,6 +1,6 @@
 # SCRIPT-F — Commandes Hit & Run / police
 
-- **Status:** TODO
+- **Status:** DONE (2026-10-21)
 - **Priority:** P2
 - **Module:** Scripting
 - **Depends on:** —
@@ -17,7 +17,19 @@
   - poursuivants : `SetChaseSpawnRate` (`:408`), `SetNumChaseCars` (`:184`), `KillAllChaseAI` (`:409`).
 - La logique de détection « busted » existe déjà (`ScriptEngine::Update`, `ChaseManager::IsBusted`) ; ces commandes doivent uniquement la paramétrer.
 
+## Done (2026-10-21)
+
+| command | scripts | now |
+|---|---|---|
+| `SetHitAndRunDecay`, `SetNumChaseCars` | 16 (`leveli.mfk`, demos) | read by `HitAndRun` from the level script (HIT-AND-RUN); the commands stay empty |
+| `DisableHitAndRun` | 23 | already wired |
+| `SetHitNRun()` | 4 calls, all in `e3m1i.mfk` (the E3 demo's mission) | fills the meter: the police at once |
+| `SetHitAndRunMeter`, `SetChaseSpawnRate` | only commented out | left empty |
+| `EnableHitAndRun`, `KillAllChaseAI`, `ResetHitAndRun`, `SetHitAndRunDecayInterior` | none | left empty |
+
 ## Critères d'acceptation
-- [ ] Un `.con` représentatif Hit & Run / police s'exécute avec 0 avertissement « unimplemented command ».
-- [ ] `EnableHitAndRun`/`DisableHitAndRun` activent/désactivent réellement le suivi de la jauge dans `ChaseManager`.
-- [ ] `SetChaseSpawnRate`/`SetNumChaseCars` influencent le nombre de poursuivants spawnés.
+- [x] The level and mission scripts run with no unimplemented-command warning.
+- [x] `DisableHitAndRun` switches the meter and the police off for its stage.
+      `EnableHitAndRun` is in no script and stays empty.
+- [x] The number of chasing cars comes from the level script's `SetNumChaseCars`.
+      `SetChaseSpawnRate` is only ever commented out and stays empty.

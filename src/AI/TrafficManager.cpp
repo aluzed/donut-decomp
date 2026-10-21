@@ -336,6 +336,32 @@ void TrafficManager::SetPresent(bool present)
 			_physics->GetDynamicsWorld()->removeRigidBody(body->rigid.get());
 }
 
+void TrafficManager::SetMaxCars(int count)
+{
+	const std::size_t total = _cars.size() + _parked.size();
+	const std::size_t wanted = count < 0 ? total : std::min(total, static_cast<std::size_t>(count));
+	if (wanted == _cars.size())
+		return;
+	while (_cars.size() > wanted)
+	{
+		// Its body out of the world with it.
+		if (_bodies.size() >= _cars.size())
+		{
+			if (_physics && _present)
+				_physics->GetDynamicsWorld()->removeRigidBody(_bodies.back()->rigid.get());
+			_bodies.pop_back();
+		}
+		_parked.push_back(_cars.back());
+		_cars.pop_back();
+	}
+	while (_cars.size() < wanted)
+	{
+		_cars.push_back(_parked.back());
+		_parked.pop_back();
+	}
+	Log::Info("TrafficManager: {} of {} cars driving", _cars.size(), total);
+}
+
 void TrafficManager::updateBodies()
 {
 	// A car model's origin is the middle of its chassis, which rides as high as

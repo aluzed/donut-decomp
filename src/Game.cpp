@@ -1959,6 +1959,8 @@ void Game::updateHitAndRun(double dt)
 	const bool driving = _inVehicle && _activeVehicle;
 	const Vector3 player = driving ? _activeVehicle->GetPosition() : _character->GetPosition();
 	const float speed = driving ? _activeVehicle->GetSpeedKmh() : 0.0f;
+	if (_scriptEngine->TakeHitNRun())
+		_hitAndRun->Add(100.0f, "the mission");
 
 	// People run down: a car going through them at more than walking pace.
 	if (driving && std::abs(speed) > 15.0f && _pedestrianManager && _interior.empty())
@@ -4608,6 +4610,11 @@ void Game::Run()
 		// drawn nor run into.
 		const bool traffic = !_scriptEngine->IsTrafficSuppressed();
 		_trafficManager->SetPresent(traffic);
+		// As many cars as the script allows (SetMaxTraffic), and the district's
+		// people on the pavements (UsePedGroup).
+		_trafficManager->SetMaxCars(_scriptEngine->GetMaxTraffic());
+		if (_pedestrianManager)
+			_pedestrianManager->UseGroup(_scriptEngine->GetPedGroup());
 		if (traffic)
 		{
 			std::vector<Vector3> obstacles;

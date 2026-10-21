@@ -14,6 +14,8 @@
 #include <cmath>
 #include <fmt/format.h>
 #include <fstream>
+#include <cstdlib>
+#include <set>
 
 namespace Donut
 {
@@ -186,25 +188,63 @@ void PedestrianManager::LoadModels(const std::string& levelScript)
 	if (!file.good())
 		return;
 
-	std::vector<std::string> people;
+	// CreatePedGroup(n) opens a group, each AddPed("name", count) adds to it.
+	_groups.clear();
+	int group = 0;
+	int first = -1;
 	std::string line;
 	while (std::getline(file, line))
 	{
+		const auto comment = line.find("//");
+		const auto create = line.find("CreatePedGroup");
+		if (create != std::string::npos && create < comment)
+		{
+			const auto open = line.find('(', create);
+			if (open != std::string::npos)
+				group = std::atoi(line.c_str() + open + 1);
+			continue;
+		}
 		const auto call = line.find("AddPed");
-		if (call == std::string::npos || line.find("//") < call)
+		if (call == std::string::npos || comment < call)
 			continue;
 		const auto open = line.find('"', call);
 		const auto close = open == std::string::npos ? open : line.find('"', open + 1);
 		if (close == std::string::npos)
 			continue;
 		const std::string name = line.substr(open + 1, close - open - 1);
-		if (FileSystem::exists(fmt::format("art/chars/{}_m.p3d", name)) &&
-		    std::find(people.begin(), people.end(), name) == people.end())
-			people.push_back(name);
+		if (!FileSystem::exists(fmt::format("art/chars/{}_m.p3d", name)))
+			continue;
+		const auto comma = line.find(',', close);
+		const int count = comma == std::string::npos ? 1 : std::max(1, std::atoi(line.c_str() + comma + 1));
+		auto& people = _groups[group];
+		// A group listed twice (the level's script and its demo's) keeps one copy.
+		if (std::find(people.begin(), people.end(), name) == people.end())
+			people.insert(people.end(), static_cast<std::size_t>(count), name);
+		if (first < 0)
+			first = group;
 	}
-	if (people.empty())
+	if (_groups.empty())
 		return;
+	Log::Info("PedestrianManager: {} pedestrian groups", _groups.size());
+	UseGroup(_groups.count(0) ? 0 : first);
+}
 
+void PedestrianManager::UseGroup(int group)
+{
+	const auto found = _groups.find(group);
+	if (group == _group || found == _groups.end())
+		return;
+	_group = group;
+	// Those about walk off with the old group's bodies: gone, they come back.
+	_pedestrians.clear();
+	buildBodies(found->second);
+	Log::Info("PedestrianManager: group {}, {} bodies from {} models", group, _bodies.size(),
+	          std::set<std::string>(found->second.begin(), found->second.end()).size());
+}
+
+void PedestrianManager::buildBodies(const std::vector<std::string>& people)
+{
+	_bodies.clear();
 	for (int i = 0; i < _maxPedestrians; ++i)
 	{
 		const std::string& name = people[static_cast<std::size_t>(i) % people.size()];
@@ -224,7 +264,6 @@ void PedestrianManager::LoadModels(const std::string& levelScript)
 		_bodies.push_back(std::move(body));
 	}
 	_bodyInUse.assign(_bodies.size(), false);
-	Log::Info("PedestrianManager: {} bodies from {} extracted pedestrian models", _bodies.size(), people.size());
 }
 
 void PedestrianManager::DrawBodies(const Matrix4x4& viewProj, GL::ShaderProgram& skinShader,

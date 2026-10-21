@@ -107,6 +107,12 @@ public:
 	// A stage with no traffic: its cars are taken out of the physics world, or
 	// they would stand in the empty streets, unseen.
 	void SetPresent(bool present);
+	// At most `count` cars drive (SetMaxTraffic); the others are parked out of
+	// the world until the limit rises. Negative: all of them.
+	void SetMaxCars(int count);
+
+private:
+	std::vector<TrafficCar> _parked;
 };
 
 } // namespace Donut

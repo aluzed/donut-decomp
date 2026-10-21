@@ -149,7 +149,10 @@ void GameCommands::PlacePlayerCar(const std::string& param0, const std::string& 
 {
 	Game::GetInstance().GetScriptEngine().PlacePlayerCar(param0, param1);
 }
-void GameCommands::SetMaxTraffic(int32_t param0) {}
+void GameCommands::SetMaxTraffic(int32_t param0)
+{
+	Game::GetInstance().GetScriptEngine().SetMaxTraffic(param0);
+}
 void GameCommands::AddStageVehicle(const std::string& param0, const std::string& param1, const std::string& param2,
                                    const std::string& param3, const std::string& param4 /*= ""*/)
 {
@@ -308,11 +311,18 @@ void GameCommands::ActivateVehicle(const std::string& param0, const std::string&
 }
 void GameCommands::SetStageMusicAlwaysOn(int32_t param0 /*= 0*/) {}
 void GameCommands::SetNumValidFailureHints(int32_t param0) {}
-void GameCommands::SetVehicleAIParams(const std::string& param0, int32_t param1, int32_t param2) {}
+void GameCommands::SetVehicleAIParams(const std::string& param0, int32_t param1, int32_t param2)
+{
+	Game::GetInstance().GetScriptEngine().SetVehicleAIParams(param0, param1, param2);
+}
 void GameCommands::StageStartMusicEvent(const std::string& param0) {}
 void GameCommands::AllowMissionAbort(const std::string& param0) {}
 void GameCommands::MustActionTrigger(int32_t param0 /*= 0*/) {}
-void GameCommands::SetStageAITargetCatchupParams(const std::string& param0, int32_t param1, int32_t param2) {}
+void GameCommands::SetStageAITargetCatchupParams(const std::string& param0, int32_t param1, int32_t param2)
+{
+	Game::GetInstance().GetScriptEngine().SetStageAITargetCatchupParams(param0, static_cast<float>(param1),
+	                                                                    static_cast<float>(param2));
+}
 void GameCommands::SetFollowDistances(int32_t param0, int32_t param1)
 {
 	Game::GetInstance().GetScriptEngine().SetFollowDistances(static_cast<float>(param0), static_cast<float>(param1));
@@ -355,14 +365,20 @@ void GameCommands::NoTrafficForStage(int32_t param0 /*= 0*/)
 {
 	Game::GetInstance().GetScriptEngine().NoTrafficForStage();
 }
-void GameCommands::SetConditionPosition(int32_t param0) {}
+void GameCommands::SetConditionPosition(int32_t param0)
+{
+	Game::GetInstance().GetScriptEngine().SetConditionPosition(param0);
+}
 void GameCommands::AddSafeZone(const std::string& param0, int32_t param1) {}
 void GameCommands::AddGagBinding(const std::string& param0, const std::string& param1, const std::string& param2,
                                  int32_t param3, const std::string& param4)
 {
 }
 void GameCommands::SetPostLevelFMV(const std::string& param0) {}
-void GameCommands::SetHitNRun(int32_t param0 /*= 0*/) {}
+void GameCommands::SetHitNRun(int32_t param0 /*= 0*/)
+{
+	Game::GetInstance().GetScriptEngine().SetHitNRun();
+}
 void GameCommands::SetObjDistance(int32_t param0)
 {
 	Game::GetInstance().GetScriptEngine().SetObjDistance(static_cast<float>(param0));

@@ -1,6 +1,6 @@
 # SCRIPT-D — Commandes de course (laps & paramètres IA de rattrapage)
 
-- **Status:** PARTIAL (2026-10-18)
+- **Status:** DONE (2026-10-21)
 - **Priority:** P2
 - **Module:** Scripting
 - **Depends on:** AI-RACE
@@ -117,7 +117,22 @@ race, which is what `SetConditionPosition(1)` asks for.
 sr3 with an idle player: honor_v 174.3s, minivanA 180.5s, both clean. The bus (2500kg,
 gas 3.5) still wedges several times on the way.
 
+## The rest (2026-10-21)
+
+- **`SetConditionPosition(n)`** (17 scripts, 16 with 1, `sr2` with 2): the race is lost
+  once `n` opponents have finished ahead of the player. sr2 with an idle player: `lisa_v`
+  finished first and the race went on; `sportsA`, second, lost it ("2 ahead of the player").
+- **`SetStageAITargetCatchupParams(vehicle, near, far)`** (7 scripts: the cars to chase in
+  "dump", "follow" and "destroy" stages, e.g. `("skinn_v", 50, 100)`): the car keeps its
+  full speed with the player within `near` metres and eases off to x0.6 (the race scripts'
+  own "ahead" factor) as the player falls `far` metres behind. An interpretation, like the
+  race's: the data names nothing.
+- **`SetVehicleAIParams(vehicle, a, b)`** (34 scripts): kept and logged, not used. The pairs
+  run from (-51, -50) to (50, 51); the scripts' comments call (-10, -9) "no shortcuts", but
+  no reading of the two numbers explains the rest. The opponents never take shortcuts.
+- `SetStageAIEvadeCatchupParams`: in no script.
+
 ## Critères d'acceptation
-- [ ] Un `.con` de course représentatif s'exécute avec 0 avertissement « unimplemented command ».
+- [x] A race script runs with no unimplemented-command warning (`sr2i.mfk`).
 - [x] `SetRaceLaps` change effectivement le nombre de tours requis pour terminer (player and opponent alike).
 - [x] Les bornes de vitesse/rattrapage IA proviennent des commandes de catchup quand la mission en donne (`RaceOpponent::SetCatchup`); the built-in band remains the default.

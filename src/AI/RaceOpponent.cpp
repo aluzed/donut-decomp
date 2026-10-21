@@ -332,7 +332,15 @@ void RaceOpponent::Update(double dt, float playerProgress)
 	// Rubber-banding: scale the throttle by how far behind the player we are.
 	// Both sides are in laps; the opponent's circuit and the player's checkpoint
 	// list have different lengths, so raw indices are not comparable.
-	if (playerProgress >= 0.0f && _hasCatchup && _circuitMetres > 0.0f && _catchup.distanceMetres > 0.0f)
+	if (_hasTargetCatchup && _hasPlayerPosition)
+	{
+		// The car being chased waits for the player: full speed within `near`,
+		// easing off to kTargetWaitBoost at `far` and beyond.
+		const float distance = (_playerPosition - position).Length();
+		const float t = std::clamp((distance - _targetNear) / std::max(1.0f, _targetFar - _targetNear), 0.0f, 1.0f);
+		_boost = 1.0f + (kTargetWaitBoost - 1.0f) * t;
+	}
+	else if (playerProgress >= 0.0f && _hasCatchup && _circuitMetres > 0.0f && _catchup.distanceMetres > 0.0f)
 	{
 		// The mission's own catch-up curve, over a distance rather than a
 		// fraction of a lap: 80m means the same on a short circuit as a long one.
@@ -476,6 +484,14 @@ void RaceOpponent::Update(double dt, float playerProgress)
 		           _path.Laps(), _path.Index(), _path.Count(), position.X, position.Y, position.Z, speed, targetSpeed,
 		           aim.X, aim.Y, aim.Z, pursuit, throttle, brake, steer, _boost);
 	}
+}
+
+void RaceOpponent::SetTargetCatchup(float near, float far)
+{
+	_hasTargetCatchup = true;
+	_targetNear = near;
+	_targetFar = far;
+	Log::Info("RaceOpponent: '{}' waits for the player between {:.0f}m and {:.0f}m", _vehicle.GetName(), near, far);
 }
 
 void RaceOpponent::SetCatchup(const Catchup& catchup)

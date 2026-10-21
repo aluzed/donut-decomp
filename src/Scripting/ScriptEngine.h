@@ -12,6 +12,8 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <set>
+#include <utility>
 #include <vector>
 
 namespace Donut
@@ -65,6 +67,13 @@ public:
 
 	void AddStageWaypoint(const std::string& path);
 	void UsePedGroup(int group);
+	// The level script's pedestrian group the streets take their people from
+	// (UsePedGroup: one per district, CreatePedGroup in leveli.mfk).
+	int GetPedGroup() const { return _pedGroup; }
+	// SetMaxTraffic: how many traffic cars may drive, from then on; -1 until a
+	// script says.
+	void SetMaxTraffic(int cars);
+	int GetMaxTraffic() const { return _maxTraffic; }
 
 	void SetMass(float mass);
 	void SetGasScale(float scale);
@@ -93,6 +102,10 @@ public:
 	// The street races switch the police off for their stage.
 	void DisableHitAndRun() { _hitAndRunOff = true; }
 	bool IsHitAndRunOff() const { return _missionActive && _hitAndRunOff; }
+	// SetHitNRun: the police on the player at once, the meter full (the E3
+	// demo's mission does so at each stage). Taken once.
+	void SetHitNRun() { _hitNRunNow = true; }
+	bool TakeHitNRun() { return std::exchange(_hitNRunNow, false); }
 	// Fails the mission under way, if there is one still undecided.
 	void FailMission(const std::string& reason, const std::string& hint)
 	{
@@ -242,6 +255,18 @@ public:
 	// behind -- an interpretation, the data carries no names.
 	void SetStageAIRaceCatchupParams(const std::string& vehicle, float distance, float ahead, float level,
 	                                 float behind);
+	// SetStageAITargetCatchupParams(vehicle, near, far): see RaceOpponent::SetTargetCatchup.
+	void SetStageAITargetCatchupParams(const std::string& vehicle, float near, float far)
+	{
+		_targetCatchups[vehicle] = {near, far};
+	}
+	// SetConditionPosition(n): the race is lost once n opponents have finished
+	// ahead of the player (sr2: 2, second place will do). 1 by default.
+	void SetConditionPosition(int position);
+	// SetVehicleAIParams(vehicle, a, b): kept and logged. The pairs run from
+	// (-51, -50) to (50, 51), and the scripts' comments call (-10, -9) "no
+	// shortcuts", but what the two numbers do is not established.
+	void SetVehicleAIParams(const std::string& vehicle, int a, int b);
 	float GetBestTime() const { return _bestTime; }
 	bool IsNewRecord() const { return _isNewRecord; }
 	void AdvanceCheckpoint();
@@ -308,6 +333,8 @@ private:
 	// the level path AddObjective falls back on.
 	bool _checkpointsFromCollectibles = false;
 	bool _noTraffic = false;
+	int _pedGroup = 0;
+	int _maxTraffic = -1;
 
 	// Each stage's own commands, recorded as the script is read and run when the
 	// stage begins: a mission is a sequence of stages, and running every stage's
@@ -437,6 +464,7 @@ private:
 	std::string _conversation;
 	bool _conversationQueued = false;
 	bool _hitAndRunOff = false;
+	bool _hitNRunNow = false;
 	// The lines of `_conversation` for this mission, in order.
 	std::vector<std::string> conversationLines() const;
 	// The player has had the car being followed within the follow distance.
@@ -445,6 +473,10 @@ private:
 	std::map<std::string, std::string> _stateProps;
 	// Catch-up curves by car name, held until that car's driver exists.
 	std::map<std::string, RaceOpponent::Catchup> _raceCatchups;
+	std::map<std::string, std::pair<float, float>> _targetCatchups;
+	int _racePosition = 1;
+	// The opponents that have finished the race ahead of the player.
+	std::set<const RaceOpponent*> _finishedAhead;
 	// Where the mission puts the player, for when the character is created after
 	// the script has run (the first start).
 	bool _hasPlayerStart = false;

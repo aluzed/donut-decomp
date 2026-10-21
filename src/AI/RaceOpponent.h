@@ -66,6 +66,14 @@ public:
 		float behind;
 	};
 	void SetCatchup(const Catchup& catchup);
+	// A car being chased (a "dump", "follow" or "destroy" target), from
+	// SetStageAITargetCatchupParams(vehicle, near, far): at full speed with the
+	// player within `near` metres, easing off to `kTargetWaitBoost` as the
+	// player falls `far` metres behind, so that it can be kept up with. An
+	// interpretation, as for the race's: the data names nothing.
+	void SetTargetCatchup(float near, float far);
+	// Where the player is, for the target catch-up; set before each Update.
+	void SetPlayerPosition(const Vector3& position) { _playerPosition = position; _hasPlayerPosition = true; }
 
 private:
 	// Speed the route ahead can be taken at. Every corner within the look-ahead
@@ -112,6 +120,12 @@ private:
 	bool _joinAhead = false;
 	bool _hasCatchup = false;
 	Catchup _catchup {};
+	bool _hasTargetCatchup = false;
+	float _targetNear = 0.0f, _targetFar = 0.0f;
+	Vector3 _playerPosition;
+	bool _hasPlayerPosition = false;
+	// The race scripts' own "ahead" factor (0.6): the most a chased car eases off.
+	static constexpr float kTargetWaitBoost = 0.6f;
 	// Length of the circuit once round, to turn a deficit in laps into metres.
 	float _circuitMetres = 0.0f;
 	// Time since the current lap began, and the lap it is timing.

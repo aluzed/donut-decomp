@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Math/Vector3.h"
+#include <map>
 #include <memory>
 #include <random>
 #include <string>
@@ -47,11 +48,16 @@ public:
 	// The pedestrians with a body, as skinned characters.
 	void DrawBodies(const class Matrix4x4& viewProj, GL::ShaderProgram& skinShader, const ResourceManager& resources);
 
-	// Builds bodies from the people a level script lists for its pedestrians
-	// (AddPed("male6", 2) ...), as far as their models have been extracted.
+	// Reads the groups of people a level script lists for its pedestrians
+	// (CreatePedGroup(1); AddPed("olady1", 2); ...; ClosePedGroup()), as far as
+	// their models have been extracted, and builds the bodies of the first.
 	// One per pedestrian slot, built once and reused: loading a character model
 	// as each pedestrian appeared would stall the frame.
 	void LoadModels(const std::string& levelScript);
+	// The streets take their people from that group from now on (UsePedGroup,
+	// one a district): its bodies built, the pedestrians about now cleared to
+	// come back as its people.
+	void UseGroup(int group);
 
 	// The pedestrians within `radius` of a car going through them: they are
 	// taken off the street (there is no knock-down animation) and counted.
@@ -68,6 +74,11 @@ private:
 	WorldPhysics& _worldPhysics;
 	std::vector<Pedestrian> _pedestrians;
 	std::vector<std::unique_ptr<Character>> _bodies;
+	// Each group's people, by its number: a name as many times as the script's
+	// count for it, which shares out the slots.
+	std::map<int, std::vector<std::string>> _groups;
+	int _group = -1;
+	void buildBodies(const std::vector<std::string>& people);
 	std::vector<bool> _bodyInUse;
 	std::mt19937 _rng;
 	int _maxPedestrians = 15;

@@ -210,10 +210,10 @@ car, rewards), not through the commands.
 | SCRIPT-A | ✅ | The base race commands: every level's races run |
 | SCRIPT-B | 🟡 | Car tuning: `SetMass`, `SetGasScale`, `SetTopSpeedKmh`, `SetTireGrip` applied; suspension and the rest are stubs |
 | SCRIPT-C | 🟡 | Cameras: `SetConversationCam` only; `SetCarStartCamera`, conversation camera names are stubs |
-| SCRIPT-D | 🟡 | Race tuning: laps, catch-up, the opponent's win; `SetVehicleAIParams` and the rest are stubs |
+| SCRIPT-D | ✅ | Race tuning: laps, catch-up, the opponent's win, `SetConditionPosition`, the chased car's catch-up; `SetVehicleAIParams` kept, its meaning unknown (2026-10-21) |
 | SCRIPT-E | ✅ | Gags and collectibles: read from `level.mfk` (GAME-010); state props for `pickupitem` |
-| SCRIPT-F | 🟡 | Hit & Run: decay and chase model read from `leveli.mfk`; `SetHitAndRunMeter`, interior decay are stubs |
-| SCRIPT-G | 🟡 | Traffic and pedestrians: models read from `leveli.mfk`; `SetMaxTraffic`, `CreatePedGroup` are stubs |
+| SCRIPT-F | ✅ | Hit & Run: decay and chase cars read from `leveli.mfk`, `DisableHitAndRun`, `SetHitNRun`; the rest in no script (2026-10-21) |
+| SCRIPT-G | ✅ | Traffic and pedestrians: `SetMaxTraffic` caps the cars, `UsePedGroup` picks the level script's pedestrian group (2026-10-21) |
 | SCRIPT-H | ✅ | UI: `SetPresentationBitmap` shown; `SetFadeOut` and `SetIrisWipe` close the screen at a stage's end, `ShowHUD` hides the HUD. The car swaps behind the fades are stubs |
 | SCRIPT-I | 🟡 | Buying, dialogue, bonus missions, FMV done; `GagCheckCollCards`, `GagSetSparkle`, `GagSetAnimCollision`, `GagSetIntro`/`Outro`, `GagBinding(s)` not |
 
