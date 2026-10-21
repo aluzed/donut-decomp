@@ -436,7 +436,6 @@ void LivingRoom::Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& skinSha
 			_sparkles->Draw(billboardShader);
 		}
 		glDepthFunc(depthFunc);
-		billboardShader.SetUniformValue("fogDensity", 0.0004f);
 	}
 	glDisable(GL_DEPTH_TEST);
 	if (culling)
@@ -445,8 +444,6 @@ void LivingRoom::Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& skinSha
 		glDisable(GL_CULL_FACE);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	// The level's fog, put back for the world drawn next frame.
-	worldShader.SetUniformValue("fogDensity", 0.0004f);
 }
 
 } // namespace Donut

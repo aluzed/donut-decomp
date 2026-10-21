@@ -2,7 +2,7 @@
 
 uniform sampler2D diffuseTex;
 uniform vec4 fogColor = vec4(0.62, 0.78, 1.0, 1.0);
-uniform float fogDensity = 0.0004;
+uniform float fogDensity = 0.0;
 uniform vec3 cameraPos = vec3(0.0);
 uniform vec3 ambientLight = vec3(0.5);
 uniform int lightCount = 1;

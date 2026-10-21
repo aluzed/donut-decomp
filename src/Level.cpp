@@ -1838,8 +1838,12 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 {
 	_worldShader->Bind();
 	_worldShader->SetUniformValue("viewProj", viewProj);
-	_worldShader->SetUniformValue("fogDensity", 0.0004f);
-	_worldShader->SetUniformValue("fogColor", Vector4(0.62f, 0.78f, 1.0f, 1.0f));
+	// No fog: the game's views are built with their fog off (Pure3D's tView,
+	// 0x572a70: white, 0 to 0 m, disabled), the render manager turns it off
+	// again on each view it makes (0x4a80a0), and nothing turns it on. Neither
+	// the level files nor the scripts carry any fog. A haze of our own
+	// (exponential, 0.0004/m, sky blue) once stood in for it.
+	_worldShader->SetUniformValue("fogDensity", 0.0f);
 	_worldShader->SetUniformValue("cameraPos", cameraPos);
 	_worldShader->SetUniformValue("lightmapIntensity", 0.0f);
 	_worldShader->SetUniformValue("lightmapTex", 1);
@@ -1851,8 +1855,7 @@ void Level::Draw(Matrix4x4& viewProj, const Vector3& cameraPos)
 	// glow multiplied by a corner of its own texture (black), and an additive
 	// glow drawn black does not show.
 	_billboardBatchShader->Bind();
-	_billboardBatchShader->SetUniformValue("fogDensity", 0.0004f);
-	_billboardBatchShader->SetUniformValue("fogColor", Vector4(0.62f, 0.78f, 1.0f, 1.0f));
+	_billboardBatchShader->SetUniformValue("fogDensity", 0.0f);
 	_billboardBatchShader->SetUniformValue("cameraPos", cameraPos);
 	_billboardBatchShader->SetUniformValue("lightmapIntensity", 0.0f);
 	_billboardBatchShader->SetUniformValue("lightmapTex", 1);
