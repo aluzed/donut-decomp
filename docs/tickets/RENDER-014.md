@@ -1,6 +1,6 @@
 # RENDER-014 — Support multi-canal UV (canal 1 = lightmap)
 
-- **Status:** TODO
+- **Status:** DONE (2026-10-21: closed, the data has none)
 - **Priority:** P2
 - **Module:** Render
 - **Depends on:** —
@@ -33,3 +33,16 @@ vertex layout / VAO, sans le `catch(...)` muet. Ce ticket débloque RENDER-015.
 - [ ] Une géométrie sans canal 1 charge sans erreur (fallback déterministe).
 - [ ] Le canal 1 atteint bien `world.frag` (vérifiable en affichant `lightmapUV`
       comme couleur de debug).
+
+## Closed: the PC data has no lightmaps (2026-10-21)
+
+Every UV list of every uncompressed P3D file was counted (`UVList`, 0x10007, its
+channel in its second word): 19866 lists in 655 files, all channel 0. Not one second
+channel, so nothing for a lightmap's coordinates. And every shader's texture parameter
+(`0x11002`) was counted: 14053 `TEX`, 157 `REFL` (the cars' reflection maps), no other:
+no shader has a second texture for one either. The game's world is lit by its vertex
+colours, which are drawn.
+
+`Mesh` no longer reads the second channel by catching the exception `GetUvs(1)`
+throws: it asks `PrimitiveGroup::GetUvChannelCount()`. The world shader keeps its
+lightmap sampler, at intensity 0.

@@ -133,6 +133,19 @@ void CollectibleManager::SpawnOnPath()
 	_collected = 0;
 }
 
+void CollectibleManager::DropCoins(const Vector3& position, int count)
+{
+	// In rings about it, a metre and more out, a little off the ground.
+	for (int i = 0; i < count; ++i)
+	{
+		const float ring = 1.2f + 0.6f * static_cast<float>(i / 8);
+		const float angle = static_cast<float>(i % 8) * 0.785398f + static_cast<float>(i / 8) * 0.39f;
+		_coins.push_back({position + Vector3(std::cos(angle) * ring, 0.5f, std::sin(angle) * ring), false});
+	}
+	Log::Info("CollectibleManager: {} coin(s) spilled at ({:.1f}, {:.1f}, {:.1f})", count, position.X, position.Y,
+	          position.Z);
+}
+
 void CollectibleManager::Update(const Vector3& playerPos, float collectRadius)
 {
 	for (auto& card : _cards)

@@ -60,8 +60,12 @@ void Mesh::CreateMeshBuffers(const P3D::Geometry& geometry)
 		}
 		bool hasColors = !colors.empty();
 
+		// A second UV channel would be a lightmap's. None of the game's 655
+		// files with UV lists has one (19866 lists, all channel 0): its world
+		// is lit by its vertex colours.
 		std::vector<Vector2> lightmapUVs;
-		try { lightmapUVs = prim->GetUvs(1); } catch (...) {}
+		if (prim->GetUvChannelCount() > 1)
+			lightmapUVs = prim->GetUvs(1);
 		bool hasLightmap = !lightmapUVs.empty();
 
 		for (uint32_t i = 0; i < verts.size(); i++)

@@ -24,6 +24,8 @@ public:
 
 	void SpawnOnPath();
 	void Update(const Vector3& playerPos, float collectRadius);
+	// `count` coins spilled about `position` (a crate broken), to pick up.
+	void DropCoins(const Vector3& position, int count);
 	// The coins as the game's spinning coin model, with the level's world shader;
 	// as wire boxes when the model is not loaded.
 	void Draw(GL::ShaderProgram& worldShader, const Matrix4x4& viewProj, float time);

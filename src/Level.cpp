@@ -1,6 +1,7 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
 #include "Render/imgui/imgui.h"
+#include "P3D/StateProp.h"
 #include <algorithm>
 #include <cctype>
 #include <Core/File.h>
@@ -507,6 +508,14 @@ void Level::LoadP3D(const std::string& filename)
 				break;
 			}
 
+			// Its states, when its wrapper has a state prop (a crate's, a
+			// vending machine's): shared by its instances.
+			std::shared_ptr<const P3D::StateProp> states;
+			for (const auto& child : chunk->GetChildren())
+				for (const auto& part : child->GetChildren())
+					if (!states && part->IsType(P3D::ChunkType::StaticPropData))
+						states = std::make_shared<const P3D::StateProp>(P3D::StateProp::Load(*part));
+
 			for (size_t i = 0; i < drawables.size(); ++i)
 			{
 				const auto& drawable = drawables.at(i);
@@ -573,12 +582,18 @@ void Level::LoadP3D(const std::string& filename)
 								if (factory != _particleFactories.end())
 									_particles.push_back({std::make_unique<ParticleSystem>(*factory->second),
 									                      _compositeModels.size(), joint, filename,
-									                      static_cast<int>(_animatedObjects.size())});
+									                      static_cast<int>(_animatedObjects.size()),
+									                      system.substr(0, system.find('\0'))});
 							}
 							effects(*child);
 						}
 					};
 					effects(*chunk);
+					if (states && !states->states.empty())
+					{
+						object.states = states;
+						enterState(object, *compositeModel, 0);
+					}
 					_animatedObjects.push_back(object);
 				}
 				_compositeModels.push_back(std::move(compositeModel));
@@ -1472,22 +1487,99 @@ std::string Level::FindAnimatedObjectEnding(const std::string& suffix, const std
 bool Level::HasBreakableNear(const Vector3& position, float radius) const
 {
 	for (const auto& object : _animatedObjects)
-		if (object.breaks && !object.pooled && !object.broken && (object.position - position).Length() < radius)
+		if (object.breaks && !object.pooled && !object.broken && (object.position - position).Length() < radius &&
+		    (!object.states || object.states->states[object.state].OnEvent("HIT") >= 0))
 			return true;
 	return false;
 }
 
-int Level::BreakObjectsNear(const Vector3& position, float radius, bool solid)
+int Level::BreakObjectsNear(const Vector3& position, float radius, bool solid, const std::string& event)
 {
 	int broke = 0;
 	for (auto& object : _animatedObjects)
-		if (object.breaks && !object.pooled && !object.broken && (solid || !object.body) &&
-		    (object.position - position).Length() < radius)
+	{
+		if (!object.breaks || object.pooled || object.broken || (!solid && object.body) ||
+		    (object.position - position).Length() >= radius)
+			continue;
+		if (object.states)
 		{
-			breakObject(object, nullptr);
-			++broke;
+			const int next = object.states->states[object.state].OnEvent(event);
+			if (next < 0 || next >= static_cast<int>(object.states->states.size()))
+				continue;
+			object.hitter = nullptr;
+			enterState(object, *_compositeModels[object.index], next);
 		}
+		else
+			breakObject(object, nullptr);
+		++broke;
+	}
 	return broke;
+}
+
+std::vector<Level::CoinDrop> Level::TakeCoinDrops()
+{
+	return std::exchange(_coinDrops, {});
+}
+
+void Level::enterState(AnimatedObject& object, CompositeModel& model, int state)
+{
+	object.state = state;
+	object.stateStartedAt = _animationTime;
+	const auto& entered = object.states->states[state];
+	object.called.assign(entered.callbacks.size(), false);
+	if (state != 0)
+		Log::Info("Level: '{}' to its {}", object.name, entered.name);
+	for (const auto& shown : entered.visibility)
+		model.SetPropVisible(shown.drawable, shown.visible);
+}
+
+void Level::updateState(AnimatedObject& object, CompositeModel& model)
+{
+	const auto& state = object.states->states[object.state];
+	const float seconds = static_cast<float>(_animationTime - object.stateStartedAt);
+	// Its pose, as the state's pose controller has it.
+	for (const auto& controller : state.controllers)
+		if (controller.name.rfind("PTRN_", 0) == 0)
+			model.Pose(controller.FrameAt(seconds), false);
+	// The callbacks whose time has come.
+	for (std::size_t i = 0; i < state.callbacks.size(); ++i)
+		if (!object.called[i] && seconds >= state.callbacks[i].onSeconds)
+		{
+			object.called[i] = true;
+			stateCallback(object, model, state.callbacks[i].callback);
+		}
+	// On by itself after a while.
+	if (state.autoTransition && seconds >= state.outSeconds &&
+	    state.outState < object.states->states.size() && static_cast<int>(state.outState) != object.state)
+		enterState(object, model, static_cast<int>(state.outState));
+}
+
+void Level::stateCallback(AnimatedObject& object, CompositeModel& model, uint32_t callback)
+{
+	if (const int coins = P3D::StateProp::Coins(callback); coins > 0)
+	{
+		_coinDrops.push_back({object.position, coins});
+		return;
+	}
+	switch (callback)
+	{
+	// Run through now: its body goes, what hit it given its speed back, and
+	// its crash is heard.
+	case P3D::StateProp::RemoveCollisionVolume:
+	case P3D::StateProp::RemoveSecondVolume:
+		if (object.body)
+		{
+			Game::GetInstance().GetWorldPhysics().RemoveProp(object.body, object.mass, object.hitter);
+			_breakingBodies.erase(object.body);
+			object.body = nullptr;
+			_knockedProps.push_back({object.sound, object.effect, object.position + Vector3(0.0f, 0.7f, 0.0f)});
+		}
+		return;
+	case P3D::StateProp::RemoveFromWorld: model.SetVisible(false); return;
+	// The wasps' (fired by their own manager), the saucer's, the cola
+	// truck's: not for the level's objects.
+	default: return;
+	}
 }
 
 void Level::breakObject(AnimatedObject& object, const btCollisionObject* hitter)
@@ -1526,8 +1618,25 @@ void Level::updateBreakingBodies()
 				hit.emplace_back(found->second, other);
 		}
 	for (const auto& [index, other] : hit)
-		if (_animatedObjects[index].body)
-			breakObject(_animatedObjects[index], other);
+	{
+		AnimatedObject& object = _animatedObjects[index];
+		if (!object.body)
+			continue;
+		if (!object.states)
+		{
+			breakObject(object, other);
+			continue;
+		}
+		// Driven into: its VEHICLE_HIT, its body gone by its new state's
+		// callback.
+		const int next = object.states->states[object.state].OnEvent("VEHICLE_HIT");
+		if (next >= 0 && next < static_cast<int>(object.states->states.size()))
+		{
+			object.hitter = other;
+			enterState(object, *_compositeModels[object.index], next);
+			updateState(object, *_compositeModels[object.index]);
+		}
+	}
 }
 
 void Level::Update(double deltatime)
@@ -1548,7 +1657,9 @@ void Level::Update(double deltatime)
 	for (auto& object : _animatedObjects)
 	{
 		auto& model = *_compositeModels[object.index];
-		if (object.driven)
+		if (object.states)
+			updateState(object, model);
+		else if (object.driven)
 		{
 			const double end = model.GetAnimationFrames() / std::max(1.0f, model.GetAnimationFrameRate());
 			object.clock += deltatime * object.speed;
@@ -1609,9 +1720,22 @@ void Level::Update(double deltatime)
 			placed.system->Update(deltatime, at);
 			continue;
 		}
+		const auto& object = _animatedObjects[placed.breakable];
+		// One with states: as its state's controller of it (EFX_<name>) plays,
+		// giving off while it runs.
+		if (object.states)
+		{
+			const auto& state = object.states->states[object.state];
+			const auto* controller = state.Controller("EFX_" + placed.effect);
+			const float seconds = static_cast<float>(_animationTime - object.stateStartedAt);
+			const bool runs = controller && controller->lastFrame > controller->firstFrame &&
+			                  (controller->cyclic || seconds * P3D::StateProp::kFramesPerSecond * controller->speed <
+			                                             controller->lastFrame - controller->firstFrame);
+			placed.system->Update(deltatime, at, controller ? controller->FrameAt(seconds) : 0.0f, runs);
+			continue;
+		}
 		// Nothing until it breaks; then keyed to its breaking, giving off no more
 		// once that has played.
-		const auto& object = _animatedObjects[placed.breakable];
 		if (!object.broken)
 			continue;
 		const bool playing = object.startedAt >= 0.0;

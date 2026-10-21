@@ -1,6 +1,6 @@
 # RENDER-007 — Implémenter la classe `CompositeDrawable`
 
-- **Status:** TODO
+- **Status:** DONE (2026-10-21: the class removed; `CompositeModel` is it)
 - **Priority:** P2
 - **Module:** Render
 - **Depends on:** —
@@ -36,3 +36,11 @@ opacité, billboards séparés).
       `P3D::CompositeDrawable` réel.
 - [ ] `Draw` rend meshes et billboards d'un drawable au bon joint du squelette.
 - [ ] Aucun symbole déclaré-non-défini restant (link OK).
+
+## Closed: `CompositeModel` is the composite drawable (2026-10-21)
+
+The class declared in `CompositeModel.h` had a constructor never defined and nothing
+using it. What it was to do is done by `CompositeModel`: a P3D `CompositeDrawable`'s
+props (meshes, billboards) on its skeleton's joints, their visibility tracks, its
+animation; the cars, the props, the gags, the wasps and the sky are drawn by it. Its
+skins and effects are P3D-014's. The empty declaration was removed.

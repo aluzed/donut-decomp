@@ -3964,7 +3964,7 @@ void Game::Run()
 				{
 					_kickedThisJump = true;
 					_lastJumpAt = _elapsedSeconds;
-					if (_level->BreakObjectsNear(_character->GetPosition(), 2.0f) > 0)
+					if (_level->BreakObjectsNear(_character->GetPosition(), 2.0f, true, "STOMP") > 0)
 						AddShake(0.2f);
 					_level->KickPropsNear(_character->GetPosition(), 1.8f);
 				}
@@ -4209,7 +4209,8 @@ void Game::Run()
 			// as the car hits it (Level::updateBreakingBodies); the others, as
 			// it comes by.
 			if (_inVehicle && _activeVehicle && std::abs(_activeVehicle->GetSpeedKmh()) > 15.0f)
-				if (const int broke = _level->BreakObjectsNear(_activeVehicle->GetPosition(), 2.5f, false); broke > 0)
+				if (const int broke = _level->BreakObjectsNear(_activeVehicle->GetPosition(), 2.5f, false, "VEHICLE_HIT");
+				    broke > 0)
 				{
 					AddShake(0.3f);
 					_audioManager->PlayRaw(SoundGenerator::Chirp(220.0f, 80.0f, 0.2f, 44100), 44100, 1, 16);
@@ -4426,6 +4427,10 @@ void Game::Run()
 		_level->Update(deltaTime);
 		// A mailbox, a lamp post knocked over: its crash, and the sparks off a
 		// metal one.
+		// What a broken crate, a vending machine gives: coins, spilled about it.
+		for (const auto& drop : _level->TakeCoinDrops())
+			if (_collectibleManager)
+				_collectibleManager->DropCoins(drop.position, drop.coins);
 		for (const auto& [sound, effect, where] : _level->TakeKnockedProps())
 		{
 			// The stars off a gravestone have no sprite of their own in the

@@ -165,19 +165,4 @@ private:
 	std::vector<DrawableProp> _props;
 };
 
-/*
-CompositeDrawable represents a sorted list of skins, props and effects linked to a Skeleton.
-Skins reference Skin,
-Props are reference to Mesh or Billboard and have a skeleton joit indentifier, Effects?
-*/
-class CompositeDrawable
-{
-public:
-	CompositeDrawable(const P3D::CompositeDrawable&);
-
-private:
-	// props:
-	std::vector<std::shared_ptr<Mesh>> _meshes;
-	std::vector<std::shared_ptr<BillboardBatch>> _billboards;
-};
 } // namespace Donut

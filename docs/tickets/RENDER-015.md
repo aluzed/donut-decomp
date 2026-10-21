@@ -1,6 +1,6 @@
 # RENDER-015 — Lightmaps / éclairage statique (2e texture)
 
-- **Status:** TODO
+- **Status:** DONE (2026-10-21: closed, the data has none)
 - **Priority:** P2
 - **Module:** Render
 - **Depends on:** RENDER-014
@@ -33,3 +33,16 @@ aucun éclairage statique réel.
 - [ ] Une zone avec lightmap montre un éclairage statique pré-calculé ;
       `lightmapIntensity=0` redonne le rendu non éclairé.
 - [ ] Géométrie sans lightmap : rendu identique à avant (fallback blanc).
+
+## Closed: the PC data has no lightmaps (2026-10-21)
+
+Every UV list of every uncompressed P3D file was counted (`UVList`, 0x10007, its
+channel in its second word): 19866 lists in 655 files, all channel 0. Not one second
+channel, so nothing for a lightmap's coordinates. And every shader's texture parameter
+(`0x11002`) was counted: 14053 `TEX`, 157 `REFL` (the cars' reflection maps), no other:
+no shader has a second texture for one either. The game's world is lit by its vertex
+colours, which are drawn.
+
+`Mesh` no longer reads the second channel by catching the exception `GetUvs(1)`
+throws: it asks `PrimitiveGroup::GetUvChannelCount()`. The world shader keeps its
+lightmap sampler, at intensity 0.

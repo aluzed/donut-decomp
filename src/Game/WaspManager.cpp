@@ -8,6 +8,7 @@
 #include "Level.h"
 #include "P3D/P3D.generated.h"
 #include "P3D/P3DFile.h"
+#include "P3D/StateProp.h"
 #include "Render/BillboardBatch.h"
 #include "Render/CompositeModel.h"
 #include "Render/OpenGL/ShaderProgram.h"
@@ -316,36 +317,23 @@ void WaspManager::readBehaviours(const std::string& levelScript)
 
 void WaspManager::readStates(const P3D::P3DChunk& stateProp)
 {
-	// Each state (StaticPropStateData): name, auto-transition, the state after,
-	// counts, out frame; then per drawable its visibility (name, visible), and
-	// per frame controller (name, cyclic, cycles, hold frame, first frame, last
-	// frame, speed) -- of which the pose animation's is the one that matters.
-	for (const auto& child : stateProp.GetChildren())
+	// Each state: what it shows, the state after when it goes on by itself,
+	// and its pose animation's frames (PTRN_), the one controller that
+	// matters here.
+	for (const auto& read : P3D::StateProp::Load(stateProp).states)
 	{
-		if (!child->IsType(P3D::ChunkType::StaticPropStateData))
-			continue;
-		MemoryStream stream(child->GetData());
-		readLPString(stream);
-		const bool autoTransition = stream.Read<uint32_t>() != 0;
-		const int next = static_cast<int>(stream.Read<uint32_t>());
 		State state;
-		state.next = autoTransition ? next : -1;
-		for (const auto& part : child->GetChildren())
-		{
-			MemoryStream data(part->GetData());
-			const std::string name = readLPString(data);
-			if (part->IsType(P3D::ChunkType::StaticPropVisibilityData))
-				state.visible[name] = data.Read<uint32_t>() != 0;
-			else if (part->IsType(P3D::ChunkType::StaticPropFrameControllerData) && name.rfind("PTRN_", 0) == 0)
+		state.next = read.autoTransition ? static_cast<int>(read.outState) : -1;
+		for (const auto& shown : read.visibility)
+			state.visible[shown.drawable] = shown.visible;
+		for (const auto& controller : read.controllers)
+			if (controller.name.rfind("PTRN_", 0) == 0)
 			{
-				state.loops = data.Read<uint32_t>() != 0;
-				data.Read<uint32_t>();
-				data.Read<uint32_t>();
-				state.firstFrame = data.Read<float>();
-				state.lastFrame = data.Read<float>();
-				state.speed = data.Read<float>();
+				state.loops = controller.cyclic;
+				state.firstFrame = controller.firstFrame;
+				state.lastFrame = controller.lastFrame;
+				state.speed = controller.speed;
 			}
-		}
 		_states.push_back(std::move(state));
 	}
 }

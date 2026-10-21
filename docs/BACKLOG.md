@@ -98,7 +98,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | P3D-009 | ✅ | — | CollisionWallVolume / CollisionEffect / Atc | `CollisionEffect` and `Atc` read by hand and used (PHYS-011); no `CollisionWallVolume` in the game. Not in `p3d.json` |
 | P3D-002 | ⬜ | P2 | Lights (headlights, dynamic lights) |
 | P3D-007 | ⬜ | P2 | Tree/TreeNode (spatial, needed for culling) |
-| P3D-010 | ⬜ | P2 | StaticProp (6 chunks) |
+| P3D-010 | ✅ | P2 | StaticProp (6 chunks) | Read by `P3D::StateProp` (2026-10-21): the levels' 263 breakables go state to state on a strike, a kick, a car (a crate takes three strikes, ten coins spilled each), their visibility, pose and particles as each state says, their callbacks called (coins, collision, gone); the wasps read theirs through it |
 | P3D-011 | ⬜ | P2 | Geometry extras (PackedNormalList, DrawShadow...) |
 | P3D-014 | ⬜ | P2 | CompositeDrawableSkin/Effect parsing |
 | P3D-003 | ⬜ | P3 | Facial expression animation |
@@ -113,10 +113,10 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 | ID | Status | Pri | Subject | Note |
 |---|---|---|---|---|
 | RENDER-006 | ✅ | — | AnimObjectWrapper `_shaders`/`_textures` | No wrapper in the game holds a shader or a texture: their file's own serve (2026-10-20) |
-| RENDER-007 | ⬜ | P2 | `CompositeDrawable` methods | declared only |
+| RENDER-007 | ✅ | P2 | `CompositeDrawable` methods | Closed (2026-10-21): `CompositeModel` does it (props on their joints, visibility, animation); the empty declaration, never defined nor used, removed |
 | RENDER-011 | 🟡 | P2 | WorldSphere billboards (lens flare, sun halo) | Drawn with the billboard program, not the world's (whose vertex layout is not theirs): the sun's warm halo shows; the sky's clouds show since the fog no longer mixes into the alpha (2026-10-19). Lens flares not done |
-| RENDER-014 | ⬜ | P2 | Multi-UV (channel 1 = lightmap) | needed by RENDER-015 |
-| RENDER-015 | ⬜ | P2 | Lightmaps, static lighting | after RENDER-014 |
+| RENDER-014 | ✅ | P2 | Multi-UV (channel 1 = lightmap) | Closed (2026-10-21): no UV list in the data has a second channel (19866 lists in 655 files, all channel 0); the channel is asked for, not caught |
+| RENDER-015 | ✅ | P2 | Lightmaps, static lighting | Closed (2026-10-21): the PC data has none: no second UV channel, no shader with a second texture (`TEX` 14053, `REFL` 157); the world is lit by its vertex colours |
 | RENDER-008 | 🧩 | P2 | LOD and spatial culling | § C.3 |
 | RENDER-009 | 🧩 | P3 | Post-process | § C.4 |
 | RENDER-013 | ✅ | — | Shader cache | |

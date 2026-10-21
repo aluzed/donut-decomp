@@ -496,6 +496,7 @@ public:
 	const std::vector<uint32_t>& GetIndices() const { return _indices; }
 	const std::vector<Vector3>& GetNormals() const { return _normals; }
 	const std::vector<Vector2>& GetUvs(size_t index) const { return _uvs.at(index); }
+	std::size_t GetUvChannelCount() const { return _uvs.size(); }
 	const std::vector<uint32_t>& GetMatrixList() const { return _matrixList; }
 	const std::vector<uint32_t>& GetMatrixPalette() const { return _matrixPalette; }
 	const std::vector<Vector3>& GetWeightList() const { return _weightList; }

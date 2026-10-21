@@ -26,6 +26,7 @@ namespace Donut
 namespace P3D
 {
 class P3DChunk;
+struct StateProp;
 }
 
 namespace GL
@@ -66,16 +67,27 @@ public:
 	// none.
 	std::string FindAnimatedObjectEnding(const std::string& suffix, const std::string& besides, const Vector3& near) const;
 	// Breaks the breakable objects within `radius` of `position` (crates,
-	// vending machines, gas pumps): each plays its animation once and stays
-	// as it ends. `solid` too, those that stand as bodies, which a car breaks
-	// by running into them instead. How many broke.
+	// vending machines, gas pumps), `event` done to them (HIT: struck,
+	// STOMP: kicked from a jump, VEHICLE_HIT: driven into): one with states
+	// (its state prop) goes to the state the event takes it to -- a crate is
+	// struck three times before it gives -- one without plays its animation
+	// once and stays as it ends. `solid` too, those that stand as bodies,
+	// which a car breaks by running into them instead. How many it moved.
 	// What the last physics step's contacts did to the props and the
 	// breakable objects: knocked loose, broken, the car that hit them given
 	// its speed back. Right after the step, before the car's damage is judged
 	// from its speed: a crate run into stopped it dead for a step, and the
 	// car took a crash's damage for it.
 	void UpdateCollisions();
-	int BreakObjectsNear(const Vector3& position, float radius, bool solid = true);
+	int BreakObjectsNear(const Vector3& position, float radius, bool solid = true, const std::string& event = "HIT");
+	// The coins the broken objects have given, where, since the last call
+	// (their states' SPAWN_n_COINS callbacks).
+	struct CoinDrop
+	{
+		Vector3 position;
+		int coins = 0;
+	};
+	std::vector<CoinDrop> TakeCoinDrops();
 	// Whether one stands unbroken within `radius`.
 	bool HasBreakableNear(const Vector3& position, float radius) const;
 	// The props the player can kick about (a mailbox, a bin, a lamp post
@@ -292,7 +304,22 @@ private:
 		btRigidBody* body = nullptr;
 		float mass = 100.0f;
 		std::string sound, effect;
+		// Its states (its wrapper's state prop: a crate's six), the one it is
+		// in, when it went in, which of the state's callbacks have been
+		// called, and what last hit it; null: no states, its animation played
+		// through on a break.
+		std::shared_ptr<const P3D::StateProp> states;
+		int state = 0;
+		double stateStartedAt = 0.0;
+		std::vector<bool> called;
+		const btCollisionObject* hitter = nullptr;
 	};
+	// Into state `state` of its state prop: what it shows; its callbacks are
+	// called as the state's time comes to each.
+	void enterState(AnimatedObject& object, CompositeModel& model, int state);
+	void updateState(AnimatedObject& object, CompositeModel& model);
+	void stateCallback(AnimatedObject& object, CompositeModel& model, uint32_t callback);
+	std::vector<CoinDrop> _coinDrops;
 	// Those that stand as bodies, by body.
 	std::unordered_map<const btCollisionObject*, std::size_t> _breakingBodies;
 	// Breaks one: its breaking plays, its body goes; `hitter`, given its
@@ -414,6 +441,8 @@ private:
 		// A breakable's (its debris, its dust): played from its breaking, keyed
 		// to that animation, the index into _animatedObjects; -1 for one always on.
 		int breakable = -1;
+		// Its name, which its object's states key it by (EFX_<name>).
+		std::string effect;
 	};
 	std::vector<PlacedParticles> _particles;
 	void drawBillboards(Matrix4x4& viewProj, bool opaque, const std::function<bool(std::size_t)>& shown);
