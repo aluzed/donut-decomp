@@ -587,6 +587,8 @@ private:
 	// sound or movie, its coins, the count of those found, saved.
 	GagManager _gags;
 	void playGag(GagManager::Gag& gag);
+	// The player came into a place an event locator marks: its reverb.
+	void placeEvent(uint32_t event);
 	void updateGags();
 	void saveGags() const;
 	void useMovieGag(const GagManager::MovieGag& gag);

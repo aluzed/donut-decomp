@@ -136,6 +136,10 @@ public:
 	void SetLoop(const std::string& channel, const std::string& file, float gain = 1.0f);
 	// The place's background sound, looped softly ("suburb_day_loop.rsd").
 	void PlayAmbience(const std::string& part);
+	// The place's reverb, one of the sound scripts' reverbSettings ("pproom1",
+	// "burns_tunnel"), heard on the sounds placed in the world and the car's;
+	// empty for none.
+	void SetReverb(const std::string& name);
 	// Every sound the loaded RCFs hold whose name contains `part`, sorted.
 	std::vector<std::string> FindSounds(const std::string& part) const;
 
@@ -218,6 +222,8 @@ private:
 	// Plays `cue` from its first track; false when none of it plays.
 	bool startCue(MusicScript::Cue cue);
 	ALuint _engineSource = 0;
+	std::unique_ptr<class Reverb> _reverb;
+	bool _reverbLoaded = false;
 	ALuint _ambienceSource = 0;
 	ALuint _ambienceBuffer = 0;
 	std::string _ambience;

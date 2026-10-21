@@ -45,6 +45,8 @@ The scripts, in `tools/ghidra/`:
   (the decompiler loses the arguments of calls through vtables; the instructions keep
   them);
 - `FindScalar.java <hex>...`: every instruction using one of these constants;
+- `DisasmRange.java <start> <end>`: the instructions of a range, disassembled first when the
+  analysis left them undefined (code reached only through a vtable or a jump table);
 - `rtti_vtables.py`: the vtables, rebuilt from the RTTI. Ghidra's RTTI analyzer labels the
   1337 type descriptors but none of the tables; each table is preceded by a pointer to its
   complete object locator, which points to the descriptor. 1605 tables, 12477 slots.
@@ -68,6 +70,7 @@ Found so far; addresses are `Simpsons.exe`'s unless named.
 | Scripts (`.con`, `.mfk`) | `Console` (`0x614cd8`), `ConsoleFileHandler` (`0x613d08`, `0x613d18`) | Plain text, run line by line by the console; the commands' names (`SelectMission` `0x612858`, `AddStage` `0x612748`, `SetDynaLoadData` `0x612810`...) are referred to from data only, a command table. `bonus/bg%d_%d.con` is built by `0x514860` |
 | Movies (`.rmv`) | `radMoviePlayerBink` (`0x5f70f8`), `IRadMoviePlayer2`, `BinkCallback`; logos played by `0x42f740` | Bink files under a radcore wrapper; `0x60f3d8`-`0x60f4ac` list them |
 | Rendering | `RenderManager`, `RenderLayer`, `WorldRenderLayer` (`0x60be24`), `FrontEndRenderLayer`; Pure3D's `tView` (`0x5f87e4`), `tPointCamera` (`0x5f8984`), `tLight` (`0x5f87fc`) | The render manager (`0x4a80a0`) gives each layer its views and cameras |
+| Reverb | `ReverbController` (`Win32ReverbController`), vtables `0x60a050`, `0x609b68`; constructor `0x4ce020`, event handler `0x4ce140` (undisassembled: `DisasmRange.java`) | The event (a place's event locator) picks one of the sound scripts' `reverbSettings`: see [AUDIO-008](tickets/AUDIO-008.md) |
 | Fog | `tView` draw `0x572810`; `pddidx8r.dll` `EnableFog` `0x10005ce0` (context vtable +0x148), `SetFog` `0x10005d10` (+0x150) | Never on: see [LEVEL-FOG](tickets/LEVEL-FOG.md) |
 
 ## Notes for reading the decompiled C

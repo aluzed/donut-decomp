@@ -608,6 +608,9 @@ void Game::enterInterior(const Level::Trigger& door)
 
 	_interior = zone ? door.locator : door.data;
 	_interiorExitArmed = false;
+	// Into a building and out of it, the reverb is off (the game's reverb
+	// controller takes it off on both).
+	_audioManager->SetReverb("");
 	// Going indoors loses the police, as the game's hint says.
 	if (_hitAndRun)
 		_hitAndRun->Reset();
@@ -643,6 +646,7 @@ void Game::updateInterior()
 		_interiorMusic = false;
 		_interior.clear();
 		_level->SetDrawOnly({});
+		_audioManager->SetReverb("");
 		_scriptEngine->OnInteriorChanged(_interior);
 		return;
 	}
@@ -660,6 +664,7 @@ void Game::updateInterior()
 	_interiorMusic = false;
 	_interior.clear();
 	_level->SetDrawOnly({});
+	_audioManager->SetReverb("");
 	SetPlayerPosition(_interiorReturn);
 	_scriptEngine->OnInteriorChanged(_interior);
 }

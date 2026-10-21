@@ -143,7 +143,7 @@ Plus 19 closed earlier (§ A) and 4 epics (§ C).
 |---|---|---|---|---|
 | AUDIO-002 | ✅ | P1 | Music | The `l<n>_music.rms` script read by its names: exploring, missions (start, win, lose, out of the car), races, bonus, Hit & Run. Not on the beat. music02.rcf mended by tools/extract_assets.sh |
 | AUDIO-007 | ✅ | P2 | Dialogue: subtitles and lip sync | Subtitles heard by machine (tools/transcribe_dialogue.py), a setting to hide them (2026-10-21), the movies' lines in each soundtrack's language (tools/transcribe_movies.py), and lip sync: the speaker's jaw opened by the loudness of the line (2026-10-21) |
-| AUDIO-008 | ⬜ | P3 | EFX reverb per zone (inside/outside) | |
+| AUDIO-008 | ✅ | P3 | EFX reverb per zone (inside/outside) | The game's 12 reverbSettings (its sound scripts), set by the places' event locators as its reverb controller does (`0x4ce140`), faded; through EFX's EAX reverb, nothing without it (2026-10-21) |
 | AUDIO-010 | ✅ | — | Footsteps and tyre squeal by the ground | The characters' own steps (concrete, metal, wood, dirt), landings; `skid`/`dirt_skid` looped while the player's car skids (2026-10-20) |
 | AUDIO-006 | ✅ | — | `audio/` scanned for RCFs, any case | |
 | AUDIO-009 | ✅ | — | Horns: the player's, and the traffic's when kept waiting | |

@@ -849,6 +849,8 @@ void Level::LoadP3D(const std::string& filename)
 				tvol.data = data;
 				tvol.action = action;
 				tvol.actionTarget = actionTarget;
+				if (tvol.type == LocatorType::Event && !loc->GetData().empty())
+					tvol.event = loc->GetData()[0];
 				tvol.position = Vector3(m[3][0], m[3][1], m[3][2]);
 				for (int axis = 0; axis < 3; ++axis)
 				{

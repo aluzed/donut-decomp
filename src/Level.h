@@ -173,6 +173,9 @@ public:
 		std::string action;
 		// Its second string: the object it works ("skinner_switch11").
 		std::string actionTarget;
+		// An event locator's event, its first word: the place's sounds
+		// ("city", 7), its reverb ("burns_tunnel_in", 40), a jump...
+		uint32_t event = 0;
 		Vector3 position;
 		// The volume's own axes. Boxes are not all axis-aligned: L1's loader
 		// triggers sit at 90 and 45 degrees.

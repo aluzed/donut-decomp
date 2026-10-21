@@ -2735,6 +2735,23 @@ void Game::updateWheelSprays(double dt)
 	}
 }
 
+void Game::placeEvent(uint32_t event)
+{
+	// The place's reverb, as the game's reverb controller has it (its event
+	// handler, 0x4ce140): the events it listens to are the places' (7 to 46,
+	// 50 to 62, 67 to 76); those of a reverb set it, the others take it off.
+	const bool place = (event >= 7 && event <= 46) || (event >= 50 && event <= 62) || (event >= 67 && event <= 76);
+	if (!place)
+		return;
+	static const std::map<uint32_t, const char*> kReverbs = {
+	    {20, "stadiumtunnel"}, {34, "krustylu"},     {37, "stonecuttertunnel"}, {38, "stonecutterhall"},
+	    {39, "sewers"},        {40, "burns_tunnel"}, {41, "pproom1"},           {42, "pproom2"},
+	    {43, "pproom3"},       {44, "PP_tunnel_01"}, {45, "PP_tunnel_02"},      {46, "mansion_interior"},
+	};
+	const auto reverb = kReverbs.find(event);
+	_audioManager->SetReverb(reverb != kReverbs.end() ? reverb->second : "");
+}
+
 void Game::updateGags()
 {
 	if (!_character)
@@ -3743,6 +3760,8 @@ void Game::updateGameplay(double deltaTime, bool simulate)
 		for (const auto& event : _level->UpdateTriggers(playerPos))
 		{
 			_scriptEngine->OnTrigger(*event.trigger, event.entered);
+			if (event.entered && event.trigger->type == Level::LocatorType::Event)
+				placeEvent(event.trigger->event);
 			// A door is an interior entrance (level 1), or a zone trigger that
 			// loads an interior, "l2i04.p3d@..." (level 2 onwards).
 			if (event.entered && (event.trigger->type == Level::LocatorType::InteriorEntrance ||

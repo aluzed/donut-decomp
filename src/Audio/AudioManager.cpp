@@ -1,8 +1,9 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
+#include "AudioManager.h"
+#include "Audio/Reverb.h"
 #include <algorithm>
 #include <cstdio>
-#include "AudioManager.h"
 
 #include "Core/FileSystem.h"
 #include "Core/Log.h"
@@ -125,6 +126,8 @@ void AudioManager::PlayAudio(const std::string& name, const Vector3& position, f
 		alSource3f(src->id, AL_POSITION, position.X, position.Y, position.Z);
 		alSourcef(src->id, AL_GAIN, gain * volume(Channel::Effects));
 		alSourcef(src->id, AL_PITCH, pitch);
+		if (_reverb)
+			_reverb->Send(src->id, true);
 		showSubtitle(name, rsdFile);
 		return;
 	}
@@ -352,6 +355,8 @@ void AudioManager::processDialogueQueue()
 
 void AudioManager::Update()
 {
+	if (_reverb)
+		_reverb->Update();
 	cleanupFinished();
 	processDialogueQueue();
 
@@ -679,6 +684,8 @@ void AudioManager::PlayEngine(const std::string& file)
 	alSourcei(_engineSource, AL_LOOPING, AL_TRUE);
 	alSourcei(_engineSource, AL_SOURCE_RELATIVE, AL_TRUE);
 	alSourcef(_engineSource, AL_GAIN, 0.35f * volume(Channel::Engine));
+	if (_reverb)
+		_reverb->Send(_engineSource, true);
 	alSourcePlay(_engineSource);
 	Log::Info("Audio: engine '{}'", file);
 }
@@ -726,6 +733,8 @@ void AudioManager::SetLoop(const std::string& channel, const std::string& file, 
 	alSourcei(loop.source, AL_LOOPING, AL_TRUE);
 	alSourcei(loop.source, AL_SOURCE_RELATIVE, AL_TRUE);
 	alSourcef(loop.source, AL_GAIN, gain * volume(Channel::Engine));
+	if (_reverb)
+		_reverb->Send(loop.source, true);
 	alSourcePlay(loop.source);
 	_loops[channel] = loop;
 }
@@ -778,6 +787,30 @@ void AudioManager::PlayAmbience(const std::string& part)
 	alSourcef(_ambienceSource, AL_GAIN, 0.3f * volume(Channel::Effects));
 	alSourcePlay(_ambienceSource);
 	Log::Info("Audio: ambience '{}'", name);
+}
+
+void AudioManager::SetReverb(const std::string& name)
+{
+	if (!_reverb || !_reverb->IsAvailable())
+		return;
+	// The settings, once: from whichever of the sound scripts holds them.
+	if (!_reverbLoaded)
+	{
+		_reverbLoaded = true;
+		for (const auto& [file, rcf] : _sounds)
+		{
+			if (file.size() < 4 || file.compare(file.size() - 4, 4, ".spt") != 0)
+				continue;
+			auto stream = rcf->GetFileStream(file);
+			if (!stream)
+				continue;
+			std::string text(stream->Size(), '\0');
+			stream->ReadBytes(reinterpret_cast<uint8_t*>(text.data()), text.size());
+			if (text.find("reverbSettings") != std::string::npos)
+				_reverb->LoadSettings(text);
+		}
+	}
+	_reverb->Set(name);
 }
 
 void AudioManager::StopMusic()
@@ -895,6 +928,7 @@ void AudioManager::initializeOpenAL()
 		throw std::runtime_error("Failed to create OpenAL context.");
 
 	alcMakeContextCurrent(_alContext);
+	_reverb = std::make_unique<Reverb>(_alDevice);
 
 	_sources.resize(kMaxSources);
 	for (auto& src : _sources)
@@ -908,6 +942,7 @@ void AudioManager::initializeOpenAL()
 
 void AudioManager::shutdownOpenAL()
 {
+	_reverb.reset();
 	releaseMusic();
 	for (auto& [channel, loop] : _loops)
 	{
@@ -1002,6 +1037,9 @@ void AudioManager::playOnSource(Source* src, const RCL::RSDFile& rsdFile)
 	}
 	alSourcei(src->id, AL_BUFFER, src->buffer);
 	alSourcei(src->id, AL_LOOPING, AL_FALSE);
+	// Dry unless placed in the world (PlayAudio at a position).
+	if (_reverb)
+		_reverb->Send(src->id, false);
 	// A pooled source keeps what the last sound on it was given.
 	alSourcef(src->id, AL_GAIN, volume(Channel::Effects));
 	alSourcef(src->id, AL_PITCH, 1.0f);
