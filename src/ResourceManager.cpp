@@ -128,6 +128,19 @@ void ResourceManager::resolveTexture(Shader& shader) const
 {
 	if (shader.IsTextureResolved())
 		return;
+	// Untextured (a few characters' and props' shaders name no texture): drawn
+	// in their colours alone, on white, not on whichever texture came first.
+	if (!_white)
+	{
+		const uint8_t white[4] = {255, 255, 255, 255};
+		_white = std::make_unique<Texture>(white, 1, 1, "white");
+	}
+	if (shader.GetDiffuseTextureName().empty())
+	{
+		shader.SetDiffuseTexture(_white.get());
+		shader.SetTextureResolved();
+		return;
+	}
 	const auto loads = _textureLoads.find(shader.GetDiffuseTextureName());
 	if (loads == _textureLoads.end() || loads->second.empty())
 	{
@@ -136,8 +149,7 @@ void ResourceManager::resolveTexture(Shader& shader) const
 		static std::set<std::string> warned;
 		if (warned.insert(shader.GetDiffuseTextureName()).second)
 			Log::Warn("could not find texture {}", shader.GetDiffuseTextureName());
-		if (!_textures.empty())
-			shader.SetDiffuseTexture(_textures.begin()->second.get()); // todo: set an error texture
+		shader.SetDiffuseTexture(_white.get());
 		return;
 	}
 	shader.SetTextureResolved();

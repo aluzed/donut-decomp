@@ -93,6 +93,8 @@ protected:
 	void addTexture(const std::string& name, std::unique_ptr<Texture> texture);
 	// A shader's texture, once: the one of its name loaded nearest to it.
 	void resolveTexture(Shader& shader) const;
+	// What a shader with no texture, or one not loaded, draws on.
+	mutable std::unique_ptr<Texture> _white;
 };
 
 } // namespace Donut
