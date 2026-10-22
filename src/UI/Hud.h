@@ -92,7 +92,7 @@ struct HudState
 
 	// free-form lines drawn under the HUD (control hints, help overlay)
 	std::vector<std::string> hints;
-	Vector4 hintColour = Vector4(0.5f, 0.5f, 0.5f, 1.0f);
+	Vector4 hintColour = Vector4(0.85f, 0.85f, 0.85f, 1.0f);
 	std::string banner; // centred call-out such as "BUSTED!"
 	// A second, smaller line under the banner (a mission's summary).
 	std::string bannerDetail;

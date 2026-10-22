@@ -114,6 +114,8 @@ void DrawHints(SpriteBatch& sprites, const Font* font, const std::vector<std::st
 	float y = viewportHeight * 0.32f;
 	for (const auto& hint : hints)
 	{
+		// A shadow under it: grey on a pale wall could not be read.
+		sprites.DrawText(font, hint, Vector2(14.0f, y + 2.0f), Vector4(0.0f, 0.0f, 0.0f, colour.W * 0.8f));
 		sprites.DrawText(font, hint, Vector2(12.0f, y), colour);
 		y += font != nullptr ? font->GetHeight() + 4.0f : 20.0f;
 	}
