@@ -28,9 +28,9 @@ public:
 	template <typename T>
 	T Read()
 	{
-		uint8_t* ptr = &(*_position); // this looks like shit v
-		T ret = *reinterpret_cast<T*>(ptr);
-		std::advance(_position, sizeof(T));
+		// Copied out: the files' values are not on their types' alignment.
+		T ret;
+		ReadBytes(reinterpret_cast<uint8_t*>(&ret), sizeof(T));
 		return ret;
 	}
 

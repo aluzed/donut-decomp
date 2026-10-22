@@ -18,6 +18,14 @@ namespace Donut::P3D
 {
 namespace
 {
+// A little-endian word at `at`, which a chunk need not have on a 4-byte boundary.
+uint32_t readU32(const std::vector<uint8_t>& bytes, std::size_t at)
+{
+	uint32_t value;
+	std::memcpy(&value, bytes.data() + at, sizeof(value));
+	return value;
+}
+
 // A 5:6:5 colour to 8-bit RGB.
 void unpack565(uint16_t c, uint8_t out[3])
 {
@@ -200,12 +208,12 @@ P3DChunk::P3DChunk(const std::vector<uint8_t>& chunk)
 	// minimum size of a chunk
 	assert(chunk.size() >= 12);
 
-	_type = *reinterpret_cast<const ChunkType*>(&chunk[0]);
+	_type = static_cast<ChunkType>(readU32(chunk, 0));
 
 	// Its sizes, kept within what there is: a file cut short, or with bytes
 	// after its last chunk, used to be read past its end.
-	const std::size_t totalSize = std::min<std::size_t>(*reinterpret_cast<const uint32_t*>(&chunk[8]), chunk.size());
-	const std::size_t dataSize = std::clamp<std::size_t>(*reinterpret_cast<const uint32_t*>(&chunk[4]), 12, totalSize);
+	const std::size_t totalSize = std::min<std::size_t>(readU32(chunk, 8), chunk.size());
+	const std::size_t dataSize = std::clamp<std::size_t>(readU32(chunk, 4), 12, totalSize);
 
 	// define our data and ignore the first 12 bytes
 	_data = std::vector<uint8_t>(chunk.begin() + 12, chunk.begin() + dataSize);
@@ -214,7 +222,7 @@ P3DChunk::P3DChunk(const std::vector<uint8_t>& chunk)
 	while (at + 12 <= totalSize)
 	{
 		// cheat a little and get the chunks size so we can advance our stream
-		const uint32_t tSize = *reinterpret_cast<const uint32_t*>(&chunk[at + 8]);
+		const uint32_t tSize = readU32(chunk, at + 8);
 		if (tSize < 12 || tSize > totalSize - at)
 			break;
 		_children.push_back(std::make_unique<P3DChunk>(std::vector<uint8_t>(chunk.begin() + at, chunk.begin() + at + tSize)));

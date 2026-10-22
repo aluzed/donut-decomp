@@ -18,7 +18,8 @@ void MemoryStream::ReadBytes(uint8_t* dest, std::size_t length)
 	// check cur + length doesn't exceed size
 
 	// copy the data
-	std::memcpy(dest, &(*_position), length);
+	if (length > 0)
+		std::memcpy(dest, _data.data() + Position(), length);
 
 	// advance our current position iterator
 	std::advance(_position, length);

@@ -22,7 +22,6 @@ class WorldSphere
 	struct Prop
 	{
 		int skeleton_joint;
-		bool translucent;
 		std::unique_ptr<Mesh> mesh;
 
 		Prop(std::unique_ptr<Mesh> pMesh, int pJoint): mesh(std::move(pMesh)), skeleton_joint(pJoint) {}
