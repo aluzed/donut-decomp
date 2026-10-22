@@ -59,8 +59,8 @@ on the grass or the beach's sand.
 
 - `SetTireGrip`, the car scripts' own figure (1.4 to 1.95, one at 15), is still not
   applied: taken as it is, it would change every car's handling.
-- No tyre sound per surface yet (the surface is there for it:
-  `Vehicle::GetWheelSurface`).
+- (The tyres' sound by surface came after: the car's sound script's "skid" on the road,
+  "dirt_skid" off it.)
 - The cars never slide sideways for long: their tyres hold far too well (a wheel's
   sideways speed goes over 2 m/s for one frame at a time), there is no handbrake to
   drift on, and the AI lifts off rather than brakes. So marks come mostly from the

@@ -42,7 +42,8 @@ failed.
 - `DisableHitAndRun()` (the street races' stages) now switches it off for the stage, meter
   and police with it: filled by hand on sr2, the meter was emptied and nobody came; on m2
   the police came. `SetHitNRun`, `ResetHitAndRun` and the meter commands are still empty. The old `ChaseManager` is left as it was.
-- No siren. The police setting off shows "Hit & Run!" for 3s, a bust "BUSTED!" (the
+- The siren (the sound script's "siren", looped, louder as the nearest police car comes)
+  came after. The police setting off shows "Hit & Run!" for 3s, a bust "BUSTED!" (the
   phrase table's), in red. As the game's own hints say, going indoors and changing clothes
   empty the meter and lose the police.
 

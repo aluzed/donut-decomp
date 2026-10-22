@@ -191,9 +191,9 @@ barrel is let go, as before.
   m7 name a barrel they do not place: they go to where the last mission put it (m3's for
   m5, m6's for m7, in the story), or, loaded alone, have nowhere to go and are skipped.
 
-- Subtitles and lip sync for the conversations: the lines are heard, not shown, and the
-  speakers do not move their lips. NPCs stand where placed, turning to face a player on
-  foot within 10m; one without animations borrows Apu's idle.
+- (Subtitles and lip sync came after: the lines are shown, the speaker's jaw moves with
+  the line's loudness, and the speakers gesture.) NPCs turn to face a player on foot
+  within 10m; one without animations borrows Apu's idle.
 - A target "getting away" in `destroy` has not been exercised:
   it goes through the same path as a `follow` target arriving, which has.
 
