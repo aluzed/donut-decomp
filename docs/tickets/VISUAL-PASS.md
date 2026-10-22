@@ -30,6 +30,7 @@ street race. What looked wrong was traced to its cause in the data or the execut
 | "Appuyez sur E pour monter" lost on pale walls | Mid grey, no shadow | `2aa23e2` |
 | The givers and car sellers standing still, bonus missions starting with no word | Their rounds and their conversation not read | `4ec8be7`, `349288e` |
 | Passers-by walking silently | Only the player's steps were heard | `7144d2e` |
+| Homer asleep half inside the living room's television | His skins drawn where the skeleton has them; homer.p3d's scene graph hangs them under Maya_Root, a quarter turn onto the couch | (this commit) |
 | Warnings for what is as it should be | Drives with no file of their own, "npd" the voice-only character, resources loaded again | `be44d4c`, `fddb4d9` |
 
 ## Seen and left

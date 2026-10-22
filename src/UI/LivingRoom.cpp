@@ -210,8 +210,18 @@ LivingRoom::LivingRoom(const std::string& file)
 
 	// Homer, his shaders and textures first: the skins' loader leaves them to
 	// whatever else the file holds.
-	loadFile(directory + "homer.p3d", "homer/", nullptr);
+	const auto homerGraph = loadFile(directory + "homer.p3d", "homer/", nullptr);
 	_homer = SceneSkins::Load(directory + "homer.p3d");
+	if (homerGraph && homerGraph->GetRoot() && homerGraph->GetRoot()->GetBranch())
+	{
+		std::vector<P3D::SceneGraphDrawable*> homerDrawables;
+		std::vector<Matrix4x4> homerTransforms;
+		for (const auto& child : homerGraph->GetRoot()->GetBranch()->GetChildren())
+			P3D::P3DUtil::GetDrawables(child, homerDrawables, homerTransforms, Matrix4x4::Identity);
+		for (std::size_t i = 0; i < homerDrawables.size(); ++i)
+			if (homerDrawables[i]->GetDrawableName() == "Motion_Root")
+				_homerTransform = homerTransforms[i];
+	}
 
 	// The glows, each about the object of a main menu's entry.
 	for (const char* name : {"tv", "homr", "sofa", "vcr", "mini", "book"})
@@ -407,7 +417,7 @@ void LivingRoom::Draw(GL::ShaderProgram& worldShader, GL::ShaderProgram& skinSha
 	{
 		glDisable(GL_BLEND);
 		_homer->Pose(static_cast<float>(_time) * 30.0f, true);
-		_homer->Draw(viewProj, Matrix4x4::Identity, skinShader);
+		_homer->Draw(viewProj, _homerTransform, skinShader);
 		glEnable(GL_BLEND);
 	}
 	// The glow, over what it is about, pulsing; the scrapbook's border and

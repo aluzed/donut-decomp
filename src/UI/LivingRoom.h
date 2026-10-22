@@ -89,6 +89,9 @@ private:
 	// Homer on the couch (homer.p3d: his skins on a skeleton, FE_HomerController
 	// a loop of 61 frames at 30 a second).
 	std::unique_ptr<SceneSkins> _homer;
+	// Where the file's scene graph hangs his skins (Maya_Root: turned a
+	// quarter and set on the couch).
+	Matrix4x4 _homerTransform = Matrix4x4::Identity;
 	// The glows: a quad each, where the file's scene graph puts it, pulsing
 	// (its BQG animation, 23 frames at 30 a second).
 	struct Glow
