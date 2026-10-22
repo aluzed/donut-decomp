@@ -181,6 +181,16 @@ cmake --build build -j$(nproc)
 ./build/bin/donut
 ```
 
+A build with AddressSanitizer and UndefinedBehaviorSanitizer (the CI runs the tests
+in one; a run of the seven stories under the autopilot in one reports nothing):
+
+```bash
+flags="-fsanitize=address,undefined -fno-omit-frame-pointer"
+cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_FLAGS="$flags" \
+  -DCMAKE_CXX_FLAGS="$flags" -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+cmake --build build-asan -j$(nproc)
+```
+
 ## Command Line
 
 | Flag | Effect |
