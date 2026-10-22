@@ -154,7 +154,7 @@ OptionsMenu::OptionsMenu(AudioManager& audio, SDL_Window* window, std::function<
 	// The wheel's row, which the PC has no use for, is the language's: built
 	// like the subtitles' row above it, its arrows and value one row down,
 	// its slider hidden.
-	float x5, y5, w5, h5, x6, y6, w6, h6;
+	float x5 = 0, y5 = 0, w5 = 0, h5 = 0, x6 = 0, y6 = 0, w6 = 0, h6 = 0;
 	if (_gameSettings->GetTextBox("Label05", x5, y5, w5, h5) && _gameSettings->GetTextBox("Label06", x6, y6, w6, h6))
 	{
 		const float dy = y6 - y5;
@@ -758,7 +758,7 @@ void OptionsMenu::drawGameSettings(const GameIntent& intent, const Matrix4x4& pr
 		// To a tenth, as the volumes.
 		*bar.value = std::clamp(std::round(*bar.value * 10.0f) / 10.0f, 0.0f, 1.0f);
 		_gameSettings->SetSpriteFill(bar.fill, *bar.value);
-		float barX, barY, barW, barH, x, y, w, h;
+		float barX = 0, barY = 0, barW = 0, barH = 0, x = 0, y = 0, w = 0, h = 0;
 		if (_gameSettings->GetSpriteBox(bar.bar, barX, barY, barW, barH) && _gameSettings->GetSpriteBox(bar.knob, x, y, w, h))
 			_gameSettings->SetSpriteBox(bar.knob, barX + *bar.value * barW - w * 0.5f, y, w, h);
 	}

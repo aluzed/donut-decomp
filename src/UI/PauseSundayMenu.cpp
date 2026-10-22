@@ -288,7 +288,7 @@ void PauseSundayMenu::layOutCards()
 		if (frame && _viewCards->GetSpriteBox(name, x, y, w, h))
 			_viewCards->SetSpriteBox(name, x, y, static_cast<float>(frame->GetWidth()), static_cast<float>(frame->GetHeight()));
 	}
-	float x, y, w, h;
+	float x = 0, y = 0, w = 0, h = 0;
 	if (frame && _viewCards->GetSpriteBox(fmt::format("Card{}", _choice), x, y, w, h))
 		_viewCards->SetSpriteBox("CardFrame", x, y, static_cast<float>(frame->GetWidth()), static_cast<float>(frame->GetHeight()));
 	_viewCards->BringSpriteToFront("CardFrame");

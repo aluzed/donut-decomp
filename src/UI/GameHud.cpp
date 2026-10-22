@@ -108,7 +108,7 @@ GameHud::GameHud()
 	// take more than they seem: four lines filled it to the rim, "beignets"
 	// touching the cap.
 	constexpr float kFrameCap = 34.0f, kFrameMargin = 14.0f;
-	float tx, ty, tw, th, fx, fy, fw, fh;
+	float tx = 0, ty = 0, tw = 0, th = 0, fx = 0, fy = 0, fw = 0, fh = 0;
 	if (_page->GetTextBox("Message", tx, ty, tw, th) && _page->GetSpriteBox("MessageBox", fx, fy, fw, fh))
 		_page->SetTextBox("Message", tx, fy + kFrameMargin, fx + fw - kFrameCap - tx, fh - 2.0f * kFrameMargin, th);
 	_coins = std::make_unique<FrontendProject>();
@@ -410,7 +410,7 @@ void GameHud::Draw(const HudState& state, const Matrix4x4& proj, double dt)
 	const bool damage = state.inVehicle && state.missionActive;
 	if (damage)
 	{
-		float mx, my, mw, mh, bx, by, bw, bh;
+		float mx = 0, my = 0, mw = 0, mh = 0, bx = 0, by = 0, bw = 0, bh = 0;
 		if (_page->GetSpriteBox("DamageMeter", mx, my, mw, mh) && _page->GetSpriteBox("DamageBar", bx, by, bw, bh))
 		{
 			const Vector2 shift = damageAt - Vector2(mx, my);
