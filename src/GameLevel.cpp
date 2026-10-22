@@ -346,7 +346,7 @@ void Game::loadLevel()
 			if (at == std::string::npos || (comment != std::string::npos && comment < at))
 				continue;
 			std::vector<std::string> args;
-			for (std::size_t q = line.find('"', at); q != std::string::npos && args.size() < 4; q = line.find('"', q + 1))
+			for (std::size_t q = line.find('"', at); q != std::string::npos && args.size() < 6; q = line.find('"', q + 1))
 			{
 				const std::size_t end = line.find('"', q + 1);
 				if (end == std::string::npos)
@@ -359,10 +359,33 @@ void Game::loadLevel()
 			const Vector3 spot = _level->GetLocatorPosition(args[2]);
 			if (spot == Vector3::Zero || !FileSystem::exists(fmt::format("scripts/{}/{}i.mfk", levelDirectory(), args[3])))
 				continue;
-			BonusGiver giver {args[0], args[3], spot, makeNpc(args[0])};
+			BonusGiver giver {args[0], args[3], spot, makeNpc(args[0]), args.size() > 5 ? args[5] : std::string(), {}};
 			if (giver.npc)
 				giver.npc->SetPosition(spot);
 			_bonusGivers.push_back(std::move(giver));
+		}
+		// SetBonusMissionDialoguePos("sr1", "sr1_bart", "sr1_mhouse_sd", "homer_car"):
+		// where the player stands for the conversation.
+		std::ifstream again(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
+		for (std::string line; std::getline(again, line);)
+		{
+			const std::size_t at = line.find("SetBonusMissionDialoguePos(");
+			const std::size_t comment = line.find("//");
+			if (at == std::string::npos || (comment != std::string::npos && comment < at))
+				continue;
+			std::vector<std::string> args;
+			for (std::size_t q = line.find('"', at); q != std::string::npos && args.size() < 2; q = line.find('"', q + 1))
+			{
+				const std::size_t end = line.find('"', q + 1);
+				if (end == std::string::npos)
+					break;
+				args.push_back(line.substr(q + 1, end - q - 1));
+				q = end;
+			}
+			if (args.size() == 2)
+				for (BonusGiver& giver : _bonusGivers)
+					if (giver.mission == args[0])
+						giver.playerSpot = _level->GetLocatorPosition(args[1]);
 		}
 		Log::Info("Game: {} street races and bonus missions on offer", _bonusGivers.size());
 	}

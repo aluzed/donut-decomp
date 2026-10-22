@@ -42,14 +42,16 @@ was left.
   missions' givers and the car sellers walk their rounds between their locators, from
   their stand, at a walk, pausing at each; a player on foot within 6 m stops them and they
   turn to face them. The shop and the mission are wherever they are.
+- **`SetBonusMissionDialoguePos`** and `AddNPCCharacterBonusMission`'s conversation
+  (2026-10-22): a bonus mission or street race starts with its giver's conversation
+  (Milhouse's "intro" for sr1, Cletus' "jug"), the player on their mark facing them; the
+  mission once it is over.
 
 Validation (seven levels' stories under the autopilot): 32 missions won; 32 conversations
 placed on their marks, 13 closing conversations heard.
 
 ## Not done, and why
 - `SetPostLevelFMV`: commented out in every level script; only the E3 demo's call it.
-- `SetBonusMissionDialoguePos`: the conversation before a bonus mission; the mission
-  starts at once.
 - `AddVehicleSelectInfo`, `ClearVehicleSelectInfo`, `AddBonusObjective`,
   `SetBonusMissionStart`: the phone booth lists the cars the player has; the last two are
   in no script.

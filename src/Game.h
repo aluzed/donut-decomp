@@ -655,7 +655,14 @@ private:
 		std::string mission;
 		Vector3 position;
 		std::unique_ptr<Character> npc;
+		// The conversation before it ("intro", Cletus' "jug"), and where the
+		// player stands for it (SetBonusMissionDialoguePos), if anywhere.
+		std::string conversation;
+		Vector3 playerSpot;
 	};
+	// A bonus mission waiting for its giver's conversation to end.
+	std::string _bonusIntro;
+	void beginBonusMission(std::string mission);
 	std::vector<BonusGiver> _bonusGivers;
 	// Playing a giver's mission: the story mission to go back to after it.
 	int _bonusReturn = -1;

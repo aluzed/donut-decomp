@@ -545,7 +545,14 @@ private:
 	bool _hitAndRunOff = false;
 	bool _hitNRunNow = false;
 	// The lines of conversation `name` for this mission, in order.
-	std::vector<std::string> conversationLines(const std::string& name) const;
+	std::vector<std::string> conversationLines(const std::string& name) const { return ConversationLines(name, _missionId); }
+
+public:
+	// The lines of conversation `name` for mission `missionId` ("bm1", "sr2",
+	// "m3"), in order: its own, failing those the level's.
+	std::vector<std::string> ConversationLines(const std::string& name, const std::string& missionId) const;
+
+private:
 	// The player has had the car being followed within the follow distance.
 	bool _followInRange = false;
 	std::map<const Vehicle*, std::string> _vehicleDrivers;

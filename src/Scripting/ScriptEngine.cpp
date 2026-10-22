@@ -1975,13 +1975,13 @@ void ScriptEngine::placeForDialogue()
 	}
 }
 
-std::vector<std::string> ScriptEngine::conversationLines(const std::string& name) const
+std::vector<std::string> ScriptEngine::ConversationLines(const std::string& name, const std::string& missionId) const
 {
 	// "conversations\c_<name>_<n>_<kind>_<speaker>_l<level><mission>.rsd": a story
 	// mission mN is "mN", a bonus mission bmN "bN", a street race srN "rN".
 	if (name.empty())
 		return {};
-	std::string mission = _missionId;
+	std::string mission = missionId;
 	if (mission.rfind("bm", 0) == 0)
 		mission = "b" + mission.substr(2);
 	else if (mission.rfind("sr", 0) == 0)

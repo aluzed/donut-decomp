@@ -2438,12 +2438,33 @@ bool Game::startBonusMission()
 	// The story mission under way is left, to be taken up again from its start
 	// once this one is over, won or not.
 	const BonusGiver* giver = bonusGiverNear();
-	if (!giver || _storyIndex < 0)
+	if (!giver || _storyIndex < 0 || !_bonusIntro.empty())
 		return false;
+	// First the giver's conversation, the player on their mark facing them;
+	// the mission once it is over.
+	const auto lines =
+	    _autopilot ? std::vector<std::string>() : _scriptEngine->ConversationLines(giver->conversation, giver->mission);
+	if (lines.empty())
+	{
+		beginBonusMission(giver->mission);
+		return true;
+	}
+	if (giver->playerSpot != Vector3::Zero)
+		PlacePlayerOnFoot(giver->playerSpot + Vector3(0.0f, _character->CentreHeight(), 0.0f), true,
+		                  giver->npc ? giver->npc->GetPosition() : giver->position);
+	for (const auto& line : lines) _audioManager->QueueDialogue(line, AudioManager::DialoguePriority::Gameplay);
+	_bonusIntro = giver->mission;
+	Log::Info("Game: '{}' offers '{}' ({}, {} lines)", giver->name, giver->mission, giver->conversation, lines.size());
+	return true;
+}
+
+void Game::beginBonusMission(std::string mission)
+{
+	_bonusIntro.clear();
 	_bonusReturn = _storyIndex;
 	_storyIndex = -1;
-	_missionScript = fmt::format("scripts/{}/{}i.mfk", levelDirectory(), giver->mission);
-	Log::Info("Game: bonus mission '{}', the story waits at mission {}", giver->mission, _bonusReturn + 1);
+	_missionScript = fmt::format("scripts/{}/{}i.mfk", levelDirectory(), mission);
+	Log::Info("Game: bonus mission '{}', the story waits at mission {}", mission, _bonusReturn + 1);
 	_scriptEngine->CleanupMission();
 	if (_collectibleManager)
 		_collectibleManager->SpawnOnPath();
@@ -2451,7 +2472,6 @@ bool Game::startBonusMission()
 	Vector3 start;
 	if (_scriptEngine->GetPlayerStart(start))
 		SetPlayerPosition(start);
-	return true;
 }
 
 bool Game::ringDoorbell()
@@ -2762,6 +2782,9 @@ void Game::placeEvent(uint32_t event)
 
 void Game::updateGags()
 {
+	// A giver's conversation over: their mission.
+	if (!_bonusIntro.empty() && !_audioManager->IsDialoguePlaying())
+		beginBonusMission(_bonusIntro);
 	if (!_character)
 		return;
 	const Vector3 me = _inVehicle && _activeVehicle ? _activeVehicle->GetPosition() : _character->GetPosition();
