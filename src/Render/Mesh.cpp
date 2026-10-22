@@ -121,6 +121,12 @@ void Mesh::Draw(GL::ShaderProgram& shader, bool opaque)
 {
 	_vertexBinding->Bind();
 
+	// A level's resources freed since its shaders were looked up: again.
+	if (const uint64_t generation = Game::GetInstance().GetResourceManager().GetGeneration(); generation != _shaderGeneration)
+	{
+		for (auto& prim : _primGroups) prim.cacheShader = nullptr;
+		_shaderGeneration = generation;
+	}
 	for (auto& prim : _primGroups)
 	{
 		if (prim.cacheShader == nullptr)

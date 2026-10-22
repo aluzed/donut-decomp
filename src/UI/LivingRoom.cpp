@@ -29,6 +29,8 @@ std::unique_ptr<P3D::SceneGraph> LivingRoom::loadFile(const std::string& file, c
 	if (!FileSystem::exists(file))
 		return nullptr;
 	const P3D::P3DFile p3d(file);
+	// The front end's, past any level.
+	const ResourceManager::PermanentScope permanent(Game::GetInstance().GetResourceManager());
 	auto& resources = Game::GetInstance().GetResourceManager();
 	std::unique_ptr<P3D::SceneGraph> sceneGraph;
 	std::vector<std::unique_ptr<P3D::Animation>> animations;

@@ -86,7 +86,7 @@ public:
 	uint64_t GetLoadIndex() const { return _loadIndex; }
 	void SetLoadIndex(uint64_t index) { _loadIndex = index; }
 	bool IsTextureResolved() const { return _textureResolved; }
-	void SetTextureResolved() { _textureResolved = true; }
+	void SetTextureResolved(bool resolved = true) { _textureResolved = resolved; }
 
 protected:
 	std::string _name;

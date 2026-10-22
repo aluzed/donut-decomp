@@ -46,6 +46,8 @@ void LoadingScreen::Show(int level)
 	// (dynaload/images/loading<n>.p3d: a sprite in tiles).
 	const std::string picture = fmt::format("./art/frontend/dynaload/images/loading{}.p3d", level);
 	const std::string pictureName = fmt::format("loading{}.png", level);
+	// Shown while the level it was loaded in is left and freed.
+	const ResourceManager::PermanentScope permanent(_resources);
 	if (!_resources.GetTexture(pictureName) && FileSystem::exists(picture))
 	{
 		const P3D::P3DFile file(picture);

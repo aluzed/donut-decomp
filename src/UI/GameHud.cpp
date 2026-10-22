@@ -128,6 +128,8 @@ GameHud::~GameHud()
 void GameHud::LoadMap(int level)
 {
 	_map.clear();
+	// Its meshes are the HUD's, past the level's resources.
+	const ResourceManager::PermanentScope permanent(Game::GetInstance().GetResourceManager());
 	const std::string file = fmt::format("./art/frontend/scrooby2/resource/pure3d/l{}hudmap.p3d", level);
 	if (!FileSystem::exists(file))
 		return;

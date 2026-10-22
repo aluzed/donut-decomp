@@ -138,21 +138,144 @@ void ResourceManager::addTexture(const std::string& name, std::unique_ptr<Textur
 
 void ResourceManager::record(const void* resource, Kind kind, std::size_t cpuBytes, std::size_t gpuBytes)
 {
-	const std::size_t section = _sections.size() - 1;
-	_records[resource] = Record {kind, section, section, cpuBytes, gpuBytes};
+	const std::size_t current = _sections.size() - 1;
+	_records[resource] = Record {kind, _permanent > 0 ? 0 : current, current, cpuBytes, gpuBytes};
 }
 
 void ResourceManager::asked(const void* resource) const
 {
-	// Nothing is ever freed here, so a pointer is never another's again.
+	// A freed resource's record goes with it: a pointer found here is live.
 	if (const auto found = _records.find(resource); found != _records.end())
+	{
 		found->second.lastAsked = _sections.size() - 1;
+		// Taken by the menus or the HUD: kept with theirs.
+		if (_permanent > 0)
+			found->second.section = 0;
+	}
+}
+
+void ResourceManager::Keep(const void* resource)
+{
+	if (const auto found = _records.find(resource); found != _records.end())
+		found->second.section = 0;
+}
+
+bool ResourceManager::HasShader(const std::string& name) const
+{
+	const auto found = _shaders.find(name);
+	if (found == _shaders.end())
+		return false;
+	// Found, the one asking does not load its own and draws this one.
+	asked(found->second.get());
+	return true;
 }
 
 void ResourceManager::BeginSection(const std::string& name)
 {
 	Log::Info("Resources on leaving section '{}':\n{}", _sections.back(), SectionReport());
+	if (_sections.size() > 1)
+		freeSection(_sections.size() - 1);
 	_sections.push_back(name);
+}
+
+void ResourceManager::freeSection(std::size_t section)
+{
+	std::unordered_set<const void*> doomed;
+	std::size_t textures = 0, shaders = 0, geometries = 0, bytes = 0;
+	for (const auto& [resource, r] : _records)
+		if (r.section == section)
+		{
+			doomed.insert(resource);
+			bytes += r.cpuBytes + r.gpuBytes;
+			(r.kind == Kind::Texture ? textures : r.kind == Kind::Shader ? shaders : geometries)++;
+		}
+	if (doomed.empty())
+		return;
+	const auto gone = [&](const void* resource) { return doomed.count(resource) > 0; };
+
+	// Taken out of every map and list first, destroyed at the end.
+	std::vector<std::unique_ptr<Texture>> deadTextures;
+	std::vector<std::unique_ptr<Shader>> deadShaders;
+	std::vector<std::unique_ptr<Mesh>> deadMeshes;
+	const auto takeFromMap = [&](auto& map, auto& dead)
+	{
+		for (auto it = map.begin(); it != map.end();)
+			if (gone(it->second.get()))
+			{
+				dead.push_back(std::move(it->second));
+				it = map.erase(it);
+			}
+			else
+				++it;
+	};
+	const auto takeFromList = [&](auto& list, auto& dead)
+	{
+		for (auto& kept : list)
+			if (gone(kept.get()))
+				dead.push_back(std::move(kept));
+		list.erase(std::remove(list.begin(), list.end(), nullptr), list.end());
+	};
+	takeFromMap(_textures, deadTextures);
+	takeFromMap(_shaders, deadShaders);
+	takeFromMap(_geometries, deadMeshes);
+	takeFromList(_retiredTextures, deadTextures);
+	takeFromList(_retiredShaders, deadShaders);
+	takeFromList(_retiredGeometries, deadMeshes);
+
+	const auto dropLoads = [&](auto& loads)
+	{
+		for (auto it = loads.begin(); it != loads.end();)
+		{
+			auto& list = it->second;
+			list.erase(std::remove_if(list.begin(), list.end(), [&](const auto& load) { return gone(load.second); }),
+			           list.end());
+			it = list.empty() ? loads.erase(it) : std::next(it);
+		}
+	};
+	dropLoads(_textureLoads);
+	dropLoads(_shaderLoads);
+	dropLoads(_textureHashes);
+
+	// A name whose latest load went: the latest one left is its own again.
+	const auto restore = [](auto& map, auto& retired, const std::string& name, const auto* latest)
+	{
+		const auto kept =
+		    std::find_if(retired.begin(), retired.end(), [&](const auto& resource) { return resource.get() == latest; });
+		if (kept == retired.end())
+			return;
+		map[name] = std::move(*kept);
+		retired.erase(kept);
+	};
+	for (const auto& [name, loads] : _textureLoads)
+		if (!_textures.count(name))
+			restore(_textures, _retiredTextures, name, loads.back().second);
+	for (const auto& [name, loads] : _shaderLoads)
+		if (!_shaders.count(name))
+			restore(_shaders, _retiredShaders, name, loads.back().second);
+	for (auto it = _retiredGeometries.rbegin(); it != _retiredGeometries.rend(); ++it)
+		if (*it && !_geometries.count((*it)->GetName()))
+			_geometries[(*it)->GetName()] = std::move(*it);
+	_retiredGeometries.erase(std::remove(_retiredGeometries.begin(), _retiredGeometries.end(), nullptr),
+	                         _retiredGeometries.end());
+
+	// The shaders left that drew a texture gone: another of its name, or none.
+	const auto repoint = [&](Shader& shader)
+	{
+		if (gone(shader.GetDiffuseTexture()))
+		{
+			shader.SetTextureResolved(false);
+			resolveTexture(shader);
+		}
+		if (gone(shader.GetEnvTexture()))
+			shader.SetEnvTexture(nullptr);
+	};
+	for (auto& [name, shader] : _shaders) repoint(*shader);
+	for (auto& shader : _retiredShaders) repoint(*shader);
+
+	for (const void* resource : doomed) _records.erase(resource);
+	++_generation;
+	Log::Info("Resources: section '{}' freed, {} textures, {} shaders and {} geometries, {:.1f} MB", _sections[section],
+	          textures, shaders, geometries, bytes / 1048576.0);
 }
 
 namespace

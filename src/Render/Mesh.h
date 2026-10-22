@@ -73,6 +73,8 @@ protected:
 	std::vector<Vertex> _vertices;
 	std::vector<std::size_t> _groupVertexStart;
 	std::size_t _gpuBytes = 0;
+	// The resource manager's generation its shaders were looked up in.
+	uint64_t _shaderGeneration = 0;
 
 	std::shared_ptr<GL::VertexBuffer> _vertexBuffer;
 	std::shared_ptr<GL::IndexBuffer> _indexBuffer;

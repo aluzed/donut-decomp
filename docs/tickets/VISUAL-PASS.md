@@ -52,6 +52,13 @@ street race. What looked wrong was traced to its cause in the data or the execut
   which only 205 (6 MB) are asked for again in level 2 -- the characters and cars
   shared. So a level's release would win about 45 MB of video memory, little of the
   process's: its world's meshes and collision are the level's own and freed already.
+  A section is now freed as it is left (the boot's stays). The menus, the HUD, the
+  living room and the loading screen load under a permanent scope, and a texture a
+  page shows is kept: they hold raw pointers past a level. A mesh looks its shaders up
+  again after a free, and a shader left whose texture went takes another of its name.
+  The 45 MB above counted the living room and pages, loaded mid-level when the game
+  starts in one: level 1's own came to 881 textures, 2028 shaders (most of them
+  replaced loads) and 178 geometries, 29 MB.
 - Comic Book Guy's arms crossed sank into his belly: he has no animations of his own and
   borrows Apu's, made for a slim build. A character borrowing them now poses Apu's arms
   crossed on its own skeleton and mesh when it is made; when its forearms come out deeper

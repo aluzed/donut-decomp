@@ -211,6 +211,8 @@ void FrontendProject::loadImages(const P3D::FrontendPage& page)
 
 void FrontendProject::SetSpriteTexture(const std::string& name, Texture* texture)
 {
+	// Shown here past the level that loaded it, perhaps (a mission's icon).
+	Game::GetInstance().GetResourceManager().Keep(texture);
 	for (auto& sprite : _sprites)
 		if (sprite.name == name && texture)
 		{
@@ -521,6 +523,8 @@ void FrontendProject::AddGroup(const P3D::FrontendGroup& group, int32_t resX, in
 
 void FrontendProject::LoadP3D(const std::string& filename, const std::string& pageName)
 {
+	// A page's pictures and fonts are its own for as long as it lives.
+	const ResourceManager::PermanentScope permanent(Game::GetInstance().GetResourceManager());
 	if (!FileSystem::exists(filename))
 	{
 		Log::Info("Frontend Project not found: {}", filename);
