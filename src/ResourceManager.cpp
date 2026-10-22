@@ -76,7 +76,7 @@ void ResourceManager::LoadGeometry(const P3D::Geometry& geo)
 {
 	if (const auto old = _geometries.find(geo.GetName()); old != _geometries.end())
 	{
-		Log::Warn("Geometry {0} already loaded", geo.GetName());
+		Log::Debug("Geometry {0} loaded again (only unique names are looked up)", geo.GetName());
 		_retiredGeometries.push_back(std::move(old->second));
 	}
 
