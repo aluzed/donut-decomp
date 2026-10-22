@@ -26,6 +26,10 @@ street race. What looked wrong was traced to its cause in the data or the execut
 | Long objectives touching their frame's rim | Too small a margin for the rim and the cap | `04f15de` |
 | Level 1 m0's "talk to Apu" skipped, no marker | The objective looked only among the mission's own characters; Apu is the level's | `d0e42f5` |
 | Dr Hibbert's coat buttonless (Beeman's wings missing) | A character's rigid props on its joints were skipped | `a11b0f1` |
+| German and French titles in quotes, ""LARD LAD'S"" | The text bible's spreadsheet quoting not undone | `4f85a6e` |
+| "Appuyez sur E pour monter" lost on pale walls | Mid grey, no shadow | `2aa23e2` |
+| The givers and car sellers standing still, bonus missions starting with no word | Their rounds and their conversation not read | `4ec8be7`, `349288e` |
+| Passers-by walking silently | Only the player's steps were heard | `7144d2e` |
 | Warnings for what is as it should be | Drives with no file of their own, "npd" the voice-only character, resources loaded again | `be44d4c`, `fddb4d9` |
 
 ## Seen and left
