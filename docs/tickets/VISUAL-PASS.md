@@ -40,5 +40,9 @@ street race. What looked wrong was traced to its cause in the data or the execut
   missions and into level 2 (measured 2026-10-22). The resource manager keeps every
   level's textures, shaders and geometries (raw pointers to them are held all over); a
   release of a level's own on leaving it is left for later, the growth being moderate.
+  Since then: the static collision shapes no longer leak (3 MB a level load, `0e9c7ac`)
+  and a texture loaded again with the same picture is reused (`a611e3b`); a run under
+  AddressSanitizer and UndefinedBehaviorSanitizer of every story, every level's change
+  and the bonus game reports nothing (`b702dd1`).
 - Level 3 m3's car sometimes wrecked under the autopilot (it ramming at speed): the
   previous binaries did the same.
