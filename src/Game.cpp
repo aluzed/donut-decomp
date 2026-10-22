@@ -882,6 +882,8 @@ void Game::openSundayPause()
 
 Game::~Game()
 {
+	if (_resourceManager)
+		Log::Info("Resources at exit:\n{}", _resourceManager->SectionReport());
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplSDL2_Shutdown();
 	ImGui::DestroyContext();

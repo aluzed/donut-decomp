@@ -46,6 +46,15 @@ public:
 
 	void ImGuiDebugWindow(bool* p_open) const;
 
+	// Every texture, shader and geometry belongs to the section current when
+	// it was loaded ("boot", "level 3", "minigame track 2"). Logs what each
+	// section's resources weigh and which of them were asked for during the
+	// section being left, then makes `name` the current one.
+	void BeginSection(const std::string& name);
+	// That table, as of now: per section, its resources live and replaced,
+	// and those asked for in the current section; then the process's memory.
+	std::string SectionReport() const;
+
 	Shader* GetShader(const std::string& name) const;
 	// The shader of that name loaded nearest to `near` (a load index): the one
 	// of the same file as what asks for it. The same names come back from
@@ -95,6 +104,25 @@ protected:
 	void resolveTexture(Shader& shader) const;
 	// What a shader with no texture, or one not loaded, draws on.
 	mutable std::unique_ptr<Texture> _white;
+
+	enum class Kind : uint8_t
+	{
+		Texture,
+		Shader,
+		Geometry
+	};
+	struct Record
+	{
+		Kind kind;
+		std::size_t section;
+		// The last section it was loaded or asked for in.
+		std::size_t lastAsked;
+		std::size_t cpuBytes, gpuBytes;
+	};
+	std::vector<std::string> _sections = {"boot"};
+	mutable std::unordered_map<const void*, Record> _records;
+	void record(const void* resource, Kind kind, std::size_t cpuBytes, std::size_t gpuBytes);
+	void asked(const void* resource) const;
 };
 
 } // namespace Donut

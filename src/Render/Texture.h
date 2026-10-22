@@ -39,6 +39,9 @@ public:
 
 	// bool HasAlpha() const;
 	GLuint GetOpenGLHandle() const { return _glTexture; }
+	// What its pixels take on the graphics card: RGBA, and a third more for
+	// the mipmaps of those that have them.
+	std::size_t GetGpuBytes() const { return _width * _height * 4 * (_mipmapped ? 4 : 3) / 3; }
 
 protected:
 	std::string _name;
@@ -46,6 +49,7 @@ protected:
 	std::size_t _height;
 
 	GLuint _glTexture;
+	bool _mipmapped = false;
 };
 
 } // namespace Donut

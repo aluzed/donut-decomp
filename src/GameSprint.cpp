@@ -161,6 +161,7 @@ void Game::startSprint(const SuperSprint::Setup& setup)
 	if (!_mini.trackLoaded || _mini.loadedTrack != setup.track)
 	{
 		unloadLevel();
+		_resourceManager->BeginSection(fmt::format("minigame track {}", setup.track));
 		_level = std::make_unique<Level>();
 		_level->SetSkyShown(false);
 		for (const std::string& file : SuperSprint::TrackFiles(setup.track))

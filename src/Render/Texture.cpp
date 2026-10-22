@@ -45,6 +45,7 @@ Texture::Texture(const P3D::Texture& texture)
 
 	// generate mipmaps :)
 	glGenerateMipmap(GL_TEXTURE_2D);
+	_mipmapped = true;
 }
 
 Texture::Texture(const uint8_t* rgba, std::size_t width, std::size_t height, std::string name)
@@ -127,6 +128,7 @@ Texture::Texture(const P3D::Sprite& sprite)
 	glBindTexture(GL_TEXTURE_2D, _glTexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)_width, (GLsizei)_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
 	glGenerateMipmap(GL_TEXTURE_2D);
+	_mipmapped = true;
 }
 
 Texture::~Texture()

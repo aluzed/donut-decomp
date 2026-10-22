@@ -16,7 +16,14 @@
 
 #include <chrono>
 #include <cstdint>
+#include <cstring>
 #include <ctime>
+#include <fstream>
+#include <unordered_set>
+
+#if defined(__linux__)
+#include <unistd.h>
+#endif
 
 namespace Donut
 {
@@ -49,6 +56,7 @@ void ResourceManager::LoadTexture(const P3D::Texture& texture)
 			}
 			if (old->second.get() == same->second)
 			{
+				asked(same->second);
 				_textureLoads[texture.GetName()].emplace_back(_loadIndex++, same->second);
 				return;
 			}
@@ -84,6 +92,7 @@ void ResourceManager::LoadShader(const P3D::Shader& shader)
 	auto loaded = std::make_unique<Shader>(shader);
 	loaded->SetLoadIndex(_loadIndex);
 	_shaderLoads[shader.GetName()].emplace_back(_loadIndex++, loaded.get());
+	record(loaded.get(), Kind::Shader, sizeof(Shader), 0);
 	_shaders[shader.GetName()] = std::move(loaded);
 }
 
@@ -108,7 +117,9 @@ void ResourceManager::LoadGeometry(const P3D::Geometry& geo)
 		_retiredGeometries.push_back(std::move(old->second));
 	}
 
-	_geometries[geo.GetName()] = std::make_unique<Mesh>(geo);
+	auto mesh = std::make_unique<Mesh>(geo);
+	record(mesh.get(), Kind::Geometry, mesh->GetCpuBytes(), mesh->GetGpuBytes());
+	_geometries[geo.GetName()] = std::move(mesh);
 }
 
 void ResourceManager::AddTexture(const std::string& name, std::unique_ptr<Texture> texture)
@@ -121,7 +132,119 @@ void ResourceManager::AddTexture(const std::string& name, std::unique_ptr<Textur
 void ResourceManager::addTexture(const std::string& name, std::unique_ptr<Texture> texture)
 {
 	_textureLoads[name].emplace_back(_loadIndex++, texture.get());
+	record(texture.get(), Kind::Texture, 0, texture->GetGpuBytes());
 	_textures[name] = std::move(texture);
+}
+
+void ResourceManager::record(const void* resource, Kind kind, std::size_t cpuBytes, std::size_t gpuBytes)
+{
+	const std::size_t section = _sections.size() - 1;
+	_records[resource] = Record {kind, section, section, cpuBytes, gpuBytes};
+}
+
+void ResourceManager::asked(const void* resource) const
+{
+	// Nothing is ever freed here, so a pointer is never another's again.
+	if (const auto found = _records.find(resource); found != _records.end())
+		found->second.lastAsked = _sections.size() - 1;
+}
+
+void ResourceManager::BeginSection(const std::string& name)
+{
+	Log::Info("Resources on leaving section '{}':\n{}", _sections.back(), SectionReport());
+	_sections.push_back(name);
+}
+
+namespace
+{
+// The process's resident memory, in bytes; 0 where it is not known.
+std::size_t residentBytes()
+{
+#if defined(__linux__)
+	std::ifstream statm("/proc/self/statm");
+	std::size_t pages = 0, resident = 0;
+	if (statm >> pages >> resident)
+		return resident * static_cast<std::size_t>(sysconf(_SC_PAGESIZE));
+#endif
+	return 0;
+}
+
+// The graphics card's memory, total and in use by every process, in bytes,
+// where the driver tells (GL_NVX_gpu_memory_info); 0 otherwise.
+std::pair<std::size_t, std::size_t> cardBytes()
+{
+	static const bool known = []
+	{
+		GLint count = 0;
+		glGetIntegerv(GL_NUM_EXTENSIONS, &count);
+		for (GLint i = 0; i < count; ++i)
+			if (const auto* name = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, static_cast<GLuint>(i)));
+			    name && std::strcmp(name, "GL_NVX_gpu_memory_info") == 0)
+				return true;
+		return false;
+	}();
+	if (!known)
+		return {0, 0};
+	constexpr GLenum kTotalKb = 0x9048, kAvailableKb = 0x9049;
+	GLint total = 0, available = 0;
+	glGetIntegerv(kTotalKb, &total);
+	glGetIntegerv(kAvailableKb, &available);
+	return {static_cast<std::size_t>(total) * 1024, static_cast<std::size_t>(total - available) * 1024};
+}
+} // namespace
+
+std::string ResourceManager::SectionReport() const
+{
+	std::unordered_set<const void*> live;
+	for (const auto& [name, texture] : _textures) live.insert(texture.get());
+	for (const auto& [name, shader] : _shaders) live.insert(shader.get());
+	for (const auto& [name, mesh] : _geometries) live.insert(mesh.get());
+
+	struct Totals
+	{
+		std::size_t count = 0, bytes = 0;
+		void Add(const Record& r) { ++count, bytes += r.cpuBytes + r.gpuBytes; }
+	};
+	struct Row
+	{
+		Totals textures, geometries, shaders, replaced, asked;
+	};
+	const std::size_t current = _sections.size() - 1;
+	std::vector<Row> rows(_sections.size());
+	Row all;
+	for (const auto& [resource, r] : _records)
+	{
+		for (Row* row : {&rows[r.section], &all})
+		{
+			if (!live.count(resource))
+				row->replaced.Add(r);
+			else if (r.kind == Kind::Texture)
+				row->textures.Add(r);
+			else if (r.kind == Kind::Geometry)
+				row->geometries.Add(r);
+			else
+				row->shaders.Add(r);
+			if (r.lastAsked == current)
+				row->asked.Add(r);
+		}
+	}
+
+	const auto cell = [](const Totals& t) { return fmt::format("{} / {:.1f} MB", t.count, t.bytes / 1048576.0); };
+	const auto line = [&](const std::string& name, const Row& row)
+	{
+		return fmt::format("{:<20} {:>18} {:>18} {:>8} {:>18} {:>18}\n", name, cell(row.textures), cell(row.geometries),
+		                   row.shaders.count, cell(row.replaced), cell(row.asked));
+	};
+	std::string report = fmt::format("{:<20} {:>18} {:>18} {:>8} {:>18} {:>18}\n", "loaded in", "textures", "geometries",
+	                                 "shaders", "replaced", "asked in current");
+	for (std::size_t i = 0; i < rows.size(); ++i)
+		if (rows[i].textures.count + rows[i].geometries.count + rows[i].shaders.count + rows[i].replaced.count > 0)
+			report += line(fmt::format("{} {}", i, _sections[i]), rows[i]);
+	report += line("all", all);
+	const auto [cardTotal, cardUsed] = cardBytes();
+	report += fmt::format("process resident: {:.0f} MB; graphics card: {:.0f} of {:.0f} MB in use (every process)",
+	                      residentBytes() / 1048576.0, cardUsed / 1048576.0, cardTotal / 1048576.0);
+	return report;
 }
 
 void ResourceManager::resolveTexture(Shader& shader) const
@@ -186,6 +309,12 @@ void ResourceManager::ImGuiDebugWindow(bool* p_open) const
 	ImGui::Text("Fonts: %zu", _fonts.size());
 
 	ImGui::BeginTabBar("rmtabs");
+
+	if (ImGui::BeginTabItem("Sections"))
+	{
+		ImGui::TextUnformatted(SectionReport().c_str());
+		ImGui::EndTabItem();
+	}
 
 	if (ImGui::BeginTabItem("Textures"))
 	{
@@ -255,10 +384,13 @@ Shader* ResourceManager::GetShader(const std::string& name) const
 
 	auto const& shader = _shaders.at(name);
 	resolveTexture(*shader);
+	asked(shader.get());
+	asked(shader->GetDiffuseTexture());
 
 	if (!shader->GetEnvTextureName().empty() && !shader->GetEnvTexture())
 		if (const auto env = _textures.find(shader->GetEnvTextureName()); env != _textures.end())
 			shader->SetEnvTexture(env->second.get());
+	asked(shader->GetEnvTexture());
 
 	return shader.get();
 }
@@ -277,9 +409,12 @@ Shader* ResourceManager::GetShader(const std::string& name, uint64_t near) const
 	                     });
 	Shader* shader = nearest->second;
 	resolveTexture(*shader);
+	asked(shader);
+	asked(shader->GetDiffuseTexture());
 	if (!shader->GetEnvTextureName().empty() && !shader->GetEnvTexture())
 		if (const auto env = _textures.find(shader->GetEnvTextureName()); env != _textures.end())
 			shader->SetEnvTexture(env->second.get());
+	asked(shader->GetEnvTexture());
 	return shader;
 }
 
@@ -289,6 +424,7 @@ Texture* ResourceManager::GetTexture(const std::string& name) const
 	if (_textures.find(name) == _textures.end())
 		return nullptr;
 
+	asked(_textures.at(name).get());
 	return _textures.at(name).get();
 }
 
@@ -297,6 +433,7 @@ Mesh* ResourceManager::GetGeometry(const std::string& name) const
 	if (_geometries.find(name) == _geometries.end())
 		return nullptr;
 
+	asked(_geometries.at(name).get());
 	return _geometries.at(name).get();
 }
 

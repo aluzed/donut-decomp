@@ -44,6 +44,14 @@ street race. What looked wrong was traced to its cause in the data or the execut
   and a texture loaded again with the same picture is reused (`a611e3b`); a run under
   AddressSanitizer and UndefinedBehaviorSanitizer of every story, every level's change
   and the bonus game reports nothing (`b702dd1`).
+- The resource manager now tags each texture, shader and geometry with the section it
+  was loaded in (boot, "level N", "minigame track N") and logs, on leaving a section
+  and at exit, what each section's resources weigh and which were asked for during it
+  (also its "Sections" tab). Level 1 into level 2: level 1 keeps 1329 textures
+  (51 MB on the card, mipmaps counted), 160 geometries (1 MB) and 808 shaders, of
+  which only 205 (6 MB) are asked for again in level 2 -- the characters and cars
+  shared. So a level's release would win about 45 MB of video memory, little of the
+  process's: its world's meshes and collision are the level's own and freed already.
 - Level 3 m3's car sometimes wrecked under the autopilot (it ramming at speed): the
   previous binaries did the same. Since `531594f` the autopilot repairs the car as a
   wrench does before blocking with a wrecked one.

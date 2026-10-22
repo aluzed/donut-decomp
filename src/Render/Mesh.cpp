@@ -112,6 +112,7 @@ void Mesh::CreateMeshBuffers(const P3D::Geometry& geometry)
 	}
 
 	_vertexBuffer = std::make_shared<GL::VertexBuffer>(allVerts.data(), allVerts.size(), sizeof(Vertex));
+	_gpuBytes = allVerts.size() * sizeof(Vertex) + allIndices.size() * sizeof(uint32_t);
 	_vertices = std::move(allVerts);
 	_indexBuffer = std::make_shared<GL::IndexBuffer>(allIndices.data(), allIndices.size(), GL_UNSIGNED_INT);
 }

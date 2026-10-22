@@ -33,6 +33,10 @@ public:
 	void OffsetGroup(std::size_t group, const std::vector<Vector3>& offsets);
 	// The box its vertices fill, in its own space (grown by OffsetGroup).
 	const BoundingBox& GetBounds() const { return _bounds; }
+	// What it takes: its vertices kept here, and its buffers on the graphics
+	// card.
+	std::size_t GetCpuBytes() const { return _vertices.capacity() * sizeof(Vertex); }
+	std::size_t GetGpuBytes() const { return _gpuBytes; }
 
 protected:
 	struct PrimGroup
@@ -68,6 +72,7 @@ protected:
 	// Kept for OffsetGroup: every vertex as built, and where each group's start.
 	std::vector<Vertex> _vertices;
 	std::vector<std::size_t> _groupVertexStart;
+	std::size_t _gpuBytes = 0;
 
 	std::shared_ptr<GL::VertexBuffer> _vertexBuffer;
 	std::shared_ptr<GL::IndexBuffer> _indexBuffer;

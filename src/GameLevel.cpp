@@ -181,6 +181,7 @@ void Game::unloadLevel()
 
 void Game::loadLevel()
 {
+	_resourceManager->BeginSection(fmt::format("level {}", _levelNumber));
 	_level = std::make_unique<Level>();
 	// The level's world: its terrain, every zone and road file, and its
 	// interiors, which live under the map and are reached through doors. The
