@@ -24,6 +24,25 @@ jobs:
       - name: Tests
         run: ctest --test-dir build --output-on-failure
 
+  # The tests again with AddressSanitizer and UndefinedBehaviorSanitizer: an
+  # unaligned read, a leak or a use after free fails the job.
+  sanitizers:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev libbullet-dev libopenal-dev libfmt-dev libglm-dev zlib1g-dev
+      - name: Build
+        run: |
+          flags="-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer"
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_FLAGS="$flags" -DCMAKE_CXX_FLAGS="$flags" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+          cmake --build build -j$(nproc) --target donut_tests
+      - name: Tests
+        run: ctest --test-dir build --output-on-failure
+
   windows:
     runs-on: windows-2022
     steps:
