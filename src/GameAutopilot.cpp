@@ -109,6 +109,14 @@ void Game::runAutopilot(double dt)
 	const bool ramming = objective == "destroy" || (objective == "dump" && !_scriptEngine->HasPickupsLying());
 	if (const Vehicle* quarry = _scriptEngine->GetFollowTarget(); quarry && ramming && _inVehicle && _activeVehicle)
 	{
+		// Each block takes the quarry's blow: level 3 m3's truck, met at 80 km/h,
+		// wrecked the car with half its meat still aboard. A player would have
+		// picked up a wrench by then; the autopilot repairs the car as one does.
+		if (_health < 35.0f)
+		{
+			Log::Info("Game: autopilot takes a wrench, the car is repaired ({:.0f} -> 100)", _health);
+			_health = 100.0f;
+		}
 		const Vector3 ahead = clearSpotNear(quarry->GetPosition() + quarry->GetRotation() * Vector3::Forward * 15.0f);
 		Log::Info("Game: autopilot blocks '{}'", quarry->GetName());
 		_activeVehicle->Teleport(ahead, quarry->GetRotation() * Quaternion(Vector3(0.0f, 1.0f, 0.0f), 1.5708f));
