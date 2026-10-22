@@ -7,6 +7,7 @@
 #include <SDL.h>
 
 #include <cstdlib>
+#include <filesystem>
 #include <memory>
 #include <string_view>
 
@@ -21,6 +22,32 @@ static Donut::Log::Level ParseLogLevel(std::string_view name)
 	if (name == "warn" || name == "2") return Donut::Log::Level::Warn;
 	if (name == "error" || name == "3") return Donut::Log::Level::Error;
 	return Donut::Log::Level::Debug;
+}
+
+// The game reads its files relative to the working directory: started from
+// elsewhere (its build directory, a desktop launcher), it goes up from the
+// executable's directory to the first holding them.
+static void FindDataDirectory()
+{
+	namespace fs = std::filesystem;
+	std::error_code error;
+	if (fs::exists("shaders/world.vert", error))
+		return;
+	char* base = SDL_GetBasePath();
+	if (!base)
+		return;
+	for (fs::path directory = fs::path(base).parent_path(); !directory.empty(); directory = directory.parent_path())
+	{
+		if (fs::exists(directory / "shaders" / "world.vert", error) && fs::exists(directory / "art", error))
+		{
+			fs::current_path(directory, error);
+			Donut::Log::Info("Game data in {}", directory.string());
+			break;
+		}
+		if (directory == directory.parent_path())
+			break;
+	}
+	SDL_free(base);
 }
 
 int main(int argc, char** argv)
@@ -57,6 +84,8 @@ int main(int argc, char** argv)
 	          "|  /_____/ \\                                        |\n"
 	          "| /         \\                                       |\n"
 	          "+---------------------------------------------------+");
+
+	FindDataDirectory();
 
 #ifdef NDEBUG
 	try
