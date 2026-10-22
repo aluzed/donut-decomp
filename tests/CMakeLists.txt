@@ -5,12 +5,14 @@ file(GLOB DONUT_MATH_SOURCES "${CMAKE_SOURCE_DIR}/src/Core/Math/*.cpp")
 add_executable(donut_tests
 	Main.cpp
 	P3DTests.cpp
+	TextBibleTests.cpp
 	${CMAKE_SOURCE_DIR}/src/Core/File.cpp
 	${CMAKE_SOURCE_DIR}/src/Core/Log.cpp
 	${CMAKE_SOURCE_DIR}/src/Core/MemoryStream.cpp
 	${CMAKE_SOURCE_DIR}/src/P3D/P3DChunk.cpp
 	${CMAKE_SOURCE_DIR}/src/P3D/P3DFile.cpp
 	${CMAKE_SOURCE_DIR}/src/P3D/P3D.generated.cpp
+	${CMAKE_SOURCE_DIR}/src/UI/TextBible.cpp
 	${DONUT_MATH_SOURCES})
 target_include_directories(donut_tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(donut_tests PRIVATE DONUT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

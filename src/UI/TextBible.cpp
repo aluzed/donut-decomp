@@ -18,7 +18,22 @@ std::vector<std::string> splitTabs(const std::string& line)
 	std::stringstream stream(line);
 	std::string field;
 	while (std::getline(stream, field, '\t'))
+	{
+		// Quoted as a spreadsheet exports it: "FOLG DER POLIZEI ZU ""LARD
+		// LAD'S""." is FOLG DER POLIZEI ZU "LARD LAD'S".
+		if (field.size() >= 2 && field.front() == '"' && field.back() == '"')
+		{
+			std::string text;
+			for (std::size_t i = 1; i + 1 < field.size(); ++i)
+			{
+				text += field[i];
+				if (field[i] == '"' && field[i + 1] == '"' && i + 2 < field.size())
+					++i;
+			}
+			field = text;
+		}
 		fields.push_back(field);
+	}
 	return fields;
 }
 } // namespace
