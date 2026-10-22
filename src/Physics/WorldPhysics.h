@@ -16,6 +16,7 @@
 class btRigidBody;
 class btMotionState;
 class btCompoundShape;
+class btTriangleIndexVertexArray;
 
 namespace Donut
 {
@@ -187,6 +188,9 @@ private:
 	// The level's ground meshes' surface, a byte a triangle (Surface, 0x80 set
 	// indoors).
 	std::unordered_map<const btCollisionObject*, std::vector<uint8_t>> _surfaces;
+	// The static bodies' shapes, and the ground meshes' triangles they read.
+	std::vector<std::unique_ptr<btCollisionShape>> _staticShapes;
+	std::vector<std::unique_ptr<btTriangleIndexVertexArray>> _meshInterfaces;
 	std::vector<std::vector<uint32_t>*> _allocatedIndexArrays;
 	std::vector<std::vector<Vector3>*> _allocatedVertexArrays;
 };

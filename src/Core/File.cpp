@@ -83,9 +83,9 @@ std::string File::ReadAll(const FileSystem::path& filename)
 	const File file(filename, FileMode::Read);
 	const std::size_t size = file.Size();
 
-	char* buffer = new char[size];
-	file.ReadBytes(buffer, size);
-	return std::string(buffer, size);
+	std::string contents(size, '\0');
+	file.ReadBytes(contents.data(), size);
+	return contents;
 }
 
 std::string File::ReadString(std::size_t length)

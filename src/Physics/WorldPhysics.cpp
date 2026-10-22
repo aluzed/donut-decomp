@@ -53,6 +53,8 @@ WorldPhysics::~WorldPhysics()
 	}
 
 	_allocatedCollisionObjects.clear();
+	_staticShapes.clear();
+	_meshInterfaces.clear();
 
 	for (auto i = 0; i < _allocatedVertexArrays.size(); i++) delete _allocatedVertexArrays[i];
 
@@ -185,6 +187,7 @@ btCollisionObject* WorldPhysics::addStaticBody(btCollisionShape* shape, const bt
 	// ground, so vehicles had no suspension and no traction and sank through
 	// the world -- while the character, which sweeps the world directly, was
 	// unaffected.
+	_staticShapes.emplace_back(shape);
 	if (_kinematicSink)
 	{
 		// Moved by hand each frame, through its motion state.
@@ -256,7 +259,7 @@ void WorldPhysics::AddIntersect(const P3D::Intersect& intersect)
 	indexedMesh.m_triangleIndexStride = sizeof(uint32_t) * 3;
 	indexedMesh.m_numTriangles = (int)indices->size() / 3;
 
-	auto meshInterface = new btTriangleIndexVertexArray();
+	auto meshInterface = _meshInterfaces.emplace_back(std::make_unique<btTriangleIndexVertexArray>()).get();
 	meshInterface->addIndexedMesh(indexedMesh, PHY_INTEGER);
 
 	auto trimeshShape = new btBvhTriangleMeshShape(meshInterface, true);

@@ -733,6 +733,8 @@ void Vehicle::DestroyPhysics(WorldPhysics& physics)
 			physics.GetDynamicsWorld()->removeRigidBody(chassis);
 
 		physics.GetDynamicsWorld()->removeAction(_rayVehicle.get());
+		if (chassis)
+			delete chassis->getMotionState();
 		delete chassis;
 		_rayVehicle.reset();
 		_raycaster.reset();
