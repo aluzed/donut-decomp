@@ -1025,6 +1025,26 @@ std::string Level::FindInteriorFile(const std::string& door) const
 			best = file;
 			bestLength = interior.tag.size();
 		}
+	if (!best.empty())
+		return best;
+	// Else a tag whose letters the name has in order: the observatory's
+	// locators are int_obv_*, its door "Observatory".
+	const auto within = [&lowered](const std::string& tag)
+	{
+		std::size_t at = 0;
+		for (const char c : tag)
+			if ((at = lowered.find(c, at)) == std::string::npos)
+				return false;
+			else
+				++at;
+		return true;
+	};
+	for (const auto& [file, interior] : _interiors)
+		if (interior.tag.size() > bestLength && within(interior.tag))
+		{
+			best = file;
+			bestLength = interior.tag.size();
+		}
 	return best;
 }
 
