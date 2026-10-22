@@ -70,11 +70,21 @@ public:
 	// (npd_m.p3d, a driver's), with nothing to draw.
 	bool HasMesh() const { return _vertexBinding != nullptr; }
 
+	// Each vertex where it was bound, and the joint that moves it most: the
+	// body's shape (Character::WristsInsideBody).
+	struct BindPoint
+	{
+		Vector3 pos;
+		int joint;
+	};
+	const std::vector<BindPoint>& GetBindPoints() const { return _bindPoints; }
+
 private:
 	std::unique_ptr<GL::VertexBinding> _vertexBinding;
 	std::unique_ptr<GL::VertexBuffer> _vertexBuffer;
 	std::unique_ptr<GL::IndexBuffer> _indexBuffer;
 	std::vector<PrimGroup> _primGroups;
+	std::vector<BindPoint> _bindPoints;
 };
 
 } // namespace Donut

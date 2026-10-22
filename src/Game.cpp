@@ -2261,7 +2261,14 @@ std::unique_ptr<Character> Game::makeNpc(const std::string& name) const
 	// Apu's, whose skeleton the adult models share; Barney stood in his bind
 	// pose, arms out.
 	if (npc->GetAnimations().empty())
+	{
 		npc->LoadAnimations("apu");
+		// His arms crossed, made for his slim build, sink into a broader one
+		// (Comic Book Guy's belly, Barney's, Wiggum's): Homer's, made for his,
+		// in their place.
+		if (npc->ForearmsInsideBody("apu_dialogue_cross_arms"))
+			npc->LoadAnimation("homer", "hom_dialogue_cross_arms", "apu_dialogue_cross_arms");
+	}
 	// Standing about: at rest, or else the first idle in the set. "The first"
 	// alone, in no particular order, had Apu doing yoga behind his counter.
 	if (const std::string rest = npcRestAnimation(*npc); !rest.empty())

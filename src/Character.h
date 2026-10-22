@@ -60,6 +60,8 @@ public:
 
 	void LoadModel(const std::string& name);
 	void LoadAnimations(const std::string& name);
+	// Animation `name` of <file>_a.p3d alone, under the name `as`.
+	void LoadAnimation(const std::string& file, const std::string& name, const std::string& as);
 
 	const std::string& GetName() const { return _name; }
 	const std::string& GetModelName() const { return _modelName; }
@@ -99,9 +101,13 @@ public:
 	const std::unordered_map<std::string, std::unique_ptr<SkinAnimation>>& GetAnimations() const { return _animations; }
 	// False for a character file that is a skeleton alone (npd_m.p3d).
 	bool HasMesh() const;
+	// Whether animation `name` takes this character's forearms inside its own
+	// torso: Apu's arms crossed, made for his slim build, sank Comic Book
+	// Guy's into his belly.
+	bool ForearmsInsideBody(const std::string& name);
 
 private:
-	void addAnimation(const P3D::Animation&);
+	void addAnimation(const P3D::Animation&, const std::string& as = {});
 
 	double _animTime = 0.0;
 	float _mouthOpen = 0.0f;

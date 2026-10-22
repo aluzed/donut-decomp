@@ -51,6 +51,10 @@ void SkinModel::LoadPolySkin(const P3D::PolySkin& polySkin)
 			const auto uv = Vector2(primUV[i].X, 1.0f - primUV[i].Y); // turn that frown upside down :)
 
 			vertices.emplace_back(primVerts[i], primNormals[i], uv, weight, boneIndices);
+			const int heaviest = weight.X >= weight.Y && weight.X >= weight.Z ? boneIndices.X
+			                     : weight.Y >= weight.Z                       ? boneIndices.Y
+			                                                                  : boneIndices.Z;
+			_bindPoints.push_back({primVerts[i], heaviest});
 		}
 
 		// copy over indices and offset by the prim groups vertices

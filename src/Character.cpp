@@ -14,8 +14,12 @@
 #include <Render/SkinModel.h>
 #include <Skeleton.h>
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
+#include <limits>
 #include <map>
+#include <set>
 
 namespace Donut
 {
@@ -101,6 +105,83 @@ const Skeleton::Joint* Character::FindJoint(const std::string& name) const
 bool Character::HasMesh() const
 {
 	return _skinModel && _skinModel->HasMesh();
+}
+
+bool Character::ForearmsInsideBody(const std::string& name)
+{
+	const auto found = _animations.find(name);
+	if (found == _animations.end() || !_skeleton || !_skinModel)
+		return false;
+	std::set<int> torso;
+	std::vector<std::pair<int, int>> forearms;
+	int elbows[2] = {-1, -1}, wrists[2] = {-1, -1};
+	const auto& joints = _skeleton->GetJoints();
+	for (std::size_t i = 0; i < joints.size(); ++i)
+	{
+		if (joints[i].name == "Pelvis" || joints[i].name == "Spine_1" || joints[i].name == "Spine_2")
+			torso.insert(static_cast<int>(i));
+		for (int side = 0; side < 2; ++side)
+		{
+			if (joints[i].name == (side ? "Elbow_R" : "Elbow_L"))
+				elbows[side] = static_cast<int>(i);
+			if (joints[i].name == (side ? "Wrist_R" : "Wrist_L"))
+				wrists[side] = static_cast<int>(i);
+		}
+	}
+	for (int side = 0; side < 2; ++side)
+		if (elbows[side] >= 0 && wrists[side] >= 0)
+			forearms.emplace_back(elbows[side], wrists[side]);
+	if (torso.empty() || forearms.empty())
+		return false;
+
+	// Over the animation, each forearm's middle against the torso's front about it,
+	// both as posed. The character faces -Z: a forearm behind the front is in it.
+	Skeleton posed = *_skeleton;
+	SkinAnimation& animation = *found->second;
+	constexpr int kSteps = 8;
+	constexpr float kAbout = 0.1f;
+	// The forearm's middle lies a little in the torso as a mesh has it, arms
+	// crossed: 0.10 m for Apu's own, 0.11 m for Homer's own; Apu's on Comic
+	// Book Guy, 0.21 m, Barney 0.20, Wiggum 0.25.
+	constexpr float kInside = 0.15f;
+	float deepest = -1.0f;
+	for (int step = 1; step < kSteps; ++step)
+	{
+		posed.UpdatePose(animation, animation.GetLength() * step / kSteps, false);
+		for (const auto& [elbow, wrist] : forearms)
+		{
+			const Vector3 at = (posed.GetJoint(static_cast<uint32_t>(elbow)).pose.Translation() +
+			                    posed.GetJoint(static_cast<uint32_t>(wrist)).pose.Translation()) *
+			                   0.5f;
+			float front = std::numeric_limits<float>::max();
+			for (const auto& point : _skinModel->GetBindPoints())
+				if (torso.count(point.joint))
+				{
+					const Vector3 p = posed.GetJoint(static_cast<uint32_t>(point.joint)).finalGlobal * point.pos;
+					if (std::abs(p.Y - at.Y) < kAbout && std::abs(p.X - at.X) < kAbout)
+						front = std::min(front, p.Z);
+				}
+			if (front != std::numeric_limits<float>::max())
+				deepest = std::max(deepest, at.Z - front);
+		}
+	}
+	Log::Debug("Character: {}'s forearms {:.2f} m behind its front in {}", _modelName, deepest, name);
+	return deepest > kInside;
+}
+
+void Character::LoadAnimation(const std::string& file, const std::string& name, const std::string& as)
+{
+	const std::string animPath = fmt::format("art/chars/{0}_a.p3d", file);
+	if (!FileSystem::exists(animPath))
+		return;
+	const P3D::P3DFile p3d(animPath);
+	for (const auto& chunk : p3d.GetRoot().GetChildren())
+		if (chunk->IsType(P3D::ChunkType::Animation))
+			if (const auto animation = P3D::Animation::Load(*chunk); animation->GetName() == name)
+			{
+				addAnimation(*animation, as);
+				return;
+			}
 }
 
 void Character::LoadAnimations(const std::string& name)
@@ -257,7 +338,7 @@ void Character::SetRotation(const Quaternion& rotation)
 	_rotation = rotation;
 }
 
-void Character::addAnimation(const P3D::Animation& p3dAnim)
+void Character::addAnimation(const P3D::Animation& p3dAnim, const std::string& as)
 {
 	if (!p3dAnim.GetGroupList())
 		return;
@@ -269,7 +350,7 @@ void Character::addAnimation(const P3D::Animation& p3dAnim)
 		names.push_back(joint.name);
 		rests.push_back(joint.rest);
 	}
-	_animations[p3dAnim.GetName()] = SkinAnimation::FromP3D(p3dAnim, names, rests);
+	_animations[as.empty() ? p3dAnim.GetName() : as] = SkinAnimation::FromP3D(p3dAnim, names, rests);
 }
 
 } // namespace Donut

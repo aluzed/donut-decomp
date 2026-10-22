@@ -52,6 +52,11 @@ street race. What looked wrong was traced to its cause in the data or the execut
   which only 205 (6 MB) are asked for again in level 2 -- the characters and cars
   shared. So a level's release would win about 45 MB of video memory, little of the
   process's: its world's meshes and collision are the level's own and freed already.
+- Comic Book Guy's arms crossed sank into his belly: he has no animations of his own and
+  borrows Apu's, made for a slim build. A character borrowing them now poses Apu's arms
+  crossed on its own skeleton and mesh when it is made; when its forearms come out deeper
+  than 0.15 m behind its torso's front (Apu's own: 0.10), that gesture is Homer's. Taken
+  by Comic Book Guy, Barney, Wiggum, Kearney, Nelson, Eddie, Ralph and a few others.
 - Level 3 m3's car sometimes wrecked under the autopilot (it ramming at speed): the
   previous binaries did the same. Since `531594f` the autopilot repairs the car as a
   wrench does before blocking with a wrecked one.
