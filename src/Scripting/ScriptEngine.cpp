@@ -1395,8 +1395,12 @@ void ScriptEngine::buildRaceCircuit()
 	// close on their own. On sr2 it sits just past the last waypoint, on the
 	// far carriageway, and threading it in turned the end of every lap into two
 	// hairpins.
+	//
+	// And only for a race: the car being followed stops at its one waypoint. On
+	// level 6 m2 the truck went on 918m to the limo race's finish line, of the
+	// stage after, and the follow took five minutes instead of one and a half.
 	const Vector3 finish = _game.GetLevel().GetLocatorPosition("race_finish");
-	if (finish != Vector3::Zero && _stageWaypoints.size() < 2)
+	if (finish != Vector3::Zero && _stageWaypoints.size() < 2 && _objectiveType == "race")
 		nodes.push_back(finish);
 
 	// Locators are not all on the ground: sr2_waypoint3 hangs 2.5m above the
