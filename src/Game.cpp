@@ -3954,6 +3954,20 @@ void Game::updateCharacters(double deltaTime)
 		_character->Update(deltaTime);
 	if (_character && !_inVehicle && !_boarding.car)
 		updateFootsteps(_character->GetCharacterController().onGround());
+	// The passers-by's steps, near the player, softly; a crowd's not more than
+	// one in 0.15s, for the sound sources the rest of the game needs.
+	if (_pedestrianManager && _character)
+	{
+		static double lastStep = 0.0;
+		const Vector3 me = _character->GetPosition();
+		for (const Vector3& feet : _pedestrianManager->TakeSteps())
+			if ((feet - me).Length() < 15.0f && _elapsedSeconds - lastStep > 0.15)
+				if (const auto sound = _audioManager->FindScriptSound("marge", "feet_concrete"); !sound.file.empty())
+				{
+					_audioManager->PlayAudio(sound.file, feet, sound.trim * 0.5f, sound.pitch);
+					lastStep = _elapsedSeconds;
+				}
+	}
 	// The level's people say something to a player who walks up to them,
 	// now and then: one of their recorded idle replies.
 	if (_character && !_inVehicle)

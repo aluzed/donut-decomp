@@ -162,6 +162,13 @@ void PedestrianManager::Update(double deltaTime, const Vector3& playerPosition)
 		{
 			p.velocity = desiredDir * speed;
 			p.position += p.velocity * static_cast<float>(deltaTime);
+			// A step heard every stride (shorter than the player's run).
+			p.stride += speed * static_cast<float>(deltaTime);
+			if (p.stride > 0.75f && p.body >= 0)
+			{
+				p.stride = 0.0f;
+				_steps.push_back(p.position);
+			}
 		}
 
 		// On the ground, not at a fixed 0.5m: Springfield has hills, and a

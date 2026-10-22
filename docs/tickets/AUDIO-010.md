@@ -50,4 +50,5 @@ The player walked and ran without a sound, and a car's tyres skidded silently.
 ## Not done
 
 - Not timed to the animation's foot falls: a stride is a distance.
-- Other people's footsteps; the traffic's tyres.
+- The traffic's tyres. (The passers-by's footsteps came after, 2026-10-22: a step every
+  0.75 m walked, heard within 15 m, softly, at most one in 0.15 s.)

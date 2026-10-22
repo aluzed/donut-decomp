@@ -5,6 +5,7 @@
 #include <memory>
 #include <random>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace Donut
@@ -31,6 +32,8 @@ struct Pedestrian
 	float waiting = 0.0f;
 	// Running clear of a car, seconds left.
 	float fleeing = 0.0f;
+	// How far walked since the last step heard, metres.
+	float stride = 0.0f;
 };
 
 class PedestrianManager
@@ -48,6 +51,9 @@ public:
 	// The pedestrians with a body, as skinned characters.
 	// Where the pedestrians with a body stand, for their shadows.
 	std::vector<Vector3> GetBodyPositions() const;
+	// Where the pedestrians with a body put a foot down since the last call:
+	// a stride's walk each (their footsteps).
+	std::vector<Vector3> TakeSteps() { return std::exchange(_steps, {}); }
 	void DrawBodies(const struct Matrix4x4& viewProj, GL::ShaderProgram& skinShader, const ResourceManager& resources);
 
 	// Reads the groups of people a level script lists for its pedestrians
@@ -75,6 +81,7 @@ private:
 
 	WorldPhysics& _worldPhysics;
 	std::vector<Pedestrian> _pedestrians;
+	std::vector<Vector3> _steps;
 	std::vector<std::unique_ptr<Character>> _bodies;
 	// Each group's people, by its number: a name as many times as the script's
 	// count for it, which shares out the slots.
