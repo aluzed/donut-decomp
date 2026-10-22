@@ -45,4 +45,5 @@ street race. What looked wrong was traced to its cause in the data or the execut
   AddressSanitizer and UndefinedBehaviorSanitizer of every story, every level's change
   and the bonus game reports nothing (`b702dd1`).
 - Level 3 m3's car sometimes wrecked under the autopilot (it ramming at speed): the
-  previous binaries did the same.
+  previous binaries did the same. Since `531594f` the autopilot repairs the car as a
+  wrench does before blocking with a wrecked one.
