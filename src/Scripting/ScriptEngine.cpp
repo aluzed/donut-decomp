@@ -46,7 +46,10 @@ void ScriptEngine::SelectMission(const std::string& id)
 	// its argument.
 	const std::string missions = "missions/" + _game.GetLevelDirectory() + "/";
 	_game.GetLevel().LoadP3D(missions + "level.p3d");
-	_game.GetLevel().LoadP3D(missions + id + ".p3d");
+	// The drives between missions ("m1sd") have none of their own: their
+	// locators are the level's.
+	if (FileSystem::exists("./art/" + missions + id + ".p3d"))
+		_game.GetLevel().LoadP3D(missions + id + ".p3d");
 
 	_currentStage = -1;
 	_noTraffic = false;

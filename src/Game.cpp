@@ -2251,7 +2251,7 @@ std::unique_ptr<Character> Game::makeNpc(const std::string& name) const
 	// crashed level 1 m5 the moment its "npd" joined the scene.
 	if (!npc->HasMesh())
 	{
-		Log::Warn("Game: '{}' has no body to show, not placed", name);
+		Log::Info("Game: '{}' has no body to show (a voice only), not placed", name);
 		return nullptr;
 	}
 	npc->LoadAnimations(file);
