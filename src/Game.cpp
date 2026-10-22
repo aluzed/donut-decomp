@@ -4082,7 +4082,8 @@ bool Game::updateStroll(const std::string& name, Character& npc, double dt)
 
 void Game::drawBlobShadows(Matrix4x4& viewProjection)
 {
-	if (!_blobShadows->enabled)
+	// The sun's own shadows of them, when they are on, in their place.
+	if (!_blobShadows->enabled || _shadows->IsOn())
 		return;
 	_blobShadows->Clear();
 	// On the ground under it, as dark as it is near: a character in the air
