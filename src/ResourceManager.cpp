@@ -8,6 +8,7 @@
 #include <ResourceManager.h>
 #include <algorithm>
 #include <set>
+#include <string_view>
 
 #include "Render/OpenGL/glad/glad.h"
 #include "Render/imgui/imgui.h"
@@ -25,13 +26,40 @@ ResourceManager::~ResourceManager() = default;
 
 void ResourceManager::LoadTexture(const P3D::Texture& texture)
 {
+	// The same picture again (a character's swatches, every time a character
+	// is loaded; a prop shared by the level's files): one loaded before, under
+	// the new load's index and the name's again, not another copy.
+	const auto& image = texture.GetImage();
+	const std::size_t hash = image ? std::hash<std::string_view>()(std::string_view(
+	                                     reinterpret_cast<const char*>(image->GetData().data()), image->GetData().size())) ^
+	                                     (static_cast<std::size_t>(image->GetFormat()) << 1)
+	                               : 0;
+	auto& seen = _textureHashes[texture.GetName()];
+	const auto same = std::find_if(seen.begin(), seen.end(), [&](const auto& load) { return load.first == hash; });
 	if (const auto old = _textures.find(texture.GetName()); old != _textures.end())
 	{
+		if (image && same != seen.end())
+		{
+			if (old->second.get() != same->second)
+			{
+				const auto retired = std::find_if(_retiredTextures.begin(), _retiredTextures.end(),
+				                                  [&](const auto& kept) { return kept.get() == same->second; });
+				if (retired != _retiredTextures.end())
+					std::swap(*retired, old->second);
+			}
+			if (old->second.get() == same->second)
+			{
+				_textureLoads[texture.GetName()].emplace_back(_loadIndex++, same->second);
+				return;
+			}
+		}
 		Log::Debug("Texture {0} loaded again (each load is kept, see GetShader)", texture.GetName());
 		_retiredTextures.push_back(std::move(old->second));
 	}
 
 	addTexture(texture.GetName(), std::make_unique<Texture>(texture));
+	if (image)
+		seen.emplace_back(hash, _textures[texture.GetName()].get());
 }
 
 void ResourceManager::LoadTexture(const P3D::Sprite& sprite)

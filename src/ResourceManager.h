@@ -87,6 +87,9 @@ protected:
 	std::unordered_map<std::string, std::vector<std::pair<uint64_t, Texture*>>> _textureLoads;
 	std::unordered_map<std::string, std::vector<std::pair<uint64_t, Shader*>>> _shaderLoads;
 	uint64_t _loadIndex = 0;
+	// Each P3D texture's picture loaded under each name, and the texture made
+	// of it.
+	std::unordered_map<std::string, std::vector<std::pair<std::size_t, Texture*>>> _textureHashes;
 	void addTexture(const std::string& name, std::unique_ptr<Texture> texture);
 	// A shader's texture, once: the one of its name loaded nearest to it.
 	void resolveTexture(Shader& shader) const;
