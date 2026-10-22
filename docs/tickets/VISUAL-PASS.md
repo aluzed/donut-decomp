@@ -36,5 +36,9 @@ street race. What looked wrong was traced to its cause in the data or the execut
 - `A_Grave.png` (the HUD's capital A grave): named by the page, not on the CD.
 - Two meshes of 12 and 3 vertices on "lambert1", Maya's default shader, which the files do
   not hold: export leftovers, not drawn.
+- Memory over a long session: 345 MB at level 1's start, 450-490 MB after its 16 story
+  missions and into level 2 (measured 2026-10-22). The resource manager keeps every
+  level's textures, shaders and geometries (raw pointers to them are held all over); a
+  release of a level's own on leaving it is left for later, the growth being moderate.
 - Level 3 m3's car sometimes wrecked under the autopilot (it ramming at speed): the
   previous binaries did the same.
