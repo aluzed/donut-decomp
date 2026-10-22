@@ -5069,9 +5069,10 @@ void LinkCallback(ImGui::MarkdownLinkCallbackData data_)
 		#ifdef _WIN32
 		ShellExecuteA(NULL, "open", url.c_str(), NULL, NULL, SW_SHOWNORMAL);
 		#else
-		std::string xdgOpenURL = "xdg-open " + url;
-		system(xdgOpenURL.c_str());
-		#endif
+		const std::string xdgOpenURL = "xdg-open '" + url + "'";
+		if (std::system(xdgOpenURL.c_str()) != 0)
+			Log::Warn("Could not open {}", url);
+#endif
 	}
 }
 
