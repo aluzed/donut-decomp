@@ -2858,9 +2858,14 @@ bool Game::openShop()
 	const Vector3 me = _character->GetPosition();
 	// A car seller within reach: their shop's cars of this level.
 	_shopSeller = nullptr;
+	// Where the keeper is now, on their round; their stand without them.
 	for (const CarSeller& seller : _carSellers)
-		if ((seller.position - me).Length() < 2.5f)
+	{
+		Vector3 at = seller.position;
+		GetAmbientNpcPosition(seller.keeper, at);
+		if ((at - me).Length() < 2.5f)
 			_shopSeller = &seller;
+	}
 	bool wardrobe = false;
 	if (!_shopSeller)
 		for (const auto& trigger : _level->GetTriggers())
@@ -3955,19 +3960,30 @@ void Game::updateCharacters(double deltaTime)
 	for (auto& giver : _bonusGivers)
 		if (giver.npc)
 		{
-			if (_character)
+			if (updateStroll(giver.name, *giver.npc, deltaTime))
+				giver.position = giver.npc->GetPosition();
+			else
 			{
-				const Vector3 toPlayer = _character->GetPosition() - giver.position;
-				if (toPlayer.X * toPlayer.X + toPlayer.Z * toPlayer.Z < 100.0f)
-					giver.npc->SetRotation(
-					    Quaternion::MakeFromEuler(Vector3(0.0f, std::atan2(toPlayer.X, toPlayer.Z) + 3.14159265f, 0.0f)));
+				if (_character)
+				{
+					const Vector3 toPlayer = _character->GetPosition() - giver.npc->GetPosition();
+					if (toPlayer.X * toPlayer.X + toPlayer.Z * toPlayer.Z < 100.0f)
+						giver.npc->SetRotation(
+						    Quaternion::MakeFromEuler(Vector3(0.0f, std::atan2(toPlayer.X, toPlayer.Z) + 3.14159265f, 0.0f)));
+				}
+				animateNpc(*giver.npc, talkingNear(giver.npc->GetPosition()));
 			}
-			animateNpc(*giver.npc, talkingNear(giver.npc->GetPosition()));
 			giver.npc->Update(deltaTime);
 		}
 	for (auto* people : {&_npcs, &_ambientNpcs})
 		for (auto& [name, npc] : *people)
 		{
+			// A car seller on their round (one a mission placed stays put).
+			if (people == &_ambientNpcs && _npcs.find(name) == _npcs.end() && updateStroll(name, *npc, deltaTime))
+			{
+				npc->Update(deltaTime);
+				continue;
+			}
 			animateNpc(*npc, talkingNear(npc->GetPosition()));
 			// Someone the player walks up to turns to face them. The model faces
 			// -Z, hence the half turn.
@@ -3980,6 +3996,65 @@ void Game::updateCharacters(double deltaTime)
 			}
 			npc->Update(deltaTime);
 		}
+}
+
+bool Game::updateStroll(const std::string& name, Character& npc, double dt)
+{
+	const auto found = _strolls.find(name);
+	if (found == _strolls.end())
+		return false;
+	Stroll& stroll = found->second;
+	const Vector3 here = npc.GetPosition() - Vector3(0.0f, npc.CentreHeight(), 0.0f);
+	// Near the player on foot, they stop for them.
+	if (_character && !_inVehicle)
+	{
+		const Vector3 gap = _character->GetPosition() - npc.GetPosition();
+		if (gap.X * gap.X + gap.Z * gap.Z < 36.0f)
+		{
+			if (stroll.walking)
+			{
+				stroll.walking = false;
+				if (const std::string rest = npcRestAnimation(npc); !rest.empty())
+					npc.SetAnimation(rest);
+			}
+			return false;
+		}
+	}
+	if (_elapsedSeconds < stroll.restUntil)
+		return false;
+	const Vector3 target = stroll.points[stroll.next];
+	Vector3 way = target - here;
+	way.Y = 0.0f;
+	const float distance = way.Length();
+	// There: a pause, idling, then on to the next.
+	if (distance < 0.3f)
+	{
+		stroll.next = (stroll.next + 1) % stroll.points.size();
+		stroll.restUntil = _elapsedSeconds + 3.0 + rand() % 5;
+		stroll.walking = false;
+		if (const std::string rest = npcRestAnimation(npc); !rest.empty())
+			npc.SetAnimation(rest);
+		return false;
+	}
+	if (!stroll.walking)
+	{
+		stroll.walking = true;
+		for (const auto& [anim, data] : npc.GetAnimations())
+			if (anim.size() > 10 && anim.compare(anim.size() - 10, 10, "_loco_walk") == 0)
+			{
+				npc.SetAnimation(anim);
+				break;
+			}
+	}
+	constexpr float kWalk = 1.3f; // metres a second
+	const float step = std::min(distance, kWalk * static_cast<float>(dt));
+	way = way / distance;
+	// Between the points, at their heights.
+	const float y = here.Y + (target.Y - here.Y) * std::min(1.0f, step / distance);
+	npc.SetPosition(Vector3(here.X + way.X * step, y, here.Z + way.Z * step));
+	// The model faces -Z, hence the half turn.
+	npc.SetRotation(Quaternion::MakeFromEuler(Vector3(0.0f, std::atan2(way.X, way.Z) + 3.14159265f, 0.0f)));
+	return true;
 }
 
 void Game::drawBlobShadows(Matrix4x4& viewProjection)

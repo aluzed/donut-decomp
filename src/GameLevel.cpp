@@ -322,7 +322,7 @@ void Game::loadLevel()
 			const Vector3 carSpot = _level->GetLocatorPosition(args[4]);
 			if (spot == Vector3::Zero || carSpot == Vector3::Zero)
 				continue;
-			_carSellers.push_back({args[0], spot, carSpot});
+			_carSellers.push_back({args[0], args[1], spot, carSpot});
 			if (!_ambientNpcs.count(args[1]))
 				if (auto npc = makeNpc(args[1]))
 				{
@@ -359,13 +359,14 @@ void Game::loadLevel()
 			const Vector3 spot = _level->GetLocatorPosition(args[2]);
 			if (spot == Vector3::Zero || !FileSystem::exists(fmt::format("scripts/{}/{}i.mfk", levelDirectory(), args[3])))
 				continue;
-			BonusGiver giver {args[3], spot, makeNpc(args[0])};
+			BonusGiver giver {args[0], args[3], spot, makeNpc(args[0])};
 			if (giver.npc)
 				giver.npc->SetPosition(spot);
 			_bonusGivers.push_back(std::move(giver));
 		}
 		Log::Info("Game: {} street races and bonus missions on offer", _bonusGivers.size());
 	}
+	loadStrolls();
 
 	// The level's music: what its music script (l<n>_music.rms) plays while
 	// exploring. Without one, or with none of it in the archives, the
@@ -667,6 +668,54 @@ void Game::updateInterior()
 	_audioManager->SetReverb("");
 	SetPlayerPosition(_interiorReturn);
 	_scriptEngine->OnInteriorChanged(_interior);
+}
+
+void Game::loadStrolls()
+{
+	// AddBonusMissionNPCWaypoint("cletus", "bm1_cletus_walk1"), one a line, in
+	// order: the round, from where the character stands.
+	_strolls.clear();
+	std::ifstream script(fmt::format("scripts/{}/leveli.mfk", levelDirectory()));
+	for (std::string line; std::getline(script, line);)
+	{
+		std::size_t at = line.find("AddBonusMissionNPCWaypoint(");
+		if (at == std::string::npos)
+			at = line.find("AddPurchaseCarNPCWaypoint(");
+		const std::size_t comment = line.find("//");
+		if (at == std::string::npos || (comment != std::string::npos && comment < at))
+			continue;
+		std::vector<std::string> args;
+		for (std::size_t q = line.find('"', at); q != std::string::npos && args.size() < 2; q = line.find('"', q + 1))
+		{
+			const std::size_t end = line.find('"', q + 1);
+			if (end == std::string::npos)
+				break;
+			args.push_back(line.substr(q + 1, end - q - 1));
+			q = end;
+		}
+		if (args.size() < 2)
+			continue;
+		const Vector3 point = _level->GetLocatorPosition(args[1]);
+		if (point != Vector3::Zero)
+			_strolls[args[0]].points.push_back(point);
+	}
+	// The round starts where they stand, when the waypoints do not name it:
+	// Gil walks to gil_walk1 and back to his stand.
+	const auto start = [&](const std::string& name, const Vector3& spot)
+	{
+		const auto found = _strolls.find(name);
+		if (found == _strolls.end())
+			return;
+		auto& points = found->second.points;
+		if (std::none_of(points.begin(), points.end(), [&](const Vector3& p) { return (p - spot).Length() < 0.5f; }))
+			points.insert(points.begin(), spot);
+	};
+	for (const CarSeller& seller : _carSellers) start(seller.keeper, seller.position);
+	for (const BonusGiver& giver : _bonusGivers) start(giver.name, giver.position);
+	// A round of one point is no round.
+	for (auto it = _strolls.begin(); it != _strolls.end();)
+		it = it->second.points.size() < 2 ? _strolls.erase(it) : std::next(it);
+	Log::Info("Game: {} character(s) walking their rounds", _strolls.size());
 }
 
 } // namespace Donut

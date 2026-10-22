@@ -436,6 +436,8 @@ private:
 	struct CarSeller
 	{
 		std::string shop;
+		// Who keeps it ("gil"): one of the level's people, on their round.
+		std::string keeper;
 		Vector3 position;
 		Vector3 carSpot;
 	};
@@ -625,6 +627,22 @@ private:
 		bool talking = false;
 	};
 	std::map<const Character*, NpcGesture> _npcGestures;
+	// The rounds the bonus missions' givers and the car sellers walk between
+	// their locators (AddBonusMissionNPCWaypoint, AddPurchaseCarNPCWaypoint),
+	// by character name: where to, a pause at each.
+	struct Stroll
+	{
+		std::vector<Vector3> points;
+		std::size_t next = 0;
+		double restUntil = 0.0;
+		bool walking = false;
+	};
+	std::map<std::string, Stroll> _strolls;
+	// Reads the level script's waypoints for the givers and the sellers.
+	void loadStrolls();
+	// Walks `npc` on its round; false when it has none or stops for the player
+	// (near them, it turns to face them instead).
+	bool updateStroll(const std::string& name, Character& npc, double dt);
 	// The level's own people, standing about (leveli.mfk's AddAmbientCharacter:
 	// Apu behind his counter, Ralph, the Moleman...). One a mission has placed
 	// as its own NPC is not shown twice.
@@ -633,6 +651,7 @@ private:
 	// (leveli.mfk's AddNPCCharacterBonusMission: Milhouse, sr1, by the school).
 	struct BonusGiver
 	{
+		std::string name;
 		std::string mission;
 		Vector3 position;
 		std::unique_ptr<Character> npc;

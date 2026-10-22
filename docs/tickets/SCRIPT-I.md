@@ -38,15 +38,18 @@ was left.
   terms the first time, a sneer after, and the ticket for a whole set of cards (49). The
   Aztec's box office (`GagCheckMovie`) now wants that ticket, not the cards.
 - **`GagSetSparkle`** (86): a gag not yet found glints.
+- **`AddBonusMissionNPCWaypoint`, `AddPurchaseCarNPCWaypoint`** (2026-10-22): the bonus
+  missions' givers and the car sellers walk their rounds between their locators, from
+  their stand, at a walk, pausing at each; a player on foot within 6 m stops them and they
+  turn to face them. The shop and the mission are wherever they are.
 
 Validation (seven levels' stories under the autopilot): 32 missions won; 32 conversations
 placed on their marks, 13 closing conversations heard.
 
 ## Not done, and why
 - `SetPostLevelFMV`: commented out in every level script; only the E3 demo's call it.
-- `SetBonusMissionDialoguePos`, `AddBonusMissionNPCWaypoint`, `AddPurchaseCarNPCWaypoint`:
-  the givers' and sellers' walks and the conversation before a bonus mission; the givers
-  stand still, and the mission starts at once.
+- `SetBonusMissionDialoguePos`: the conversation before a bonus mission; the mission
+  starts at once.
 - `AddVehicleSelectInfo`, `ClearVehicleSelectInfo`, `AddBonusObjective`,
   `SetBonusMissionStart`: the phone booth lists the cars the player has; the last two are
   in no script.
