@@ -1,19 +1,21 @@
 // Copyright 2019-2020 the donut authors. See AUTHORS.md
 
+#include "Core/FileSystem.h"
+#include "Core/Log.h"
+#include "Core/MemoryStream.h"
 #include <Character.h>
 #include <CharacterController.h>
 #include <Game.h>
 #include <P3D/P3D.generated.h>
 #include <P3D/P3DFile.h>
 #include <Physics/BulletCast.h>
+#include <Render/Mesh.h>
 #include <Render/OpenGL/ShaderProgram.h>
 #include <Render/SkinModel.h>
-#include "Core/MemoryStream.h"
 #include <Skeleton.h>
-#include "Core/FileSystem.h"
-#include "Core/Log.h"
 
 #include <cstdint>
+#include <map>
 
 namespace Donut
 {
@@ -45,10 +47,13 @@ void Character::LoadModel(const std::string& name)
 	const std::string modelPath = fmt::format("art/chars/{0}_m.p3d", name);
 	const P3D::P3DFile p3d(modelPath);
 
+	_rigidProps.clear();
+	std::map<std::string, const P3D::P3DChunk*> geometries;
 	for (const auto& chunk : p3d.GetRoot().GetChildren())
 	{
 		switch (chunk->GetType())
 		{
+		case P3D::ChunkType::Geometry: geometries[P3D::Geometry::Load(*chunk)->GetName()] = chunk.get(); break;
 		case P3D::ChunkType::Shader: Game::GetInstance().GetResourceManager().LoadShader(*P3D::Shader::Load(*chunk)); break;
 		case P3D::ChunkType::Texture: Game::GetInstance().GetResourceManager().LoadTexture(*P3D::Texture::Load(*chunk)); break;
 		case P3D::ChunkType::PolySkin: _skinModel->LoadPolySkin(*P3D::PolySkin::Load(*chunk)); break;
@@ -63,6 +68,19 @@ void Character::LoadModel(const std::string& name)
 				_blink = std::move(blink);
 			break;
 		case P3D::ChunkType::CompositeDrawable:
+		{
+			// Its props: the skin, and any rigid mesh on a joint.
+			const auto drawable = P3D::CompositeDrawable::Load(*chunk);
+			if (const auto& props = drawable->GetPropList())
+				for (const auto& prop : props->GetProps())
+					if (const auto found = geometries.find(prop->GetName()); found != geometries.end())
+					{
+						auto mesh = std::make_unique<Mesh>(*P3D::Geometry::Load(*found->second));
+						mesh->Commit();
+						_rigidProps.push_back({std::move(mesh), prop->GetSkeletonJoint()});
+					}
+			break;
+		}
 		case P3D::ChunkType::MultiController:
 		case P3D::ChunkType::FrameController: break;
 		default: Log::Warn("unhandled chunk {:#x} in character {}", static_cast<uint32_t>(chunk->GetType()), name); break;
@@ -127,6 +145,28 @@ void Character::Draw(const Matrix4x4& viewProjection, GL::ShaderProgram& shaderP
 	if (_blink && _blinkTime >= 0.0)
 		eyes = rm.GetTexture(_blink->TextureAt(static_cast<float>(_blinkTime * _blink->frameRate)));
 	_skinModel->Draw(_blink ? _blink->shader : std::string(), eyes);
+	if (!_rigidProps.empty())
+		drawRigidProps(viewProjection, model);
+}
+
+void Character::drawRigidProps(const Matrix4x4& viewProjection, const Matrix4x4& model)
+{
+	if (!_skeleton || !Game::GetInstance().HasLevel())
+		return;
+	GL::ShaderProgram& world = Game::GetInstance().GetLevel().GetWorldShader();
+	world.Bind();
+	world.SetUniformValue("lighting", 0);
+	for (const auto& prop : _rigidProps)
+	{
+		if (prop.joint >= _skeleton->GetJoints().size())
+			continue;
+		const Skeleton::Joint& joint = _skeleton->GetJoint(prop.joint);
+		// The joint where it is now; unanimated, at rest, as the skin is drawn.
+		const Matrix4x4 placed = _currentAnimation != nullptr ? joint.pose : joint.restGlobalInverse.Inverse();
+		world.SetUniformValue("viewProj", viewProjection * model * placed);
+		prop.mesh->Draw(world, true);
+		prop.mesh->Draw(world, false);
+	}
 }
 
 bool Character::IsAnimationFinished() const

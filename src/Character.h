@@ -134,6 +134,16 @@ private:
 	// The eyes' texture animation (TEX_eyeball_m): the shader it retextures,
 	// the texture at each key frame, its rate; and when the next blink is due.
 	std::optional<TextureAnimation> _blink;
+	// Its rigid props, each on a joint of its skeleton (its composite
+	// drawable's props that are not its skin: Dr Hibbert's buttons, Beeman's
+	// wings), in that joint's frame.
+	struct RigidProp
+	{
+		std::unique_ptr<class Mesh> mesh;
+		uint32_t joint = 0;
+	};
+	std::vector<RigidProp> _rigidProps;
+	void drawRigidProps(const Matrix4x4& viewProjection, const Matrix4x4& model);
 	double _blinkAt = 0.0;
 	double _blinkTime = -1.0;
 };
