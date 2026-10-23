@@ -469,7 +469,9 @@ private:
 
 	std::unique_ptr<GL::ShaderProgram> _skinShaderProgram;
 
-	bool _showDebug = true;
+	// The debug guides (the player's skeleton and box, the arrow to the mission
+	// car, a box round each traffic car), on toggle_debug_draw.
+	bool _showDebug = false;
 	bool _showHelp = false;
 	float _health = 100.0f;
 	float _prevVehicleY = 0.0f;
